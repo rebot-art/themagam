@@ -56,13 +56,13 @@
 
   /* ★ script_core.js 의 firebaseConfig 와 동기 유지 — 코어가 바뀌면 여기도 */
   const firebaseConfig = {
-    apiKey: "AIzaSyD1YV5KlgkwBSEpDupiwMcWtryrlfCFyGc",
-    authDomain: "themagam-158f7.firebaseapp.com",
-    databaseURL: "https://themagam-158f7-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "themagam-158f7",
-    storageBucket: "themagam-158f7.firebasestorage.app",
-    messagingSenderId: "429789102223",
-    appId: "1:429789102223:web:22263ce9440c144baa70fa"
+    apiKey: "AIzaSyBrFRdC034hq3kYrY7CncNAMgPBH6-Br-4",
+    authDomain: "themagam-ec0e4.firebaseapp.com",
+    databaseURL: "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "themagam-ec0e4",
+    storageBucket: "themagam-ec0e4.firebasestorage.app",
+    messagingSenderId: "166061592687",
+    appId: "1:166061592687:web:c8ae9f9a36ded674a3bd9a"
   };
   try {
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);

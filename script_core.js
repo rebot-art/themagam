@@ -101,20 +101,20 @@ window.AppSession = AppSession;
   // Firebase config
   // =====================================================
   /* =====================================================================
-     TheMagam 전용 파이어베이스 (프로젝트: themagam-158f7)
+     TheMagam 전용 파이어베이스 (프로젝트: themagam-ec0e4)
 
      벨사탕 작업실과 데이터가 완전히 분리됩니다.
      방을 옮기거나 새로 만들 때는 이 덩어리만 갈아끼우면 됩니다.
      databaseURL 이 실제 방 주소입니다 — 여기가 틀리면 아무것도 안 맞습니다.
      ===================================================================== */
   const firebaseConfig = {
-    apiKey: "AIzaSyD1YV5KlgkwBSEpDupiwMcWtryrlfCFyGc",
-    authDomain: "themagam-158f7.firebaseapp.com",
-    databaseURL: "https://themagam-158f7-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "themagam-158f7",
-    storageBucket: "themagam-158f7.firebasestorage.app",
-    messagingSenderId: "429789102223",
-    appId: "1:429789102223:web:22263ce9440c144baa70fa"
+    apiKey: "AIzaSyBrFRdC034hq3kYrY7CncNAMgPBH6-Br-4",
+    authDomain: "themagam-ec0e4.firebaseapp.com",
+    databaseURL: "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "themagam-ec0e4",
+    storageBucket: "themagam-ec0e4.firebasestorage.app",
+    messagingSenderId: "166061592687",
+    appId: "1:166061592687:web:c8ae9f9a36ded674a3bd9a"
   };
 
   try {
@@ -158,11 +158,22 @@ window.AppSession = AppSession;
      가 판정하고, 고아 기록 정리(ONLINE_STALE_MS)는 12시간짜리라
      여기와 아무 상관이 없습니다. 그래서 30초는 안전합니다.
 
-     [더 줄여야 하면] 45초로 가면 월 4.8GB 까지 떨어집니다. 다만 그쯤
-     되면 "들어왔는데 한참 안 뜬다" 는 말이 나올 거예요. 그때는 주기보다
-     status 줄에서 안 변하는 칸을 빼는 쪽(다이어트)이 낫습니다.
+     [또 늘림 2026-08-19 — 30초 → 45초]
+     멤버가 38명으로 늘었습니다. 통신량은 사람 수의 제곱으로 커지니
+     인원이 늘어난 것만으로 짐이 훌쩍 무거워져요. 이번 달 사용량이
+     6.89GB(무료치 10GB)까지 차올랐고, 자료실도 막 생겼습니다.
+     45초로 가면 하트비트 몫이 월 7.3GB → 4.9GB 로 떨어집니다.
+
+     [잃는 것은 여전히 하나뿐] 남의 입장·퇴장이 뜨는 것이 최대 45초
+     늦어집니다. 위에 적은 대로 이 값은 **알리는 주기**일 뿐이라
+     판정(onDisconnect · 30분 유예 · 12시간 정리)에는 안 쓰여요.
+     내 카드·기록·글자수·뽀모는 아무 영향이 없습니다.
+
+     ★ "들어왔는데 한참 안 뜬다" 는 말이 나오면 **30000 으로 되돌리면
+       됩니다** — 이 줄 하나예요. 그다음 지렛대는 주기가 아니라
+       status 줄에서 안 변하는 칸을 빼는 쪽(다이어트)입니다.
      ===================================================================== */
-  const PRESENCE_POLL_MS = 30000;
+  const PRESENCE_POLL_MS = 45000;
 
   // 마지막으로 쓴 닉네임 (이 기기에만 저장)
   const LAST_NICK_KEY = "writerLastNick";
