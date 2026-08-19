@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>더마감 — 임시 비밀번호 찾기</title>
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    color:#2B2620;background:#FAF6EC;
+    background-image:
+      repeating-linear-gradient(90deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px),
+      repeating-linear-gradient(0deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px);
+  }
+  .card{
+    width:100%;max-width:420px;background:rgba(255,253,246,.97);
+    border:1.5px solid #B3372B;border-radius:14px;padding:26px 24px 22px;
+    box-shadow:0 4px 18px rgba(90,70,40,.12);
+  }
+  .eyebrow{text-align:center;font-size:11px;color:#B3372B;letter-spacing:2px;font-weight:600;}
+  h1{font-family:"Noto Serif KR","Nanum Myeongjo",serif;text-align:center;
+     font-size:23px;letter-spacing:2px;margin:6px 0 2px;}
+  .sub{text-align:center;font-size:11px;color:#B3372B;letter-spacing:3px;margin:0 0 18px;}
+  .lede{font-size:12.5px;color:#6B5F52;line-height:1.65;margin:0 0 18px;}
+  .lede b{color:#2B2620;}
+  input{
+    width:100%;background:transparent;border:none;border-bottom:1px solid rgba(150,120,80,.5);
+    padding:9px 4px;font:inherit;font-size:15px;color:#2B2620;margin-bottom:12px;
+  }
+  input:focus{outline:none;border-bottom-color:#B3372B;}
+  button{
+    width:100%;background:#4A140D;color:#FFFDF6;border:none;border-radius:8px;
+    padding:12px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;margin-top:4px;
+  }
+  button:hover{background:#5C1A11;}
+  button:disabled{opacity:.55;cursor:default;}
+  .msg{font-size:12.5px;margin:12px 0 0;min-height:1.4em;line-height:1.6;}
+  .msg.bad{color:#B3372B;font-weight:700;}
+  .out{
+    margin-top:16px;padding:16px;border:1.5px dashed #B3372B;border-radius:10px;
+    background:rgba(179,55,43,.05);text-align:center;display:none;
+  }
+  .out.on{display:block;}
+  .out .lbl{font-size:11.5px;color:#6B5F52;}
+  .out .pw{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:26px;font-weight:700;letter-spacing:3px;color:#B3372B;margin:7px 0;
+    user-select:all;
+  }
+  .out .go{display:inline-block;margin-top:8px;font-size:12.5px;color:#4A140D;font-weight:600;}
+  .foot{font-size:11px;color:#8A7B68;line-height:1.7;margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="eyebrow">— WRITERS' ROOM —</div>
+  <h1>임시 비밀번호 찾기</h1>
+  <div class="sub">T H E M A G A M</div>
+
+  <p class="lede">
+    방이 새 집으로 옮겨지면서 <b>비밀번호만</b> 임시로 바뀌었어요.
+    닉네임과 <b>지금까지 쓰던 비밀번호</b>를 넣으면 새 임시 비밀번호를 알려드려요.<br>
+    (기록·카드·꾸밈은 전부 그대로예요!)
+  </p>
+
+  <input type="text" id="nick" placeholder="닉네임" autocomplete="off" spellcheck="false">
+  <input type="password" id="pw" placeholder="지금까지 쓰던 비밀번호" autocomplete="off">
+  <button id="btn">찾기</button>
+  <p class="msg" id="msg"></p>
+
+  <div class="out" id="out">
+    <div class="lbl">🔑 새 임시 비밀번호</div>
+    <div class="pw" id="pwout"></div>
+    <div class="lbl">새 방에 들어가서 <b>설정 › 🔒 개인정보</b> 에서<br>꼭 내 것으로 바꿔 주세요.</div>
+    <a class="go" href="./" >→ 새 방으로 가기</a>
+  </div>
+
+  <p class="foot">
+    ⚠️ 본인 확인을 위해 <b>옛 비밀번호</b>를 물어봐요. 닉네임만으로는 알려주지 않습니다.<br>
+    이 페이지는 모두가 비밀번호를 바꾸면 없앨 거예요.
+  </p>
+</div>
+
+<script>
+/* 옛 파이어베이스 — 본인 확인에만 씁니다. 로그인에 성공하면 곧바로 끊어요. */
+const OLD = {
+  apiKey: "AIzaSyD1YV5KlgkwBSEpDupiwMcWtryrlfCFyGc",
+  authDomain: "themagam-158f7.firebaseapp.com",
+  databaseURL: "https://themagam-158f7-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "themagam-158f7",
+  storageBucket: "themagam-158f7.firebasestorage.app",
+  messagingSenderId: "429789102223",
+  appId: "1:429789102223:web:22263ce9440c144baa70fa"
+};
+firebase.initializeApp(OLD);
+
+const TBL = JSON.parse(decodeURIComponent(escape(atob("eyLsmLfqu4QiOiAidzJqYzZoYWciLCAi67CN67CNIjogIm41amUzc3VyIiwgIuuniOuNlO2FhSI6ICJ2Y2JnazR0MiIsICLrsJjsp53rs4QiOiAiZWtrYnl2dG4iLCAi7Iuc7JeYIjogIjJlNGpodm5jIiwgIuungeqwgOungfCfjYQiOiAiNmt6bTZ4MmsiLCAi7Iqk7Lm066CbIjogImhnMjhtcnd1IiwgIuqzoOuplCI6ICJzcjU4MnRwOCIsICLrqr3rqr0iOiAidDR4YnVjNzUiLCAi7L2pdGVzdCI6ICI5cGJjaGhycCIsICLrqLjri4jrqqjri4giOiAieWZnd3Q0YmUiLCAi6rOw66+4IjogIjZjcDlwZGNmIiwgIuuekeuekSI6ICJ1ZHc2dmpuayIsICLshozshowiOiAiOG1kbmoyNzUiLCAi7LW47LW4IjogImc3bTIyNmV1IiwgIuuMleuMlSI6ICIzNXQ5bXJzdCIsICLrsoTssIwiOiAicDhjYnM3dDciLCAi64+E7Yq4IjogInZtem43cTVoIiwgIuqzteqztSI6ICJlOHJ0N2s3OCIsICLslYTslYTrn6zrsoQiOiAibXJlejNwN3UiLCAi7ZWR6rWsIjogIm40bWVxZ3dlIiwgIuyYpOyVmSI6ICJ6ZmtxYzhhYSIsICLtj7DrsqjrsqgiOiAiemRzYWNlcGgiLCAi7Z2Q66y8IjogInJqemc4dG54IiwgIuqzoOuvuCI6ICJhcHI2c2UzaCIsICLsm4zthLAiOiAidGdnYnM3ZDgiLCAi7ZS87LmYIjogIjdtdWp2M2pyIiwgIuy4oO2CpCI6ICJ4ZGNkM2dzdiIsICLshJ3rpZgiOiAiZHA0NDZ2OHMiLCAi66eBdGVzdCI6ICJnOTZ4bWpiNyIsICLri4jri4jspogiOiAidXJyZ3piemMiLCAi64W57LCo7LCoIjogImdteTNkcDVqIiwgIuuanOyehyI6ICJ1MnJ4a2tjdiIsICLsmKXsiJjsiJgiOiAiZ3RrbnI3cXAiLCAi7Iuk67KEIjogIjY5bnVyamtuIiwgIu2dq3Rlc3Tqt7jrp4EiOiAiaHFlbXBmcHkiLCAi7J207JW86riwIO2VnCDsnpQiOiAiMjd4cjdzenMiLCAi7Jyk67mEIjogInFud3BnZ3l6IiwgIu2VmOuanCI6ICJqa24yc2VlcCIsICLrrLTsp4DqsJwiOiAia2c4bXRoZXIiLCAi64u56re8IjogImRwN3JnZGJyIiwgIuuplOumrCI6ICJ3eXVyZ2ZtYSIsICLsnKTsiqwiOiAiaDh6Nzd6cnEiLCAidGVzdCI6ICJxazdianl6ZCIsICLshKDstZwiOiAiOGF2a200YXoiLCAi67Ko67KoIjogImQycmJzaDY0IiwgIuyGneyGnSI6ICJncHVoNWhteiIsICLtlLzsuZjwn42RIjogImFyaDZyYnpxIiwgIuqzoOq1rOuniCI6ICIydDV2ZnU0dCIsICLtmLjrnpHwn5CvIjogInhyeGRkZngzIiwgIuyekOuqveyXkOydtOuTnCI6ICJ2d3I1NGtrZiIsICLrjIDssIwiOiAieHVjbmZrbnEiLCAi66as66asIjogInY3YXVwa3g1IiwgIuuCmOuUlCI6ICJrNnJiaGhjZCIsICLsvansvakiOiAibWhidmo4ajciLCAi7J207KCc7KeE7Kec66y865+s64Kg6rOz7J207JeG7Iq164uI64ukIjogIjVlbmRoOHA1IiwgIuyLoOuztSI6ICJydXNnNzVmYiIsICJLSU3stpjsi50iOiAidXFlYW1oNmQifQ=="))));
+
+function nickToEmail(nick){
+  let hex = "";
+  for (const b of new TextEncoder().encode(nick)) hex += b.toString(16).padStart(2, "0");
+  return "n" + hex + "@themagam.local";
+}
+const el = (id) => document.getElementById(id);
+function say(t, bad){ const m = el("msg"); m.textContent = t || ""; m.className = "msg" + (bad ? " bad" : ""); }
+
+async function 찾기(){
+  const nick = (el("nick").value || "").trim();
+  const pw   = el("pw").value || "";
+  el("out").classList.remove("on");
+  if (!nick) return say("닉네임을 적어 주세요.", true);
+  if (!pw)   return say("지금까지 쓰던 비밀번호를 적어 주세요.", true);
+
+  el("btn").disabled = true;
+  say("확인 중…");
+  try {
+    await firebase.auth().signInWithEmailAndPassword(nickToEmail(nick), pw);
+    try { await firebase.auth().signOut(); } catch(e){}     /* 확인만 하고 바로 끊습니다 */
+    const found = TBL[nick];
+    if (!found) return say("명단에 없는 닉네임이에요. 방장에게 말씀해 주세요.", true);
+    el("pwout").textContent = found;
+    el("out").classList.add("on");
+    say("");
+  } catch (e) {
+    const c = e && e.code;
+    if (c === "auth/too-many-requests") say("시도가 너무 많았어요. 잠시 뒤에 다시 해주세요.", true);
+    else if (c === "auth/network-request-failed") say("인터넷 연결을 확인해 주세요.", true);
+    else say("닉네임이나 비밀번호가 달라요.", true);
+  } finally {
+    el("btn").disabled = false;
+  }
+}
+el("btn").addEventListener("click", 찾기);
+["nick","pw"].forEach(id => el(id).addEventListener("keydown", e => {
+  if (e.isComposing || e.keyCode === 229) return;
+  if (e.key === "Enter") { e.preventDefault(); 찾기(); }
+}));
+</script>
+</body>
+</html>
