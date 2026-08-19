@@ -303,5 +303,80 @@
     });
   });
 
+  /* =====================================================================
+     🔑 비밀번호 바꾸기 (2026-08-20) — 설정 › 🔒 개인정보
+     ---------------------------------------------------------------------
+     [왜 만들었나] 2026-08-19 방을 새 파이어베이스로 옮기면서, 옛 비밀번호를
+     그대로 가져오지 못했습니다(SCRYPT 해시 이전이 끝내 안 먹었어요).
+     그래서 38명이 **임시 비밀번호**를 받았고, 스스로 바꿀 길이 필요했습니다.
+
+     [지금 비밀번호를 한 번 더 묻는 이유]
+     파이어베이스는 로그인한 지 오래되면 비밀번호 변경을 거절합니다
+     (auth/requires-recent-login). 그래서 어차피 다시 확인해야 하는데,
+     이왕이면 **자리를 비운 사이 남이 만지는 것**도 같이 막습니다.
+     이 방은 카페·독서실에서 켜 두는 사람이 많아요.
+
+     ★ 서버에 새 비밀번호를 우리가 적는 게 아닙니다 — 파이어베이스가
+       알아서 섞어(해시) 보관해요. 우리는 그 글자를 볼 수 없습니다.
+     ===================================================================== */
+  async function changeMyPassword() {
+    const msg = (t, bad) => {
+      const p = el("pw-change-msg");
+      if (!p) return;
+      p.textContent = t || "";
+      p.style.color = bad ? "#B3372B" : "#2E6B2B";
+      p.style.fontWeight = t ? "700" : "400";
+    };
+    const now  = el("pw-now")?.value  || "";
+    const nw   = el("pw-new")?.value  || "";
+    const nw2  = el("pw-new2")?.value || "";
+    const btn  = el("pw-change-btn");
+
+    const user = firebase.auth().currentUser;
+    if (!user) { msg("먼저 입장한 뒤에 바꿀 수 있어요.", true); return; }
+    if (!now)  { msg("지금 비밀번호를 적어 주세요.", true); return; }
+    if (nw.length < MIN_PW) { msg(`새 비밀번호는 ${MIN_PW}자 이상이어야 해요.`, true); return; }
+    if (nw !== nw2) { msg("새 비밀번호 두 칸이 서로 달라요.", true); return; }
+    if (nw === now) { msg("지금 쓰는 것과 같아요. 다른 걸로 정해 주세요.", true); return; }
+
+    if (btn) btn.disabled = true;
+    msg("바꾸는 중…");
+    try {
+      /* ① 지금 비밀번호로 본인 확인 */
+      const cred = firebase.auth.EmailAuthProvider.credential(user.email, now);
+      await user.reauthenticateWithCredential(cred);
+      /* ② 새 비밀번호로 */
+      await user.updatePassword(nw);
+
+      ["pw-now", "pw-new", "pw-new2"].forEach(id => { const i = el(id); if (i) i.value = ""; });
+      msg("✅ 바꿨어요. 다음부터는 새 비밀번호로 들어오세요.");
+    } catch (e) {
+      const c = e && e.code;
+      if (c === "auth/wrong-password" || c === "auth/invalid-credential"
+          || c === "auth/invalid-login-credentials") {
+        msg("지금 비밀번호가 달라요.", true);
+      } else if (c === "auth/weak-password") {
+        msg(`너무 짧아요. ${MIN_PW}자 이상으로 해주세요.`, true);
+      } else if (c === "auth/too-many-requests") {
+        msg("시도가 너무 많았어요. 잠시 뒤에 다시 해주세요.", true);
+      } else if (c === "auth/network-request-failed") {
+        msg("인터넷 연결을 확인해주세요.", true);
+      } else {
+        msg("바꾸지 못했어요. 잠시 뒤에 다시 해주세요.", true);
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+  window.changeMyPassword = changeMyPassword;
+
+  /* 마지막 칸에서 Enter 로도 바꿔지게 */
+  document.addEventListener("DOMContentLoaded", () => {
+    el("pw-new2")?.addEventListener("keydown", (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === "Enter") { e.preventDefault(); changeMyPassword(); }
+    });
+  });
+
   window.Auth = { nickToEmail, MIN_PW, MAIL_DOMAIN };
 })();
