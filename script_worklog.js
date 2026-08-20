@@ -126,7 +126,7 @@
   }
 
   /** 줄 하나를 고칩니다. patch 에 담긴 칸만 나갑니다. */
-  async function 고치기(day, id, patch) {
+  async function 고치기(day, id, patch, 조용히) {
     const nick = me();
     if (!nick || !window.db) return;
     const 전 = 줄들(day)[id];
@@ -136,7 +136,9 @@
        치면 옛 값으로 계산되던 사고가 글자수 쪽에 있었어요. */
     const 뒤 = { ...전, ...patch, at: Date.now() };
     _lines[day] = { ...(_lines[day] || {}), [id]: 뒤 };
-    window.renderWorklogIfOpen?.();
+    /* ★ 조용히 = 지금 그 칸에 글을 쓰는 중이라는 뜻입니다. 다시 그리면
+       입력칸이 갈려서 커서가 날아가요 (2026-08-21 콩 신고). */
+    if (!조용히) window.renderWorklogIfOpen?.();
 
     try {
       await 내길(day, id).update({ ...patch, at: 뒤.at });
@@ -217,12 +219,34 @@
     });
   }
 
-  /** 글자수 칸이 바뀌었습니다. 저장은 바로, 흘리기는 3초 뒤에. */
-  function 글자수바뀜(day, id, 값) {
-    const v = Math.max(0, Math.min(MAX_CNT, Number(값) || 0));
-    고치기(day, id, { cnt: v });
+  /* =====================================================================
+     글자수 칸이 바뀌었습니다 — **세 박자로** 나눠 처리합니다
+     ---------------------------------------------------------------------
+       ① 지금 바로   손안의 값 (화면 합계가 곧바로 따라오게)
+       ② 0.8초 뒤    서버에 저장
+       ③ 3초 뒤      방 흐름에 한 줄
 
+     ★ 왜 저장까지 미루나 — 5,200 을 치면 5 / 52 / 520 / 5200 네 번
+       바뀝니다. 그때마다 저장하면 쓰기가 네 배가 돼요. 방금 status
+       다이어트로 아낀 것을 여기서 도로 까먹을 수는 없습니다.
+     ===================================================================== */
+  const _저장타이머 = {};
+
+  function 글자수바뀜(day, id, 값, 조용히) {
+    const v = Math.max(0, Math.min(MAX_CNT, Number(값) || 0));
     const k = day + "|" + id;
+
+    /* ① 손안의 값만 먼저 — 서버는 아직 안 부릅니다 */
+    const 전 = 줄들(day)[id];
+    if (!전) return;
+    _lines[day] = { ...(_lines[day] || {}), [id]: { ...전, cnt: v } };
+    if (!조용히) window.renderWorklogIfOpen?.();
+
+    /* ② 손을 멈추면 저장 */
+    clearTimeout(_저장타이머[k]);
+    _저장타이머[k] = setTimeout(() => 고치기(day, id, { cnt: v }, true), 800);
+
+    /* ③ 조금 더 있다가 방에 알리기 */
     clearTimeout(_타이머[k]);
     _타이머[k] = setTimeout(() => 흘려보내기(day, id), 묶음ms);
   }
@@ -708,11 +732,48 @@
     host.classList.add("wl-host");
   }
   window.Worklog_render = render;
+  /* =====================================================================
+     ★★ 다시 그리기 문지기 (2026-08-21 고침 — 콩: "커서가 옮겨가는 느낌")
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     글자수 칸에 4 를 치면
+        input → 고치기() → 다시 그리기 → **입력칸이 새 것으로 갈림**
+     이 됩니다. 브라우저는 새 칸을 원래 칸으로 못 알아봐서 커서가
+     날아가고, 이어서 4 를 더 치면 엉뚱한 데로 들어갔어요.
+     서버 응답(_ref.on)이 돌아올 때도 같은 일이 한 번 더 납니다.
+
+     [그래서]
+     **칸에 손이 올라가 있는 동안에는 절대 다시 그리지 않습니다.**
+     그리고 싶었던 것은 밀어 두었다가, 손을 뗄 때 한 번에 그립니다.
+
+     ※ 한글 조합(자소 분리)도 같은 뿌리의 사고예요 — 조합 중에 요소를
+       갈아치우면 "ㅎ ㅏ ㄴ" 으로 흩어집니다.
+     ===================================================================== */
+  let _밀린그리기 = false;
+
+  function 손올라가있나() {
+    const a = document.activeElement;
+    if (!a || !a.closest) return false;
+    const b = a.closest("[data-wl]");
+    if (!b) return false;
+    /* 글을 쓰는 칸일 때만 막습니다 — 단추는 눌러도 다시 그려야 하니까요 */
+    return b.dataset.wl === "txt" || b.dataset.wl === "cnt";
+  }
+
   window.renderWorklogIfOpen = function () {
     const host = el("wc-rows");
     if (!host || !/^wl/.test(String(window.Wordcount?._state?.().tab || ""))) return;
+    if (손올라가있나()) { _밀린그리기 = true; return; }
+    _밀린그리기 = false;
     render(window.Wordcount._state().tab, host);
   };
+
+  /** 손을 뗐습니다 — 밀어 둔 그리기가 있으면 이제 그립니다 */
+  function 밀린것그리기() {
+    if (!_밀린그리기) return;
+    _밀린그리기 = false;
+    window.renderWorklogIfOpen();
+  }
 
   /* ═══════════════════ 손가락 ═══════════════════ */
   function 지금날() { return W().dayKey(보는날()); }
@@ -798,13 +859,17 @@
     const b = e.target.closest("[data-wl]");
     if (!b) return;
     const id = b.dataset.id, day = 지금날();
+    /* ★ 둘 다 조용히(다시 안 그리게) 저장합니다. 화면에서 바뀌어야 할
+       것은 아래에서 **손으로** 짚어 고쳐요 — 통째로 다시 그리면
+       지금 쓰고 있는 칸이 갈려서 커서가 날아갑니다. */
     if (b.dataset.wl === "txt") {
       clearTimeout(b._t);
-      b._t = setTimeout(() => W().고치기(day, id, { t: b.value.slice(0, 120) }), 500);
+      b._t = setTimeout(() => W().고치기(day, id, { t: b.value.slice(0, 120) }, true), 500);
     }
     if (b.dataset.wl === "cnt") {
       const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
-      W().글자수바뀜(day, id, v);
+      W().글자수바뀜(day, id, v, true);
+      /* 합계 한 곳만 조용히 고쳐 둡니다 */
       const s = document.querySelector(".wl-sum b");
       if (s) s.textContent = 콤마(W().날합계(day));
     }
@@ -813,10 +878,16 @@
   /* 글자수 칸에서 손을 떼면 콤마를 다시 찍습니다 (쓰는 중에 찍으면
      커서가 튀어요) */
   document.addEventListener("blur", (e) => {
-    const b = e.target.closest?.("[data-wl='cnt']");
-    if (!b) return;
-    const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
-    b.value = v ? 콤마(v) : "";
+    const b = e.target.closest?.("[data-wl]");
+    if (!b || (b.dataset.wl !== "cnt" && b.dataset.wl !== "txt")) return;
+    if (b.dataset.wl === "cnt") {
+      const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
+      b.value = v ? 콤마(v) : "";
+    }
+    /* 칸을 떠났으니 이제 밀어 둔 그리기를 합니다.
+       ★ 조금 기다립니다 — 옆 칸으로 탭 이동하는 중이면 activeElement 가
+         아직 옮겨 붙지 않아서, 바로 물으면 "손을 뗐다" 고 잘못 봅니다. */
+    setTimeout(밀린것그리기, 60);
   }, true);
 
   /* ── 작품·회차 고르는 작은 창 ── */
