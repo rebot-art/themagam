@@ -55,7 +55,10 @@
 
   const el = (id) => document.getElementById(id);
 
-  let _tab   = "today";
+  /* [2026-08-21] 처음 보이는 탭이 새 ✍️ 오늘 로 바뀌었습니다.
+     index.html 의 .wc-tab.on 과 반드시 같아야 해요 — 다르면 켜진 탭과
+     그려지는 내용이 어긋납니다. */
+  let _tab   = "wl";
   let _today = {};        // { 닉네임: {total, base} }
   let _week  = {};        // { 날짜: { 닉네임: {total} } }
   let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
@@ -336,6 +339,38 @@
     if (!big || !rows) return;
 
     const mine = myRow();
+
+    /* =====================================================================
+       [2026-08-21] wl 로 시작하는 탭은 script_worklog.js 가 그립니다.
+       ---------------------------------------------------------------------
+       한 줄이 곧 할 일이자 글자수인 새 화면이에요. 여기서는 자리만 내주고,
+       예전 입력줄(전체 글자수·기준·어제 채우기)은 **감춥니다** — 새 탭은
+       줄마다 글자수를 적으니 두 길이 같은 합계를 건드리면 헷갈립니다.
+       ===================================================================== */
+    const 새탭 = /^wl/.test(_tab);
+    /* ★ querySelector 가 없는 자리에서도 돌아야 합니다 — 검사(checks.js)는
+       아주 작은 가짜 DOM 위에서 이 파일을 **실제로 실행**해 봅니다.
+       없는 손잡이를 잡으면 그 자리에서 통째로 멈춰요. */
+    const 찾기 = (c) => {
+      try { return document.querySelector?.("#wordcount-block ." + c) || null; }
+      catch (e) { return null; }
+    };
+    ["wc-memoline", "wc-inputline", "wc-minirow"].forEach(c => {
+      const n = 찾기(c);
+      if (n) n.hidden = 새탭;
+    });
+    /* 🕛 어제 채우기 서랍은 새 탭에서 늘 닫습니다 — 새 탭은 ‹ › 로
+       지난 날에 직접 적을 수 있어서 이 서랍이 할 일이 없어요. */
+    if (새탭) {
+      const y = 찾기("wc-yday");
+      if (y) y.hidden = true;
+      big.textContent  = fmt(Object.values(_today).reduce((a, v) => a + Number(v?.total || 0), 0));
+      unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
+      if (hint) hint.textContent = "";
+      const nav0 = el("wc-daynav"); if (nav0) nav0.hidden = true;
+      window.Worklog_render?.(_tab, rows);
+      return;
+    }
 
     if (_tab === "me") {
       /* 내 요일별 기록 — 여기서만 그래프를 씁니다.

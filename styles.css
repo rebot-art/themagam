@@ -9778,3 +9778,204 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
   font-weight: var(--fw-bold);
   vertical-align: 2px;
 }
+
+/* =====================================================================
+   ✍️ Work Log 줄 (2026-08-21) — script_worklog.js
+   ---------------------------------------------------------------------
+   한 줄이 곧 할 일이자 글자수입니다. 판 안에 들어가므로 글씨와 여백을
+   전부 한 단계씩 줄였어요 — 알약 판은 챗보다 좁습니다.
+   ===================================================================== */
+.wl-host{ padding: 2px 1px 4px; }
+
+/* ── 날짜·주 넘기기 ── */
+.wl-nav{ display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.wl-nav button{
+  border: 1px solid var(--border); background: var(--panel);
+  color: var(--sub-muted); width: 23px; height: 21px; border-radius: 6px;
+  cursor: pointer; font-size: 11px; line-height: 1; padding: 0; flex: 0 0 auto;
+}
+.wl-nav button:hover:not(:disabled){ background: var(--fill-2); color: var(--text); }
+.wl-nav button:disabled{ opacity: .35; cursor: default; }
+.wl-lbl{ flex: 1; text-align: center; font-size: 12px; font-weight: 700; color: var(--text); }
+.wl-back{ width: auto !important; padding: 0 7px !important; font-size: 10.5px !important; }
+
+/* ── 줄 ── */
+.wl-rows{ display: flex; flex-direction: column; gap: 4px; }
+.wl-row{
+  display: flex; align-items: center; gap: 6px; padding: 5px 6px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+}
+.wl-row.done{ background: var(--fill-1); }
+.wl-row.done .wl-txt{ text-decoration: line-through; opacity: .5; }
+.wl-chk{
+  width: 16px; height: 16px; flex: 0 0 auto; border: 1.5px solid var(--sub-muted);
+  border-radius: 5px; background: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff;
+}
+.wl-chk.on{ background: var(--ok, #5E8C61); border-color: var(--ok, #5E8C61); }
+.wl-txt{
+  flex: 1 1 60px; min-width: 0; border: none; background: none; color: var(--text);
+  font-size: 12.5px; padding: 2px 3px; border-radius: 5px; font-family: inherit;
+}
+.wl-txt::placeholder{ color: var(--sub-muted); }
+.wl-txt:focus, .wl-cnt:focus{ outline: none; background: var(--fill-1); }
+
+.wl-tag{
+  flex: 0 0 auto; font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+  cursor: pointer; border: 1px dashed var(--border); background: none;
+  color: var(--sub-muted); white-space: nowrap; max-width: 118px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.wl-tag:hover{ border-style: solid; color: var(--text); background: var(--fill-1); }
+.wl-tag.on{ border-style: solid; font-weight: 700; border-color: transparent; }
+
+.wl-stage{
+  flex: 0 0 auto; font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+  cursor: pointer; border: 1px solid transparent; font-weight: 700;
+  white-space: nowrap; user-select: none;
+}
+.wl-s-초고  { background: #F7EDD9; color: #B08640; border-color: #E9D9B6; }
+.wl-s-수정  { background: #F0E6F2; color: #8C5A93; border-color: #E2D0E6; }
+.wl-s-퇴고  { background: #F6E5DE; color: #C0654A; border-color: #EFCEC3; }
+.wl-s-비축  { background: #E2ECF5; color: #5A7FA6; border-color: #CFE0EF; }
+.wl-s-업로드{ background: #E4EFE4; color: #5E8C61; border-color: #CFE2CF; }
+
+/* 글자수 칸 — ★ 46px 은 너무 좁아 숫자가 잘렸습니다 (콩 지적 0821).
+   92px 로 두 배. 다섯 자리(12,000)까지 여유 있게 들어갑니다. */
+.wl-cw{ flex: 0 0 auto; position: relative; display: flex; align-items: center; }
+.wl-cnt{
+  width: 92px; text-align: right; font-variant-numeric: tabular-nums; font-size: 12.5px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+  color: var(--text); padding: 2px 16px 2px 7px; font-family: inherit;
+}
+.wl-cw i{ position: absolute; right: 5px; font-size: 9.5px; color: var(--sub-muted);
+  pointer-events: none; font-style: normal; }
+
+.wl-del{
+  flex: 0 0 auto; border: none; background: none; color: var(--sub-muted);
+  cursor: pointer; font-size: 13px; padding: 2px 3px; border-radius: 5px; line-height: 1;
+}
+.wl-del:hover{ background: var(--danger-soft); color: var(--on-danger-btn); }
+
+.wl-add{
+  margin-top: 6px; width: 100%; padding: 6px; border: 1px dashed var(--border);
+  border-radius: 8px; background: none; color: var(--sub-muted); cursor: pointer; font-size: 12px;
+}
+.wl-add:hover{ background: var(--fill-1); color: var(--text); }
+.wl-empty{ color: var(--sub-muted); font-size: 12px; text-align: center; padding: 16px 0; margin: 0; line-height: 1.7; }
+.wl-dim{ color: var(--sub-muted); font-size: 11px; }
+
+.wl-sum{ display: flex; align-items: baseline; gap: 6px; margin-top: 9px;
+  padding-top: 8px; border-top: 1px solid var(--border); }
+.wl-sum b{ font-size: 19px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.wl-sum span{ color: var(--sub-muted); font-size: 11.5px; }
+.wl-sum .wl-g{ margin-left: auto; }
+
+/* ── 🔥 방 흐름 ── */
+.wl-feed{ margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.wl-fh{ font-size: 11.5px; font-weight: 700; color: var(--sub-muted); margin-bottom: 5px; }
+.wl-fb{ display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
+.wl-fl{ display: flex; align-items: baseline; gap: 6px; font-size: 12px; padding: 2px 3px; border-radius: 5px; }
+.wl-fl.big{ background: var(--fill-1); font-weight: 600; }
+.wl-who{ flex: 0 0 auto; font-weight: 700; color: var(--text); }
+.wl-who.me{ color: var(--accent); }
+.wl-what{ flex: 1 1 auto; min-width: 0; color: var(--sub-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-what b{ color: var(--text); }
+.wl-ago{ flex: 0 0 auto; font-size: 10px; color: var(--sub-muted); }
+.wl-fempty{ font-size: 11.5px; color: var(--sub-muted); padding: 6px 2px; }
+
+/* ── 주간 세로 달력 ── */
+.wl-wk{ display: flex; flex-direction: column; gap: 3px; }
+.wl-d{ border: 1px solid var(--border); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.wl-d.today{ border-color: var(--accent); }
+.wl-dh{ display: flex; align-items: center; gap: 8px; padding: 6px 9px; cursor: pointer; user-select: none; }
+.wl-dh:hover{ background: var(--fill-1); }
+.wl-dw{ flex: 0 0 auto; font-size: 10.5px; color: var(--sub-muted); width: 13px; text-align: center; }
+.wl-dw.sun{ color: var(--accent); }
+.wl-dn{ flex: 0 0 auto; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; width: 19px; }
+.wl-dl{ flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--sub-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-dl b{ color: var(--text); font-weight: 700; }
+.wl-dc{ flex: 0 0 auto; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 700; }
+.wl-dc.zero{ color: var(--sub-muted); font-weight: 400; }
+.wl-dx{ flex: 0 0 auto; font-size: 9px; color: var(--sub-muted); width: 9px; transition: transform var(--anim-fast); }
+.wl-d.open .wl-dx{ transform: rotate(90deg); }
+.wl-db{ display: none; padding: 1px 9px 8px 40px; border-top: 1px dashed var(--border); }
+.wl-d.open .wl-db{ display: block; }
+.wl-di{ display: flex; align-items: center; gap: 7px; padding: 2px 0; font-size: 12px; }
+.wl-p{ flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 999px; font-weight: 700; }
+.wl-p.plain{ background: var(--fill-1); color: var(--sub-muted); }
+.wl-di .wl-n{ flex: 1 1 auto; min-width: 0; color: var(--sub-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-di .wl-c{ flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--text); }
+.wl-goto{ margin-top: 4px; border: none; background: none; color: var(--accent);
+  font-size: 11px; cursor: pointer; padding: 2px 0; }
+.wl-goto:hover{ text-decoration: underline; }
+
+/* ── 작품별 진도 ── */
+.wl-pj{ display: flex; flex-direction: column; gap: 7px; }
+.wl-pjr{ border: 1px solid var(--border); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.wl-pjh{ padding: 8px 10px; cursor: pointer; }
+.wl-pjh:hover{ background: var(--fill-1); }
+.wl-pjt{ display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+.wl-pjt .nm{ font-weight: 800; font-size: 13px; }
+.wl-pjt .ep{ font-size: 11.5px; color: var(--sub-muted); font-variant-numeric: tabular-nums; }
+.wl-pjt .ax{ margin-left: auto; font-size: 9px; color: var(--sub-muted); transition: transform var(--anim-fast); }
+.wl-pjr.open .ax{ transform: rotate(90deg); }
+.wl-pbar{ height: 6px; border-radius: 999px; background: var(--fill-1); overflow: hidden; display: flex; }
+.wl-pbar i{ display: block; height: 100%; }
+.wl-pjm{ display: flex; gap: 11px; margin-top: 5px; font-size: 11px; color: var(--sub-muted); flex-wrap: wrap; }
+.wl-pjm b{ color: var(--text); font-variant-numeric: tabular-nums; }
+.wl-pjb{ display: none; border-top: 1px dashed var(--border); padding: 8px 10px 10px; background: var(--fill-1); }
+.wl-pjr.open .wl-pjb{ display: block; }
+
+/* 회차표 — 15개씩 3열, 세로로 읽힙니다 (1~5 / 6~10 / 11~15) */
+.wl-epnav{ display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+  margin-bottom: 6px; font-size: 11px; color: var(--sub-muted); }
+.wl-epnav button{ border: 1px solid var(--border); background: var(--panel);
+  color: var(--sub-muted); width: 20px; height: 19px; border-radius: 5px;
+  cursor: pointer; font-size: 10px; padding: 0; line-height: 1; }
+.wl-epnav button:disabled{ opacity: .35; cursor: default; }
+.wl-eptbl{ display: grid; grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border); border-radius: 7px; overflow: hidden; margin-bottom: 6px; }
+.wl-epc{ border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 4px 7px; font-size: 11.5px; display: flex; gap: 5px; align-items: baseline;
+  min-height: 26px; font-variant-numeric: tabular-nums; background: var(--panel); }
+.wl-epc:nth-child(3n){ border-right: none; }
+.wl-epc i{ width: 5px; height: 5px; border-radius: 999px; flex: 0 0 auto; }
+.wl-epc .e{ font-weight: 700; flex: 0 0 auto; font-size: 11px; }
+.wl-epc .c{ color: var(--sub-muted); flex: 1 1 auto; text-align: right; }
+.wl-epc.none{ background: var(--fill-1); }
+.wl-epc.none .e{ color: var(--sub-muted); font-weight: 400; }
+.wl-legend{ display: flex; gap: 9px; font-size: 10.5px; color: var(--sub-muted); flex-wrap: wrap; align-items: center; }
+.wl-legend i{ display: inline-block; width: 7px; height: 7px; border-radius: 2px;
+  margin-right: 3px; vertical-align: middle; }
+.wl-wdel{ margin-left: auto; border: none; background: none; color: var(--sub-muted);
+  font-size: 10.5px; cursor: pointer; text-decoration: underline; }
+.wl-wdel:hover{ color: var(--on-danger-btn); }
+
+/* ── 작품·회차 고르는 작은 창 ── */
+.wl-pick{
+  position: fixed; z-index: 6400; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 9px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.2); padding: 9px; width: 206px; display: none;
+}
+.wl-pick.on{ display: block; }
+.wl-pick .t{ font-size: 10.5px; color: var(--sub-muted); margin: 0 0 4px; }
+.wl-pick .w{ display: block; width: 100%; text-align: left; border: 1px solid var(--border);
+  background: var(--panel); border-radius: 6px; padding: 4px 8px; font-size: 12px;
+  color: var(--text); cursor: pointer; margin-bottom: 3px; }
+.wl-pick .w.on{ background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+.wl-pick .dim{ font-size: 11px; color: var(--sub-muted); margin: 0 0 5px; }
+.wl-pick input{ width: 100%; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; background: var(--panel); color: var(--text);
+  margin-bottom: 5px; font-family: inherit; }
+.wl-pick input:focus{ outline: none; border-color: var(--accent); }
+.wl-pick .r2{ display: flex; gap: 4px; }
+.wl-pick .r2 button{ flex: 1; border: 1px solid var(--border); background: var(--fill-1);
+  border-radius: 6px; padding: 4px; font-size: 11.5px; cursor: pointer; color: var(--sub-muted); }
+.wl-pick .r2 button.go{ background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+
+/* ★ 판이 넓어야 한 줄에 다 들어갑니다 (콩 지정 530px).
+   챗(352)보다 넓지만, 여기가 이제 매일 쓰는 자리라 그만한 값을 합니다. */
+#dock-panel-wc{ width: min(530px, calc(100vw - 24px)); }

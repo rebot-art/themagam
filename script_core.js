@@ -530,6 +530,26 @@ window.AppSession = AppSession;
          목록을 다 불러온 뒤라야 제대로 세므로 조금 기다렸다 올립니다. */
       setTimeout(() => { try { window.saveTodoStat?.(); } catch (e) {} }, 1500);
 
+      /* =====================================================================
+         [2026-08-21] ✍️ Work Log 줄 — script_worklog.js
+         ---------------------------------------------------------------------
+         차례가 중요합니다.
+           ① listen()      내 줄을 받아옵니다
+           ② 기준맞추기()   지금 값을 "이미 셈한 것" 으로 표시합니다
+              ★ 이걸 빠뜨리면 판을 여는 순간 어제 적어 둔 글자수가
+                +5,200 +1,100 … 하고 방 전체에 우르르 흘러갑니다.
+           ③ 이어받기()     예전 할 일(todoItems)을 오늘 줄로 한 번 옮깁니다
+              (원본은 지우지 않아요 — 되돌릴 길을 남겨 둡니다)
+         ===================================================================== */
+      setTimeout(() => {
+        try {
+          window.Worklog?.listen();
+          setTimeout(() => {
+            try { window.Worklog?.기준맞추기(); window.Worklog?.이어받기(); } catch (e) {}
+          }, 1200);
+        } catch (e) {}
+      }, 1800);
+
       _statusIntervalId = setInterval(() => callIfFn("updateStatus", false), PRESENCE_POLL_MS);
 
       // ✅ [FIX] 크롬은 백그라운드 탭의 setInterval을 최소 60초로 늦춥니다.
