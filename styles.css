@@ -2861,6 +2861,35 @@ body.room-bg-on{
   font-weight: var(--fw-medium);
 }
 #modal #join-btn:hover{ background: #5C1A11; }
+/* ── 🚚 이사 안내 (2026-08-20) ──
+   임시 비밀번호 찾기로 가는 길. 입장 단추 바로 아래, 눈에 띄되 단추처럼
+   보이지는 않게 — 진짜 단추(입장하기)와 겨루면 안 되니까요.
+   왼쪽 굵은 세로줄과 옅은 살구빛 바탕으로 "안내문" 결을 냅니다.
+   ★ 이사가 끝나면 index.html 의 .join-moved 덩어리와 함께 지우면 됩니다. */
+#modal .join-moved{
+  display: block;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-left: 3px solid #B3372B;
+  border-radius: 0 9px 9px 0;
+  background: rgba(179,55,43,.07);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--anim-fast);
+}
+#modal .join-moved:hover{ background: rgba(179,55,43,.13); }
+#modal .join-moved b{ color: #B3372B; }
+#modal .join-moved > b{
+  display: block;
+  font-size: var(--fs-sm);
+  margin-bottom: 3px;
+}
+#modal .join-moved span{
+  display: block;
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  color: #6B5F52;
+}
 #modal .join-copy{
   text-align: center;
   font-size: var(--fs-2xs);
