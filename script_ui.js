@@ -1854,7 +1854,9 @@
     const emo = document.getElementById("head-clock-emo");
     if (ap) ap.textContent = h < 12 ? "AM" : "PM";
     if (t) t.textContent = `${h % 12 || 12}:${String(n.getMinutes()).padStart(2, "0")}`;
-    if (emo) emo.textContent = emojiFor(h);
+    /* [2026-08-21] 이모지 셋 (콩) — 하나면 시계 옆이 허전했어요.
+       CLOCK_EMOJI 가 시각대로 골라 준 하나를 셋으로 늘려 놓습니다. */
+    if (emo) emo.textContent = emojiFor(h).repeat(3);
   }
   tickHeadClock();
   setInterval(tickHeadClock, 1000);

@@ -666,6 +666,11 @@
     _seenOnline = null;   // 다시 붙을 때는 씨앗부터 (옛 목록으로 오알림 방지)
     listenBans();
     listenVice();          // 🏷️ 부방장 스티커 명단 (config/vice)
+    /* 📢 공지 목록 — [2026-08-21] 여기로 옮겨 왔습니다.
+       예전엔 아래 알약 판이 열릴 때 켜졌는데, 공지가 머리말로 올라가면서
+       그 자리가 없어졌어요. 안 읽은 글 빨간 점은 **판을 열기 전에**
+       켜져 있어야 뜻이 있으니, 입장할 때 바로 붙입니다. */
+    window.listenNoticeBoard?.();
     _statusRef = db.ref("status");
     _statusRef.on("value", snap => {
       const data = dropBanned(snap.val() || null);

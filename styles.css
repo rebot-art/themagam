@@ -2920,6 +2920,7 @@ body.room-bg-on{
 #mywork-modal,
 #forest-modal,
 #notice-modal,
+#files-modal,
 #record-modal-legacy-unused{
   position: fixed; inset: 0;
   display: none;
@@ -2934,6 +2935,7 @@ body.room-bg-on{
 #mywork-modal .modal-content,
 #forest-modal .modal-content,
 #notice-modal .modal-content,
+#files-modal .modal-content,
 #panel-modal .modal-content{
   width: min(460px, 100%);
   max-height: calc(100vh - 32px);
@@ -2951,6 +2953,9 @@ body.room-bg-on{
 /* [2026-08-09] 대숲 창을 130% 로 넓혔습니다 (1196 → 1555).
    min(…, 100%) 이라 좁은 화면에서는 여전히 화면 폭까지만 커집니다. */
 #forest-modal .modal-content{ width: min(1555px, 100%); }
+
+/* 📁 자료실 — 파일 이름이 길어서 460 은 좁습니다 (2026-08-21) */
+#files-modal .modal-content{ width: min(620px, 100%); }
 
 /* 목표·투두는 입력칸 몇 개뿐이라 좁아도 됩니다 (520 → 416) */
 #goals-modal .modal-content{ width: min(416px, 100%); }
@@ -3524,6 +3529,10 @@ input[type="range"]:focus{ box-shadow: none; }
   transition: background var(--anim-fast), color var(--anim-fast), transform var(--anim-fast);
 }
 .icon-btn svg{ width: 16px; height: 16px; display: block; }
+/* [2026-08-21] 📢 공지 단추 안에 빨간 점이 들어옵니다. 점은 position:
+   absolute 라 **기준이 될 자리**가 필요해요 — 없으면 화면 구석으로
+   날아갑니다 (채팅 탭에서는 .chat-tab 이 그 노릇을 했습니다). */
+.icon-btn{ position: relative; }
 .icon-btn:hover{ background: var(--fill-2); color: var(--text); }
 .icon-btn:active{ transform: scale(.94); }
 .icon-btn.danger{ color: var(--on-danger-btn); border-color: var(--danger-line); }
@@ -4821,7 +4830,14 @@ body.narrow-chat-focus .room-pulse{ display: none; }
    딱지를 붙여 목록을 훑기 쉽게 했습니다 (아이콘 그림 대신 글자라
    어떤 기기에서나 같게 보여요 — BGM 이모지를 걷어낸 이유와 같습니다).
    ===================================================================== */
-.files-board{ display: flex; flex-direction: column; height: 100%; min-height: 0; }
+/* [2026-08-21] 알약 판 → 가운데 창으로 옮겼습니다.
+   판에서는 부모 키가 정해져 있어 height:100% 가 통했지만, 창 안에서는
+   부모가 내용만큼 늘어나는 자리라 100% 가 0 으로 접힙니다.
+   그래서 **최대 키**만 정하고 내용이 알아서 자라게 둡니다. */
+.files-board{
+  display: flex; flex-direction: column; min-height: 0;
+  max-height: min(560px, calc(100dvh - 190px));
+}
 .fl-usage{
   flex: none; display: flex; align-items: center; gap: 8px;
   padding: 7px 10px; font-size: 11px; color: var(--text-3, #8A93A2);
@@ -9654,7 +9670,8 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
    껍데기입니다. 그런데 openNoticeBoard() 가 그것을 display:flex 로
    켜요 — 목록을 그리는 조건이 그 값이거든요. 그래서 값은 그대로 두고
    **보이는 것만** 막습니다. (style.display 는 여전히 "flex" 입니다) */
-.dock-mode #notice-modal{ display: none !important; }
+/* [2026-08-21] 공지가 머리말로 올라가면서 겉창을 다시 씁니다 — 감추면 안 돼요.
+   (지웠던 규칙: .dock-mode #notice-modal{ display:none !important }) */
 
 /* =====================================================================
    좁은 화면 — 판 하나가 폭을 다 씁니다

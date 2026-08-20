@@ -281,7 +281,7 @@
      손가락 — 판 안쪽 상자에 답니다 (대숲에서 데인 자리)
      ===================================================================== */
   function bind() {
-    const host = el("dock-body-files");
+    const host = el("files-modal");
     if (!host || _bound) return;
     _bound = true;
 
@@ -296,15 +296,21 @@
     });
   }
 
-  /** 알약 판이 열릴 때 부릅니다 */
+  /* [2026-08-21] 아래 알약 → 머리말 가운데 창으로 옮겼습니다.
+     껍데기(#files-modal)는 index.html 에 붙박이로 있고, 여기서는 안만
+     채웁니다. 판 시절과 달리 host 를 만들 필요가 없어요. */
   function openFiles() {
-    const host = el("dock-body-files");
-    if (host && !el("files-board")) {
-      host.innerHTML = `<div class="files-board" id="files-board"></div>`;
-    }
+    const m = el("files-modal");
+    if (!m) return;
     bind();
+    m.style.display = "flex";
     listen();
     render();
   }
-  window.openFiles = openFiles;
+  function closeFiles() {
+    const m = el("files-modal");
+    if (m) m.style.display = "none";
+  }
+  window.openFiles  = openFiles;
+  window.closeFiles = closeFiles;
 })();

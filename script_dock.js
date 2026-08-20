@@ -51,8 +51,12 @@
      panel: 제 판을 안 갖고 **남의 판을 같이 쓰는** 알약 (수다방)
      tab  : 그 판에서 켜 둘 탭
      ===================================================================== */
+  /* [2026-08-21 자리 옮김 — 콩]
+     📢 공지 · 📁 자료실은 **머리말로 올라갔습니다** (대숲과 같은 결로
+     가운데 창이 뜹니다). 📓 Letters 전체 기록은 알약에서 뺐어요 —
+     알약 줄 위 📊 띠에서 각자 골라 보면 되니까요.
+     남은 아래 줄은 "함께 떠드는 것 → 오늘 할 일 → 내가 쌓는 것" 순서입니다. */
   const DOCK = [
-    { id: "notice", label: "📢 공지",            stay: true,  size: 1.2, move: null },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -79,27 +83,19 @@
     /* ♪ BGM (2026-08-13, script_music.js) — 유튜브 추천 리스트 + 작은
        플레이어. 접어도 소리가 이어집니다(판은 hidden 으로 가려질 뿐,
        iframe 은 DOM 에 남으니까). 키는 위 가장자리로 조절. */
-    /* [2026-08-14] 기본 키를 도로 전부 보이게(0.5 → 0.72) — "영상까지만"을
-       기본으로 했더니 처음 여는 사람이 까만 상자만 보고 뭘 눌러야 할지
-       몰랐습니다(실제 제보 ㅋㅋ). 리스트·입력칸이 보여야 쓰는 법을 알아요.
-       영상만 남기고 싶은 사람은 위 가장자리를 아래로 끌어 줄이면 되고,
-       줄인 키는 이 기기에 남습니다. */
     { id: "music", label: "♪ BGM", stay: true, size: 0.72, move: null, drag: true, resize: true },
-    /* 📁 자료실 (2026-08-18) — 한글·엑셀 같은 자료를 올리고 내려받는 자리.
-       BGM 오른쪽 (콩 지정). 목록이 길어지니 키울 수 있게 resize. */
-    { id: "files", label: "📁 자료실", stay: true, size: 1.35, move: null, drag: true, resize: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다.
-       [2026-08-13] 자리를 전체기록 앞으로 — 왼쪽(소통)과 오른쪽(기록)을
-       가르는 기준선 역할입니다. */
+       [2026-08-13] 자리를 기준선으로 — 왼쪽(함께 떠드는 것)과
+       오른쪽(내가 쌓는 것)을 가릅니다. */
     { id: "todo",   label: "",                   stay: false, size: 0, move: null, inline: true },
-    { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     /* [2026-08-16] 🆘 살려주세요‼️ — "이거 맞나요?" 하고 후다닥 묻는
        익명 자리. 맞춤법·단어·문장. 채택도 하트도 없고 💡 아하 스티커만
        겹쳐 붙습니다 (채택은 은근히 자존심 문제라 아무도 답을 안 달게 돼요).
        ★ id 는 help 그대로 둡니다 — 이름표만 바뀐 것이고, id 를 바꾸면
-         저장해 둔 판 높이·자리가 통째로 날아갑니다. */
-    { id: "help",   label: "🆘 살려주세요‼️",      stay: true,  size: 1.35, move: null, drag: true, resize: true },
+         저장해 둔 판 높이·자리가 통째로 날아갑니다.
+       [2026-08-21] 이름표만 📓 표현 공부‼️ 로 (콩). 하는 일은 그대로예요. */
+    { id: "help",   label: "📓 표현 공부‼️",      stay: true,  size: 1.35, move: null, drag: true, resize: true },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
@@ -322,14 +318,11 @@
       if (node && body) body.appendChild(node);
     });
 
-    /* 📢 공지 — 원래 가운데 창의 알맹이를 그대로 가져옵니다.
-       (손가락이 .modal-content 에 걸려 있어서 통째로 옮겨야 합니다) */
-    const nt = document.querySelector("#notice-modal .modal-content");
-    const ntBody = el("dock-body-notice");
-    if (nt && ntBody) {
-      nt.querySelector(".modal-x")?.remove();   // 판에는 우리 ✕ 가 있습니다
-      ntBody.appendChild(nt);
-    }
+    /* [2026-08-21] 📢 공지 알맹이 옮기기 — **없앴습니다.**
+       공지가 머리말로 올라가면서 제 가운데 창을 그대로 쓰게 됐어요.
+       (예전엔 알맹이를 알약 판으로 끌어오고 겉창은 CSS 로 감췄습니다.
+        styles.css 의 `.dock-mode #notice-modal{display:none}` 도 함께
+        걷어냈으니, 되살릴 때는 둘을 같이 되돌려야 합니다.) */
 
     /* =====================================================================
        🏅 업적 — 원래 칸을 **지우지 말고 숨겨 둡니다** (고침 2026-08-12)
@@ -622,12 +615,6 @@
       const t = el("dock-panel-achv")?.querySelector(".dock-title");
       if (t) t.innerHTML = "🏅 업적" + (n ? ` <span class="dock-count">${n}</span>` : "");
     }
-    /* 📢 공지 — **여는 일은 공지판 제 손으로** 시킵니다 (고침 2026-08-12).
-       render() 는 #notice-modal 의 display 가 flex 일 때만 도는데,
-       알약은 그 값을 건드리지 않아서 목록이 영영 안 그려졌습니다.
-       ("아직 공지가 없어요" 도 아니고 아예 빈 칸이었어요 — 그리는
-        일 자체가 없었으니까요.) 겉창은 CSS 로 감춰 뒀습니다. */
-    if (pid === "notice") { window.listenNoticeBoard?.(); window.openNoticeBoard?.(); }
     /* 판을 열면 그 방은 읽은 것으로 — 쌓여 있던 숫자를 털어 냅니다.
        ★ 알약의 배지만 지우면 안 됩니다. 숫자는 script_chatty.js 가
          들고 있어서, 판을 닫는 순간 옛 숫자가 도로 올라와요. */
@@ -635,7 +622,6 @@
     if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
     if (pid === "pub")    window.openPubReview?.();
     if (pid === "help")   window.openHelp?.();
-    if (pid === "files")  window.openFiles?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
@@ -648,7 +634,6 @@
     const pid = panelOf(id);
     const p = el("dock-panel-" + pid);
     if (p) p.hidden = true;
-    if (pid === "notice") window.closeNoticeBoard?.();
     setTimeout(syncBadges, 0);      // 닫으면 다시 쌓이기 시작합니다
     _open.delete(pid);
     /* ✍️ 펜이 놓여 있던 판을 닫으면 펜은 다른 방으로 옮겨 둡니다 —
@@ -791,12 +776,12 @@
          펜이 저쪽에 있어도 눈은 여기 있으니까요. */
     badge("chat",   _open.has("chat")   ? 0 : 읽기("chat-tab-badge-main"));
     badge("chatty", _open.has("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
-    const nd = el("notice-dot");
-    dot("notice", !_open.has("notice") && !!nd && !nd.classList.contains("hidden"));
+    /* [2026-08-21] 공지 빨간 점은 이제 머리말이 직접 켭니다
+       (script_notice.js 의 paintDot 이 #notice-dot-head 를 함께 칠해요). */
   }
 
   function watchBadges() {
-    ["chat-tab-badge-main", "chat-tab-badge-chatty", "notice-dot"].forEach(id => {
+    ["chat-tab-badge-main", "chat-tab-badge-chatty"].forEach(id => {
       const n = el(id);
       if (!n) return;
       try {

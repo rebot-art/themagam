@@ -176,10 +176,14 @@
     const s = seenAt();
     return _list.filter(n => Number(n.at || 0) > s).length;
   }
+  /* [2026-08-21] 공지 단추가 둘이 됐습니다 — 채팅 머리말과 방 머리말.
+     안 읽은 글 표시는 **둘 다** 켜 줘야 해요. 한쪽만 켜면 챗을 접어 둔
+     사람은 새 공지가 온 줄 모릅니다. */
   function paintDot() {
-    const dot = el("notice-dot");
-    if (!dot) return;
-    dot.classList.toggle("hidden", unreadCount() === 0);
+    const 없음 = unreadCount() === 0;
+    ["notice-dot", "notice-dot-head"].forEach(id => {
+      el(id)?.classList.toggle("hidden", 없음);
+    });
   }
 
   /* =====================================================================
@@ -349,8 +353,10 @@
        지키고 있었으니 [＋ 새 공지] 가 또 침묵했습니다 — 같은 자리에서
        세 번째 사고입니다 (0806 나의작업 → 0811 공지 → 오늘).
        이제 상자가 어디로 이사 갔든 **상자 자신**을 찾아서 답니다. */
-    const box = document.querySelector("#dock-body-notice .modal-content")
-             || modal.querySelector(".modal-content") || modal;
+    /* [2026-08-21] 공지가 머리말로 올라가면서 **이사가 끝났습니다** —
+       상자는 다시 겉창 안에 있어요. 그래도 "겉창"이 아니라 **상자**를
+       찾아서 다는 버릇은 그대로 둡니다 (위 세 번의 사고가 그래서 났어요). */
+    const box = modal.querySelector(".modal-content") || modal;
 
     box.addEventListener("click", async ev => {
       const btn = ev.target.closest("[data-nt]");
