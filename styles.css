@@ -9979,3 +9979,10 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
 /* ★ 판이 넓어야 한 줄에 다 들어갑니다 (콩 지정 530px).
    챗(352)보다 넓지만, 여기가 이제 매일 쓰는 자리라 그만한 값을 합니다. */
 #dock-panel-wc{ width: min(530px, calc(100vw - 24px)); }
+
+/* [2026-08-21] 아래 줄 숫자가 둘이 됐습니다 — 오늘 늘어난 양 · 원고 분량 */
+.wl-sum .wl-t{ font-size: 11.5px; color: var(--sub-muted); }
+.wl-sum .wl-t b{ font-size: 19px; color: var(--accent); }
+.wl-sum .wl-m{ font-size: 11.5px; color: var(--sub-muted); }
+/* 딱지가 줄 맨 앞으로 왔습니다 — 눈에 먼저 걸려야 누르니까요 */
+.wl-row .wl-tag{ order: 0; }

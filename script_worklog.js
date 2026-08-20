@@ -217,7 +217,10 @@
     Object.keys(_lines).forEach(day => {
       Object.entries(_lines[day] || {}).forEach(([id, r]) => {
         const k = day + "|" + id;
-        if (_보낸[k] === undefined) _보낸[k] = Number(r.cnt) || 0;
+        if (_보낸[k] !== undefined) return;
+        /* 이미 적힌 글자수가 있으면 그건 예전에 셈에 들어간 값입니다.
+           아직 안 적었으면 물려받은 기준(base)에서 시작해요. */
+        _보낸[k] = Number(r.cnt) || Number(r.base) || 0;
       });
     });
   }
@@ -329,21 +332,67 @@
     if (켜짐) { try { window.achvBump?.("cTodo"); } catch (e) {} }
   }
 
+  /* =====================================================================
+     ★★ 지난 분량 물려받기 (2026-08-21 고침 — 콩이 짚은 계산 구멍)
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     어제 1화를 3,000자까지 썼습니다. 오늘 그 1화를 퇴고해서 2,500자가
+     됐어요. 오늘 새 줄에 2,500 을 적으면 —
+
+         기준이 0 이라 **2,500자를 새로 쓴 것**으로 잡혔습니다.
+         실제로 오늘 한 일은 −500자인데요.
+
+     줄은 날짜별로 저장되니까, 오늘 만든 줄은 "이 회차가 어제까지 몇 자
+     였는지" 를 몰랐던 것입니다.
+
+     [그래서]
+     회차 딱지를 붙이는 순간 **그 회차의 지난 마지막 값**을 기준으로
+     물려받습니다. 예전 글자수 기능의 base 를 하루 단위에서 **회차
+     단위**로 옮긴 셈이에요 — 새 개념이 아니라 제자리를 찾은 것입니다.
+
+         어제 1화 3,000  →  오늘 딱지 붙임 → 기준 3,000
+         오늘 2,500 적음 →  2,500 − 3,000 = −500 → 조용, 합계 0   ✅
+         오늘 3,500 까지 →  +500자                                 ✅
+
+     ★ 이미 글자수를 적어 둔 줄에 뒤늦게 딱지를 붙이면, **이미 셈한 것은
+       되돌리지 않습니다.** 하루 합계는 줄어들지 않는다는 규칙(③)을
+       지켜야 하니까요. 그래서 딱지를 **줄 맨 앞**에 두었습니다 —
+       숫자를 적기 전에 먼저 고르게 하려고요 (콩 요청 0821).
+     ===================================================================== */
+  function 지난분량(wid, ep, 뺄id) {
+    if (!wid || !ep) return 0;
+    let 최신 = null;
+    Object.values(_lines).forEach(rows => Object.entries(rows || {}).forEach(([id, r]) => {
+      if (id === 뺄id) return;
+      if (r.w !== wid || String(r.ep) !== String(ep)) return;
+      const t = Number(r.at) || 0;
+      if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
+    }));
+    return 최신 ? 최신.cnt : 0;
+  }
+
   async function 딱지붙이기(day, id, w, ep) {
     const r = 줄들(day)[id];
     if (!r) return;
-    const 전회차 = r.ep || "";
     const patch = {};
     patch.w  = w || null;
     patch.ep = (ep || "").slice(0, MAX_EP);
     if (patch.w && !r.stage) patch.stage = "초고";
     if (!patch.w && !patch.ep) patch.stage = null;
+
+    /* 이 회차를 전에 쓴 적이 있으면 거기서 이어 갑니다 */
+    const 물려받을것 = 지난분량(patch.w, patch.ep, id);
+    patch.base = 물려받을것 || null;
+
     await 고치기(day, id, patch);
 
-    /* 없던 회차가 생겼을 때만 — 고쳐 쓴 것으로는 안 흘립니다 */
-    if (patch.ep && patch.ep !== 전회차) {
-      await 흐름에(day, { kind: "start", ep: patch.ep });
-    }
+    /* 앞으로의 셈만 기준을 옮깁니다 — 이미 나간 것은 되돌리지 않아요 */
+    const k = day + "|" + id;
+    _보낸[k] = Math.max(Number(_보낸[k]) || 0, 물려받을것);
+
+    /* [2026-08-21] "45화 시작" 은 **빼기로 했습니다** (콩).
+       회차를 붙일 때마다 흘러서 흐름이 시끄러웠어요. 남은 것은
+       +글자수 와 마침 둘뿐입니다. */
   }
 
   async function 상태돌리기(day, id) {
@@ -573,19 +622,38 @@
       const 상태 = r.stage
         ? `<span class="wl-stage wl-s-${r.stage}" data-wl="stage" data-id="${id}" title="눌러서 바꾸기">${r.stage}</span>`
         : "";
+      /* ★ [2026-08-21 콩] 작품·상태 딱지가 **내용보다 앞**에 옵니다.
+         계산이 회차 기준을 물려받는 구조라, 숫자를 적기 **전에** 먼저
+         고르는 게 중요해졌어요. 뒤에 있으면 다들 안 누르고 지나갑니다. */
       return `<div class="wl-row${r.done ? " done" : ""}">
         <button class="wl-chk${r.done ? " on" : ""}" data-wl="chk" data-id="${id}"
                 aria-label="마침" aria-pressed="${r.done}">${r.done ? "✓" : ""}</button>
+        ${딱지}${상태}
         <input class="wl-txt" data-wl="txt" data-id="${id}" value="${esc(r.t)}"
                maxlength="120" placeholder="무엇을 했나요">
-        ${딱지}${상태}
         <span class="wl-cw"><input class="wl-cnt" data-wl="cnt" data-id="${id}"
               value="${r.cnt ? 콤마(r.cnt) : ""}" placeholder="0" inputmode="numeric"><i>자</i></span>
         <button class="wl-del" data-wl="del" data-id="${id}" title="이 줄 지우기">✕</button>
       </div>`;
     }).join("") : `<p class="wl-empty">이 날은 아직 비어 있어요.<br>아래에서 한 줄 적어 보세요.</p>`;
 
-    const 합 = W().날합계(day);
+    /* =====================================================================
+       ★ 아래 줄에 숫자가 **둘** 입니다 (2026-08-21 — 콩이 짚은 혼동)
+       ---------------------------------------------------------------------
+       예전엔 "합계" 하나였는데, 그게 가리키는 게 두 가지였어요.
+         · 오늘 +N자  = 오늘 **늘어난** 양. 업적·흐름이 보는 바로 그 숫자라
+                        wordlog 에서 그대로 가져옵니다 (따로 세면 어긋나요).
+         · 원고 M자   = 지금 원고가 몇 자인가. 줄에 적힌 값의 합입니다.
+       퇴고로 깎으면 오른쪽만 줄고 왼쪽은 그대로예요 — 그날 한 일은
+       한 일이니까요.
+       ===================================================================== */
+    const 원고 = W().날합계(day);
+    let 오늘늘 = 0;
+    try {
+      const t = window.Wordcount?._state?.().today;
+      if (오늘인가 && t) 오늘늘 = Number(t[window.myNick || ""]?.total || 0);
+      else rows.forEach(([, r]) => { 오늘늘 += Math.max(0, (Number(r.cnt)||0) - (Number(r.base)||0)); });
+    } catch (e) {}
     const 회 = rows.filter(([, r]) => r.ep && r.cnt > 0).map(([, r]) => 화(r.ep)).join(" · ");
     const 한일 = rows.filter(([, r]) => r.done).length;
 
@@ -597,7 +665,9 @@
       </div>
       <div class="wl-rows">${줄HTML}</div>
       <button class="wl-add" data-wl="add">＋ 한 줄 더</button>
-      <div class="wl-sum"><b>${콤마(합)}</b><span>자</span>
+      <div class="wl-sum">
+        <span class="wl-t">오늘 <b>+${콤마(오늘늘)}</b>자</span>
+        <span class="wl-m">원고 ${콤마(원고)}자</span>
         <span class="wl-g">${회 ? esc(회) + " · " : ""}${한일}/${rows.length} 마침</span></div>
       ${흐름HTML()}`;
   }
@@ -612,6 +682,8 @@
       const 내것 = f.nick === (window.myNick || "");
       let 말;
       if (f.kind === "done")       말 = `<b>${esc(화(f.ep || ""))} 마침</b>${f.snap ? " · " + 콤마(f.snap) + "자" : ""} 🎉`;
+      /* "시작" 은 더 이상 만들지 않습니다 (2026-08-21 콩). 오늘 이미
+         쌓인 옛 줄이 있을 수 있어 읽기만 남겨 둡니다. */
       else if (f.kind === "start") 말 = `<b>${esc(화(f.ep || ""))}</b> 시작`;
       else                         말 = `+${콤마(f.add)}자`;
       return `<div class="wl-fl${f.kind === "done" ? " big" : ""}">
@@ -898,9 +970,11 @@
     if (b.dataset.wl === "cnt") {
       const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
       W().글자수바뀜(day, id, v, true);
-      /* 합계 한 곳만 조용히 고쳐 둡니다 */
-      const s = document.querySelector(".wl-sum b");
-      if (s) s.textContent = 콤마(W().날합계(day));
+      /* 오른쪽 "원고" 숫자만 조용히 고쳐 둡니다.
+         왼쪽 "오늘 +N자" 는 서버가 셈해 주는 값이라, 3초 뒤 흘려보내고
+         나서 저절로 따라옵니다 — 여기서 미리 손대면 둘이 어긋나요. */
+      const m = document.querySelector(".wl-sum .wl-m");
+      if (m) m.textContent = `원고 ${콤마(W().날합계(day))}자`;
     }
   });
 
