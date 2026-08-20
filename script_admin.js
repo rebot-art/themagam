@@ -213,6 +213,7 @@
     loadForest();
     loadAllowList();
     loadBanList();
+    loadHello();
     if (isOwner) loadStaffList();
   }
 
@@ -1393,6 +1394,45 @@
      ★ staff 쓰기는 보안규칙에서 **방장 uid 만** 받습니다. 운영진이
        콘솔로 자기 동료를 늘리는 길은 없어요.
      ===================================================================== */
+  /* =====================================================================
+     👋 입장 인사 (2026-08-20) — config/hello = { text, at }
+     ---------------------------------------------------------------------
+     걸어 두면 들어오는 사람에게 가운데 큰 카드로 뜹니다. 비우면 안 떠요.
+     ★ at 을 함께 적는 이유 — 멤버 쪽이 "하루 한 번" 을 셀 때 이 값으로
+       **문구가 바뀌었는지**를 압니다. 바뀌면 그날 다시 한 번 보여줘요.
+       그래서 내용이 같아도 [인사 걸기] 를 누르면 다시 돕니다.
+     ===================================================================== */
+  async function loadHello() {
+    const ta = el("adm-hello");
+    if (!ta) return;
+    try {
+      const v = (await db.ref("config/hello").once("value")).val();
+      ta.value = String(v?.text || "");
+    } catch (e) {}
+  }
+
+  async function saveHello() {
+    const t = String(el("adm-hello")?.value || "").trim().slice(0, 200);
+    if (!t) { msg("adm-hello-msg", "문구를 적어 주세요. (내리려면 [내리기])", true); return; }
+    try {
+      await db.ref("config/hello").set({ text: t, at: Date.now() });
+      msg("adm-hello-msg", "👋 걸었어요. 들어오는 분들에게 오늘 한 번씩 보입니다.");
+    } catch (e) {
+      msg("adm-hello-msg", "걸지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  async function clearHello() {
+    if (!confirm("입장 인사를 내릴까요? 아무에게도 안 뜨게 됩니다.")) return;
+    try {
+      await db.ref("config/hello").remove();
+      const ta = el("adm-hello"); if (ta) ta.value = "";
+      msg("adm-hello-msg", "내렸어요.");
+    } catch (e) {
+      msg("adm-hello-msg", "내리지 못했어요.", true);
+    }
+  }
+
   async function loadStaffList() {
     const box = el("adm-staff-list");
     if (!box) return;
@@ -2172,6 +2212,10 @@
       if (!el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
     });
     /* 🔐 입장 승인 · 🚫 내보내기 */
+    /* 👋 입장 인사 */
+    el("adm-hello-save")?.addEventListener("click", saveHello);
+    el("adm-hello-clear")?.addEventListener("click", clearHello);
+
     /* 🛡️ 운영진 명단 (방장에게만 보이는 칸) */
     el("adm-staff-add")?.addEventListener("click", () => addStaff(el("adm-staff-nick")?.value));
     el("adm-staff-nick")?.addEventListener("keydown", e => {

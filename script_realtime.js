@@ -595,6 +595,62 @@
     return "";
   }
 
+  /* =====================================================================
+     👋 입장 인사 (2026-08-20) — 들어오면 화면 가운데 큰 카드
+     ---------------------------------------------------------------------
+     [왜 가운데 큰 카드인가] 오른쪽 아래 토스트도 만들어 봤지만, 이 방의
+     쓸모는 "안 읽고 지나치는 걸 막는 것" 입니다(콩). 뒤를 살짝 어둡게
+     덮고 가운데 세우면 안 볼 수가 없어요. 대신 **저절로 안 닫힙니다** —
+     [확인]을 눌러야 사라집니다.
+
+     [확인을 누르면 챗창이 열립니다] "발자국 찍기" 를 부탁하는 인사라,
+     닫고 나서 챗을 또 찾아 눌러야 하면 절반은 그냥 지나가요. 문을 열어
+     주는 데까지가 이 인사의 일입니다.
+
+     [언제 뜨나]  config/hello/{text, at} 에 문구가 **걸려 있을 때만.**
+     지우면 아무에게도 안 뜹니다 — 공지 핀과 같은 결이에요.
+     같은 문구를 하루에 여러 번 보여주면 잔소리가 되므로 **하루 한 번**,
+     다만 방장이 문구를 바꾸면(at 이 바뀌면) 그날 다시 한 번 보여줍니다.
+     기억은 이 기기에만 남습니다(AppStore).
+     ===================================================================== */
+  const HELLO_KEY = "helloSeen";        // "YYYY-MM-DD|at"
+
+  async function showHelloOnce() {
+    if (!myNick || !window.db) return;
+    let v = null;
+    try { v = (await db.ref("config/hello").once("value")).val(); } catch (e) { return; }
+    const text = String(v?.text || "").trim();
+    if (!text) return;                                   // 안 걸려 있으면 조용히
+    const at = Number(v?.at || 0);
+    const 오늘 = ymd(Date.now());
+    const 도장 = `${오늘}|${at}`;
+    try { if (AppStore.getItem(HELLO_KEY) === 도장) return; } catch (e) {}
+
+    const veil = document.createElement("div");
+    veil.className = "hello-veil";
+    veil.innerHTML = `
+      <div class="hello-card" role="dialog" aria-modal="true" aria-label="입장 인사">
+        <div class="hello-ic">👋</div>
+        <p class="hello-t">${escapeHtml(text).replace(/\n/g, "<br>")}</p>
+        <button type="button" class="hello-ok">좋아요!</button>
+      </div>`;
+    document.body.appendChild(veil);
+    requestAnimationFrame(() => veil.classList.add("on"));
+
+    const 닫기 = () => {
+      try { AppStore.setItem(HELLO_KEY, 도장); } catch (e) {}
+      veil.classList.remove("on");
+      setTimeout(() => veil.remove(), 300);
+      /* 챗창을 열어 줍니다 — 발자국을 찍으라고 부른 인사니까요 */
+      try { window.dockOpen?.("chat"); } catch (e) {}
+    };
+    veil.querySelector(".hello-ok").addEventListener("click", 닫기);
+    /* ★ 바깥을 눌러도 안 닫습니다 — 실수로 흘려보내지 않게(콩).
+       [확인] 하나만이 문입니다. */
+    setTimeout(() => veil.querySelector(".hello-ok")?.focus(), 340);
+  }
+  window.showHelloOnce = showHelloOnce;
+
   function dropBanned(data) {
     if (!data || !_banned) return data;
     let hit = false;

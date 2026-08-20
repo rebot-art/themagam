@@ -468,6 +468,10 @@ window.AppSession = AppSession;
       //         (브라우저는 클릭 전에 소리를 못 내게 막습니다. 지금이 그 클릭 직후예요)
       try { await window.afterJoinInitAlive?.(); } catch(e){ console.warn("[afterJoinInitAlive failed]", e); }
 
+      // ✅ 3-2-A) 👋 입장 인사 — 방장이 걸어 둔 문구가 있으면 가운데 카드로.
+      //           알약 줄이 다 선 뒤에 불러야 [확인] 이 챗창을 열 수 있어요.
+      setTimeout(() => { try { window.showHelloOnce?.(); } catch(e){} }, 600);
+
       // ✅ 3-2-0) 📊 오늘 접속 띠 — 켜 둔 기기에서만 구독을 겁니다
       //           (꺼 둔 사람은 읽지도 않아요)
       try { window.startPulse?.(); } catch(e){ console.warn("[startPulse failed]", e); }

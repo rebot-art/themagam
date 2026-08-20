@@ -4689,6 +4689,52 @@ html[data-unzoom] #dock-bar{
 .help-send:active{ transform: scale(.96); }
 .help-note{ margin: 0; font-size: 11px; color: var(--text-3, #8A93A2); flex: none; }
 
+/* =====================================================================
+   👋 입장 인사 (2026-08-20) — 들어오면 화면 가운데 큰 카드
+   ---------------------------------------------------------------------
+   ★ 저절로 안 닫힙니다. [확인] 을 눌러야 사라지고, 그때 챗창이 열려요.
+     안 읽고 지나치는 걸 막는 것이 이 카드의 유일한 일입니다.
+   ★ 뒤 덮개는 옅게(.28) — 방을 가리는 게 아니라 "잠깐 이것부터" 라는
+     결이라, 완전히 캄캄하게 덮으면 위압적입니다.
+   ===================================================================== */
+.hello-veil{
+  position: fixed; inset: 0; z-index: 9700;
+  display: grid; place-items: center;
+  background: rgba(30,26,24,.28);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.hello-veil.on{ opacity: 1; pointer-events: auto; }
+.hello-card{
+  width: min(420px, 90vw);
+  background: var(--modal-bg, #FFFDF6);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r-lg, 16px);
+  padding: 30px 28px 24px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(40,30,20,.28);
+  /* 톡 튀어나오는 느낌 — 스르륵보다 "불렀다" 는 인상이 납니다 */
+  transform: scale(.9) translateY(10px);
+  transition: transform .32s cubic-bezier(.2,.9,.3,1.2);
+}
+.hello-veil.on .hello-card{ transform: none; }
+.hello-ic{ font-size: 44px; line-height: 1; }
+.hello-t{
+  margin: 14px 0 0;
+  font-size: var(--fs-md);
+  line-height: 1.75;
+  color: var(--text-1);
+  white-space: pre-line;          /* 방장이 줄을 나눠 적으면 그대로 */
+}
+.hello-ok{
+  margin-top: 20px; width: 100%;
+  background: #4A140D; color: #FFFDF6; border: none;
+  border-radius: 9px; padding: 12px;
+  font: inherit; font-size: var(--fs-md); font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.hello-ok:hover{ background: #5C1A11; }
+
 /* ── 📊 오늘 접속 띠 (2026-08-18) ──
    알약 줄 바로 위, 24칸 막대. 색은 테마 포인트색(--accent)을 따라갑니다
    — BGM 노브와 같은 결이에요. 기본은 꺼짐이라 이 상자는 켠 사람 화면에만
