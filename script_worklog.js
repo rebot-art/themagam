@@ -158,6 +158,9 @@
     const 줄 = {
       t: String(seed?.t ?? "").slice(0, MAX_TEXT),
       done: false,
+      /* c = 만든 때. at(마지막 손댄 때)과 **따로** 둡니다 —
+         줄 차례는 c 로 매겨야 딱지를 눌러도 자리가 안 바뀌어요. */
+      c: Date.now(),
       at: Date.now()
     };
     if (seed?.w)     줄.w = String(seed.w).slice(0, 24);
@@ -496,6 +499,33 @@
   const 콤마 = (n) => Number(n || 0).toLocaleString("ko-KR");
   const 요일 = ["일", "월", "화", "수", "목", "금", "토"];
   const 화 = (ep) => ep + (/^\d+$/.test(ep) ? "화" : "");
+
+  /* =====================================================================
+     ★★ 줄 차례는 **만든 때**로 매깁니다 (2026-08-21 고침 — 콩 신고)
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     at(마지막 손댄 시각)으로 줄을 세웠더니, 딱지 하나만 눌러도 그 줄의
+     at 이 "지금" 이 되면서 **맨 아래로 쑥 내려갔습니다.** 같은 자리를
+     이어서 누르면 그새 다른 줄이 올라와 있으니, 딱지가 저 혼자
+     순차적으로 바뀌는 것처럼 보였어요.
+
+     [그래서]
+     id 앞머리에 만든 시각이 박혀 있습니다 (`${Date.now()}_${랜덤}`).
+     그걸 씁니다 — 무엇을 고치든 줄은 **제자리에 있습니다.**
+     ※ at 은 그대로 둡니다. 작품회차() 가 "같은 회차를 여러 날 썼으면
+       마지막 값" 을 고를 때 여전히 필요해요.
+     ===================================================================== */
+  const 만든때 = (id, r) =>
+    Number(r?.c)                                   // ① 적어 둔 만든 때
+    || Number(String(id).split("_")[0])            // ② id 앞머리에 박힌 시각
+    || Number(r?.at) || 0;                         // ③ 옛 줄을 위한 마지막 수단
+  const 차례대로 = (obj) => Object.entries(obj || {})
+    .sort((a, b) => {
+      const d = 만든때(a[0], a[1]) - 만든때(b[0], b[1]);
+      /* 같은 밀리초에 만들어진 줄이 있을 수 있습니다 (이어받기가 여러
+         개를 잇달아 만들 때). 그때는 id 로 갈라 늘 같은 차례가 되게. */
+      return d !== 0 ? d : (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    });
   const esc = (s) => String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -530,8 +560,7 @@
   /* ═══════════════════ 탭 ①  오늘 ═══════════════════ */
   function 오늘탭() {
     const d = 보는날(), day = W().dayKey(d), 오늘인가 = day === 오늘키();
-    const rows = Object.entries(W().줄들(day))
-      .sort((a, b) => (a[1].at || 0) - (b[1].at || 0));
+    const rows = 차례대로(W().줄들(day));
 
     const 줄HTML = rows.length ? rows.map(([id, r]) => {
       const w = r.w ? W().작품(r.w) : null;
@@ -611,7 +640,7 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(s); d.setDate(d.getDate() + i);
       const day = W().dayKey(d);
-      const rows = Object.values(W().줄들(day)).sort((a,b)=>(a.at||0)-(b.at||0));
+      const rows = 차례대로(W().줄들(day)).map(([, r]) => r);
       const 총 = W().날합계(day);
       const 회 = rows.filter(r => r.ep).map(r => 화(r.ep));
       const 그냥 = rows.filter(r => !r.ep).length;
