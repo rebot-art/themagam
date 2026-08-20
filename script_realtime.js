@@ -1101,11 +1101,18 @@
   /* 마지막으로 **실제로 보낸** 줄의 지문과 시각 — 같은 화면이면 안 보내려고 */
   let _lastSentSig = "";
   let _lastSentAt  = 0;
+  /* 🥗 마지막으로 보낸 **칸별 값** — 달라진 칸만 보내려고 (2026-08-21).
+     null 이면 "서버에 뭐가 있는지 모른다" 는 뜻이라 통째로 다시 씁니다. */
+  let _lastSentObj = null;
   const STATUS_KEEPALIVE_MS = 5 * 60 * 1000;   // 아무것도 안 변해도 5분에 한 번은
 
   /** 기억해 둔 지문을 지웁니다 — 다시 이어졌을 때처럼 "서버에 뭐가 남아
-      있는지 알 수 없는" 순간에 부릅니다 (script_core.js 재연결 자리). */
-  window.forgetStatusSig = function () { _lastSentSig = ""; _lastSentAt = 0; };
+      있는지 알 수 없는" 순간에 부릅니다 (script_core.js 재연결 자리).
+      ★ 칸별 기억(_lastSentObj)도 함께 버려야 합니다 — 끊긴 사이에 서버
+        쪽이 어떻게 됐는지 모르니, 다음 한 번은 통째로 덮어야 해요. */
+  window.forgetStatusSig = function () {
+    _lastSentSig = ""; _lastSentAt = 0; _lastSentObj = null;
+  };
 
   function updateStatus(force = false) {
     if (!myNick) return;
@@ -1222,7 +1229,50 @@
     _lastSentSig = 지문;
     _lastSentAt = 지금;
 
-    db.ref("status/" + myNick).set(보낼것);
+    /* =====================================================================
+       🥗 status 다이어트 (2026-08-21) — 바뀐 칸만 보냅니다
+       ---------------------------------------------------------------------
+       [무엇이 낭비였나] 위의 "같은 화면이면 안 보냄"(0815) 덕에 헛걸음은
+       사라졌지만, **보낼 때는 늘 17칸을 통째로** 보냈습니다(set).
+       그런데 대개 달라지는 건 workMs 하나예요 — 집필 중이면 1분마다
+       그 칸만 늘어납니다. 나머지 열여섯 칸(emoji · joinedAt · 닉 색 ·
+       목표 글 · 작업 스티커…)은 하루 종일 그대로인데 같이 실려 나갔어요.
+
+       한 사람이 쓰면 **접속한 모두**가 받으므로 통신량은 사람 수의
+       제곱으로 커집니다. 38명이 되면서 이 낭비가 눈에 띄게 커졌어요.
+
+       [어떻게] 마지막으로 보낸 값을 손에 들고 있다가 **달라진 칸만**
+       update() 로 보냅니다. 흔한 경우 17칸 → 1~2칸이 됩니다.
+
+       ★ set() 이 아니라 update() 라 나머지 칸은 서버에 그대로 남습니다.
+       ★ 처음 보낼 때(또는 force)는 통째로 set() 합니다 — 지난 판이
+         남긴 묵은 칸을 한 번은 싹 덮어야 하니까요.
+       ★ 쓰기가 실패하면 손에 든 값을 버립니다. 안 그러면 "보냈다고
+         착각한 칸" 이 영영 안 나가요.
+       ===================================================================== */
+    const ref = db.ref("status/" + myNick);
+
+    /* 견줄 수 없는 두 칸은 빼고 봅니다 — lastSeen 은 서버가 찍는 값이고,
+       disconnectedAt 은 늘 null(=끊김 표시 지우기)이라 견줄 것이 없어요. */
+    const 견줄것 = { ...보낼것 };
+    delete 견줄것.lastSeen;
+    delete 견줄것.disconnectedAt;
+
+    let 쓸것, 통째로 = false;
+    if (!_lastSentObj) {
+      쓸것 = 보낼것; 통째로 = true;          // 첫 판 — 묵은 칸까지 덮습니다
+    } else {
+      쓸것 = { lastSeen: 보낼것.lastSeen, disconnectedAt: null };
+      Object.keys(견줄것).forEach(k => {
+        if (견줄것[k] !== _lastSentObj[k]) 쓸것[k] = 보낼것[k];
+      });
+    }
+
+    const 진행 = 통째로 ? ref.set(쓸것) : ref.update(쓸것);
+    _lastSentObj = 견줄것;                   // 손에 들어 둡니다
+    진행 && 진행.catch && 진행.catch(() => {
+      _lastSentObj = null;                   // 실패하면 다음에 통째로
+    });
   }
 
   // =====================================================
