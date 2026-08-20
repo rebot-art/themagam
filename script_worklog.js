@@ -309,6 +309,9 @@
     if (o.add > 0) 짐.add = o.add;
     if (o.snap)    짐.snap = o.snap;
     if (o.ep)      짐.ep = String(o.ep).slice(0, MAX_EP);
+    /* ★ 흐름 줄에는 작품 id 가 없습니다 (남이 읽는 자리라 안 싣습니다).
+       그래서 단위 글자를 함께 실어 보냅니다 — 없으면 "화" 로 읽어요. */
+    if (o.u && o.u !== "화") 짐.u = o.u;
     if (day !== dayKey()) 짐.late = true;               // 지난 날을 채운 것
     try { await window.db.ref(`wordfeed/${day}`).push(짐); }
     catch (e) { console.warn("[worklog] 흐름 실패", e); }
@@ -326,7 +329,7 @@
     /* 회차가 없는 줄은 조용합니다 — "시놉시스 정리" 를 마친 건
        남의 관심사가 아니니까요 (콩). */
     if (켜짐 && r.ep && Number(r.cnt) > 0) {
-      await 흐름에(day, { kind: "done", ep: r.ep, snap: Number(r.cnt) });
+      await 흐름에(day, { kind: "done", ep: r.ep, snap: Number(r.cnt), u: 단위(r.w) });
     }
     /* 업적의 할 일 카운터는 예전 자리를 그대로 씁니다 */
     if (켜짐) { try { window.achvBump?.("cTodo"); } catch (e) {} }
@@ -408,17 +411,43 @@
      ★ 콩: "작품 제목은 함부로 노출 안 해요. 아마 A, B 로 적을 거예요."
        그래서 이름은 짧게 두고, 서버에서도 본인만 읽습니다.
      ===================================================================== */
-  async function 작품만들기(name) {
+  /* 단위 — 연재는 "화", 단행은 "챕터" 로 셉니다 (2026-08-21 콩).
+     작품마다 따로 정합니다. 정해 두면 숫자만 적어도 알아서 붙어요. */
+  const UNITS = ["화", "챕터"];
+
+  async function 작품만들기(name, unit) {
     const nick = me();
     const n = String(name || "").trim().slice(0, 24);
     if (!nick || !n || !window.db) return null;
     const id = "w" + Date.now().toString(36);
-    _works = { ..._works, [id]: { name: n } };
+    const u = UNITS.indexOf(unit) >= 0 ? unit : "화";
+    _works = { ..._works, [id]: { name: n, unit: u } };
     window.renderWorklogIfOpen?.();
-    try { await window.db.ref(`workname/${nick}/${id}`).set({ name: n }); }
+    try { await window.db.ref(`workname/${nick}/${id}`).set({ name: n, unit: u }); }
     catch (e) { delete _works[id]; window.renderWorklogIfOpen?.(); return null; }
     return id;
   }
+  /** 그 작품을 무엇으로 세나 — "화" 또는 "챕터" */
+  function 단위(wid) {
+    const u = _works[wid]?.unit;
+    return UNITS.indexOf(u) >= 0 ? u : "화";
+  }
+
+  /** 화 ↔ 챕터 뒤집기 */
+  async function 단위바꾸기(wid) {
+    const nick = me();
+    const w = _works[wid];
+    if (!nick || !w || !window.db) return;
+    const 다음 = 단위(wid) === "화" ? "챕터" : "화";
+    _works = { ..._works, [wid]: { ...w, unit: 다음 } };
+    window.renderWorklogIfOpen?.();
+    try { await window.db.ref(`workname/${nick}/${wid}/unit`).set(다음); }
+    catch (e) {
+      _works = { ..._works, [wid]: w };
+      window.renderWorklogIfOpen?.();
+    }
+  }
+
   async function 작품지우기(id) {
     const nick = me();
     if (!nick || !window.db) return;
@@ -524,7 +553,7 @@
     listen, stop, 기준맞추기, 이어받기,
     줄들, 작품, 작품들: () => _works,
     더하기, 고치기, 지우기, 체크, 딱지붙이기, 상태돌리기, 글자수바뀜,
-    작품만들기, 작품지우기,
+    작품만들기, 작품지우기, 단위, 단위바꾸기, UNITS,
     날합계, 날회차, 작품회차,
     _state: () => ({ lines: _lines, works: _works, sent: _보낸 })
   };
@@ -547,7 +576,11 @@
   const W  = () => window.Worklog;
   const 콤마 = (n) => Number(n || 0).toLocaleString("ko-KR");
   const 요일 = ["일", "월", "화", "수", "목", "금", "토"];
-  const 화 = (ep) => ep + (/^\d+$/.test(ep) ? "화" : "");
+  /* 숫자면 단위를 붙이고, "프롤로그" 처럼 글자면 그대로 둡니다.
+     ★ 단위는 **작품마다** 다릅니다 — 연재는 화, 단행은 챕터 (콩 0821).
+       wid 를 모르는 자리(흐름 줄)에서는 실려 온 글자를 씁니다. */
+  const 화 = (ep, 단위글) => ep + (/^\d+$/.test(ep) ? (단위글 || "화") : "");
+  const 회차글 = (wid, ep) => 화(ep, W().단위(wid));
 
   /* =====================================================================
      ★★ 줄 차례는 **만든 때**로 매깁니다 (2026-08-21 고침 — 콩 신고)
@@ -617,7 +650,7 @@
       const 딱지 = w
         ? `<button class="wl-tag on" data-wl="pick" data-id="${id}"
              style="background:${col.s};color:${col.c}" title="작품·회차 고치기"
-             >${esc(w.name)}${r.ep ? " " + esc(화(r.ep)) : ""}</button>`
+             >${esc(w.name)}${r.ep ? " " + esc(회차글(r.w, r.ep)) : ""}</button>`
         : `<button class="wl-tag" data-wl="pick" data-id="${id}" title="작품·회차 붙이기">＋작품</button>`;
       const 상태 = r.stage
         ? `<span class="wl-stage wl-s-${r.stage}" data-wl="stage" data-id="${id}" title="눌러서 바꾸기">${r.stage}</span>`
@@ -654,7 +687,7 @@
       if (오늘인가 && t) 오늘늘 = Number(t[window.myNick || ""]?.total || 0);
       else rows.forEach(([, r]) => { 오늘늘 += Math.max(0, (Number(r.cnt)||0) - (Number(r.base)||0)); });
     } catch (e) {}
-    const 회 = rows.filter(([, r]) => r.ep && r.cnt > 0).map(([, r]) => 화(r.ep)).join(" · ");
+    const 회 = rows.filter(([, r]) => r.ep && r.cnt > 0).map(([, r]) => 회차글(r.w, r.ep)).join(" · ");
     const 한일 = rows.filter(([, r]) => r.done).length;
 
     return `<div class="wl-nav">
@@ -681,10 +714,10 @@
     const 줄 = feed.slice(-14).reverse().map(f => {
       const 내것 = f.nick === (window.myNick || "");
       let 말;
-      if (f.kind === "done")       말 = `<b>${esc(화(f.ep || ""))} 마침</b>${f.snap ? " · " + 콤마(f.snap) + "자" : ""} 🎉`;
+      if (f.kind === "done")       말 = `<b>${esc(화(f.ep || "", f.u))} 마침</b>${f.snap ? " · " + 콤마(f.snap) + "자" : ""} 🎉`;
       /* "시작" 은 더 이상 만들지 않습니다 (2026-08-21 콩). 오늘 이미
          쌓인 옛 줄이 있을 수 있어 읽기만 남겨 둡니다. */
-      else if (f.kind === "start") 말 = `<b>${esc(화(f.ep || ""))}</b> 시작`;
+      else if (f.kind === "start") 말 = `<b>${esc(화(f.ep || "", f.u))}</b> 시작`;
       else                         말 = `+${콤마(f.add)}자`;
       return `<div class="wl-fl${f.kind === "done" ? " big" : ""}">
         <span class="wl-who${내것 ? " me" : ""}">${esc(f.nick)}</span>
@@ -714,7 +747,7 @@
       const day = W().dayKey(d);
       const rows = 차례대로(W().줄들(day)).map(([, r]) => r);
       const 총 = W().날합계(day);
-      const 회 = rows.filter(r => r.ep).map(r => 화(r.ep));
+      const 회 = rows.filter(r => r.ep).map(r => 회차글(r.w, r.ep));
       const 그냥 = rows.filter(r => !r.ep).length;
       let 요약 = 회.length ? `<b>${esc(회.join(", "))}</b>` : "";
       if (그냥) 요약 += (요약 ? " · " : "") + `기록 ${그냥}줄`;
@@ -731,7 +764,7 @@
           const col = r.w ? 작품색(r.w) : null;
           return `<div class="wl-di">
             ${r.ep && col
-              ? `<span class="wl-p" style="background:${col.s};color:${col.c}">${esc(화(r.ep))}</span>`
+              ? `<span class="wl-p" style="background:${col.s};color:${col.c}">${esc(회차글(r.w, r.ep))}</span>`
               : `<span class="wl-p plain">기록</span>`}
             <span class="wl-n">${esc(r.t) || "—"}</span>
             <span class="wl-c">${r.cnt ? 콤마(r.cnt) + "자" : "·"}</span></div>`;
@@ -759,6 +792,7 @@
       const 숫자 = 키.filter(k => /^\d+$/.test(k)).map(Number).sort((a,b)=>a-b);
       const 글자 = 키.filter(k => !/^\d+$/.test(k));
       const 최대 = 숫자.length ? Math.max(...숫자) : 0;
+      const u = W().단위(id);
       const 총자 = 키.reduce((a,k) => a + m[k].cnt, 0);
       const 평균 = 키.length ? Math.round(총자 / 키.length) : 0;
       const 셈 = {}; W().STAGES.forEach(s => 셈[s] = 0);
@@ -775,7 +809,7 @@
         for (let n = 0; n < 15; n++) {
           const 번 = 시작 + n, rec = m[String(번)];
           칸.push(rec
-            ? `<div class="wl-epc"><i style="background:${상태색(rec.stage)}"></i><span class="e">${번}화</span><span class="c">${콤마(rec.cnt)}자</span></div>`
+            ? `<div class="wl-epc"><i style="background:${상태색(rec.stage)}"></i><span class="e">${번}${u}</span><span class="c">${콤마(rec.cnt)}자</span></div>`
             : `<div class="wl-epc none"><span class="e">${번}</span></div>`);
         }
         /* 세로로 읽히게 열 우선으로 다시 깝니다 (1~5 / 6~10 / 11~15) */
@@ -788,13 +822,17 @@
           }</div>` : ""}
           <div class="wl-epnav">
             <button data-wl="ep" data-id="${id}" data-v="-1" ${쪽 === 0 ? "disabled" : ""}>‹</button>
-            <span>회차 이동 · ${시작}–${시작 + 14}</span>
+            <span>${u} 이동 · ${시작}–${시작 + 14}</span>
             <button data-wl="ep" data-id="${id}" data-v="1" ${쪽 >= 총쪽 - 1 ? "disabled" : ""}>›</button>
           </div>
           <div class="wl-eptbl">${세로.join("")}</div>
           <div class="wl-legend">${W().STAGES.map(s =>
             `<span><i style="background:${상태색(s)}"></i>${s}</span>`).join("")}
-            <button class="wl-wdel" data-wl="delwork" data-id="${id}">이름표 지우기</button></div>
+            <span class="wl-unit">
+              <button class="${u === "화" ? "on" : ""}" data-wl="unit" data-id="${id}" data-v="화">화</button>
+              <button class="${u === "챕터" ? "on" : ""}" data-wl="unit" data-id="${id}" data-v="챕터">챕터</button>
+            </span>
+            <button class="wl-wdel" data-wl="delwork" data-id="${id}">작품 지우기</button></div>
         </div>`;
       }
 
@@ -802,7 +840,7 @@
         <div class="wl-pjh" data-wl="openwork" data-id="${id}">
           <div class="wl-pjt">
             <span class="nm" style="color:${col.c}">${esc(w.name)}</span>
-            <span class="ep">${최대 ? 최대 + "화까지" : (키.length ? 키.length + "편" : "아직 없음")}</span>
+            <span class="ep">${최대 ? 최대 + u + "까지" : (키.length ? 키.length + "편" : "아직 없음")}</span>
             <span class="ax">▸</span>
           </div>
           <div class="wl-pbar">${W().STAGES.map(s =>
@@ -935,8 +973,15 @@
       if (n && n.trim()) await W().작품만들기(n.trim());
       window.renderWorklogIfOpen(); return;
     }
+    if (act === "unit") {
+      const v = b.dataset.v;
+      if (v !== W().단위(id)) await W().단위바꾸기(id);
+      window.renderWorklogIfOpen(); return;
+    }
     if (act === "delwork") {
-      if (!confirm("이름표만 지웁니다.\n이미 적어 둔 회차와 글자수는 그대로 남아요.")) return;
+      if (!confirm("이 작품을 목록에서 지웁니다.\n\n" +
+                   "이미 적어 둔 회차와 글자수 기록은 그대로 남아요 —\n" +
+                   "작품 이름만 사라집니다. 되살릴 수는 없습니다.")) return;
       await W().작품지우기(id); _열린작품 = null;
       window.renderWorklogIfOpen(); return;
     }
@@ -1008,7 +1053,7 @@
         ? Object.entries(works).map(([wid, w]) =>
             `<button class="w${r.w === wid ? " on" : ""}" data-wlpw="${wid}">${esc(w.name)}</button>`).join("")
         : `<p class="dim">아직 작품이 없어요 — 작품 탭에서 만들 수 있습니다.</p>`}</div>
-      <p class="t">회차 <span class="dim">(비워도 됩니다)</span></p>
+      <p class="t">번호 <span class="dim">(비워도 됩니다 · 화든 챕터든 숫자만)</span></p>
       <input id="wl-pick-ep" maxlength="16" value="${esc(r.ep || "")}" placeholder="45 · 프롤로그 · 외전2 …">
       <div class="r2"><button data-wlpick="clear">떼기</button>
         <button class="go" data-wlpick="ok">붙이기</button></div>`;
