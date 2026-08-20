@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGM</title>
+<!-- =====================================================================
+     콩트(Compte) 전용 BGM 재생 페이지 — 2026-08-19
+
+     [왜 필요한가]
+     콩트는 file:// 로 열리는 단일 HTML 이라 정식 주소가 없습니다.
+     유튜브는 영상을 내보내기 전에 "어느 주소에서 요청했나"를 보는데,
+     주소가 없거나(153) 임시 주소(http://127.0.0.1)면 저작권이 걸린
+     영상을 거절합니다. 그래서 되는 곡과 안 되는 곡이 갈렸어요.
+
+     이 페이지를 깃허브 Pages(https://rebot-art.github.io/…)에 올려 두고
+     콩트가 iframe 으로 부르면, 유튜브 눈에는 정식 https 주소에서 온
+     요청으로 보입니다 — 작업방에서 잘 나오는 것과 같은 조건이 됩니다.
+
+     [방을 건드리지 않습니다]
+     로그인·데이터베이스·통신량 어디에도 손대지 않는 독립 파일입니다.
+     쓰는 것은 주소의 ?v= 하나뿐이고, 잘못돼도 이 페이지만 안 열립니다.
+
+     [콩트와 주고받는 쪽지]
+       받기 : {bgmVolume: 0~100}  볼륨 맞추기
+       보내기: {bgmReady:1}        준비 완료 (콩트가 볼륨을 보내옵니다)
+              {bgmEnded:1}        곡 끝 (연속 재생용)
+              {bgmError:코드}     재생 실패 (콩트가 이유를 띄웁니다)
+     ===================================================================== -->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; }
+  #p { width: 100%; height: 100%; border: 0; }
+  #msg {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    color: #C9C9CE; font: 13px/1.7 -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+    text-align: center; padding: 20px; box-sizing: border-box;
+  }
+</style>
+</head>
+<body>
+<div id="p"></div>
+<div id="msg"></div>
+<script>
+(function () {
+  "use strict";
+
+  // 주소에서 영상 id 만 꺼내 씁니다 (11자 영문·숫자·_- 만 통과)
+  var vid = new URLSearchParams(location.search).get('v') || '';
+  var msg = document.getElementById('msg');
+  if (!/^[\w-]{11}$/.test(vid)) {
+    msg.style.display = 'flex';
+    msg.textContent = '영상 주소가 올바르지 않아요.';
+    return;
+  }
+
+  var player = null, vol = 70;
+
+  // 콩트가 보내오는 볼륨 — 준비 전에 와도 기억해 뒀다가 적용합니다
+  window.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (typeof d.bgmVolume !== 'number') return;
+    vol = d.bgmVolume;
+    try { if (player && player.setVolume) player.setVolume(vol); } catch (e) {}
+  });
+
+  function tell(o) { try { parent.postMessage(o, '*'); } catch (e) {} }
+
+  // nocookie 도메인 — 방문 기록에 쿠키를 덜 남깁니다 (작업방과 같은 방식)
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('p', {
+      videoId: vid,
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
+      events: {
+        onReady: function (e) {
+          try { e.target.setVolume(vol); e.target.playVideo(); } catch (er) {}
+          tell({ bgmReady: 1 });
+        },
+        onStateChange: function (e) { if (e.data === 0) tell({ bgmEnded: 1 }); },
+        onError: function (e) { tell({ bgmError: e.data }); }
+      }
+    });
+  };
+
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.body.appendChild(tag);
+})();
+</script>
+</body>
+</html>
