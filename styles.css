@@ -9786,7 +9786,7 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
   /* [2026-08-21] 판이 424px 로 좁아져서 118 → 96. 작품 이름이 길면
      …으로 잘립니다 — 딱지가 내용 칸을 잡아먹으면 안 되니까요.
      (이름은 A · B 처럼 짧게 쓰는 걸 전제로 합니다 — 콩) */
-  max-width: 96px; overflow: hidden; text-overflow: ellipsis;
+  max-width: 104px; overflow: hidden; text-overflow: ellipsis;
 }
 .wl-tag:hover{ border-style: solid; color: var(--text); background: var(--fill-1); }
 .wl-tag.on{ border-style: solid; font-weight: 700; border-color: transparent; }
@@ -9886,7 +9886,10 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
 .wl-pjr.open .ax{ transform: rotate(90deg); }
 .wl-pbar{ height: 6px; border-radius: 999px; background: var(--fill-1); overflow: hidden; display: flex; }
 .wl-pbar i{ display: block; height: 100%; }
-.wl-pjm{ display: flex; gap: 11px; margin-top: 5px; font-size: 11px; color: var(--sub-muted); flex-wrap: wrap; }
+/* [2026-08-22] 판이 352px 로 좁아져서 틈을 11 → 8 로 (콩).
+   ★ flex-wrap 은 그대로 둡니다 — 글꼴·배율에 따라 폭이 달라지니
+     한 줄로 못 박으면 어딘가에서 잘립니다. 접히는 편이 안전해요. */
+.wl-pjm{ display: flex; gap: 8px; margin-top: 5px; font-size: 11px; color: var(--sub-muted); flex-wrap: wrap; }
 .wl-pjm b{ color: var(--text); font-variant-numeric: tabular-nums; }
 .wl-pjb{ display: none; border-top: 1px dashed var(--border); padding: 8px 10px 10px; background: var(--fill-1); }
 .wl-pjr.open .wl-pjb{ display: block; }
@@ -9938,15 +9941,19 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
   border-radius: 6px; padding: 4px; font-size: 11.5px; cursor: pointer; color: var(--sub-muted); }
 .wl-pick .r2 button.go{ background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
 
-/* ★ 판 폭 — 챗(352)보다 넓습니다. 여기가 이제 매일 쓰는 자리라서요.
-   [2026-08-21] 530 → 424 (콩: "80% 정도로"). 실제로 써 보니 530 은
-   알약 줄 위가 무거워 보였습니다. 424 면 한 줄에 이렇게 들어갑니다 —
+/* ★ 판 폭 — **챗과 같은 352px** 입니다 (2026-08-22).
+   [내려온 자취] 530 → 424 → 352
+   내용 적는 칸이 없어지면서(회차 전용 개편) 한 줄이 이만큼 줄었습니다 —
 
-     [✓] [A 45화] [초고] 내용……………… [ 5,200 자] [✕]
-      22    ~76     ~46    남는 만큼      ~98      ~26
+     [✓] [A · 프롤로그] [초고] [ 5,200 자] [✕]
+      14+16    ~90       ~46     ~98      ~20   + 틈 28  =  312px
 
-   ★ 더 줄이면 내용 칸이 대여섯 글자밖에 안 남습니다. 424 가 바닥이에요. */
-#dock-panel-wc{ width: min(424px, calc(100vw - 24px)); }
+   판 352 → 속 330 이라 18px 여유. 작품 탭 회차표도 한 칸 110px 로
+   "123화  4,731자" 가 넉넉히 들어갑니다.
+   ★ 320 아래로는 내리지 마세요 — 회차표 세 칸이 깨집니다.
+   ★ 챗과 같은 폭이라 알약 줄 위가 가지런해요. 굳이 다르게 둘 이유가
+     없어졌습니다 (예전엔 내용 칸 때문에 넓어야 했어요). */
+#dock-panel-wc{ width: min(352px, calc(100vw - 24px)); }
 
 /* [2026-08-21] 아래 줄 숫자가 둘이 됐습니다 — 오늘 늘어난 양 · 원고 분량 */
 .wl-sum .wl-t{ font-size: 11.5px; color: var(--sub-muted); }
