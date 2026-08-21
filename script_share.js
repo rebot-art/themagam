@@ -62,8 +62,36 @@
   const FIT_KEY = "shareFit";           // "cover"(채우기) | "contain"(전체 보기)
   let _shareFit = "cover";
 
+  /* =====================================================================
+     👀 남의 화면 안 보기 (2026-08-21 — 콩)
+     ---------------------------------------------------------------------
+     내 화면은 그대로 보여 주되, **남의 것은 안 받는** 선택입니다.
+     · 집중하고 싶은 사람에게 좋고,
+     · 받는 양이 그대로 **0** 이 되니 통신량도 크게 줍니다.
+       (화면 공유는 공유자끼리 서로 받아서 **제곱**으로 늘어나거든요.)
+     ★ 기기별로 기억합니다 — 노트북에서 끈 게 폰까지 따라가지 않게.
+     ===================================================================== */
+  const WATCH_KEY = "shareWatch";       // "0" 이면 안 봅니다
+  function watchOn() {
+    try { return window.AppStore?.getItem(WATCH_KEY) !== "0"; } catch (e) { return true; }
+  }
+  window.isShareWatchOn = watchOn;
+  window.setShareWatch = function (on) {
+    try { window.AppStore?.setItem(WATCH_KEY, on ? "1" : "0"); } catch (e) {}
+    if (on) { if (_sharing || window.SOLO) listenScreens(); }
+    else    { detachScreens(); _screensCache = null; }
+    renderShareCards();
+  };
+
   const SHARE_W_MIN  = 80;    // 가장 뭉갠 쪽
-  const SHARE_W_MAX  = 360;   // 가장 선명한 쪽 (400 미만이어야 합니다)
+  /* [고침 2026-08-21 — 콩] 360 → 256.
+     화면 공유가 이 방에서 가장 큰 통신량이 됐습니다 (하루 6시간·공유자
+     5명이면 월 25GB). 픽셀은 **제곱**으로 주니까 폭을 2/3 로 줄이면
+     용량은 절반 아래로 떨어져요.
+     ★ 원래 글자를 읽는 용도가 아닙니다 — "저 사람 지금 뭐 하는구나" 를
+       보는 것이라 256 으로도 문단 덩어리와 창 모양은 그대로 보입니다.
+     ★ 이 값을 다시 올리려면 SHARE_INTERVAL_MS 도 같이 봐야 합니다. */
+  const SHARE_W_MAX  = 256;   // 가장 선명한 쪽 (400 미만이어야 합니다)
   const SHARE_W_STEP = 20;
 
   /* 예전 저장값(0·1·2)을 새 값(가로 픽셀)으로 옮기는 표.
@@ -75,7 +103,7 @@
      글자를 읽으려면 획이 5px 쯤 남아야 하는데, 320 에서 본문 16px 은
      2.7px 로 줄어 회색 띠가 됩니다. 큰 제목 32px 도 5.3px 라 형태만
      겨우 보이는 정도예요. */
-  const SHARE_DEFAULT_W = 320;            // 기본값 — 예전의 "약함"과 같습니다
+  const SHARE_DEFAULT_W = 256;            // [2026-08-21] 320 → 256 (상한과 같게)
 
   /* [고침 2026-08-15] 5초 → 10초.
      화면 공유는 **공유 중인 사람끼리만** 봅니다. 그래서 통신량이
@@ -218,8 +246,79 @@
     return null;
   }
 
+  /* =====================================================================
+     ★ 안 바뀌었으면 안 보냅니다 (2026-08-21 — 콩)
+     ---------------------------------------------------------------------
+     글쓰기는 화면이 **멈춰 있는 시간이 깁니다.** 자료 찾고, 멍 때리고,
+     자리 비우고. 그동안에도 15초마다 꼬박꼬박 올리던 것을 멈춥니다.
+     status 다이어트에서 쓴 것과 같은 수법이에요.
+
+     [왜 "똑같을 때" 가 아니라 "거의 안 바뀌었을 때" 인가]
+     글을 치는 동안에는 커서가 깜빡이고 글자가 한 자씩 늘어서, 픽셀이
+     **완전히 같은 순간은 거의 없습니다.** 똑같을 때만 건너뛰면 하나도
+     못 건너뛰어요. 그래서 아주 작은 지문(64×40 회색)을 떠서 견주고,
+     **눈에 띄게 달라진 점의 비율**로 판단합니다.
+
+     [실제로 재 본 값 — 1280×800 원고 화면 기준]
+         아무것도 안 함     0.00%   ⏭️ 건너뜀
+         커서만 깜빡        0.04%   ⏭️ 건너뜀
+         ────────────────── 문턱 1.2% ──────────────────
+         한 줄 더 씀        1.41%   📤 보냄
+         세 줄 더 씀        4.30%   📤 보냄
+         조금 스크롤        7.77%   📤 보냄
+         많이 스크롤       19.06%   📤 보냄
+         창을 바꿈        100.00%   📤 보냄
+
+     ★ 문턱을 1.2% 로 잡은 까닭: **한 줄만 더 써도 보내는** 자리가
+       여기입니다. 더 올리면 글이 몇 줄 쌓일 때까지 화면이 멈춰 보여요.
+       더 아끼고 싶으면 올리되, 1.4 를 넘기면 "한 줄" 이 안 나갑니다.
+
+     ★★ 아무리 안 바뀌어도 45초에 한 번은 **무조건** 보냅니다.
+        60초를 놓치면 남들 화면에서 "끊김" 으로 흐려지거든요
+        (SHARE_STALE_MS). 45초는 그 앞에 둔 안전선입니다 —
+        간격(15초)을 바꾸면 이 값도 함께 봐야 합니다.
+     ===================================================================== */
+  const 지문W = 64, 지문H = 40;
+  const 지문점문턱 = 12;      // 이만큼 달라진 점만 "바뀐 점" 으로 셉니다
+  const 보낼비율   = 0.012;   // 바뀐 점이 1.2% 이상이면 보냅니다 (중간에서 높은 쪽)
+  const 강제MS     = 45000;   // ★ SHARE_STALE_MS(60초)보다 반드시 짧아야 합니다
+  let _지문 = null, _지문캔 = null, _마지막보냄 = 0, _건너뛴 = 0;
+
+  function 지문뜨기() {
+    if (!_video) return null;
+    try {
+      const cv = _지문캔 || (_지문캔 = document.createElement("canvas"));
+      cv.width = 지문W; cv.height = 지문H;
+      const ctx = cv.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(_video, 0, 0, 지문W, 지문H);
+      const d = ctx.getImageData(0, 0, 지문W, 지문H).data;
+      const out = new Uint8Array(지문W * 지문H);
+      for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+        out[p] = (d[i] * 77 + d[i + 1] * 151 + d[i + 2] * 28) >> 8;   // 회색 한 칸
+      }
+      return out;
+    } catch (e) { return null; }              // 못 뜨면 그냥 보냅니다
+  }
+
+  function 많이바뀌었나(전, 후) {
+    if (!전 || !후 || 전.length !== 후.length) return true;
+    let 바뀐 = 0;
+    for (let i = 0; i < 전.length; i++) {
+      if (Math.abs(전[i] - 후[i]) > 지문점문턱) 바뀐++;
+    }
+    return (바뀐 / 전.length) >= 보낼비율;
+  }
+  /* 방장이 콘솔에서 들여다볼 수 있게 — 문턱을 조일 때 씁니다 */
+  window.shareSkipStat = () => ({ 건너뛴: _건너뛴, 문턱: 보낼비율, 강제MS });
+
   async function pushFrame() {
     if (!_sharing || !myNick) return;
+
+    /* ★ 무거운 일(모자이크 만들기)보다 **먼저** 물어봅니다 */
+    const 지문 = 지문뜨기();
+    const 오래됐나 = (Date.now() - _마지막보냄) >= 강제MS;
+    if (!오래됐나 && 지문 && !많이바뀌었나(_지문, 지문)) { _건너뛴++; return; }
+
     const img = grabMosaic();
     if (!img) return;
     try {
@@ -229,8 +328,11 @@
         level: _shareW,
         fit: _shareFit          // 카드에 어떻게 맞출지 — 보는 쪽이 그대로 따릅니다
       });
+      _지문 = 지문;                 // 보낸 것만 기준으로 삼습니다
+      _마지막보냄 = Date.now();
     } catch (e) {
       console.warn("[화면 공유 — 저장 실패]", e);
+      _지문 = null;                   // 실패했으면 다음엔 무조건 보냅니다
     }
   }
 
@@ -238,6 +340,8 @@
      구독 — 공유 중인 동안에만 삽니다
      --------------------------------------------------------------- */
   function listenScreens() {
+    /* ★ 안 보기로 해 둔 사람은 **아예 안 붙습니다** — 받는 양이 0 입니다 */
+    if (!watchOn()) { detachScreens(); return; }
     if (_screensRef) return;
     _screensRef = db.ref("screens");
     _screensRef.on("value", snap => {
@@ -468,11 +572,16 @@
       const raw = String(window.AppStore && window.AppStore.getItem(SHARE_LEVEL_KEY) || "");
       if (raw.startsWith("w")) {                    // 새 방식 — 가로 픽셀
         const w = Number(raw.slice(1));
-        if (w >= SHARE_W_MIN && w <= SHARE_W_MAX) _shareW = w;
+        /* ★★ [고침 2026-08-21] 예전에는 상한을 넘는 값이면 **그냥 버리고**
+           기본값을 썼습니다. 상한을 360 → 256 으로 내리면서 그 길로는
+           320 으로 맞춰 둔 사람이 조용히 256 이 되는데, 그건 맞지만
+           **본인이 고른 값에 가장 가까운 쪽**으로 데려다 놓는 게 낫습니다.
+           (예: 200 으로 낮춰 둔 사람은 200 을 그대로 지켜야 해요.) */
+        if (w >= SHARE_W_MIN) _shareW = Math.min(w, SHARE_W_MAX);
         return;
       }
       const v = Number(raw);                        // 옛 방식 — 0·1·2
-      if (SHARE_LEGACY_W[v]) _shareW = SHARE_LEGACY_W[v];
+      if (SHARE_LEGACY_W[v]) _shareW = Math.min(SHARE_LEGACY_W[v], SHARE_W_MAX);
     } catch (e) {}
   }
 
@@ -620,7 +729,9 @@
     if (!list) return;
 
     /* 🧘 혼자 방은 내가 공유 중이 아니어도 그립니다 (전부 내가 놓아둔 사진) */
-    const rows = (_sharing || window.SOLO) ? shareRows() : [];
+    let rows = (_sharing || window.SOLO) ? shareRows() : [];
+    /* 👀 안 보기 — 남의 것은 빼고 내 것만 남깁니다 (내 화면은 계속 나갑니다) */
+    if (!watchOn()) rows = rows.filter(r => r && r.nick === myNick);
     const html = rows.map(shareCardHtml).join("");
     const present = !!list.querySelector(".share-card");
 
@@ -899,6 +1010,16 @@
         타임좌처럼 <b>가로로 길쭉한 창</b>에 쓰세요.
       </p>
 
+      <div class="blur-pop-head blur-pop-head2"><span>남의 화면</span></div>
+      <div class="fit-pick" role="group" aria-label="남의 화면 보기">
+        <button type="button" data-watch="1" aria-pressed="${watchOn()}">보기</button>
+        <button type="button" data-watch="0" aria-pressed="${!watchOn()}">안 보기</button>
+      </div>
+      <p class="blur-pop-note">
+        <b>안 보기</b> 로 두면 내 화면은 그대로 나가고 <b>남의 것만 안 받습니다.</b>
+        집중하고 싶을 때 쓰세요 — 받는 양이 0 이 되니 통신량도 크게 줄어요.
+      </p>
+
       <p class="blur-pop-note">
         <b>내 화면에만</b> 적용돼요. 이 기기에 저장되고,
         가장 선명해도 <b>글자는 읽히지 않는 선</b>까지만 올라갑니다.
@@ -926,10 +1047,19 @@
     /* 맞추는 방식 — 누르면 곧바로 바뀝니다 (막대와 달리 끄는 동작이 없어요) */
     pop.addEventListener("click", (e) => {
       const b = e.target.closest("[data-fit]");
-      if (!b) return;
-      setShareFit(b.getAttribute("data-fit"));
-      pop.querySelectorAll("[data-fit]").forEach(x =>
-        x.setAttribute("aria-pressed", String(x === b)));
+      if (b) {
+        setShareFit(b.getAttribute("data-fit"));
+        pop.querySelectorAll("[data-fit]").forEach(x =>
+          x.setAttribute("aria-pressed", String(x === b)));
+        return;
+      }
+      /* 👀 남의 화면 보기 / 안 보기 */
+      const w = e.target.closest("[data-watch]");
+      if (w) {
+        window.setShareWatch(w.getAttribute("data-watch") === "1");
+        pop.querySelectorAll("[data-watch]").forEach(x =>
+          x.setAttribute("aria-pressed", String(x === w)));
+      }
     });
 
     /* 손을 뗐을 때 — 그제서야 한 장 보냅니다 */
