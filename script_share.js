@@ -1121,39 +1121,67 @@
      ★ 진짜 방의 grabMosaic 과 **같은 픽셀 상한·같은 품질 사다리**를
        씁니다 — 여기서 본 것이 곧 저기서 보일 것이어야 하니까요.
      ===================================================================== */
-  const _뭉갠캐시 = new Map();          // "원본길이|폭" → 뭉갠 dataURL
+  const _뭉갠캐시 = new Map();          // 열쇠 → 뭉갠 dataURL
+  function _뭉갬열쇠(dataUrl, 폭) {
+    return dataUrl.length + "|" + dataUrl.slice(-24) + "|" + 폭;
+  }
+  function _폭조이기(w) {
+    return Math.max(SHARE_W_MIN, Math.min(SHARE_W_MAX, Number(w) || _shareW));
+  }
+
+  /** 이미 만들어 둔 게 있으면 바로 (없으면 null) */
+  window.soloBlurPeek = function (dataUrl, w) {
+    if (typeof dataUrl !== "string") return null;
+    return _뭉갠캐시.get(_뭉갬열쇠(dataUrl, _폭조이기(w))) || null;
+  };
+
+  /** 뭉개서 돌려줍니다 — 기다릴 수 있는 쪽 (슬라이더 미리보기가 씁니다) */
+  window.soloBlurShotAsync = function (dataUrl, w) {
+    return new Promise((resolve) => {
+      if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return resolve(dataUrl);
+      const 폭 = _폭조이기(w);
+      const 열쇠 = _뭉갬열쇠(dataUrl, 폭);
+      const 있 = _뭉갠캐시.get(열쇠);
+      if (있) return resolve(있);
+
+      const im = new Image();
+      im.onerror = () => resolve(dataUrl);
+      im.onload = () => {
+        try {
+          /* ★ 진짜 방(grabMosaic)과 **같은 픽셀 상한** 을 씁니다 —
+             여기서 본 것이 곧 저기서 보일 것이어야 하니까요. */
+          const PIX = SHARE_W_MAX * Math.round(SHARE_W_MAX * 0.6);
+          let W = 폭, H = Math.max(1, Math.round(폭 * (im.height / im.width)));
+          if (W * H > PIX) { const k = Math.sqrt(PIX / (W * H));
+                             W = Math.max(1, Math.round(W * k)); H = Math.max(1, Math.round(H * k)); }
+          const cv = document.createElement("canvas");
+          cv.width = W; cv.height = H;
+          cv.getContext("2d").drawImage(im, 0, 0, W, H);
+          /* 그림을 꺼내는 자리는 여기 하나뿐입니다 (진짜 방과 같은 사다리) */
+          let out = null;
+          for (const q of SHARE_QUALITIES) {
+            const u = cv.toDataURL("image/jpeg", q);
+            if (!out) out = u;                                   // 못 줄여도 뭔가는 남깁니다
+            if (dataUrlBytes(u) <= SHARE_MAX_BYTES) { out = u; break; }
+          }
+          _뭉갠캐시.set(열쇠, out);
+          if (_뭉갠캐시.size > 24) _뭉갠캐시.delete(_뭉갠캐시.keys().next().value);
+          resolve(out);
+        } catch (e) { resolve(dataUrl); }
+      };
+      im.src = dataUrl;
+    });
+  };
+
+  /** 기다릴 수 없는 쪽(화면동기)이 씁니다 — 처음엔 원본, 다 되면 다시 그립니다 */
   window.soloBlurShot = function (dataUrl, w) {
-    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return dataUrl;
-    const 폭 = Math.max(SHARE_W_MIN, Math.min(SHARE_W_MAX, Number(w) || _shareW));
-    const 열쇠 = dataUrl.length + "|" + dataUrl.slice(-24) + "|" + 폭;
-    if (_뭉갠캐시.has(열쇠)) return _뭉갠캐시.get(열쇠);
-    /* 그림을 불러오는 일은 비동기라, 여기서는 원본을 돌려주고
-       다 되면 다시 그려 달라고 알립니다 (두 번째부터는 캐시에서 바로). */
-    const im = new Image();
-    im.onload = () => {
-      try {
-        const PIX = SHARE_W_MAX * Math.round(SHARE_W_MAX * 0.6);
-        let W = 폭, H = Math.max(1, Math.round(폭 * (im.height / im.width)));
-        if (W * H > PIX) { const k = Math.sqrt(PIX / (W * H));
-                           W = Math.max(1, Math.round(W * k)); H = Math.max(1, Math.round(H * k)); }
-        const cv = document.createElement("canvas");
-        cv.width = W; cv.height = H;
-        cv.getContext("2d").drawImage(im, 0, 0, W, H);
-        /* 그림을 꺼내는 자리는 여기 하나뿐입니다 (진짜 방과 같은 사다리) */
-        let out = null;
-        for (const q of SHARE_QUALITIES) {
-          const u = cv.toDataURL("image/jpeg", q);
-          if (!out) out = u;                                   // 못 줄여도 뭔가는 남깁니다
-          if (dataUrlBytes(u) <= SHARE_MAX_BYTES) { out = u; break; }
-        }
-        _뭉갠캐시.set(열쇠, out);
-        if (_뭉갠캐시.size > 24) _뭉갠캐시.delete(_뭉갠캐시.keys().next().value);
-        window.soloSyncScreens?.();     // 이제 뭉갠 것으로 다시 담습니다
-        renderShareCards();
-      } catch (e) {}
-    };
-    im.src = dataUrl;
-    return dataUrl;                     // 아직은 원본 (한 박자 뒤에 뭉개져서 옵니다)
+    const 있 = window.soloBlurPeek(dataUrl, w);
+    if (있) return 있;
+    window.soloBlurShotAsync(dataUrl, w).then(() => {
+      window.soloSyncScreens?.();     // 이제 뭉갠 것으로 다시 담습니다
+      renderShareCards();
+    });
+    return dataUrl;                   // 아직은 원본 (한 박자 뒤에 뭉개져서 옵니다)
   };
   window.setShareWidth     = setShareWidth;
   window.setShareFit       = setShareFit;

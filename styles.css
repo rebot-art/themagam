@@ -10118,3 +10118,12 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
 /* 좁은 화면에서는 접습니다 — 카드가 두 줄도 안 되는 폭에서 배경판까지
    깔면 화면이 답답해져요 */
 @media (max-width: 640px){ .room-board{ display: none; } }
+
+/* [2026-08-21] 🧘 혼자 방 — 사진 아래 뭉갬 슬라이더 (콩) */
+.solo-blur-row{ display: flex; align-items: center; gap: 9px; margin-top: 9px; }
+.solo-blur-row label{ font-size: 12px; color: var(--muted); white-space: nowrap; }
+.solo-blur-row input[type="range"]{ flex: 1; min-width: 0; }
+.solo-blur-row output{
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  font-variant-numeric: tabular-nums; min-width: 44px; text-align: right;
+}

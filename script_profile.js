@@ -1050,6 +1050,25 @@ function soloProfileBlockHtml(tgt) {
           ? "액자를 꽉 채워요. 넘치는 쪽은 잘립니다."
           : "사진을 통째로 보여줘요. 남는 쪽은 바탕색."}</span>
       </div>` : ""}
+      ${shot ? `
+      <!-- =====================================================================
+           [2026-08-21 — 콩] 뭉갬 정도를 **여기서** 시험합니다.
+           예전에는 카드의 빨간 불을 눌러야 했는데, 혼자 방에는 그 불이
+           안 떴어요. 사진을 올리는 자리 바로 아래에 두는 게 자연스럽습니다.
+           ★ 움직이는 값은 진짜 방과 **같은 값**(shareLevel)입니다 —
+             여기서 맞춰 두면 진짜 방에도 그대로 적용돼요.
+           ===================================================================== -->
+      <div class="solo-blur-row">
+        <label for="solo-blur">화면 뭉갬 정도</label>
+        <input type="range" id="solo-blur" min="80" max="256" step="20"
+               value="${window.shareWidthNow?.() || 256}">
+        <output id="solo-blur-out">${window.shareWidthNow?.() || 256}px</output>
+      </div>
+      <p class="hint">
+        움직이면 위 미리보기가 <b>진짜 방에서 보일 그대로</b> 뭉개집니다.
+        올린 사진은 그대로 두고 <b>보여줄 때만</b> 줄이는 것이라,
+        아무리 움직여도 원본은 안 상하고 서버로 나가는 것도 없어요.
+      </p>` : ""}
       <p class="hint">
         진짜 화면 공유와 같은 액자에, 고른 사진을 걸어 둡니다. 카드 옆에
         나란히 서요. 위 미리보기가 실제 크기 그대로입니다 —
@@ -1353,6 +1372,34 @@ function bindSoloProfileBlock() {
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
 
   /* 🖥️ 가짜 화면 사진 */
+  /* 🖥️ 뭉갬 슬라이더 — 미리보기를 진짜 방에서 보일 모습으로 (2026-08-21) */
+  const blurR = document.getElementById("solo-blur");
+  if (blurR) {
+    const out = document.getElementById("solo-blur-out");
+    const prevImg = document.querySelector("#solo-shot-prev img");
+    const 원본 = prevImg?.getAttribute("data-원본") || prevImg?.src || "";
+    if (prevImg && 원본) prevImg.setAttribute("data-원본", 원본);
+    let 타이머 = null;
+    blurR.addEventListener("input", () => {
+      const v = Number(blurR.value);
+      if (out) out.textContent = v + "px";
+      /* 값은 진짜 방과 같은 자리에 저장합니다 (quiet: 지금 보내지는 않음) */
+      try { window.setShareWidth?.(v, { quiet: true }); } catch (e) {}
+      clearTimeout(타이머);
+      타이머 = setTimeout(async () => {
+        if (!prevImg || !원본) return;
+        try {
+          const 뭉갠 = await window.soloBlurShotAsync?.(원본, v);
+          if (뭉갠) prevImg.src = 뭉갠;
+        } catch (e) {}
+        /* 카드 쪽 액자도 같이 맞춥니다 */
+        try { window.soloSyncScreens?.(); } catch (e) {}
+      }, 120);
+    });
+    /* 창을 열자마자 지금 값으로 한 번 */
+    blurR.dispatchEvent(new Event("input"));
+  }
+
   const shotBtn = document.getElementById("solo-shot-btn");
   const shotFile = document.getElementById("solo-shot-file");
   const shotClr = document.getElementById("solo-shot-clear");
