@@ -237,6 +237,11 @@
      그대로 읽혀요 — "live" 는 한 칸짜리 목록이니까요. */
   const PULSE_KEY = "showPulse";          // 기기별 — 노트북에서 켠 게 폰까지 안 따라가게
   const PULSE_WHAT_KEY = "pulseWhat";     // "live,wmine" 처럼 쉼표로 이은 목록
+  /* 🖼️ 방 배경 현황판 (2026-08-21 — 콩)
+     ★ 기본이 **켜짐**입니다. 목적이 "이 방이 이렇게 굴러간다"를 보여 주고
+       옆 사람을 끌어들이는 것이라, 아무도 안 켜면 뜻이 없어요.
+       보기 싫은 사람은 설정에서 끄면 됩니다. */
+  const BOARD_KEY = "roomBoard";
   const PULSE_ALL = ["live", "wall", "wmine", "tmine"];
   let _pulseRef = null;
   let _pulse = {};                        // { 시: 인원 }
@@ -247,6 +252,16 @@
   function pulseOn() {
     try { return AppStore.getItem(PULSE_KEY) === "1"; } catch (e) { return false; }
   }
+  /** 배경 현황판 — 한 번도 안 건드렸으면 켜진 것으로 봅니다 */
+  function boardOn() {
+    try { return AppStore.getItem(BOARD_KEY) !== "0"; } catch (e) { return true; }
+  }
+  window.isRoomBoardOn = boardOn;
+  window.setRoomBoard = function (on) {
+    try { AppStore.setItem(BOARD_KEY, on ? "1" : "0"); } catch (e) {}
+    listenPulse();          // 껐으면 구독도 거두고, 켰으면 다시 붙입니다
+    drawBoard();
+  };
   /** 고른 항목들 — 늘 순서대로, 빈 목록이면 오늘 접속 하나 */
   function pulseWhat() {
     let raw = "";
@@ -274,12 +289,15 @@
   }
 
   function listenPulse() {
-    if (!pulseOn() || !window.db) { stopPulse(); return; }
-    const 고른것 = pulseWhat();
+    if (!window.db) { stopPulse(); return; }
+    if (!pulseOn() && !boardOn()) { stopPulse(); return; }
+    const 고른것 = pulseOn() ? pulseWhat() : [];
     /* 꺾은선은 고른 것만 한 번씩 읽습니다 (안 고른 항목은 아예 안 읽어요) */
     고른것.filter(w => w !== "live").forEach(꺾은선읽기);
-    /* 📊 오늘 접속만 실시간 구독 */
-    if (고른것.indexOf("live") < 0) { stopPulse(); drawPulse(); return; }
+    /* 📊 오늘 접속만 실시간 구독.
+       [2026-08-21] 배경 현황판도 같은 자료를 씁니다 — 둘 중 하나만
+       켜져 있어도 붙여야 해요. 구독은 하나뿐이니 통신량은 그대로입니다. */
+    if (고른것.indexOf("live") < 0 && !boardOn()) { stopPulse(); drawPulse(); return; }
     const d = ymd(Date.now());
     if (_pulseRef && _pulseDay === d) { drawPulse(); return; }
     stopPulse();
@@ -344,6 +362,7 @@
   };
 
   function drawPulse() {
+    drawBoard();                       // 배경판도 같은 자료를 봅니다
     let box = document.getElementById("room-pulse");
     if (!pulseOn()) { box?.remove(); return; }
     if (!box) {
@@ -380,6 +399,99 @@
             <span class="rp-bars">${칸.join("")}</span>
             <span class="rp-peak">최다 ${최다}명</span>`;
   }
+
+  /* =====================================================================
+     🖼️ 방 배경 현황판 (2026-08-21 — 콩)
+     ---------------------------------------------------------------------
+     [무엇을 하려는 것인가]
+     콩의 말: "작업방이 이렇게 굴러가고 있다는 걸 보여 주면서, 어서 너도
+     참여하라고 독려하는 것." 그래서 **판을 열지 않아도 늘 보이는 자리**
+     인 카드 마당 배경에 얹습니다.
+
+         위 : 📊 오늘 접속 현황  (24칸 막대 — 띠와 같은 그림)
+         아래: 🔥 지금 n명 참여 중 (최근 일곱 줄)
+
+     [지켜야 할 것]
+     ① **클릭을 하나도 안 가립니다.** pointer-events: none 이고 카드보다
+        뒤(z-index 0)에 섭니다. 카드가 위로 지나가며 가려도 그게 정상이에요
+        (최다 동접 19명이면 A자리는 거의 안 가립니다 — 콩 확인).
+     ② **새로 읽는 자료가 없습니다.** 막대는 띠가 쓰던 roomStat 구독을
+        같이 쓰고, 줄은 글자수 쪽이 이미 받아 둔 wordfeed 를 봅니다.
+     ③ 배경 그림 위에 얹히므로 **흐린 판을 깔고 글씨를 짙게** 씁니다.
+        (이 방에서 여러 번 데인 자리 — 흔한 회색은 밝은 배경에서 사라져요.)
+     ===================================================================== */
+  function 언제글(at) {
+    const m = Math.floor((Date.now() - (Number(at) || 0)) / 60000);
+    if (m < 1) return "방금";
+    if (m < 60) return m + "분";
+    return Math.floor(m / 60) + "시간";
+  }
+  const 화글 = (ep, u) => ep + (/^\d+$/.test(String(ep)) ? (u || "화") : "");
+
+  /** 오늘 글자수를 올린 사람 수 — 이미 받아 둔 wordlog 를 셉니다 */
+  function 오늘참여자수() {
+    try {
+      const t = window.Wordcount?._state?.().today || {};
+      return Object.values(t).filter(v => Number(v?.total) > 0).length;
+    } catch (e) { return 0; }
+  }
+
+  function 흐름줄들() {
+    let feed = [];
+    try { feed = (window.Wordcount?._state?.().feed || []).filter(f => f && f.type !== "pomo"); }
+    catch (e) { return ""; }
+    if (!feed.length) {
+      return `<p class="rb-empty">아직 조용해요 — 첫 줄을 올려 보세요</p>`;
+    }
+    return feed.slice(-7).reverse().map(f => {
+      const 내것 = !!myNick && f.nick === myNick;
+      let 말;
+      if (f.kind === "done")       말 = `<b>${escapeHtml(화글(f.ep || "", f.u))} 마침</b>${f.snap ? " · " + comma(f.snap) + "자" : ""} 🎉`;
+      else if (f.kind === "start") 말 = `<b>${escapeHtml(화글(f.ep || "", f.u))}</b> 시작`;
+      else                         말 = `+${comma(f.add)}자`;
+      return `<span class="rb-fl${내것 ? " me" : ""}">
+        <span class="rb-who">${escapeHtml(f.nick)}</span>
+        <span class="rb-what">${말}</span>
+        <span class="rb-ago">${언제글(f.at)}</span></span>`;
+    }).join("");
+  }
+
+  let _board재시도 = 0;
+  function drawBoard() {
+    const host = document.querySelector(".cards-area");
+    let box = document.getElementById("room-board");
+    if (!boardOn()) { box?.remove(); return; }
+    /* 카드 마당이 아직 안 만들어졌을 수 있습니다 (배치를 다시 짜는 중).
+       조금 있다 한 번만 더 두드려 봅니다 — 안 그러면 흐름이 올 때까지
+       배경판이 안 뜹니다. */
+    if (!host) {
+      if (_board재시도 < 3) { _board재시도++; setTimeout(drawBoard, 900); }
+      return;
+    }
+    _board재시도 = 0;
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "room-board";
+      box.className = "room-board";
+      box.setAttribute("aria-hidden", "true");   // 읽어 주는 기계는 건너뛰게
+      /* ★ 카드 격자 **앞**에 넣습니다 — 뒤에 넣으면 카드가 스크롤될 때
+         같이 밀려 올라갑니다. 자리는 CSS 가 absolute 로 잡아요. */
+      host.insertBefore(box, host.firstChild);
+    }
+    const n = 오늘참여자수();
+    box.innerHTML = `<div class="rb-inner">
+      <div class="rb-box">
+        <div class="rb-t">📊 오늘 접속 현황</div>
+        <div class="rb-bars">${막대띠()}</div>
+      </div>
+      <div class="rb-box">
+        <div class="rb-t">🔥 ${n > 0 ? `지금 ${n}명 참여 중` : "지금 방에서"}</div>
+        <div class="rb-fb">${흐름줄들()}</div>
+      </div>
+    </div>`;
+  }
+  /* 글자수 쪽에서 새 줄이 흘러올 때 불러 줍니다 (자료를 다시 안 읽습니다) */
+  window.renderRoomBoard = drawBoard;
 
   /* ✍️⏱️ 이번 달 추이 — 꺾은선.
      ★ 막대와 같은 높이(39px) 안에 그립니다. 값이 하나도 없으면 선을

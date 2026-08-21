@@ -502,6 +502,12 @@
        켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */
     const pulseChk = document.getElementById("set-pulse");
     if (pulseChk) pulseChk.checked = !!window.isPulseOn?.();
+
+    /* 🖼️ 방 배경 현황판 (2026-08-21) — 이것도 처음 상태만.
+       ★ 기본이 **켜짐**이라, 한 번도 안 건드린 사람은 체크가 들어와 있어야
+         합니다. 여기서 안 맞추면 "켜져 있는데 꺼진 것처럼" 보여요. */
+    const boardChk = document.getElementById("set-board");
+    if (boardChk) boardChk.checked = !!window.isRoomBoardOn?.();
     /* 📊 띠 항목 체크 — 지금 고른 것들에 맞춥니다.
        하나도 안 남으면 pulseWhat() 이 '오늘 접속' 으로 되돌리므로,
        그 값을 그대로 비춰 주면 화면과 실제가 어긋나지 않아요. */

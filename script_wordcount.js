@@ -1129,6 +1129,8 @@
         .filter(f => f && f.type !== "pomo")
         .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
       render();
+      /* 🖼️ 방 배경 현황판도 이 줄들을 봅니다 (자료를 새로 안 읽어요) */
+      window.renderRoomBoard?.();
     });
 
     /* 주간은 날짜마다 따로 붙습니다. 하루치씩이라 양이 적어요.
