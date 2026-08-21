@@ -1095,6 +1095,56 @@
   });
   window.listenScreens     = listenScreens;   // 🧘 혼자 방이 직접 켭니다
   window.isScreenSharing   = () => _sharing;
+  /* 지금 뭉갬 폭 — 🧘 혼자 방이 같은 값으로 사진을 줄여 보여 줍니다 */
+  window.shareWidthNow     = () => _shareW;
+
+  /* =====================================================================
+     🧘 혼자 방에서 뭉갬을 **진짜로** 걸어 보기 (2026-08-21 — 콩)
+     ---------------------------------------------------------------------
+     혼자 방은 시험장인데, 정작 뭉갬 정도는 시험할 수 없었습니다.
+     올린 사진을 520px 그대로 띄웠거든요 — 진짜 방(256px)보다 두 배
+     선명해서, 보고 판단하면 오히려 잘못 판단하게 됩니다.
+
+     그래서 **보여줄 때만** 같은 폭으로 다시 줄입니다.
+     ★ 저장된 사진은 건드리지 않습니다. 슬라이더를 아무리 움직여도
+       원본은 그대로라 되돌리기가 자유롭고, 서버로 나가는 것도 없어요.
+     ★ 진짜 방의 grabMosaic 과 **같은 픽셀 상한·같은 품질 사다리**를
+       씁니다 — 여기서 본 것이 곧 저기서 보일 것이어야 하니까요.
+     ===================================================================== */
+  const _뭉갠캐시 = new Map();          // "원본길이|폭" → 뭉갠 dataURL
+  window.soloBlurShot = function (dataUrl, w) {
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return dataUrl;
+    const 폭 = Math.max(SHARE_W_MIN, Math.min(SHARE_W_MAX, Number(w) || _shareW));
+    const 열쇠 = dataUrl.length + "|" + dataUrl.slice(-24) + "|" + 폭;
+    if (_뭉갠캐시.has(열쇠)) return _뭉갠캐시.get(열쇠);
+    /* 그림을 불러오는 일은 비동기라, 여기서는 원본을 돌려주고
+       다 되면 다시 그려 달라고 알립니다 (두 번째부터는 캐시에서 바로). */
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const PIX = SHARE_W_MAX * Math.round(SHARE_W_MAX * 0.6);
+        let W = 폭, H = Math.max(1, Math.round(폭 * (im.height / im.width)));
+        if (W * H > PIX) { const k = Math.sqrt(PIX / (W * H));
+                           W = Math.max(1, Math.round(W * k)); H = Math.max(1, Math.round(H * k)); }
+        const cv = document.createElement("canvas");
+        cv.width = W; cv.height = H;
+        cv.getContext("2d").drawImage(im, 0, 0, W, H);
+        /* 그림을 꺼내는 자리는 여기 하나뿐입니다 (진짜 방과 같은 사다리) */
+        let out = null;
+        for (const q of SHARE_QUALITIES) {
+          const u = cv.toDataURL("image/jpeg", q);
+          if (!out) out = u;                                   // 못 줄여도 뭔가는 남깁니다
+          if (dataUrlBytes(u) <= SHARE_MAX_BYTES) { out = u; break; }
+        }
+        _뭉갠캐시.set(열쇠, out);
+        if (_뭉갠캐시.size > 24) _뭉갠캐시.delete(_뭉갠캐시.keys().next().value);
+        window.soloSyncScreens?.();     // 이제 뭉갠 것으로 다시 담습니다
+        renderShareCards();
+      } catch (e) {}
+    };
+    im.src = dataUrl;
+    return dataUrl;                     // 아직은 원본 (한 박자 뒤에 뭉개져서 옵니다)
+  };
   window.setShareWidth     = setShareWidth;
   window.setShareFit       = setShareFit;
 

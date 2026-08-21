@@ -611,7 +611,14 @@
            올릴 때는 자르지 않고 통째로 담아 두었으니, 여기서 어떻게
            보여줄지만 정하면 됩니다 — 마음이 바뀌면 다시 고를 수 있어요. */
         const fit = (사람들[닉]?.profile?.shareFit === "contain") ? "contain" : "cover";
-        out[닉] = { img, at: 1, level: 100, fit };
+        /* ★ [2026-08-21 — 콩] 진짜 방과 **같은 폭으로 뭉개서** 보여 줍니다.
+           예전에는 올린 사진(520px)을 그대로 띄우고 level 을 100 으로
+           박아 두어서, 여기서 본 선명도가 진짜 방보다 두 배였어요.
+           혼자 방은 시험장인데 정작 뭉갬을 못 시험한 셈입니다.
+           ※ 저장된 사진은 그대로 둡니다 — 화면에만 걸어요. */
+        const 폭 = window.shareWidthNow?.() || 256;
+        const 뭉갠 = window.soloBlurShot ? window.soloBlurShot(img, 폭) : img;
+        out[닉] = { img: 뭉갠, at: 1, level: 폭, fit };
       }
     });
     const 옛 = _get("screens") || {};
