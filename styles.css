@@ -10080,7 +10080,10 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
 .rb-box{
   background: var(--foot-veil, rgba(253,251,247,.72));
   backdrop-filter: blur(9px);
-  border: 1px solid var(--border);
+  /* [2026-08-21 콩] 테두리가 도드라져 보였습니다. 배경에 얹는 것이니
+     가장자리는 있는 듯 없는 듯이면 충분해요 — 흐린 판이 이미 경계를
+     만들어 주니까요. var(--border) 를 절반쯤으로 묽힙니다. */
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   border-radius: 12px;
   padding: 9px 13px;
 }
@@ -10093,6 +10096,11 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
    없으니 여기서 키를 잡아 줘야 해요 — 안 그러면 막대가 0px 로 접힙니다. */
 .rb-bars{ display: flex; align-items: flex-end; gap: 3px; height: 46px; }
 .rb-bars .rp-bars{ flex: 1; }
+/* [2026-08-21 콩] 왼쪽 "오늘" 글자를 뺍니다 — 제목에 이미 "오늘 접속
+   현황" 이라고 적혀 있어서 겹치는 말이고, 그만큼 막대가 넓어져
+   오른쪽 "최다 N명" 이 잘린 듯 보이던 것도 풀립니다.
+   ★ 띠(.room-pulse)에서는 그대로 둡니다 — 거기엔 제목이 없어요. */
+.rb-bars .rp-lb{ display: none; }
 
 /* 흐름 일곱 줄 */
 .rb-fb{ display: flex; flex-direction: column; gap: 1px; }
