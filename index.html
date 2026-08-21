@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608211425">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608211425">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608211856">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608211856">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608211425">
+  <link rel="manifest" href="manifest.json?v=202608211856">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608211425" />
+  <link rel="stylesheet" href="styles.css?v=202608211856" />
 </head>
 
 <body class="dock-mode">
@@ -417,6 +417,27 @@
           <div class="mini-row" style="margin-top:8px;">
             <button type="button" class="ghost-btn compact" onclick="resetSplitSizes()">칸 크기 초기화</button>
           </div>
+        </div>
+
+        <!-- =====================================================================
+             [2026-08-21] 🖥️ 화면 공유 — 남의 화면 보기/안 보기
+             ★ 카드의 빨간 불 안에도 같은 단추가 있지만, **거기만 두면
+               갇힙니다.** 안 보기로 두면 카드가 안 뜰 수 있고, 그러면
+               되돌아갈 문이 사라져요 (콩이 실제로 갇혔습니다 0821).
+               그래서 설정에 **늘 열려 있는 문**을 하나 더 둡니다.
+             ===================================================================== -->
+        <div class="set-block">
+          <div class="set-title">🖥️ 화면 공유</div>
+          <label class="set-row" style="gap:8px; align-items:center; cursor:pointer;">
+            <input type="checkbox" id="set-share-watch"
+                   onchange="setShareWatch(this.checked)">
+            <span>남의 화면 보기</span>
+          </label>
+          <p class="hint" style="margin:6px 0 0;">
+            끄면 <b>내 화면은 그대로 나가고 남의 것만 안 받습니다.</b>
+            집중하고 싶을 때 쓰세요 — 받는 양이 0 이 되니 통신량도 크게 줄어요.
+            뭉갬 정도는 카드의 빨간 불을 누르면 조절할 수 있어요.
+          </p>
         </div>
 
         <!-- =====================================================================
@@ -1269,52 +1290,52 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608211425"></script>
+<script src="script_demo.js?v=202608211856"></script>
 <!-- 🧘 혼자 방 (?solo=1) — demo 와 같은 이유로 맨 앞쪽에 실립니다.
      script_core.js 가 database() 를 부르기 전에 갈아 끼워야 해요. -->
-<script src="script_solo.js?v=202608211425"></script>
-<script src="fortune_data.js?v=202608211425"></script>
-<script src="script_core.js?v=202608211425"></script>
-<script src="script_auth.js?v=202608211425"></script>
-<script src="script_ui.js?v=202608211425"></script>
-<script src="script_chat.js?v=202608211425"></script>
-<script src="script_chatty.js?v=202608211425"></script>
-<script src="script_data.js?v=202608211425"></script>
-<script src="script_realtime.js?v=202608211425"></script>
-<script src="script_dock.js?v=202608211425"></script>
-<script src="script_music.js?v=202608211425"></script>
-<script src="script_wordcount.js?v=202608211425"></script>
+<script src="script_solo.js?v=202608211856"></script>
+<script src="fortune_data.js?v=202608211856"></script>
+<script src="script_core.js?v=202608211856"></script>
+<script src="script_auth.js?v=202608211856"></script>
+<script src="script_ui.js?v=202608211856"></script>
+<script src="script_chat.js?v=202608211856"></script>
+<script src="script_chatty.js?v=202608211856"></script>
+<script src="script_data.js?v=202608211856"></script>
+<script src="script_realtime.js?v=202608211856"></script>
+<script src="script_dock.js?v=202608211856"></script>
+<script src="script_music.js?v=202608211856"></script>
+<script src="script_wordcount.js?v=202608211856"></script>
 <!-- [2026-08-21] ✍️ Work Log 줄 — 반드시 script_wordcount.js **뒤**에.
      날짜 열쇠(dayKey)를 저쪽에서 빌려 쓰기 때문입니다. -->
-<script src="script_worklog.js?v=202608211425"></script>
-<script src="script_timelog.js?v=202608211425"></script>
-<script src="script_idledetect.js?v=202608211425"></script>
-<script src="script_alive.js?v=202608211425"></script>
-<script src="script_profile.js?v=202608211425"></script>
-<script src="script_mywork.js?v=202608211425"></script>
-<script src="script_forest.js?v=202608211425"></script>
-<script src="script_pubreview.js?v=202608211425"></script>
-<script src="script_notice.js?v=202608211425"></script>
-<script src="script_achv.js?v=202608211425"></script>
-<script src="script_reactions.js?v=202608211425"></script>
-<script src="script_note.js?v=202608211425"></script>
+<script src="script_worklog.js?v=202608211856"></script>
+<script src="script_timelog.js?v=202608211856"></script>
+<script src="script_idledetect.js?v=202608211856"></script>
+<script src="script_alive.js?v=202608211856"></script>
+<script src="script_profile.js?v=202608211856"></script>
+<script src="script_mywork.js?v=202608211856"></script>
+<script src="script_forest.js?v=202608211856"></script>
+<script src="script_pubreview.js?v=202608211856"></script>
+<script src="script_notice.js?v=202608211856"></script>
+<script src="script_achv.js?v=202608211856"></script>
+<script src="script_reactions.js?v=202608211856"></script>
+<script src="script_note.js?v=202608211856"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608211425"></script>
+<script src="script_worktag.js?v=202608211856"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608211425"></script>
-<script src="script_share.js?v=202608211425"></script>
+<script src="script_sticker.js?v=202608211856"></script>
+<script src="script_share.js?v=202608211856"></script>
 <!-- 🔍 화면 확대·축소 — 머리말 [− 18px +] 오른쪽에 나란히.
      다른 파일들은 (window.uiZoom?.() || 1) 처럼 **부를 때** 물어보므로
      싣는 차례는 상관없습니다. 없으면 100% 로 봅니다. -->
 <!-- 🙋 Help — 익명 교정 문답 (2026-08-16). 대숲과 같은 익명 방식입니다. -->
-<script src="script_help.js?v=202608211425"></script>
+<script src="script_help.js?v=202608211856"></script>
 <!-- 📁 자료실 (2026-08-18) — 목록(files)과 내용(fileBlob)을 따로 담습니다. -->
-<script src="script_files.js?v=202608211425"></script>
-<script src="script_zoom.js?v=202608211425"></script>
-<script src="script_manual.js?v=202608211425"></script>
-<script src="script_guard.js?v=202608211425"></script>
+<script src="script_files.js?v=202608211856"></script>
+<script src="script_zoom.js?v=202608211856"></script>
+<script src="script_manual.js?v=202608211856"></script>
+<script src="script_guard.js?v=202608211856"></script>
 
 <script>
   window.addEventListener("load", () => {

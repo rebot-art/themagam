@@ -508,6 +508,12 @@
          합니다. 여기서 안 맞추면 "켜져 있는데 꺼진 것처럼" 보여요. */
     const boardChk = document.getElementById("set-board");
     if (boardChk) boardChk.checked = !!window.isRoomBoardOn?.();
+
+    /* 🖥️ 남의 화면 보기 (2026-08-21) — 기본은 켬.
+       ★ 여기가 "갇혔을 때 되돌아오는 문" 입니다. 카드가 안 보이는
+         상황에서도 설정은 늘 열리니까요. */
+    const watchChk = document.getElementById("set-share-watch");
+    if (watchChk) watchChk.checked = !!window.isShareWatchOn?.();
     /* 📊 띠 항목 체크 — 지금 고른 것들에 맞춥니다.
        하나도 안 남으면 pulseWhat() 이 '오늘 접속' 으로 되돌리므로,
        그 값을 그대로 비춰 주면 화면과 실제가 어긋나지 않아요. */

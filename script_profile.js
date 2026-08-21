@@ -1060,7 +1060,10 @@ function soloProfileBlockHtml(tgt) {
            ===================================================================== -->
       <div class="solo-blur-row">
         <label for="solo-blur">화면 뭉갬 정도</label>
-        <input type="range" id="solo-blur" min="80" max="256" step="20"
+        <input type="range" id="solo-blur"
+               min="${(window.shareWRange?.() || {}).min ?? 80}"
+               max="${(window.shareWRange?.() || {}).max ?? 256}"
+               step="${(window.shareWRange?.() || {}).step ?? 16}"
                value="${window.shareWidthNow?.() || 256}">
         <output id="solo-blur-out">${window.shareWidthNow?.() || 256}px</output>
       </div>
