@@ -1401,6 +1401,7 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
    테두리가 없으니 어디까지가 프로필 칸인지 안 보여서,
    손잡이를 어디서 잡아야 하는지 알기 어려웠습니다. */
 .cards-area{
+  position: relative;      /* 🖼️ 배경 현황판의 자리 기준 (2026-08-21) */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -4783,20 +4784,31 @@ html[data-unzoom] #dock-bar{
      화면이 좁으면 저절로 하나씩 섭니다 (flex-wrap 이 알아서). */
   flex: 0 1 auto;
 }
-.room-pulse .rp-lb{
+/* ★★ [고침 2026-08-21] 아래 조각들은 원래 `.room-pulse` 안에서만 모양이
+   있었습니다. 그런데 🖼️ 배경 현황판(.rb-bars)이 **같은 막대 그림**을
+   그대로 빌려 씁니다 (막대띠() 하나로 둘을 그려요).
+   선택자를 안 넓혔더니 배경판의 막대가 **폭도 색도 없이** 사라졌습니다.
+   → 앞으로 막대를 쓰는 자리가 늘면 여기 선택자에 함께 적어 주세요. */
+.room-pulse .rp-lb,
+.rb-bars .rp-lb{
   align-self: center; margin-right: 7px; white-space: nowrap;
   font-size: 10.5px; letter-spacing: .06em; color: var(--muted);
 }
-.room-pulse .rp-bars{ display: flex; align-items: flex-end; gap: 3px; height: 100%; }
-.room-pulse .rp-b{
+.room-pulse .rp-bars,
+.rb-bars .rp-bars{ display: flex; align-items: flex-end; gap: 3px; height: 100%; }
+.room-pulse .rp-b,
+.rb-bars .rp-b{
   width: 10.5px;                        /* 콩: 기본의 150% */
   border-radius: 3px 3px 0 0;
   background: color-mix(in srgb, var(--accent) 34%, transparent);
   transition: height var(--anim);
 }
-.room-pulse .rp-b.now{ background: var(--accent); }
-.room-pulse .rp-b.future{ background: rgba(0,0,0,.07); }
-.room-pulse .rp-peak{
+.room-pulse .rp-b.now,
+.rb-bars .rp-b.now{ background: var(--accent); }
+.room-pulse .rp-b.future,
+.rb-bars .rp-b.future{ background: rgba(0,0,0,.07); }
+.room-pulse .rp-peak,
+.rb-bars .rp-peak{
   align-self: center; margin-left: 8px; white-space: nowrap;
   font-size: 11px; font-weight: var(--fw-bold); color: var(--accent);
 }
@@ -10030,3 +10042,71 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
 .wl-fl.me .wl-what{ text-align: right; }
 /* 시각이 왼쪽 끝에 붙습니다 — 남의 줄과 세로로 어긋나 보이라고 둡니다 */
 .wl-fl.me .wl-ago{ margin-right: 2px; }
+
+/* =====================================================================
+   🖼️ 방 배경 현황판 (2026-08-21 — 콩)
+   ---------------------------------------------------------------------
+   카드 마당 **뒤**에 얹는 한 겹. "이 방이 이렇게 굴러간다"를 판을 열지
+   않아도 보여 주려고 둡니다 (홍보 + 독려).
+
+   ★★ 클릭을 하나도 안 가립니다 — pointer-events: none.
+      카드가 위로 지나가며 가리는 건 정상이에요. 최다 동접 19명 기준
+      이 자리(아래 가운데)는 거의 안 가립니다.
+
+   ★ 배경 그림 위에 얹히므로 흐린 판을 깔고 글씨를 짙게 씁니다.
+     이 방에서 여러 번 데인 자리예요 — 흔한 회색은 밝은 배경에서 사라집니다.
+   ===================================================================== */
+.room-board{
+  position: absolute;
+  left: 0; right: 0; bottom: 14px;
+  z-index: 0;                     /* 카드(1)보다 뒤 */
+  pointer-events: none;           /* ★ 카드 클릭을 하나도 안 가림 */
+  display: flex; justify-content: center;
+}
+/* 카드 격자를 앞으로 — 안 올리면 배경판이 카드를 덮습니다 */
+.cards-area > .user-cards-grid{ position: relative; z-index: 1; }
+
+/* ★ 확대·축소해도 알약처럼 제 크기 (콩 요청).
+   머리말·알약 줄이 쓰는 그 장치를 그대로 씁니다 — 새로 만들지 않아요.
+   ※ 바깥(.room-board)이 아니라 **안쪽**에 겁니다. 바깥에 걸면 left/right
+     까지 배율을 타서 가운데가 어긋나요. 안쪽만 키우면 flex 가 알아서
+     가운데를 다시 잡아 줍니다. */
+html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
+
+.rb-inner{
+  width: min(420px, calc(100% - 28px));
+  display: flex; flex-direction: column; gap: 9px;
+}
+.rb-box{
+  background: var(--foot-veil, rgba(253,251,247,.72));
+  backdrop-filter: blur(9px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 13px;
+}
+.rb-t{
+  font-size: 11px; font-weight: 800; letter-spacing: .02em;
+  color: var(--muted-strong); margin-bottom: 6px;
+}
+/* 막대 — 띠와 같은 그림이라 .rp-* 를 그대로 씁니다 */
+/* ★ 띠에서는 .rp-wrap 이 57px 높이를 주었습니다. 배경판에는 그 껍데기가
+   없으니 여기서 키를 잡아 줘야 해요 — 안 그러면 막대가 0px 로 접힙니다. */
+.rb-bars{ display: flex; align-items: flex-end; gap: 3px; height: 46px; }
+.rb-bars .rp-bars{ flex: 1; }
+
+/* 흐름 일곱 줄 */
+.rb-fb{ display: flex; flex-direction: column; gap: 1px; }
+.rb-fl{ display: flex; align-items: baseline; gap: 7px; font-size: 12px; padding: 1px 0; }
+.rb-who{ flex: 0 0 auto; font-weight: 700; color: var(--text); }
+.rb-what{ flex: 1 1 auto; min-width: 0; color: var(--muted-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rb-what b{ color: var(--text); }
+.rb-ago{ flex: 0 0 auto; font-size: 10px; color: var(--muted); }
+/* 내 줄은 반대쪽에서 — Work Log 흐름과 같은 결(A안) */
+.rb-fl.me{ flex-direction: row-reverse; text-align: right; }
+.rb-fl.me .rb-what{ text-align: right; }
+.rb-empty{ font-size: 11.5px; color: var(--muted); margin: 2px 0 0; }
+
+/* 좁은 화면에서는 접습니다 — 카드가 두 줄도 안 되는 폭에서 배경판까지
+   깔면 화면이 답답해져요 */
+@media (max-width: 640px){ .room-board{ display: none; } }
