@@ -574,6 +574,20 @@
 
   const el = (id) => document.getElementById(id);
   const W  = () => window.Worklog;
+
+  /* ★★ [고침 2026-08-21] 여기서 또 밟았습니다.
+     script_core.js 의 myNick 은 **최상위 let** 이라 window 에 안 붙습니다.
+     그래서 window.myNick 은 늘 빈 글자예요.
+
+     이걸 두 군데서 쓰고 있었고, 둘 다 조용히 틀렸습니다 —
+       · 아래 "오늘 +N자" 가 늘 **+0자** 로 떴습니다 (콩 캡쳐에서 발견)
+       · 🔥 흐름에서 **내 줄이 한 번도 내 줄로 안 잡혔습니다**
+
+     자료실에서 한 번, 여기서 두 번. 늘 이 me() 를 거칩니다. */
+  function me() {
+    try { if (typeof myNick === "string" && myNick) return myNick; } catch (e) {}
+    return window.myNick || "";
+  }
   const 콤마 = (n) => Number(n || 0).toLocaleString("ko-KR");
   const 요일 = ["일", "월", "화", "수", "목", "금", "토"];
   /* 숫자면 단위를 붙이고, "프롤로그" 처럼 글자면 그대로 둡니다.
@@ -684,7 +698,7 @@
     let 오늘늘 = 0;
     try {
       const t = window.Wordcount?._state?.().today;
-      if (오늘인가 && t) 오늘늘 = Number(t[window.myNick || ""]?.total || 0);
+      if (오늘인가 && t) 오늘늘 = Number(t[me()]?.total || 0);
       else rows.forEach(([, r]) => { 오늘늘 += Math.max(0, (Number(r.cnt)||0) - (Number(r.base)||0)); });
     } catch (e) {}
     const 회 = rows.filter(([, r]) => r.ep && r.cnt > 0).map(([, r]) => 회차글(r.w, r.ep)).join(" · ");
@@ -712,14 +726,18 @@
     if (!feed.length) return `<div class="wl-feed"><div class="wl-fh">🔥 지금 방에서</div>
       <div class="wl-fempty">아직 조용해요. 첫 줄을 올려 보세요.</div></div>`;
     const 줄 = feed.slice(-14).reverse().map(f => {
-      const 내것 = f.nick === (window.myNick || "");
+      const 내것 = !!me() && f.nick === me();
       let 말;
       if (f.kind === "done")       말 = `<b>${esc(화(f.ep || "", f.u))} 마침</b>${f.snap ? " · " + 콤마(f.snap) + "자" : ""} 🎉`;
       /* "시작" 은 더 이상 만들지 않습니다 (2026-08-21 콩). 오늘 이미
          쌓인 옛 줄이 있을 수 있어 읽기만 남겨 둡니다. */
       else if (f.kind === "start") 말 = `<b>${esc(화(f.ep || "", f.u))}</b> 시작`;
       else                         말 = `+${콤마(f.add)}자`;
-      return `<div class="wl-fl${f.kind === "done" ? " big" : ""}">
+      /* [2026-08-21 콩 — B안] 내 줄에는 왼쪽에 가는 색 띠 하나.
+         일부러 얌전하게 둡니다 — 이 자리는 "남이 쓰는 게 보여서 나도
+         쓰게 되는" 곳이라, 내 줄이 너무 튀면 남의 줄이 배경처럼
+         보여서 그 효과가 되레 줄어요. */
+      return `<div class="wl-fl${f.kind === "done" ? " big" : ""}${내것 ? " me" : ""}">
         <span class="wl-who${내것 ? " me" : ""}">${esc(f.nick)}</span>
         <span class="wl-what">${말}</span>
         <span class="wl-ago">${언제(f.at)}</span></div>`;
