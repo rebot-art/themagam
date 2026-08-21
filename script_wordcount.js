@@ -877,13 +877,16 @@
       const okSave = await save({ base: v, total: next });
       if (okSave === false) { clearInput(); return; }
       await pushFeed(diff, v);
-      say(`+${fmt(diff)}자 · 오늘 누적 ${fmt(next)}자`);
+      /* [2026-08-22 — 콩] 기준을 함께 보여 줍니다. 안 보이니 자꾸
+         [▶ 기준] 을 눌러 되짚어 보게 되더라고요.
+         기준 = 방금 적은 값(v) — 다음엔 여기서부터 셉니다. */
+      say(`+${fmt(diff)}자 · 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
     } else if (diff === 0) {
       say("그대로예요");
     } else {
       /* 줄었을 때는 누적을 깎지 않고 기준만 옮깁니다 */
       await save({ base: v });
-      say("글자수가 줄었네요. 기준만 옮겼어요");
+      say(`글자수가 줄었네요. 기준만 ${fmt(v)}자로 옮겼어요`);
     }
     clearInput();
   }

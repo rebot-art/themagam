@@ -233,25 +233,26 @@
          내 작업   //  내 글자수
          오늘 접속  //  전체 글자수
 
-     저장은 쉼표로 이은 목록(pulseWhat). 예전에 하나만 고르던 값도
-     그대로 읽혀요 — "live" 는 한 칸짜리 목록이니까요. */
-  const PULSE_KEY = "showPulse";          // 기기별 — 노트북에서 켠 게 폰까지 안 따라가게
-  const PULSE_WHAT_KEY = "pulseWhat";     // "live,wmine" 처럼 쉼표로 이은 목록
+     (항목 고르기는 2026-08-22 에 없앴습니다)
+  /* [철거 2026-08-22] PULSE_KEY · PULSE_WHAT_KEY — 띠를 켜고 끄던 값.
+     기기에 남아 있어도 이제 아무도 안 읽습니다. */
   /* 🖼️ 방 배경 현황판 (2026-08-21 — 콩)
      ★ 기본이 **켜짐**입니다. 목적이 "이 방이 이렇게 굴러간다"를 보여 주고
        옆 사람을 끌어들이는 것이라, 아무도 안 켜면 뜻이 없어요.
        보기 싫은 사람은 설정에서 끄면 됩니다. */
   const BOARD_KEY = "roomBoard";
-  const PULSE_ALL = ["live", "wall", "wmine", "tmine"];
-  let _pulseRef = null;
-  let _pulse = {};                        // { 시: 인원 }
-  let _pulseDay = "";                     // 지금 듣고 있는 날짜
-  const _line = {};                       // 항목별 꺾은선 자료 { what: {날: 값} }
-  const _lineFor = {};                    // 그 자료가 어느 달 것인지 { what: "2026-08" }
+  /* =====================================================================
+     [철거 2026-08-22 — 콩] 📊 각종 현황 띠
+     ---------------------------------------------------------------------
+     알약 줄 위에 뜨던 띠(오늘 접속 막대 · 이번 달 꺾은선 셋)를 없앴습니다.
+     🖼️ 방 배경 현황판이 같은 자리를 더 잘 하고 있어서요 — 판을 열어도
+     안 사라지고, 늘 보이고, 카드를 안 가립니다.
 
-  function pulseOn() {
-    try { return AppStore.getItem(PULSE_KEY) === "1"; } catch (e) { return false; }
-  }
+     ★ 남긴 것: 막대띠() 와 roomStat 구독. 배경판이 그대로 씁니다.
+     ★ 없앤 것: PULSE_ALL · pulseWhat · setPulse · togglePulseWhat ·
+                꺾은선읽기 · 꺾은선띠 · drawPulse · .room-pulse
+     ★ 되살리지 마세요. 되살리려면 배경판과 겹치는지부터 보고요.
+     ===================================================================== */
   /** 배경 현황판 — 한 번도 안 건드렸으면 켜진 것으로 봅니다 */
   function boardOn() {
     try { return AppStore.getItem(BOARD_KEY) !== "0"; } catch (e) { return true; }
@@ -262,18 +263,6 @@
     listenPulse();          // 껐으면 구독도 거두고, 켰으면 다시 붙입니다
     drawBoard();
   };
-  /** 고른 항목들 — 늘 순서대로, 빈 목록이면 오늘 접속 하나 */
-  function pulseWhat() {
-    let raw = "";
-    try { raw = AppStore.getItem(PULSE_WHAT_KEY) || ""; } catch (e) {}
-    const got = String(raw).split(",").map(s => s.trim()).filter(s => PULSE_ALL.indexOf(s) >= 0);
-    /* 차례는 고른 순서가 아니라 **늘 같은 차례**로 — 켜고 끌 때마다
-       띠가 자리를 바꾸면 눈이 피곤합니다 */
-    const out = PULSE_ALL.filter(k => got.indexOf(k) >= 0);
-    return out.length ? out : ["live"];
-  }
-  window.isPulseOn = pulseOn;
-  window.pulseWhat = pulseWhat;
 
   /* 이 시간대 기록 남기기 — 더 클 때만 (규칙도 같은 조건이라 헛걸음이 없음) */
   function 기록해두기(n) {
@@ -288,16 +277,11 @@
     } catch (e) {}
   }
 
+  /* roomStat 구독 — 이제 🖼️ 배경 현황판 하나만 씁니다 (2026-08-22).
+     ★ 꺼 둔 사람은 **읽지도 않습니다.** 띠 시절부터 지켜 온 약속이에요. */
   function listenPulse() {
     if (!window.db) { stopPulse(); return; }
-    if (!pulseOn() && !boardOn()) { stopPulse(); return; }
-    const 고른것 = pulseOn() ? pulseWhat() : [];
-    /* 꺾은선은 고른 것만 한 번씩 읽습니다 (안 고른 항목은 아예 안 읽어요) */
-    고른것.filter(w => w !== "live").forEach(꺾은선읽기);
-    /* 📊 오늘 접속만 실시간 구독.
-       [2026-08-21] 배경 현황판도 같은 자료를 씁니다 — 둘 중 하나만
-       켜져 있어도 붙여야 해요. 구독은 하나뿐이니 통신량은 그대로입니다. */
-    if (고른것.indexOf("live") < 0 && !boardOn()) { stopPulse(); drawPulse(); return; }
+    if (!boardOn()) { stopPulse(); return; }
     const d = ymd(Date.now());
     if (_pulseRef && _pulseDay === d) { drawPulse(); return; }
     stopPulse();
@@ -310,76 +294,9 @@
     _pulseRef = null; _pulseDay = "";
   }
 
-  /* 이번 달 꺾은선 자료 — 항목마다 따로, 달이 넘어갈 때만 다시 읽습니다 */
-  async function 꺾은선읽기(what) {
-    if (what === "live" || !window.db || !myNick) return;
-    const ym = ymd(Date.now()).slice(0, 7);
-    if (_lineFor[what] === ym && _line[what]) { drawPulse(); return; }
-    _lineFor[what] = ym;
-    _line[what] = {};
-    const _pulseLine = _line[what];               // 아래 셈이 이 그릇에 담습니다
-    drawPulse();                                  // 먼저 빈 띠를 띄워 자리를 잡습니다
-    try {
-      if (what === "tmine") {
-        /* ⏱️ 나의 작업 시간 — 내 노드 하나만 읽습니다 (남의 것은 못 읽어요) */
-        const v = (await db.ref(`users/${myNick}/timeSegs`).orderByKey()
-          .startAt(ym + "-01").endAt(ym + "-31").once("value")).val() || {};
-        Object.keys(v).forEach(d => {
-          /* 같은 구간이 두 번 적힌 흉터는 한 번만 (관리자 쪽과 같은 셈) */
-          const best = {};
-          Object.values(v[d] || {}).forEach(sg => {
-            if (!sg || !(sg.b > sg.a)) return;
-            const k = `${sg.s}|${sg.a}`;
-            if (!best[k] || sg.b > best[k].b) best[k] = sg;
-          });
-          let ms = 0;
-          Object.values(best).forEach(sg => { ms += sg.b - sg.a; });
-          _pulseLine[d] = Math.round(ms / 60000);   // 분
-        });
-      } else {
-        /* ✍️ 글자수 — wordlog 은 공개 읽기. 한 달을 한 번에 (요청 하나) */
-        const v = (await db.ref("wordlog").orderByKey()
-          .startAt(ym + "-01").endAt(ym + "-31").once("value")).val() || {};
-        Object.keys(v).forEach(d => {
-          const 그날 = v[d] || {};
-          let n = 0;
-          if (what === "wmine") n = Math.max(0, Number(그날[myNick]?.total || 0));
-          else Object.values(그날).forEach(r => { n += Math.max(0, Number(r?.total || 0)); });
-          _pulseLine[d] = n;
-        });
-      }
-    } catch (e) { /* 못 읽으면 빈 띠로 둡니다 */ }
-    drawPulse();
-  }
-  /* 글자수 기능이 오늘 값을 갱신하면 띠도 따라옵니다 (지난 날짜는 그대로) */
-  window.pulseTouchToday = function (myTotal, roomTotal) {
-    if (!pulseOn()) return;
-    const d = ymd(Date.now());
-    let 바뀜 = false;
-    if (_line.wmine && typeof myTotal === "number" && myTotal >= 0) { _line.wmine[d] = myTotal; 바뀜 = true; }
-    if (_line.wall && typeof roomTotal === "number" && roomTotal >= 0) { _line.wall[d] = roomTotal; 바뀜 = true; }
-    if (바뀜) drawPulse();
-  };
-
-  function drawPulse() {
-    drawBoard();                       // 배경판도 같은 자료를 봅니다
-    let box = document.getElementById("room-pulse");
-    if (!pulseOn()) { box?.remove(); return; }
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "room-pulse";
-      box.className = "room-pulse";
-      /* 알약 줄 바로 위 — #dock 안에 넣어야 좁게 보기·배율을 같이 탑니다 */
-      const dock = document.getElementById("dock");
-      const bar = document.getElementById("dock-bar");
-      if (!dock || !bar) return;
-      dock.insertBefore(box, bar);
-    }
-    /* 고른 것마다 띠 하나. CSS 가 두 개씩 한 줄로 접습니다 */
-    box.innerHTML = pulseWhat()
-      .map(w => `<div class="rp-wrap">${w === "live" ? 막대띠() : 꺾은선띠(w)}</div>`)
-      .join("");
-  }
+  /* [철거 2026-08-22] drawPulse() — 알약 줄 위 띠를 그리던 곳.
+     이제 배경 현황판(drawBoard)만 남습니다. */
+  function drawPulse() { drawBoard(); }
 
   /* 📊 오늘 접속 인원 — 24칸 막대 */
   function 막대띠() {
@@ -493,73 +410,12 @@
   /* 글자수 쪽에서 새 줄이 흘러올 때 불러 줍니다 (자료를 다시 안 읽습니다) */
   window.renderRoomBoard = drawBoard;
 
-  /* ✍️⏱️ 이번 달 추이 — 꺾은선.
-     ★ 막대와 같은 높이(39px) 안에 그립니다. 값이 하나도 없으면 선을
-       안 그리고 "아직 없어요" 만 — 바닥에 붙은 직선은 고장처럼 보여요. */
-  function 꺾은선띠(what) {
-    const _pulseLine = _line[what] || {};
-    const 이름 = { wall: "이번 달 방 전체", wmine: "이번 달 내 글자수", tmine: "이번 달 내 작업" }[what] || "";
-    const now = new Date();
-    const ym = ymd(Date.now()).slice(0, 7);
-    const 날수 = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const 오늘 = now.getDate();
-    const 값 = [];
-    for (let d = 1; d <= 날수; d++) {
-      값.push(Number((_pulseLine || {})[`${ym}-${String(d).padStart(2, "0")}`] || 0));
-    }
-    const 최대 = Math.max(...값, 0);
-    const 합 = 값.reduce((a, b) => a + b, 0);
-    const 꼬리 = what === "tmine" ? 시간글(합) : `${comma(합)}자`;
-
-    if (!최대) {
-      return `<span class="rp-lb">${이름}</span>
-              <span class="rp-empty">아직 쌓인 게 없어요</span>`;
-    }
-    /* 오늘까지만 긋습니다 — 앞날을 0으로 이으면 절벽처럼 뚝 떨어져요 */
-    const W = 24 * 13.5, H = 39;
-    const X = (d) => (날수 <= 1 ? 0 : (d - 1) / (날수 - 1) * W);
-    const Y = (v) => H - (v / 최대) * (H - 3);
-    const 점 = [];
-    for (let d = 1; d <= Math.min(오늘, 날수); d++) 점.push(`${X(d).toFixed(1)},${Y(값[d - 1]).toFixed(1)}`);
-    const 끝 = Math.min(오늘, 날수);
-    return `<span class="rp-lb">${이름}</span>
-      <svg class="rp-line" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
-           role="img" aria-label="${이름} 추이">
-        <polyline points="${점.join(" ")}" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <circle cx="${X(끝).toFixed(1)}" cy="${Y(값[끝 - 1]).toFixed(1)}" r="2.6" fill="currentColor"/>
-      </svg>
-      <span class="rp-peak">${꼬리}</span>`;
-  }
-
-  function 시간글(분) {
-    const h = Math.floor(분 / 60), m = Math.round(분 % 60);
-    return h ? (m ? `${comma(h)}시간 ${m}분` : `${comma(h)}시간`) : `${m}분`;
-  }
   function comma(n) { return Number(n || 0).toLocaleString("ko-KR"); }
   window.drawPulse = drawPulse;
 
-  /** 설정 스위치가 부릅니다 */
-  window.setPulse = function (on) {
-    try { AppStore.setItem(PULSE_KEY, on ? "1" : "0"); } catch (e) {}
-    if (on) listenPulse(); else { stopPulse(); _pulse = {}; }
-    drawPulse();
-  };
-  /** 설정 체크박스가 부릅니다 — 항목 켜고 끄기.
-      ★ 껐다 다시 켜도 자료는 그대로 둡니다 (_line 을 안 비움) —
-        같은 달이면 다시 읽을 이유가 없어요. */
-  window.togglePulseWhat = function (what, on) {
-    if (PULSE_ALL.indexOf(what) < 0) return;
-    const now = new Set(pulseWhat());
-    if (on) now.add(what); else now.delete(what);
-    const list = PULSE_ALL.filter(k => now.has(k));
-    try { AppStore.setItem(PULSE_WHAT_KEY, list.join(",")); } catch (e) {}
-    listenPulse();
-    drawPulse();
-    /* 하나도 안 남으면 pulseWhat() 이 오늘 접속으로 되돌리므로,
-       화면의 체크 상태를 그 값에 다시 맞춰 줍니다 */
-    window.syncPulseChecks?.();
-  };
+  /* [철거 2026-08-22 — 콩] setPulse · togglePulseWhat.
+     띠를 켜고 끄고 항목을 고르던 창구였습니다. 띠가 없어졌으니 함께
+     걷어냅니다. 배경 현황판은 setRoomBoard 를 씁니다. */
   window.startPulse = listenPulse;
 
   /* [철거 2026-08-14] 머리말 한줄 공지(📌 config/notice)를 뺐습니다 —

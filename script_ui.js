@@ -498,12 +498,10 @@
        없고 좁아져도 쓸 만해서 걷었습니다. 좁은 화면은 채팅부터 열리고
        위쪽 탭으로 옮겨 다닙니다 (script_layout.js 그대로). */
 
-    /* 📊 오늘 접속 띠 (2026-08-18) — 스위치의 처음 상태만 맞춰 줍니다.
-       켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */
-    const pulseChk = document.getElementById("set-pulse");
-    if (pulseChk) pulseChk.checked = !!window.isPulseOn?.();
+    /* [철거 2026-08-22] 📊 띠 스위치·항목 체크 맞추기 — 띠가 없어졌습니다.
+       ★ 아래 둘은 **띠와 무관합니다** — 같이 지우지 마세요. */
 
-    /* 🖼️ 방 배경 현황판 (2026-08-21) — 이것도 처음 상태만.
+    /* 🖼️ 방 배경 현황판 (2026-08-21) — 처음 상태만.
        ★ 기본이 **켜짐**이라, 한 번도 안 건드린 사람은 체크가 들어와 있어야
          합니다. 여기서 안 맞추면 "켜져 있는데 꺼진 것처럼" 보여요. */
     const boardChk = document.getElementById("set-board");
@@ -514,16 +512,6 @@
          상황에서도 설정은 늘 열리니까요. */
     const watchChk = document.getElementById("set-share-watch");
     if (watchChk) watchChk.checked = !!window.isShareWatchOn?.();
-    /* 📊 띠 항목 체크 — 지금 고른 것들에 맞춥니다.
-       하나도 안 남으면 pulseWhat() 이 '오늘 접속' 으로 되돌리므로,
-       그 값을 그대로 비춰 주면 화면과 실제가 어긋나지 않아요. */
-    window.syncPulseChecks = function () {
-      const now = window.pulseWhat?.() || ["live"];
-      document.querySelectorAll(".set-pulse-what").forEach(c => {
-        c.checked = now.indexOf(c.value) >= 0;
-      });
-    };
-    window.syncPulseChecks();
 
     /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
     const csort = document.getElementById("set-card-sort");

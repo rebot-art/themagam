@@ -4745,95 +4745,39 @@ html[data-unzoom] #dock-bar{
 }
 .hello-ok:hover{ background: #5C1A11; }
 
-/* ── 📊 오늘 접속 띠 (2026-08-18) ──
-   알약 줄 바로 위, 24칸 막대. 색은 테마 포인트색(--accent)을 따라갑니다
-   — BGM 노브와 같은 결이에요. 기본은 꺼짐이라 이 상자는 켠 사람 화면에만
-   태어납니다(script_realtime.js drawPulse).
-   ★ #dock 안에 넣습니다 — 좁게 보기·배율을 알약 줄과 같이 타야 해요. */
-/* ★ [고침 2026-08-18, 올린 날] 흐름에서 **빼냅니다**.
-   처음엔 #dock 의 보통 자식으로 뒀는데, 그러면 dock 이 띠 높이만큼
-   두꺼워지고 판(.dock-panels)은 dock 위 끝에 붙어 있어서 **알약 창이
-   통째로 훌쩍 올라갔습니다** (콩 제보 ㅋㅋ). absolute 로 띄우면 dock
-   높이가 그대로라 판도 원래 자리에 섭니다.
-   ★ 판이 열리면 띠는 감춥니다 — 같은 자리라 판 위에 겹쳐 보여요. */
-.room-pulse{
-  position: absolute;
-  left: 0; right: 0;
-  bottom: calc(100% - var(--sp-2));
-  /* [2026-08-18] 여러 개를 고를 수 있게 되면서 — **두 개씩 한 줄**,
-     넘치면 아랫줄로 접힙니다. 아래에서 위로 쌓이도록 wrap-reverse:
-     띠가 늘어도 알약 줄과 붙은 첫 줄은 자리를 안 옮겨요. */
-  display: flex; flex-wrap: wrap-reverse;
-  justify-content: center; align-content: flex-end;
-  gap: 6px;
-  padding: 0 14px 6px;
-  pointer-events: none;                 /* 빈자리는 뒤 카드가 받게 */
-}
-.dock:has(.dock-panel:not([hidden])) .room-pulse{ display: none; }
-.room-pulse .rp-wrap{
-  display: flex; align-items: flex-end; gap: 3px;
-  height: 57px;                         /* 콩: 기본의 150% */
-  background: var(--foot-veil, rgba(253,251,247,.62));
-  backdrop-filter: blur(8px);
-  border-radius: 12px;
-  padding: 7px 13px 6px;
-  pointer-events: auto;
-  box-shadow: 0 2px 10px rgba(0,0,0,.08);
-  max-width: 100%;
-  /* 한 줄에 둘까지 — 띠 하나가 450px 남짓이라 셋째부터는 아랫줄로.
-     화면이 좁으면 저절로 하나씩 섭니다 (flex-wrap 이 알아서). */
-  flex: 0 1 auto;
-}
-/* ★★ [고침 2026-08-21] 아래 조각들은 원래 `.room-pulse` 안에서만 모양이
-   있었습니다. 그런데 🖼️ 배경 현황판(.rb-bars)이 **같은 막대 그림**을
-   그대로 빌려 씁니다 (막대띠() 하나로 둘을 그려요).
-   선택자를 안 넓혔더니 배경판의 막대가 **폭도 색도 없이** 사라졌습니다.
-   → 앞으로 막대를 쓰는 자리가 늘면 여기 선택자에 함께 적어 주세요. */
-.room-pulse .rp-lb,
+/* =====================================================================
+   [철거 2026-08-22 — 콩] 📊 각종 현황 띠 (.room-pulse)
+   ---------------------------------------------------------------------
+   알약 줄 위에 뜨던 띠를 없앴습니다. 🖼️ 방 배경 현황판이 같은 자리를
+   더 잘 해요 — 판을 열어도 안 사라지고, 늘 보이고, 카드를 안 가립니다.
+
+   ★★ 다만 **막대 조각(.rp-*)은 배경판이 그대로 빌려 씁니다.**
+      막대띠() 하나로 둘을 그렸거든요. 그래서 여기 남겨 둡니다 —
+      지우면 배경판의 막대가 폭도 색도 없이 사라집니다 (0821 에 한 번
+      그랬어요). 이제 쓰는 곳이 배경판 하나뿐이라 .rb-bars 로 적습니다.
+   ===================================================================== */
 .rb-bars .rp-lb{
   align-self: center; margin-right: 7px; white-space: nowrap;
   font-size: 10.5px; letter-spacing: .06em; color: var(--muted);
 }
-.room-pulse .rp-bars,
 .rb-bars .rp-bars{ display: flex; align-items: flex-end; gap: 3px; height: 100%; }
-.room-pulse .rp-b,
 .rb-bars .rp-b{
-  width: 10.5px;                        /* 콩: 기본의 150% */
+  width: 10.5px;
   border-radius: 3px 3px 0 0;
   background: color-mix(in srgb, var(--accent) 34%, transparent);
   transition: height var(--anim);
 }
-.room-pulse .rp-b.now,
 .rb-bars .rp-b.now{ background: var(--accent); }
-.room-pulse .rp-b.future,
 .rb-bars .rp-b.future{ background: rgba(0,0,0,.07); }
-.room-pulse .rp-peak,
 .rb-bars .rp-peak{
   align-self: center; margin-left: 8px; white-space: nowrap;
   font-size: 11px; font-weight: var(--fw-bold); color: var(--accent);
 }
-/* ✍️⏱️ 이번 달 추이 — 꺾은선 (2026-08-18).
-   막대와 같은 높이·같은 폭 안에 그려서 항목을 바꿔도 띠가 안 흔들립니다.
-   색은 currentColor 로 받아 포인트색을 그대로 씁니다. */
-.room-pulse .rp-line{
-  width: 324px;            /* 24칸 × 13.5 — 막대 띠와 같은 폭 */
-  max-width: 52vw;
-  height: 39px;
-  color: var(--accent);
-  align-self: flex-end;
-  overflow: visible;
-}
-.room-pulse .rp-empty{
-  align-self: center; font-size: 11px; color: var(--muted);
-  padding: 0 10px; white-space: nowrap;
-}
 /* 좁은 화면에선 막대를 줄여 24칸이 한 줄에 남게 */
 @media (max-width: 640px){
-  .room-pulse .rp-b{ width: 7px; }
-  .room-pulse .rp-lb, .room-pulse .rp-peak{ display: none; }
+  .rb-bars .rp-b{ width: 7px; }
+  .rb-bars .rp-peak{ display: none; }
 }
-/* 채팅에 집중할 때는 띠도 비켜 줍니다 */
-body.narrow-chat-focus .room-pulse{ display: none; }
 
 /* =====================================================================
    📁 자료실 (2026-08-18)

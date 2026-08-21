@@ -322,8 +322,15 @@ const PHOTO_MAX_BYTES = 60 * 1024;  // data URL 문자열 상한
 const PHOTO_INPUT_MAX = 12 * 1024 * 1024; // 원본 파일 상한(12MB)
 /* [추가 2026-08-05] 움직이는 GIF 프사 — 캔버스에 넣으면 첫 프레임만
    남아 정지화면이 됩니다. GIF만은 변환 없이 원본을 그대로 담는데,
-   여러 사람 화면에 매번 내려가는 값이라 크기 상한을 따로 둡니다. */
-const PHOTO_GIF_MAX_BYTES = 300 * 1024;  // GIF 원본 상한(300KB)
+   여러 사람 화면에 매번 내려가는 값이라 크기 상한을 따로 둡니다.
+
+   [막음 2026-08-22 — 콩] **새로 올리는 것은 이제 안 받습니다.**
+   프사는 카드마다 붙어 접속자 수만큼 화면에 뜨는데, GIF 는 눌리지 않는
+   원본이라 여느 프사의 대여섯 배예요.
+   ★ 이 상수는 **아직 남깁니다** — 예전에 올려 둔 GIF 프사를 계속
+     보여 주려면 검사(sanitizePhoto)가 그 크기를 알아야 하니까요.
+     안 그러면 그분들 사진이 어느 날 갑자기 사라집니다. */
+const PHOTO_GIF_MAX_BYTES = 300 * 1024;  // 옛 GIF 프사를 읽어 주기 위한 상한
 
 /**
  * 저장된 사진 값 검증.
@@ -333,7 +340,9 @@ const PHOTO_GIF_MAX_BYTES = 300 * 1024;  // GIF 원본 상한(300KB)
 function sanitizePhoto(v) {
   const s = String(v || "");
   if (!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) return "";
-  /* GIF 는 원본 그대로라 상한이 더 큽니다 (base64 는 원본의 약 4/3배) */
+  /* GIF 는 원본 그대로라 상한이 더 큽니다 (base64 는 원본의 약 4/3배).
+     ★ 새 GIF 는 못 올리지만(2026-08-22), **예전에 올려 둔 것은 그대로
+       보여 줍니다.** 여기서 막으면 그분들 프사가 통째로 사라져요. */
   const cap = s.startsWith("data:image/gif")
     ? Math.ceil(PHOTO_GIF_MAX_BYTES * 4 / 3) + 64
     : PHOTO_MAX_BYTES * 2;
@@ -406,18 +415,23 @@ function fileToSquareDataUrl(file) {
     if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
     if (file.size > PHOTO_INPUT_MAX) return reject(new Error("파일이 너무 커요. 12MB 이하로 올려주세요."));
 
-    /* [추가 2026-08-05] 움직이는 GIF — 변환 없이 원본 그대로.
-       (캔버스를 거치면 첫 프레임만 남습니다) 크기만 확인합니다. */
-    if (file.type === "image/gif") {
-      if (file.size > PHOTO_GIF_MAX_BYTES) {
-        return reject(new Error("움직이는 GIF는 300KB 이하만 올릴 수 있어요. 더 작은 GIF로 부탁해요!"));
-      }
-      const fr = new FileReader();
-      fr.onload = () => resolve(String(fr.result || ""));
-      fr.onerror = () => reject(new Error("이미지를 읽지 못했어요."));
-      fr.readAsDataURL(file);
-      return;
-    }
+    /* =====================================================================
+       [철거 2026-08-22 — 콩] 움직이는 GIF 를 받지 않습니다.
+       ---------------------------------------------------------------------
+       [예전에는] 300KB 이하면 **변환 없이 원본 그대로** 내보냈습니다
+       (캔버스를 거치면 첫 프레임만 남으니까요).
+
+       [왜 막나]
+       프사는 카드마다 붙어서 **접속자 수만큼 화면에 뜹니다.** 20명이면
+       움직이는 그림 20개가 계속 돌아요. 게다가 GIF 는 눌리지 않는
+       원본이라 300KB 짜리 하나가 여느 프사(30~60KB)의 대여섯 배입니다.
+       한 사람이 바꿀 때마다 그게 방 전체로 다시 내려가고요.
+
+       [이제는]
+       .gif 도 다른 사진과 똑같이 캔버스를 거칩니다 — **첫 프레임만**
+       남고 JPEG 로 눌립니다. 그림은 그대로 쓸 수 있고 움직임만 멎어요.
+       ★ 되살리지 마세요. 되살리려면 통신량부터 다시 재 보고요.
+       ===================================================================== */
 
     const url = URL.createObjectURL(file);
     const img = new Image();
