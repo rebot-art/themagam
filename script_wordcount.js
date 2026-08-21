@@ -1281,6 +1281,43 @@
 
   window.startWordcount = startWordcount;
   window.renderWordcount = render;
+  /* =====================================================================
+     ✍️ 이번 달 나의 글자수 — 꺾은선 (2026-08-22, 콩)
+     ---------------------------------------------------------------------
+     알약 줄 위 띠에 있던 것을 **나의 작업 › 글자수 맨 아래**로 옮겼습니다.
+     띠는 없앴지만 "이번 달을 하루하루 훑어보는" 눈은 쓸모가 있어서요.
+
+     ★ 한 달치를 **한 번에** 받습니다 (하루씩 31번 부르지 않아요).
+       wordlog 는 누구나 읽을 수 있어서 범위 읽기가 됩니다.
+     ★ 1일부터 **오늘까지만** 긋습니다 — 앞날을 0 으로 이으면 절벽이 돼요.
+     ===================================================================== */
+  async function myMonthLineHtml() {
+    const nick = me();
+    if (!nick || !window.db) return "";
+    const now = new Date();
+    const ym = dayKey(now).slice(0, 7);
+    const 오늘 = now.getDate();
+    let snap = null;
+    try {
+      snap = await db.ref("wordlog").orderByKey()
+        .startAt(`${ym}-01`).endAt(`${ym}-31\uf8ff`).once("value");
+    } catch (e) { return ""; }
+    const all = snap.val() || {};
+    const pts = [];
+    for (let d = 1; d <= 오늘; d++) {
+      const k = `${ym}-${String(d).padStart(2, "0")}`;
+      pts.push({ v: Number(all[k]?.[nick]?.total || 0), label: `${now.getMonth() + 1}/${d}` });
+    }
+    const 합 = pts.reduce((a, p) => a + p.v, 0);
+    if (!합) {
+      return `<div class="rec-h2">이번 달 하루하루</div>
+              <p class="hint">이번 달엔 아직 적은 글자수가 없어요.</p>`;
+    }
+    return `<div class="rec-h2">이번 달 하루하루</div>
+            ${lineChartHtml(pts)}
+            <div class="rec-foot">이번 달 <b>${fmt(합)}자</b></div>`;
+  }
+
   window.wordcountMyWeekHtml = myWeekHtml;
   /* ---------------------------------------------------------------
      설정 → 📊 나의 기록 에 넣을 글자수 요약.
@@ -1517,6 +1554,7 @@
   window.closeWcAll = closeWcAll;
 
   window.Wordcount = { dayKey, weekDays, weekKeys, rollKeys, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
+                       myMonthLineHtml, lineChartHtml,
                        _state: () => ({ today: _today, week: _week, feed: _feed,
                                         pomoLines: _pomoLines, tab: _tab }) };
 })();

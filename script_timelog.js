@@ -643,12 +643,19 @@
       let timeHtml = "";
       try { timeHtml = recordHtml(await loadSummary(myNick, 7, backWeeks), backWeeks, wcBack); }
       catch (e) { timeHtml = `<p class="hint">기록을 불러오지 못했어요.</p>`; }
+      /* 이번 달 꺾은선은 **한 박자 뒤에** 채웁니다 — 주간 기록이 먼저
+         떠야 창이 빈 채로 멈춰 보이지 않아요 (한 달치를 읽거든요). */
       tHost.innerHTML = `
         <div class="set-block">
           <div class="set-title">⏱️ Working hours</div>
           ${timeHtml}
+          <div id="mw-time-month"></div>
         </div>
         ${exportBlock(backWeeks, wcBack)}`;
+      myMonthTimeLineHtml().then(h => {
+        const box = document.getElementById("mw-time-month");
+        if (box && h) box.innerHTML = h;
+      }).catch(() => {});
     }
 
     /* ✍️ 글자수 */
@@ -662,10 +669,53 @@
         <div class="set-block">
           <div class="set-title">✍️ Letters</div>
           ${wcHtml}
+          <div id="mw-wc-month"></div>
         </div>
         ${exportBlock(backWeeks, wcBack)}`;
+      window.Wordcount?.myMonthLineHtml?.().then(h => {
+        const box = document.getElementById("mw-wc-month");
+        if (box && h) box.innerHTML = h;
+      }).catch(() => {});
     }
   }
+  /* =====================================================================
+     ⏱️ 이번 달 나의 작업 시간 — 꺾은선 (2026-08-22, 콩)
+     ---------------------------------------------------------------------
+     알약 줄 위 띠에 있던 것을 **나의 작업 › 작업 시간 맨 아래**로 옮겼습니다.
+
+     ★ 세는 것은 **Write + Job** 입니다 — 카드의 시계와 같은 기준이에요.
+       (Break·Away 는 뺍니다. "얼마나 앉아 있었나" 가 아니라 "얼마나
+        일했나" 를 보는 자리니까요.)
+     ★ 1일부터 오늘까지만 긋습니다. loadSummary 가 "오늘로부터 N일"을
+       주므로, N 을 **오늘 날짜**로 두면 딱 이번 달 1일부터가 됩니다.
+     ★ 남의 것은 못 읽습니다 — timeSegs 는 본인과 방장만 볼 수 있어요.
+     ===================================================================== */
+  async function myMonthTimeLineHtml() {
+    if (!myNick || !window.db) return "";
+    const 그림 = window.Wordcount?.lineChartHtml;
+    if (!그림) return "";
+    const now = new Date();
+    const 오늘 = now.getDate();
+    let rows = [];
+    try { rows = await loadSummary(myNick, 오늘, 0, { applyReset: true }); }
+    catch (e) { return ""; }
+
+    const pts = rows.map((r, i) => {
+      const ms = Number(r.totals?.writing || 0) + Number(r.totals?.focus || 0);
+      return { v: Math.round(ms / 60000), label: `${now.getMonth() + 1}/${i + 1}` };
+    });
+    const 합분 = pts.reduce((a, p) => a + p.v, 0);
+    if (!합분) {
+      return `<div class="rec-h2">이번 달 하루하루</div>
+              <p class="hint">이번 달엔 아직 쌓인 작업 시간이 없어요.</p>`;
+    }
+    const h = Math.floor(합분 / 60), m = 합분 % 60;
+    const 꼬리 = h ? (m ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
+    return `<div class="rec-h2">이번 달 하루하루 <span class="hint">(Write + Job · 분)</span></div>
+            ${그림(pts)}
+            <div class="rec-foot">이번 달 <b>${꼬리}</b></div>`;
+  }
+
   window.renderMyRecordPanel = renderMyRecordPanel;
 
 
