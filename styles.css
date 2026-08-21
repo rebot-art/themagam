@@ -10071,3 +10071,37 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
   font-size: 12px; font-weight: 700; color: var(--accent);
   font-variant-numeric: tabular-nums; min-width: 44px; text-align: right;
 }
+
+/* =====================================================================
+   ✍️ Work Log 오늘 탭 — 회차만 (2026-08-22 개편, 콩)
+   ---------------------------------------------------------------------
+   할 일과 글자수를 한 줄에 합쳤더니 정신이 없었습니다. 이제 여기는
+   **회차와 글자수만** 다뤄요 — 할 일은 메모 탭의 슬래시 명령 몫입니다.
+   ===================================================================== */
+.wl-epadd{ display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.wl-epwork{
+  flex: 0 0 auto; max-width: 96px; border: 1px solid var(--border);
+  border-radius: 7px; background: var(--panel); color: var(--text);
+  font-size: 12px; padding: 4px 6px; font-family: inherit;
+}
+.wl-epnum{
+  flex: 1 1 auto; min-width: 0; border: 1px solid var(--border);
+  border-radius: 7px; background: var(--panel); color: var(--text);
+  font-size: 12.5px; padding: 4px 8px; font-family: inherit;
+}
+.wl-epnum:focus, .wl-epwork:focus{ outline: none; border-color: var(--accent); }
+.wl-add.compact{ width: auto; margin-top: 0; padding: 5px 11px; white-space: nowrap; }
+
+.wl-eps{ display: flex; flex-direction: column; gap: 4px; }
+.wl-ep{
+  display: flex; align-items: center; gap: 7px; padding: 5px 7px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+}
+.wl-ep.done{ background: var(--fill-1); }
+.wl-ep.done .wl-epname{ text-decoration: line-through; opacity: .55; }
+.wl-epname{
+  flex: 1 1 auto; min-width: 0; font-size: 12.5px; font-weight: 700;
+  color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wl-note{ font-size: 11px; color: var(--sub-muted); margin: 8px 2px 0; line-height: 1.6; }
+.wl-note b{ color: var(--text); }

@@ -1,34 +1,35 @@
 /* TheMagam © 그링링 · 무단 복제·재배포 금지 */
 /* =====================================================================
-   script_worklog.js — ✍️ Work Log 줄 (2026-08-21, 콩 요청)
+   script_worklog.js — ✍️ Work Log (2026-08-22 개편, 콩)
    ---------------------------------------------------------------------
-   [무엇이 달라지나]
-   지금까지 세 가지가 서로를 모른 채 따로 놀았습니다.
+   [무엇을 하는 곳인가]
+   **회차와 글자수만** 다룹니다. 할 일은 여기 없어요.
 
-       할 일   users/{닉}/todoItems   (나의 작업 창 📌 탭)
-       글자수  wordlog/{날}/{닉}      (Work Log 판, 하루에 숫자 하나)
-       달력    wordlog 를 훑어 그림
+       할 일   →  ✍️ 메모 탭의 슬래시 명령(/오늘 · /완료) · 나의 작업 창
+       글자수  →  ① 기존 방식 (전체 글자수 → 기준 대비 차이)
+                  ② 작품·회차 방식  ← 여기
 
-   숫자에 **이름표가 없어서** 5,200자를 쓴 건 알아도 무엇을 썼는지는
-   아무 데도 안 남았어요. 그래서 일주일 막대 말고는 보여줄 게 없었습니다.
+   [왜 갈랐나]
+   처음엔 한 줄이 "할 일이자 글자수" 였습니다. 그런데 둘이 섞이니까
+   자리만 차지하고 헷갈렸어요 — 콩: "동시에 돌아간다는 걸 멤버들이
+   이해를 못해."
 
-   이제 **한 줄이 곧 할 일이자 글자수**입니다.
+   [자리]
+       worklog/{닉}/ep/{id} = { w, ep, cnt, base, stage, done, doneDay, c, at }
+       workname/{닉}/{id}   = { name, unit }        A · B … / 화 · 챕터
 
-       worklog/{닉}/{날}/{id} = { t, w, ep, cnt, stage, done, at }
-
-       t     무엇을 했나 (내용)          ★ 이건 남에게 안 보입니다
-       w     작품 id (선택)
-       ep    회차 (선택, "45" 도 "프롤로그" 도 됩니다)
-       cnt   그 회차의 **누적** 글자수
-       stage 초고 · 수정 · 퇴고 · 비축 · 업로드
-       done  마쳤나
-       at    마지막 손 댄 시각
+       w        작품 id (선택)
+       ep       회차 — "1" 도 "프롤로그" 도 됩니다
+       cnt      그 회차의 **누적** 글자수
+       base     이어 쓰는 회차라면 물려받은 출발선
+       stage    초고 · 수정 · 퇴고 · 비축 · 업로드
+       doneDay  마친 날 — ★ **체크하는 순간** 정해집니다
 
    [★★ 반드시 지켜야 할 것 — 이걸 어기면 조용히 망가집니다]
 
-   ① 할 일 **내용(t)** 은 공개 노드에 절대 안 나갑니다.
-      worklog 는 보안규칙에서 **본인·방장만** 읽습니다. 방 전체가 보는
-      숫자는 예전처럼 todostat(개수만) 으로 갑니다.
+   ① **회차는 날짜에 안 묶입니다.** 1~5화를 미리 만들어 두고 며칠에
+      걸쳐 씁니다. 체크하는 날이 마친 날이 되고, 그때 주간 달력에
+      나타나요. 만들 때는 아무 날에도 안 속합니다.
 
    ② **wordlog/{날}/{닉}.total 을 계속 채워야 합니다.**
       업적(script_achv.js)이 이 값을 봅니다 — wc1k · wc1m · wc10m ·
@@ -41,12 +42,13 @@
    ④ 흐름(wordfeed)에는 **늘어난 만큼만** 나갑니다.
       칸에 든 값은 그 회차의 누적이고, 방에는 차이만 흘려보내요.
 
+   ⑤ **todostat 은 여기서 안 올립니다.** script_data.js 가 예전부터
+      하던 일이라, 겹쳐 올리면 방 전체 숫자가 두 배가 됩니다.
+
    [흐름 규칙 — 콩 확정]
-     글자수를 늘림           → +1,200자      (체크는 안 눌러도 됩니다)
+     글자수를 늘림           → +1,200자
      글자수를 줄이거나 지움  → 아무 일 없음
-     회차 딱지를 새로 붙임   → 45화 시작
-     완료 체크 + 회차 있음   → 45화 마침 · 6,000자 🎉
-     완료 체크 + 회차 없음   → 아무 일 없음
+     체크 (글자수 있음)      → 45화 마침 · 6,000자 🎉
 
    ★ 흐름은 일부러 **걸러내지 않습니다.** 빨리 흘러가야 올리는 부담이
      없어져요 — 남을 글이면 잘 써야 할 것 같아지니까요 (콩).
@@ -64,10 +66,10 @@
   }
 
   const STAGES = ["초고", "수정", "퇴고", "비축", "업로드"];
-  const MAX_TEXT = 120;      // 보안규칙의 t 길이 제한과 같아야 합니다
-  const MAX_EP   = 16;
-  const MAX_CNT  = 500000;
-  const 묶음ms   = 3000;     // 손 떼고 3초 뒤에 한 줄로 묶어 보냅니다
+  const UNITS  = ["화", "챕터"];
+  const MAX_EP  = 16;
+  const MAX_CNT = 500000;
+  const 묶음ms  = 3000;     // 손 떼고 3초 뒤에 한 줄로 묶어 방에 알립니다
 
   /* 날짜 열쇠는 **글자수 쪽 것을 그대로 빌려 씁니다.**
      따로 만들면 자정 언저리에 둘이 다른 날을 가리켜서, 화면은 오늘인데
@@ -78,33 +80,36 @@
                return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`; })());
 
   /* ── 손안의 값 ──────────────────────────────────────────────────
-     _lines[날짜] = { id: {…줄}, … }   내 줄만 들고 있습니다
-     _works[id]   = { name }           내 작품 이름표 (A · B …)      */
-  let _lines = {};
+     _eps[id]   = { w, ep, cnt, base, stage, done, doneDay, c, at }
+     _works[id] = { name, unit }
+     _old[날짜] = { id: {…} }   예전 날짜별 줄 — **읽기만** 합니다        */
+  let _eps = {};
   let _works = {};
+  let _old = {};
   let _ref = null, _wref = null;
-  let _bound = false;
 
-  const 줄들 = (day) => _lines[day] || {};
+  const 회차들 = () => _eps;
   const 작품 = (id) => _works[id] || null;
+  const 옛줄 = (day) => _old[day] || {};
 
   /* =====================================================================
-     듣기 — 내 것만 봅니다 (남의 할 일 내용은 규칙이 막습니다)
-     ---------------------------------------------------------------------
-     ★ 통째로 듣지 않고 **최근 것만** 듣습니다. 1년쯤 쌓이면 줄이 수천
-       개가 되는데, 그걸 매번 받아 오면 입장이 느려져요.
+     듣기 — 내 것만 봅니다 (남의 기록은 규칙이 막습니다)
      ===================================================================== */
-  const KEEP_DAYS = 70;      // 주간 달력이 열 주쯤 뒤로 갈 수 있게
-
   function listen() {
     const nick = me();
     if (!nick || !window.db) return;
     stop();
-    const from = dayKey(new Date(Date.now() - KEEP_DAYS * 86400000));
-    _ref = window.db.ref("worklog/" + nick).orderByKey().startAt(from);
+    _ref = window.db.ref("worklog/" + nick);
     _ref.on("value", (snap) => {
-      _lines = snap.val() || {};
+      const v = snap.val() || {};
+      _eps = v.ep || {};
+      /* 예전에 날짜별로 적어 둔 줄 — 주간 달력에서 함께 보여 줍니다.
+         새로 쓰지는 않아요 (2026-08-22 개편). */
+      _old = {};
+      Object.keys(v).forEach(k => { if (/^\d{4}-\d{2}-\d{2}$/.test(k)) _old[k] = v[k] || {}; });
+      기준맞추기();
       window.renderWorklogIfOpen?.();
+      window.renderRoomBoard?.();
     });
     _wref = window.db.ref("workname/" + nick);
     _wref.on("value", (snap) => {
@@ -119,169 +124,137 @@
   }
 
   /* =====================================================================
-     쓰기
+     쓰기 — 회차 한 칸
      ===================================================================== */
-  function 내길(day, id) {
-    return window.db.ref(`worklog/${me()}/${day}` + (id ? "/" + id : ""));
-  }
+  const 회차길 = (id) => window.db.ref(`worklog/${me()}/ep` + (id ? "/" + id : ""));
 
-  /** 줄 하나를 고칩니다. patch 에 담긴 칸만 나갑니다. */
-  async function 고치기(day, id, patch, 조용히) {
+  async function 고치기(id, patch, 조용히) {
     const nick = me();
     if (!nick || !window.db) return;
-    const 전 = 줄들(day)[id];
+    const 전 = _eps[id];
     if (!전) return;
-
-    /* 손안의 값을 먼저 고칩니다 — 왕복을 기다리는 동안 다음 글자를
-       치면 옛 값으로 계산되던 사고가 글자수 쪽에 있었어요. */
     const 뒤 = { ...전, ...patch, at: Date.now() };
-    _lines[day] = { ...(_lines[day] || {}), [id]: 뒤 };
-    /* ★ 조용히 = 지금 그 칸에 글을 쓰는 중이라는 뜻입니다. 다시 그리면
+    _eps = { ..._eps, [id]: 뒤 };
+    /* ★ 조용히 = 지금 그 칸에 숫자를 치는 중이라는 뜻입니다. 다시 그리면
        입력칸이 갈려서 커서가 날아가요 (2026-08-21 콩 신고). */
     if (!조용히) window.renderWorklogIfOpen?.();
-
     try {
-      await 내길(day, id).update({ ...patch, at: 뒤.at });
+      await 회차길(id).update({ ...patch, at: 뒤.at });
     } catch (e) {
-      _lines[day] = { ...(_lines[day] || {}), [id]: 전 };   // 되돌립니다
+      _eps = { ..._eps, [id]: 전 };
       window.renderWorklogIfOpen?.();
       console.warn("[worklog] 고치기 실패", e);
     }
-    _todoStat();
   }
 
-  /** 새 줄. 만들어진 id 를 돌려줍니다. */
-  async function 더하기(day, seed) {
+  /** 회차 하나 만들기. 만들어진 id 를 돌려줍니다. */
+  async function 회차더하기(w, ep) {
     const nick = me();
-    if (!nick || !window.db) return null;
+    const 번호 = String(ep || "").trim().slice(0, MAX_EP);
+    if (!nick || !번호 || !window.db) return null;
     const id = `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
-    const 줄 = {
-      t: String(seed?.t ?? "").slice(0, MAX_TEXT),
-      done: false,
-      /* c = 만든 때. at(마지막 손댄 때)과 **따로** 둡니다 —
-         줄 차례는 c 로 매겨야 딱지를 눌러도 자리가 안 바뀌어요. */
-      c: Date.now(),
-      at: Date.now()
-    };
-    if (seed?.w)     줄.w = String(seed.w).slice(0, 24);
-    if (seed?.ep)    줄.ep = String(seed.ep).slice(0, MAX_EP);
-    if (seed?.cnt)   줄.cnt = Math.max(0, Math.min(MAX_CNT, Number(seed.cnt) || 0));
-    if (seed?.stage) 줄.stage = seed.stage;
-    if (seed?.from)  줄.from = String(seed.from).slice(0, 40);   // 옮겨온 할 일 표시
+    const 칸 = { ep: 번호, stage: "초고", done: false, c: Date.now(), at: Date.now() };
+    if (w) 칸.w = String(w).slice(0, 24);
+    /* ★ 같은 회차를 전에 쓴 적이 있으면 거기서 이어 갑니다 —
+       기준을 0 으로 두면 이미 쓴 분량이 오늘 것으로 잡혀요. */
+    const 물려받을것 = 지난분량(칸.w, 번호, null);
+    if (물려받을것) { 칸.base = 물려받을것; 칸.cnt = 물려받을것; }
 
-    _lines[day] = { ...(_lines[day] || {}), [id]: 줄 };
+    _eps = { ..._eps, [id]: 칸 };
+    _보낸[id] = Number(칸.cnt) || 0;
     window.renderWorklogIfOpen?.();
-    try { await 내길(day, id).set(줄); }
+    try { await 회차길(id).set(칸); }
     catch (e) {
-      delete _lines[day][id];
+      delete _eps[id];
       window.renderWorklogIfOpen?.();
       console.warn("[worklog] 더하기 실패", e);
       return null;
     }
-    _todoStat();
     return id;
   }
 
-  /** 줄 지우기 — 되돌릴 수 없습니다 */
-  async function 지우기(day, id) {
-    const 전 = 줄들(day)[id];
+  /** 여러 회차를 한꺼번에 — "1-5" 처럼 적었을 때 */
+  async function 회차여럿(w, 처음, 끝) {
+    const a = Number(처음), b = Number(끝);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+    const 낮 = Math.min(a, b), 높 = Math.max(a, b);
+    if (높 - 낮 > 49) return 0;                 // 한 번에 쉰 개까지
+    let 만든수 = 0;
+    for (let n = 낮; n <= 높; n++) {
+      if (await 회차더하기(w, String(n))) 만든수++;
+    }
+    return 만든수;
+  }
+
+  async function 지우기(id) {
+    const 전 = _eps[id];
     if (!전) return;
-    delete _lines[day][id];
+    delete _eps[id];
+    delete _보낸[id];
     window.renderWorklogIfOpen?.();
-    delete _보낸[day + "|" + id];
-    try { await 내길(day, id).remove(); }
+    try { await 회차길(id).remove(); }
     catch (e) {
-      _lines[day] = { ...(_lines[day] || {}), [id]: 전 };
+      _eps = { ..._eps, [id]: 전 };
       window.renderWorklogIfOpen?.();
     }
-    _todoStat();
   }
 
   /* =====================================================================
      ★ 글자수 — 여기가 이 파일의 심장입니다
      ---------------------------------------------------------------------
      칸에 든 값은 그 회차의 **누적**입니다. 5,200 을 6,000 으로 고치면
-     늘어난 800 만 방으로 흘러가고, 하루 합계에도 800 만 더해집니다.
+     늘어난 800 만 방으로 흘러가고, **그 날** 합계에도 800 만 더해집니다.
      콩의 표현으로는 "기준 0 으로 된 계산기" 예요.
 
-     _보낸[날|id] = 마지막으로 셈에 넣은 값
-       · 판을 열 때 지금 값으로 채워 둡니다 — 안 그러면 열자마자
-         +5,200 +1,100 이 우르르 흘러갑니다.
-       · 서버가 거절하면 비웁니다 (다음에 다시 셈하도록).
+     ★★ 회차 칸은 **날짜에 안 묶입니다** (2026-08-22 개편).
+        1~5화를 미리 만들어 두고 며칠에 걸쳐 씁니다. 글자수를 올릴 때마다
+        늘어난 만큼이 **그 날** wordlog 로 들어가요. 날짜는 여기서 셈하지
+        않고 "지금이 며칠인가" 만 봅니다.
      ===================================================================== */
-  const _보낸 = {};
+  const _보낸 = {};      // id → 마지막으로 셈에 넣은 값
   const _타이머 = {};
+  const _저장타이머 = {};
 
-  /** 판을 열거나 서버 값이 새로 올 때 — 기준선을 조용히 맞춥니다 */
   function 기준맞추기() {
-    Object.keys(_lines).forEach(day => {
-      Object.entries(_lines[day] || {}).forEach(([id, r]) => {
-        const k = day + "|" + id;
-        if (_보낸[k] !== undefined) return;
-        /* 이미 적힌 글자수가 있으면 그건 예전에 셈에 들어간 값입니다.
-           아직 안 적었으면 물려받은 기준(base)에서 시작해요. */
-        _보낸[k] = Number(r.cnt) || Number(r.base) || 0;
-      });
+    Object.entries(_eps).forEach(([id, r]) => {
+      if (_보낸[id] === undefined) _보낸[id] = Number(r.cnt) || Number(r.base) || 0;
     });
   }
 
-  /* =====================================================================
-     글자수 칸이 바뀌었습니다 — **세 박자로** 나눠 처리합니다
-     ---------------------------------------------------------------------
-       ① 지금 바로   손안의 값 (화면 합계가 곧바로 따라오게)
-       ② 0.8초 뒤    서버에 저장
-       ③ 3초 뒤      방 흐름에 한 줄
-
-     ★ 왜 저장까지 미루나 — 5,200 을 치면 5 / 52 / 520 / 5200 네 번
-       바뀝니다. 그때마다 저장하면 쓰기가 네 배가 돼요. 방금 status
-       다이어트로 아낀 것을 여기서 도로 까먹을 수는 없습니다.
-     ===================================================================== */
-  const _저장타이머 = {};
-
-  function 글자수바뀜(day, id, 값, 조용히) {
+  function 글자수바뀜(id, 값, 조용히) {
     const v = Math.max(0, Math.min(MAX_CNT, Number(값) || 0));
-    const k = day + "|" + id;
-
-    /* ① 손안의 값만 먼저 — 서버는 아직 안 부릅니다 */
-    const 전 = 줄들(day)[id];
+    const 전 = _eps[id];
     if (!전) return;
-    _lines[day] = { ...(_lines[day] || {}), [id]: { ...전, cnt: v } };
+    _eps = { ..._eps, [id]: { ...전, cnt: v } };
     if (!조용히) window.renderWorklogIfOpen?.();
 
-    /* ② 손을 멈추면 저장 */
-    clearTimeout(_저장타이머[k]);
-    _저장타이머[k] = setTimeout(() => 고치기(day, id, { cnt: v }, true), 800);
+    clearTimeout(_저장타이머[id]);
+    _저장타이머[id] = setTimeout(() => 고치기(id, { cnt: v }, true), 800);
 
-    /* ③ 조금 더 있다가 방에 알리기 */
-    clearTimeout(_타이머[k]);
-    _타이머[k] = setTimeout(() => 흘려보내기(day, id), 묶음ms);
+    clearTimeout(_타이머[id]);
+    _타이머[id] = setTimeout(() => 흘려보내기(id), 묶음ms);
   }
 
-  async function 흘려보내기(day, id) {
-    const k = day + "|" + id;
-    const r = 줄들(day)[id];
+  async function 흘려보내기(id) {
+    const r = _eps[id];
     if (!r) return;
     const 지금 = Number(r.cnt) || 0;
-    const 전   = Number(_보낸[k]) || 0;
+    const 전   = Number(_보낸[id]) || 0;
     const 늘어난 = 지금 - 전;
-
     /* 줄었으면 **아무 일도 없습니다.** 오타를 고친 걸 -3,000자 로
        알릴 수는 없으니까요. 기준만 조용히 내려갑니다. */
-    if (늘어난 <= 0) { _보낸[k] = 지금; return; }
-
-    _보낸[k] = 지금;
-    await 하루합계더하기(day, 늘어난);
-    await 흐름에(day, { kind: "add", add: 늘어난, snap: 지금, ep: r.ep || "" });
+    if (늘어난 <= 0) { _보낸[id] = 지금; return; }
+    _보낸[id] = 지금;
+    await 하루합계더하기(dayKey(), 늘어난);
+    await 흐름에({ kind: "add", add: 늘어난, snap: 지금, ep: r.ep, u: 단위(r.w) });
   }
 
   /* =====================================================================
      ★★ 업적이 보는 자리 — wordlog/{날}/{닉}.total
-     ---------------------------------------------------------------------
      여기를 안 채우면 wc1k · wc1m · wc7d · burst7 … 이 전부 멈춥니다.
-     화면에는 아무 오류도 안 떠요. 그래서 검사(checks.js)로 못 박았습니다.
-
-     ★ transaction 을 씁니다. 두 기기에서 동시에 적으면 update 로는
-       한쪽이 덮여 사라져요 — 합계는 반드시 "읽고 더하기" 여야 합니다.
+     화면에는 아무 오류도 안 떠요. 그래서 검사로 못 박았습니다.
+     ★ transaction 을 씁니다 — 두 기기에서 동시에 적으면 update 로는
+       한쪽이 덮여 사라져요.
      ===================================================================== */
   async function 하루합계더하기(day, 늘어난) {
     const nick = me();
@@ -295,126 +268,56 @@
     }
   }
 
-  /* =====================================================================
-     흐름 — 방이 함께 보는 자리
-     ---------------------------------------------------------------------
-     ★ 내용(t)은 절대 안 싣습니다. 회차 번호와 늘어난 글자수만요.
-       "45화 시작" 은 괜찮지만 "회식 자리 폭로 씬" 은 안 됩니다.
-     ===================================================================== */
-  async function 흐름에(day, o) {
+  /* 흐름 — 방이 함께 보는 자리.
+     ★ 회차 번호와 늘어난 글자수만 싣습니다. */
+  async function 흐름에(o) {
     const nick = me();
     if (!nick || !window.db) return;
     const 짐 = { nick, at: Date.now() };
-    if (o.kind && o.kind !== "add") 짐.kind = o.kind;   // add 는 예전 모양 그대로
+    if (o.kind && o.kind !== "add") 짐.kind = o.kind;
     if (o.add > 0) 짐.add = o.add;
     if (o.snap)    짐.snap = o.snap;
     if (o.ep)      짐.ep = String(o.ep).slice(0, MAX_EP);
-    /* ★ 흐름 줄에는 작품 id 가 없습니다 (남이 읽는 자리라 안 싣습니다).
+    /* 흐름 줄에는 작품 id 가 없습니다 (남이 읽는 자리라 안 싣습니다).
        그래서 단위 글자를 함께 실어 보냅니다 — 없으면 "화" 로 읽어요. */
     if (o.u && o.u !== "화") 짐.u = o.u;
-    if (day !== dayKey()) 짐.late = true;               // 지난 날을 채운 것
-    try { await window.db.ref(`wordfeed/${day}`).push(짐); }
+    try { await window.db.ref(`wordfeed/${dayKey()}`).push(짐); }
     catch (e) { console.warn("[worklog] 흐름 실패", e); }
   }
 
   /* =====================================================================
-     완료 체크 · 회차 딱지
+     ★★ 마침 — 날짜가 여기서 정해집니다 (2026-08-22 개편의 핵심)
+     ---------------------------------------------------------------------
+     회차는 만들 때 아무 날에도 안 속합니다. **체크하는 순간** 그 날
+     것으로 확정돼서 주간 달력에 나타나요.
+     콩: "오늘은 1,2화를 비축 쌓아서 체크하면, 주간 오늘 날짜에 1,2화를
+          썼다고 마무리 짓는 거지."
      ===================================================================== */
-  async function 체크(day, id) {
-    const r = 줄들(day)[id];
+  async function 체크(id) {
+    const r = _eps[id];
     if (!r) return;
     const 켜짐 = !r.done;
-    await 고치기(day, id, { done: 켜짐 });
-
-    /* 회차가 없는 줄은 조용합니다 — "시놉시스 정리" 를 마친 건
-       남의 관심사가 아니니까요 (콩). */
-    if (켜짐 && r.ep && Number(r.cnt) > 0) {
-      await 흐름에(day, { kind: "done", ep: r.ep, snap: Number(r.cnt), u: 단위(r.w) });
+    await 고치기(id, 켜짐 ? { done: true, doneDay: dayKey() }
+                          : { done: false, doneDay: null });
+    if (켜짐 && Number(r.cnt) > 0) {
+      await 흐름에({ kind: "done", ep: r.ep, snap: Number(r.cnt), u: 단위(r.w) });
     }
-    /* 업적의 할 일 카운터는 예전 자리를 그대로 씁니다 */
-    if (켜짐) { try { window.achvBump?.("cTodo"); } catch (e) {} }
   }
 
-  /* =====================================================================
-     ★★ 지난 분량 물려받기 (2026-08-21 고침 — 콩이 짚은 계산 구멍)
-     ---------------------------------------------------------------------
-     [무슨 일이 있었나]
-     어제 1화를 3,000자까지 썼습니다. 오늘 그 1화를 퇴고해서 2,500자가
-     됐어요. 오늘 새 줄에 2,500 을 적으면 —
-
-         기준이 0 이라 **2,500자를 새로 쓴 것**으로 잡혔습니다.
-         실제로 오늘 한 일은 −500자인데요.
-
-     줄은 날짜별로 저장되니까, 오늘 만든 줄은 "이 회차가 어제까지 몇 자
-     였는지" 를 몰랐던 것입니다.
-
-     [그래서]
-     회차 딱지를 붙이는 순간 **그 회차의 지난 마지막 값**을 기준으로
-     물려받습니다. 예전 글자수 기능의 base 를 하루 단위에서 **회차
-     단위**로 옮긴 셈이에요 — 새 개념이 아니라 제자리를 찾은 것입니다.
-
-         어제 1화 3,000  →  오늘 딱지 붙임 → 기준 3,000
-         오늘 2,500 적음 →  2,500 − 3,000 = −500 → 조용, 합계 0   ✅
-         오늘 3,500 까지 →  +500자                                 ✅
-
-     ★ 이미 글자수를 적어 둔 줄에 뒤늦게 딱지를 붙이면, **이미 셈한 것은
-       되돌리지 않습니다.** 하루 합계는 줄어들지 않는다는 규칙(③)을
-       지켜야 하니까요. 그래서 딱지를 **줄 맨 앞**에 두었습니다 —
-       숫자를 적기 전에 먼저 고르게 하려고요 (콩 요청 0821).
-     ===================================================================== */
-  function 지난분량(wid, ep, 뺄id) {
-    if (!wid || !ep) return 0;
-    let 최신 = null;
-    Object.values(_lines).forEach(rows => Object.entries(rows || {}).forEach(([id, r]) => {
-      if (id === 뺄id) return;
-      if (r.w !== wid || String(r.ep) !== String(ep)) return;
-      const t = Number(r.at) || 0;
-      if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
-    }));
-    return 최신 ? 최신.cnt : 0;
-  }
-
-  async function 딱지붙이기(day, id, w, ep) {
-    const r = 줄들(day)[id];
-    if (!r) return;
-    const patch = {};
-    patch.w  = w || null;
-    patch.ep = (ep || "").slice(0, MAX_EP);
-    if (patch.w && !r.stage) patch.stage = "초고";
-    if (!patch.w && !patch.ep) patch.stage = null;
-
-    /* 이 회차를 전에 쓴 적이 있으면 거기서 이어 갑니다 */
-    const 물려받을것 = 지난분량(patch.w, patch.ep, id);
-    patch.base = 물려받을것 || null;
-
-    await 고치기(day, id, patch);
-
-    /* 앞으로의 셈만 기준을 옮깁니다 — 이미 나간 것은 되돌리지 않아요 */
-    const k = day + "|" + id;
-    _보낸[k] = Math.max(Number(_보낸[k]) || 0, 물려받을것);
-
-    /* [2026-08-21] "45화 시작" 은 **빼기로 했습니다** (콩).
-       회차를 붙일 때마다 흘러서 흐름이 시끄러웠어요. 남은 것은
-       +글자수 와 마침 둘뿐입니다. */
-  }
-
-  async function 상태돌리기(day, id) {
-    const r = 줄들(day)[id];
+  async function 상태돌리기(id) {
+    const r = _eps[id];
     if (!r) return;
     const at = STAGES.indexOf(r.stage);
-    await 고치기(day, id, { stage: STAGES[(at + 1) % STAGES.length] });
+    await 고치기(id, { stage: STAGES[(at + 1) % STAGES.length] });
   }
 
   /* =====================================================================
-     작품 이름표
-     ---------------------------------------------------------------------
-     ★ 콩: "작품 제목은 함부로 노출 안 해요. 아마 A, B 로 적을 거예요."
-       그래서 이름은 짧게 두고, 서버에서도 본인만 읽습니다.
+     작품 이름표 — 콩: "제목은 함부로 노출 안 해요. A, B 로 적을 거예요."
      ===================================================================== */
-  /* 단위 — 연재는 "화", 단행은 "챕터" 로 셉니다 (2026-08-21 콩).
-     작품마다 따로 정합니다. 정해 두면 숫자만 적어도 알아서 붙어요. */
-  const UNITS = ["화", "챕터"];
-
+  function 단위(wid) {
+    const u = _works[wid]?.unit;
+    return UNITS.indexOf(u) >= 0 ? u : "화";
+  }
   async function 작품만들기(name, unit) {
     const nick = me();
     const n = String(name || "").trim().slice(0, 24);
@@ -427,13 +330,6 @@
     catch (e) { delete _works[id]; window.renderWorklogIfOpen?.(); return null; }
     return id;
   }
-  /** 그 작품을 무엇으로 세나 — "화" 또는 "챕터" */
-  function 단위(wid) {
-    const u = _works[wid]?.unit;
-    return UNITS.indexOf(u) >= 0 ? u : "화";
-  }
-
-  /** 화 ↔ 챕터 뒤집기 */
   async function 단위바꾸기(wid) {
     const nick = me();
     const w = _works[wid];
@@ -442,120 +338,79 @@
     _works = { ..._works, [wid]: { ...w, unit: 다음 } };
     window.renderWorklogIfOpen?.();
     try { await window.db.ref(`workname/${nick}/${wid}/unit`).set(다음); }
-    catch (e) {
-      _works = { ..._works, [wid]: w };
-      window.renderWorklogIfOpen?.();
-    }
+    catch (e) { _works = { ..._works, [wid]: w }; window.renderWorklogIfOpen?.(); }
   }
-
   async function 작품지우기(id) {
     const nick = me();
     if (!nick || !window.db) return;
-    /* 줄에 붙은 딱지는 그대로 둡니다 — 이름표만 사라져요.
-       지난 기록에서 회차까지 날리면 되돌릴 길이 없습니다. */
+    /* 회차에 붙은 딱지는 그대로 둡니다 — 이름표만 사라져요. */
     delete _works[id];
     window.renderWorklogIfOpen?.();
     try { await window.db.ref(`workname/${nick}/${id}`).remove(); } catch (e) {}
   }
 
   /* =====================================================================
-     방 전체가 보는 숫자 — todostat (개수만)
-     ---------------------------------------------------------------------
-     ★ status 가 아니라 todostat 인 이유: status 는 나가면 통째로
-       지워져서 방 합계가 **줄어듭니다.** todostat 은 하루치로 남아요.
-       (script_data.js 가 같은 이유로 그렇게 하고 있습니다.)
+     집계
      ===================================================================== */
-  let _statTimer = null;
-  function _todoStat() {
-    clearTimeout(_statTimer);
-    _statTimer = setTimeout(async () => {
-      const nick = me();
-      if (!nick || !window.db) return;
-      const day = dayKey();
-      const rows = Object.values(줄들(day));
-      /* 예전 할 일(todoItems)도 함께 셉니다 — 아직 옮기지 않은
-         사람의 숫자가 갑자기 0 이 되면 안 되니까요. */
-      let total = rows.length, done = rows.filter(r => r.done).length;
-      try {
-        const old = window.todosForProfileList?.() || [];
-        total += old.length;
-        done  += old.filter(t => t.done).length;
-      } catch (e) {}
-      if (total <= 0) return;
-      try {
-        await window.db.ref(`todostat/${day}/${nick}`)
-          .set({ total, done: Math.min(done, total), at: Date.now() });
-      } catch (e) {}
-    }, 600);
+  /** 그 회차를 전에 쓴 적이 있으면 마지막 분량 (없으면 0) */
+  function 지난분량(wid, ep, 뺄id) {
+    if (!ep) return 0;
+    let 최신 = null;
+    Object.entries(_eps).forEach(([id, r]) => {
+      if (id === 뺄id) return;
+      if ((r.w || null) !== (wid || null) || String(r.ep) !== String(ep)) return;
+      const t = Number(r.at) || 0;
+      if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
+    });
+    /* 예전 날짜별 줄에도 같은 회차가 있을 수 있습니다 */
+    Object.values(_old).forEach(rows => Object.values(rows || {}).forEach(r => {
+      if ((r.w || null) !== (wid || null) || String(r.ep) !== String(ep)) return;
+      const t = Number(r.at) || 0;
+      if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
+    }));
+    return 최신 ? 최신.cnt : 0;
   }
 
-  /* =====================================================================
-     집계 — 화면이 물어보는 것들
-     ===================================================================== */
-  /** 그 날 쓴 글자수 합 (줄들의 cnt 합이 아니라 **그 날 늘어난 만큼**이
-      아니라, 줄에 적힌 누적의 합입니다 — 달력에 보여 줄 값) */
-  function 날합계(day) {
-    return Object.values(줄들(day)).reduce((a, r) => a + (Number(r.cnt) || 0), 0);
-  }
-  function 날회차(day) {
-    return Object.values(줄들(day)).filter(r => r.ep).map(r => r.ep);
+  /** 그 날 마친 회차들 — 주간 달력이 씁니다 */
+  function 날마침(day) {
+    return Object.entries(_eps)
+      .filter(([, r]) => r.done && r.doneDay === day)
+      .map(([id, r]) => ({ id, ...r }));
   }
 
-  /** 작품 하나의 회차별 글자수 — { "45": {cnt, stage}, "프롤로그": {…} } */
+  /** 작품 하나의 회차별 글자수 — { "45": {cnt, stage}, … } */
   function 작품회차(wid) {
     const m = {};
-    Object.values(_lines).forEach(rows => Object.values(rows || {}).forEach(r => {
-      if (r.w !== wid || !r.ep) return;
-      /* 같은 회차를 여러 날에 걸쳐 썼으면 **가장 마지막 값**이 그 회차의
-         분량입니다 (cnt 는 누적이니까 더하면 안 됩니다). */
+    const 담기 = (r) => {
+      if ((r.w || null) !== (wid || null) || !r.ep) return;
       const 전 = m[r.ep];
       if (!전 || (Number(r.at) || 0) >= (전.at || 0)) {
         m[r.ep] = { cnt: Number(r.cnt) || 0, stage: r.stage || null, at: Number(r.at) || 0 };
       }
-    }));
+    };
+    Object.values(_eps).forEach(담기);
+    Object.values(_old).forEach(rows => Object.values(rows || {}).forEach(담기));
     return m;
   }
 
   /* =====================================================================
-     예전 할 일 이어받기 — **지우지 않습니다**
+     [철거 2026-08-22 — 콩] 할 일 이어받기·todostat 올리기
      ---------------------------------------------------------------------
-     users/{닉}/todoItems 는 그대로 둡니다. 오늘 할 것(오늘 due · 루틴 ·
-     날짜 없음)만 오늘 줄로 **한 번** 옮겨 옵니다.
-
-     ★ from 칸에 원래 id 를 적어 두고, 같은 id 가 이미 있으면 건너뜁니다.
-       안 그러면 새로고침할 때마다 같은 할 일이 쌓입니다.
+     Work Log 는 이제 **회차와 글자수만** 다룹니다. 할 일 관리는
+     ✍️ 메모 탭의 슬래시 명령(/오늘 · /완료)과 나의 작업 창이 맡아요.
+     콩: "할일과 글자수가 섞이니까 공간만 차지하고 정신이 없어."
+     ★ todostat 은 script_data.js 가 예전부터 하던 대로 올립니다 —
+       여기서 겹쳐 올리면 숫자가 두 배가 됩니다.
      ===================================================================== */
-  async function 이어받기() {
-    const nick = me();
-    if (!nick || !window.db) return;
-    let old = [];
-    try { old = window.todosForProfileList?.() || []; } catch (e) { return; }
-    if (!old.length) return;
 
-    const day = dayKey();
-    const 이미 = new Set(Object.values(줄들(day)).map(r => r.from).filter(Boolean));
-    for (const t of old) {
-      if (!t?.id || 이미.has(t.id)) continue;
-      await 더하기(day, { t: t.text || "", from: t.id });
-      if (t.done) {
-        /* 이미 체크해 둔 것은 체크된 채로 (흐름은 안 흘립니다) */
-        const 새것 = Object.entries(줄들(day)).find(([, r]) => r.from === t.id);
-        if (새것) await 고치기(day, 새것[0], { done: true });
-      }
-    }
-  }
-
-  /* =====================================================================
-     바깥에 내주는 것
-     ===================================================================== */
   window.Worklog = {
-    STAGES, dayKey,
-    listen, stop, 기준맞추기, 이어받기,
-    줄들, 작품, 작품들: () => _works,
-    더하기, 고치기, 지우기, 체크, 딱지붙이기, 상태돌리기, 글자수바뀜,
-    작품만들기, 작품지우기, 단위, 단위바꾸기, UNITS,
-    날합계, 날회차, 작품회차,
-    _state: () => ({ lines: _lines, works: _works, sent: _보낸 })
+    STAGES, UNITS, dayKey,
+    listen, stop, 기준맞추기,
+    회차들, 옛줄, 작품, 작품들: () => _works, 단위,
+    회차더하기, 회차여럿, 고치기, 지우기, 체크, 상태돌리기, 글자수바뀜,
+    작품만들기, 작품지우기, 단위바꾸기,
+    지난분량, 날마침, 작품회차,
+    _state: () => ({ eps: _eps, works: _works, old: _old, sent: _보낸 })
   };
 })();
 
@@ -636,115 +491,119 @@
     return { c: 색판[i][0], s: 색판[i][1] };
   }
 
-  let _보는날 = null;      // null 이면 오늘
+  let _고른작품 = null;    // 회차 만들 때 고른 작품
   let _주시작 = null;
   let _펼친날 = null;
   let _열린작품 = null;
   let _회페이지 = {};
-  let _picking = null;     // { day, id }
+
 
   const 오늘키 = () => W().dayKey();
-  function 보는날() {
-    if (!_보는날) { const d = new Date(); d.setHours(0,0,0,0); _보는날 = d; }
-    return _보는날;
-  }
+  /* [철거 2026-08-22] _보는날 — 오늘 탭이 날짜를 안 봅니다.
+     회차는 날짜에 안 묶이거든요. 주간 탭만 주를 옮겨 다닙니다. */
   function 주시작() {
-    if (!_주시작) { const d = new Date(보는날()); d.setDate(d.getDate() - d.getDay()); _주시작 = d; }
+    if (!_주시작) { const d = new Date(); d.setHours(0,0,0,0);
+                    d.setDate(d.getDate() - d.getDay()); _주시작 = d; }
     return _주시작;
   }
 
   /* ═══════════════════ 탭 ①  오늘 ═══════════════════ */
-  function 오늘탭() {
-    const d = 보는날(), day = W().dayKey(d), 오늘인가 = day === 오늘키();
-    const rows = 차례대로(W().줄들(day));
+  /* =====================================================================
+     ✍️ 오늘 탭 — **회차만** 놓습니다 (2026-08-22 개편)
+     ---------------------------------------------------------------------
+     [무엇이 달라졌나]
+     예전에는 한 줄이 "할 일이자 글자수" 였습니다. 그런데 둘이 섞이니까
+     자리만 차지하고 헷갈렸어요 — 콩: "동시에 돌아간다는 걸 멤버들이
+     이해를 못해."
 
-    const 줄HTML = rows.length ? rows.map(([id, r]) => {
-      const w = r.w ? W().작품(r.w) : null;
+     이제 갈라 둡니다.
+         할 일   →  ✍️ 메모 탭의 슬래시 명령 · 나의 작업 창
+         글자수  →  ① 기존 방식(아래 입력줄)  ② 작품·회차 (여기)
+
+     [회차는 날짜에 안 묶입니다]
+     1~5화를 미리 만들어 두고 며칠에 걸쳐 씁니다. **체크하는 날**이
+     그 회차를 마친 날이 되고, 그때 주간 달력에 나타나요.
+     ===================================================================== */
+  function 오늘탭() {
+    const W = window.Worklog;
+    const eps = W.회차들();
+    const 목록 = Object.entries(eps).sort((a, b) => {
+      /* 작품 → 회차 번호 차례. 번호가 아니면 뒤로 */
+      const [ai, A] = a, [bi, B] = b;
+      const w = String(A.w || "").localeCompare(String(B.w || ""));
+      if (w) return w;
+      const na = Number(A.ep), nb = Number(B.ep);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      if (Number.isFinite(na)) return -1;
+      if (Number.isFinite(nb)) return 1;
+      return String(A.ep).localeCompare(String(B.ep));
+    });
+
+    const 줄HTML = 목록.length ? 목록.map(([id, r]) => {
+      const w = r.w ? W.작품(r.w) : null;
       const col = r.w ? 작품색(r.w) : null;
-      const 딱지 = w
-        ? `<button class="wl-tag on" data-wl="pick" data-id="${id}"
-             style="background:${col.s};color:${col.c}" title="작품·회차 고치기"
-             >${esc(w.name)}${r.ep ? " " + esc(회차글(r.w, r.ep)) : ""}</button>`
-        : `<button class="wl-tag" data-wl="pick" data-id="${id}" title="작품·회차 붙이기">＋작품</button>`;
-      const 상태 = r.stage
-        ? `<span class="wl-stage wl-s-${r.stage}" data-wl="stage" data-id="${id}" title="눌러서 바꾸기">${r.stage}</span>`
-        : "";
-      /* ★ [2026-08-21 콩] 작품·상태 딱지가 **내용보다 앞**에 옵니다.
-         계산이 회차 기준을 물려받는 구조라, 숫자를 적기 **전에** 먼저
-         고르는 게 중요해졌어요. 뒤에 있으면 다들 안 누르고 지나갑니다. */
-      return `<div class="wl-row${r.done ? " done" : ""}">
+      const 이름 = (w ? esc(w.name) + " · " : "") + esc(회차글(r.w, r.ep));
+      return `<div class="wl-ep${r.done ? " done" : ""}">
         <button class="wl-chk${r.done ? " on" : ""}" data-wl="chk" data-id="${id}"
                 aria-label="마침" aria-pressed="${r.done}">${r.done ? "✓" : ""}</button>
-        ${딱지}${상태}
-        <input class="wl-txt" data-wl="txt" data-id="${id}" value="${esc(r.t)}"
-               maxlength="120" placeholder="무엇을 했나요">
+        <span class="wl-epname"${col ? ` style="color:${col.c}"` : ""}>${이름}</span>
+        <span class="wl-stage wl-s-${r.stage || "초고"}" data-wl="stage" data-id="${id}"
+              title="눌러서 바꾸기">${esc(r.stage || "초고")}</span>
         <span class="wl-cw"><input class="wl-cnt" data-wl="cnt" data-id="${id}"
               value="${r.cnt ? 콤마(r.cnt) : ""}" placeholder="0" inputmode="numeric"><i>자</i></span>
-        <button class="wl-del" data-wl="del" data-id="${id}" title="이 줄 지우기">✕</button>
+        <button class="wl-del" data-wl="del" data-id="${id}" title="이 회차 지우기">✕</button>
       </div>`;
-    }).join("") : `<p class="wl-empty">이 날은 아직 비어 있어요.<br>아래에서 한 줄 적어 보세요.</p>`;
+    }).join("") : `<p class="wl-empty">아직 만든 회차가 없어요.<br>
+        아래에서 <b>1-5</b> 처럼 적으면 다섯 개가 한 번에 생깁니다.</p>`;
 
-    /* =====================================================================
-       ★ 아래 줄에 숫자가 **둘** 입니다 (2026-08-21 — 콩이 짚은 혼동)
-       ---------------------------------------------------------------------
-       예전엔 "합계" 하나였는데, 그게 가리키는 게 두 가지였어요.
-         · 오늘 +N자  = 오늘 **늘어난** 양. 업적·흐름이 보는 바로 그 숫자라
-                        wordlog 에서 그대로 가져옵니다 (따로 세면 어긋나요).
-         · 원고 M자   = 지금 원고가 몇 자인가. 줄에 적힌 값의 합입니다.
-       퇴고로 깎으면 오른쪽만 줄고 왼쪽은 그대로예요 — 그날 한 일은
-       한 일이니까요.
-       ===================================================================== */
-    const 원고 = W().날합계(day);
+    /* 아래 요약 — 왼쪽은 오늘 늘어난 양(업적·흐름과 같은 숫자) */
     let 오늘늘 = 0;
     try {
       const t = window.Wordcount?._state?.().today;
-      if (오늘인가 && t) 오늘늘 = Number(t[me()]?.total || 0);
-      else rows.forEach(([, r]) => { 오늘늘 += Math.max(0, (Number(r.cnt)||0) - (Number(r.base)||0)); });
+      오늘늘 = Number(t?.[me()]?.total || 0);
     } catch (e) {}
-    const 회 = rows.filter(([, r]) => r.ep && r.cnt > 0).map(([, r]) => 회차글(r.w, r.ep)).join(" · ");
-    const 한일 = rows.filter(([, r]) => r.done).length;
+    const 마친것 = W.날마침(W.dayKey()).map(r => 회차글(r.w, r.ep));
 
-    return `<div class="wl-nav">
-        <button data-wl="day" data-v="-1" title="어제">‹</button>
-        <span class="wl-lbl">${d.getMonth()+1}월 ${d.getDate()}일 (${요일[d.getDay()]})${오늘인가 ? " · 오늘" : ""}</span>
-        <button data-wl="day" data-v="1" title="내일" ${오늘인가 ? "disabled" : ""}>›</button>
-        ${오늘인가 ? "" : `<button class="wl-back" data-wl="day" data-v="0">오늘로</button>`}
+    return `<div class="wl-epadd">
+        ${작품고르개()}
+        <input class="wl-epnum" id="wl-ep-new" maxlength="16"
+               placeholder="회차 — 1 · 1-5 · 프롤로그">
+        <button type="button" class="wl-add compact" data-wl="addep">＋ 만들기</button>
       </div>
-      <div class="wl-rows">${줄HTML}</div>
-      <button class="wl-add" data-wl="add">＋ 한 줄 더</button>
+      <div class="wl-eps">${줄HTML}</div>
       <div class="wl-sum">
         <span class="wl-t">오늘 <b>+${콤마(오늘늘)}</b>자</span>
-        <span class="wl-m">원고 ${콤마(원고)}자</span>
-        <span class="wl-g">${회 ? esc(회) + " · " : ""}${한일}/${rows.length} 마침</span></div>
+        <span class="wl-g">${마친것.length ? esc(마친것.join(" · ")) + " 마침" : ""}</span>
+      </div>
       ${흐름HTML()}`;
   }
 
-  /* =====================================================================
-     🔥 오늘 몇 명이 썼나 (2026-08-21 — 콩)
-     ---------------------------------------------------------------------
-     ★ 새로 읽는 것이 **하나도 없습니다.** 이미 받아 둔 wordlog/{오늘}
-       (script_wordcount.js 가 구독 중)을 세기만 해요.
+  /** 작품 고르는 작은 드롭다운 (없으면 만들기 단추) */
+  function 작품고르개() {
+    const works = window.Worklog.작품들();
+    const ids = Object.keys(works);
+    if (!ids.length) {
+      return `<button type="button" class="wl-tag" data-wl="newwork">＋ 작품 먼저</button>`;
+    }
+    return `<select class="wl-epwork" id="wl-ep-work" aria-label="작품 고르기">
+      ${ids.map(id => `<option value="${id}"${id === _고른작품 ? " selected" : ""}>${esc(works[id].name)}</option>`).join("")}
+    </select>`;
+  }
 
-     [왜 흐름(wordfeed)을 안 세나]
-     흐름은 limitToLast(200) 이라 바쁜 날에는 아침에 올린 사람이 목록
-     밖으로 밀려납니다. 그러면 참여자 수가 **줄어드는** 이상한 일이 나요.
-     wordlog 는 사람당 하루 한 칸이라 밀려날 일이 없습니다.
-
-     ※ 세는 기준은 "오늘 글자수를 올린 사람" 입니다. 할 일만 적고 숫자를
-       안 넣은 사람은 안 세요 — 이 자리가 글자수 흐름이라서입니다. */
+  /* 🔥 오늘 몇 명이 썼나 — 이미 받아 둔 wordlog 를 세기만 합니다.
+     ★ 흐름(wordfeed)으로 세면 안 됩니다 — limitToLast 라 바쁜 날엔
+       아침에 올린 사람이 밀려나서 참여자가 **줄어듭니다.** */
   function 오늘참여자() {
     try {
       const t = window.Wordcount?._state?.().today || {};
       return Object.values(t).filter(v => Number(v?.total) > 0).length;
     } catch (e) { return 0; }
   }
-
   function 흐름이름표() {
     const n = 오늘참여자();
     return n > 0 ? `🔥 지금 ${n}명 참여 중` : "🔥 지금 방에서";
   }
 
-  /* 🔥 방 흐름 — 함께 쓰는 기운이 이 판의 핵심입니다 (콩) */
   function 흐름HTML() {
     const st = window.Wordcount?._state?.();
     const feed = (st?.feed || []).filter(f => f && f.type !== "pomo");
@@ -778,6 +637,13 @@
   }
 
   /* ═══════════════════ 탭 ②  주간 ═══════════════════ */
+  /* =====================================================================
+     📅 주간 탭 — 그 날 **마친 회차**와 그 날 쓴 글자수
+     ---------------------------------------------------------------------
+     회차는 날짜에 안 묶이지만, 체크한 날(doneDay)은 남습니다. 그 날을
+     여기서 보여 줘요 — "오늘 1화, 2화 마침" 하고 마무리 짓는 자리.
+     ★ 예전에 날짜별로 적어 둔 줄도 함께 보여 줍니다 (안 지웠습니다).
+     ===================================================================== */
   function 주간탭() {
     const s = 주시작(), e = new Date(s); e.setDate(e.getDate() + 6);
     let html = `<div class="wl-nav">
@@ -788,33 +654,51 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(s); d.setDate(d.getDate() + i);
       const day = W().dayKey(d);
-      const rows = 차례대로(W().줄들(day)).map(([, r]) => r);
-      const 총 = W().날합계(day);
-      const 회 = rows.filter(r => r.ep).map(r => 회차글(r.w, r.ep));
-      const 그냥 = rows.filter(r => !r.ep).length;
-      let 요약 = 회.length ? `<b>${esc(회.join(", "))}</b>` : "";
-      if (그냥) 요약 += (요약 ? " · " : "") + `기록 ${그냥}줄`;
+      const 마친 = W().날마침(day);
+      const 옛 = Object.values(W().옛줄(day));
+      const 총 = 그날글자수(day);
+      const 이름들 = 마친.map(r => 회차글(r.w, r.ep));
+      let 요약 = 이름들.length ? `<b>${esc(이름들.join(", "))}</b> 마침` : "";
+      if (옛.length) 요약 += (요약 ? " · " : "") + `옛 기록 ${옛.length}줄`;
       if (!요약) 요약 = "—";
+      const 펼칠것 = 마친.length + 옛.length;
       html += `<div class="wl-d${day === 오늘키() ? " today" : ""}${_펼친날 === day ? " open" : ""}">
         <div class="wl-dh" data-wl="fold" data-k="${day}">
           <span class="wl-dw${d.getDay() === 0 ? " sun" : ""}">${요일[d.getDay()]}</span>
           <span class="wl-dn">${d.getDate()}</span>
           <span class="wl-dl">${요약}</span>
           <span class="wl-dc${총 ? "" : " zero"}">${총 ? 콤마(총) + "자" : "·"}</span>
-          <span class="wl-dx">${rows.length ? "▸" : ""}</span>
+          <span class="wl-dx">${펼칠것 ? "▸" : ""}</span>
         </div>
-        ${rows.length ? `<div class="wl-db">${rows.map(r => {
-          const col = r.w ? 작품색(r.w) : null;
-          return `<div class="wl-di">
-            ${r.ep && col
-              ? `<span class="wl-p" style="background:${col.s};color:${col.c}">${esc(회차글(r.w, r.ep))}</span>`
-              : `<span class="wl-p plain">기록</span>`}
-            <span class="wl-n">${esc(r.t) || "—"}</span>
-            <span class="wl-c">${r.cnt ? 콤마(r.cnt) + "자" : "·"}</span></div>`;
-        }).join("")}<button class="wl-goto" data-wl="goto" data-k="${day}">이 날 고치기 ›</button></div>` : ""}
+        ${펼칠것 ? `<div class="wl-db">${
+          마친.map(r => {
+            const col = r.w ? 작품색(r.w) : null;
+            return `<div class="wl-di">
+              <span class="wl-p"${col ? ` style="background:${col.s};color:${col.c}"` : ' class="wl-p plain"'}>${esc(회차글(r.w, r.ep))}</span>
+              <span class="wl-n">${esc(r.stage || "")}</span>
+              <span class="wl-c">${r.cnt ? 콤마(r.cnt) + "자" : "·"}</span></div>`;
+          }).join("") +
+          옛.map(r => `<div class="wl-di">
+              <span class="wl-p plain">옛 기록</span>
+              <span class="wl-n">${esc(r.t) || "—"}</span>
+              <span class="wl-c">${r.cnt ? 콤마(r.cnt) + "자" : "·"}</span></div>`).join("")
+        }</div>` : ""}
       </div>`;
     }
-    return html + `</div>`;
+    return html + `</div>
+      <p class="wl-note">회차는 <b>체크한 날</b>에 들어갑니다. 며칠에 걸쳐 써도
+      마무리 짓는 날 하루에 얹혀요.</p>`;
+  }
+
+  /** 그 날 쓴 글자수 — 이미 받아 둔 주간 자료에서 (새로 안 읽습니다) */
+  function 그날글자수(day) {
+    try {
+      const st = window.Wordcount?._state?.();
+      const 나 = me();
+      if (st?.week?.[day]?.[나]) return Number(st.week[day][나].total || 0);
+      if (day === 오늘키() && st?.today?.[나]) return Number(st.today[나].total || 0);
+    } catch (e) {}
+    return 0;
   }
 
   /* ═══════════════════ 탭 ③  작품 ═══════════════════ */
@@ -958,160 +842,91 @@
   }
 
   /* ═══════════════════ 손가락 ═══════════════════ */
-  function 지금날() { return W().dayKey(보는날()); }
-
   document.addEventListener("click", async (e) => {
-    /* 작품 고르는 작은 창 */
-    const pw = e.target.closest("[data-wlpw]");
-    if (pw) {
-      const box = el("wl-pick");
-      box.querySelectorAll("[data-wlpw]").forEach(b =>
-        b.classList.toggle("on", b === pw && !pw.classList.contains("on")));
-      return;
-    }
-    const pk = e.target.closest("[data-wlpick]");
-    if (pk) {
-      const { day, id } = _picking || {};
-      if (day && id) {
-        if (pk.dataset.wlpick === "clear") await W().딱지붙이기(day, id, null, "");
-        else {
-          const on = el("wl-pick").querySelector("[data-wlpw].on");
-          await W().딱지붙이기(day, id, on?.dataset.wlpw || null, el("wl-pick-ep").value.trim());
-        }
-      }
-      닫기picker(); return;
-    }
-    if (_picking && !e.target.closest("#wl-pick")) 닫기picker();
-
     const b = e.target.closest("[data-wl]");
     if (!b) return;
-    const act = b.dataset.wl, id = b.dataset.id, day = 지금날();
+    const act = b.dataset.wl, id = b.dataset.id;
+    const W = window.Worklog;
 
-    if (act === "day") {
-      const v = Number(b.dataset.v);
-      if (v === 0) { _보는날 = null; }
-      else { const d = new Date(보는날()); d.setDate(d.getDate() + v);
-             if (W().dayKey(d) > 오늘키()) return; _보는날 = d; }
-      _주시작 = new Date(보는날()); _주시작.setDate(_주시작.getDate() - _주시작.getDay());
-      _펼친날 = W().dayKey(보는날());
+    /* ── 주 넘기기 · 펼치기 ── */
+    if (act === "week") {
+      const s2 = 주시작(); s2.setDate(s2.getDate() + Number(b.dataset.v) * 7);
+      _주시작 = s2; window.renderWorklogIfOpen(); return;
+    }
+    if (act === "fold") {
+      _펼친날 = _펼친날 === b.dataset.k ? null : b.dataset.k;
       window.renderWorklogIfOpen(); return;
     }
-    if (act === "week") {
-      const s = 주시작(); s.setDate(s.getDate() + Number(b.dataset.v) * 7);
-      _주시작 = s; window.renderWorklogIfOpen(); return;
+
+    /* ── 회차 만들기 ── */
+    if (act === "addep") {
+      const 칸 = el("wl-ep-new");
+      const 값 = String(칸?.value || "").trim();
+      if (!값) { 칸?.focus(); return; }
+      const wsel = el("wl-ep-work");
+      const w = wsel ? wsel.value : null;
+      _고른작품 = w;
+      /* "1-5" 처럼 적으면 한 번에 여럿 */
+      const m = 값.match(/^(\d+)\s*[-~]\s*(\d+)$/);
+      if (m) await W.회차여럿(w, m[1], m[2]);
+      else   await W.회차더하기(w, 값);
+      if (칸) 칸.value = "";
+      window.renderWorklogIfOpen(); return;
     }
-    if (act === "fold") { _펼친날 = _펼친날 === b.dataset.k ? null : b.dataset.k;
-                          window.renderWorklogIfOpen(); return; }
-    if (act === "goto") {
-      const [y, m, dd] = b.dataset.k.split("-").map(Number);
-      _보는날 = new Date(y, m - 1, dd);
-      탭으로("wl"); return;
+    if (act === "chk")   { await W.체크(id); return; }
+    if (act === "del")   { await W.지우기(id); return; }
+    if (act === "stage") { await W.상태돌리기(id); return; }
+
+    /* ── 작품 ── */
+    if (act === "newwork") {
+      const n = prompt("작품 이름을 적어 주세요.\n제목 대신 A · B 처럼 적어도 됩니다.");
+      if (n && n.trim()) _고른작품 = await W.작품만들기(n.trim());
+      window.renderWorklogIfOpen(); return;
     }
     if (act === "openwork") { _열린작품 = _열린작품 === id ? null : id;
                               window.renderWorklogIfOpen(); return; }
     if (act === "ep") { _회페이지[id] = Math.max(0, (_회페이지[id] || 0) + Number(b.dataset.v));
                         window.renderWorklogIfOpen(); return; }
-    if (act === "newwork") {
-      const n = prompt("작품 이름을 적어 주세요.\n제목 대신 A · B 처럼 적어도 됩니다.");
-      if (n && n.trim()) await W().작품만들기(n.trim());
-      window.renderWorklogIfOpen(); return;
-    }
     if (act === "unit") {
-      const v = b.dataset.v;
-      if (v !== W().단위(id)) await W().단위바꾸기(id);
+      if (b.dataset.v !== W.단위(id)) await W.단위바꾸기(id);
       window.renderWorklogIfOpen(); return;
     }
     if (act === "delwork") {
       if (!confirm("이 작품을 목록에서 지웁니다.\n\n" +
                    "이미 적어 둔 회차와 글자수 기록은 그대로 남아요 —\n" +
                    "작품 이름만 사라집니다. 되살릴 수는 없습니다.")) return;
-      await W().작품지우기(id); _열린작품 = null;
+      await W.작품지우기(id); _열린작품 = null;
       window.renderWorklogIfOpen(); return;
     }
-    if (act === "add") {
-      await W().더하기(day, { t: "" });
-      window.renderWorklogIfOpen();
-      const t = document.querySelectorAll(".wl-txt");
-      t[t.length - 1]?.focus();
-      return;
-    }
-    if (act === "chk")   { await W().체크(day, id); return; }
-    if (act === "del")   { await W().지우기(day, id); return; }
-    if (act === "stage") { await W().상태돌리기(day, id); return; }
-    if (act === "pick")  { 열기picker(day, id, b); return; }
   });
 
-  /* 글자쓰기 — ★ 다시 그리지 않습니다.
-     한글은 조합 중에 요소를 갈아치우면 자소가 분리돼요 (여기서 여러 번
-     데였습니다). 손안의 값만 조용히 고치고, 화면은 그대로 둡니다. */
+  /* 글자수 치기 — ★ 다시 그리지 않습니다.
+     치는 동안 요소를 갈아치우면 커서가 날아가요 (2026-08-21 콩 신고). */
   document.addEventListener("input", (e) => {
-    const b = e.target.closest("[data-wl]");
+    const b = e.target.closest("[data-wl='cnt']");
     if (!b) return;
-    const id = b.dataset.id, day = 지금날();
-    /* ★ 둘 다 조용히(다시 안 그리게) 저장합니다. 화면에서 바뀌어야 할
-       것은 아래에서 **손으로** 짚어 고쳐요 — 통째로 다시 그리면
-       지금 쓰고 있는 칸이 갈려서 커서가 날아갑니다. */
-    if (b.dataset.wl === "txt") {
-      clearTimeout(b._t);
-      b._t = setTimeout(() => W().고치기(day, id, { t: b.value.slice(0, 120) }, true), 500);
-    }
-    if (b.dataset.wl === "cnt") {
-      const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
-      W().글자수바뀜(day, id, v, true);
-      /* 오른쪽 "원고" 숫자만 조용히 고쳐 둡니다.
-         왼쪽 "오늘 +N자" 는 서버가 셈해 주는 값이라, 3초 뒤 흘려보내고
-         나서 저절로 따라옵니다 — 여기서 미리 손대면 둘이 어긋나요. */
-      const m = document.querySelector(".wl-sum .wl-m");
-      if (m) m.textContent = `원고 ${콤마(W().날합계(day))}자`;
-    }
+    const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
+    window.Worklog.글자수바뀜(b.dataset.id, v, true);
   });
 
-  /* 글자수 칸에서 손을 떼면 콤마를 다시 찍습니다 (쓰는 중에 찍으면
-     커서가 튀어요) */
+  /* 회차 칸에서 엔터 = 만들기 */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    if (e.target?.id !== "wl-ep-new") return;
+    e.preventDefault();
+    document.querySelector('[data-wl="addep"]')?.click();
+  });
+
+  /* 손을 떼면 콤마를 다시 찍고, 밀어 둔 그리기를 합니다 */
   document.addEventListener("blur", (e) => {
-    const b = e.target.closest?.("[data-wl]");
-    if (!b || (b.dataset.wl !== "cnt" && b.dataset.wl !== "txt")) return;
-    if (b.dataset.wl === "cnt") {
-      const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
-      b.value = v ? 콤마(v) : "";
-    }
-    /* 칸을 떠났으니 이제 밀어 둔 그리기를 합니다.
-       ★ 조금 기다립니다 — 옆 칸으로 탭 이동하는 중이면 activeElement 가
-         아직 옮겨 붙지 않아서, 바로 물으면 "손을 뗐다" 고 잘못 봅니다. */
+    const b = e.target.closest?.("[data-wl='cnt']");
+    if (!b) return;
+    const v = Number(String(b.value).replace(/[^\d]/g, "")) || 0;
+    b.value = v ? 콤마(v) : "";
     setTimeout(밀린것그리기, 60);
   }, true);
 
-  /* ── 작품·회차 고르는 작은 창 ── */
-  function 열기picker(day, id, btn) {
-    let box = el("wl-pick");
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "wl-pick"; box.className = "wl-pick";
-      document.body.appendChild(box);
-    }
-    const r = W().줄들(day)[id] || {};
-    const works = W().작품들();
-    box.innerHTML = `<p class="t">작품</p>
-      <div class="ws">${Object.keys(works).length
-        ? Object.entries(works).map(([wid, w]) =>
-            `<button class="w${r.w === wid ? " on" : ""}" data-wlpw="${wid}">${esc(w.name)}</button>`).join("")
-        : `<p class="dim">아직 작품이 없어요 — 작품 탭에서 만들 수 있습니다.</p>`}</div>
-      <p class="t">번호 <span class="dim">(비워도 됩니다 · 화든 챕터든 숫자만)</span></p>
-      <input id="wl-pick-ep" maxlength="16" value="${esc(r.ep || "")}" placeholder="45 · 프롤로그 · 외전2 …">
-      <div class="r2"><button data-wlpick="clear">떼기</button>
-        <button class="go" data-wlpick="ok">붙이기</button></div>`;
-    _picking = { day, id };
-    box.classList.add("on");
-    const q = btn.getBoundingClientRect();
-    box.style.top  = Math.max(8, q.top - box.offsetHeight - 6) + "px";
-    box.style.left = Math.max(8, Math.min(q.left - 60, window.innerWidth - 222)) + "px";
-    setTimeout(() => el("wl-pick-ep")?.focus(), 30);
-  }
-  function 닫기picker() { el("wl-pick")?.classList.remove("on"); _picking = null; }
-
-  function 탭으로(t) {
-    const btn = document.querySelector(`[data-wc-tab="${t}"]`);
-    if (btn) btn.click();
-  }
-  window.worklogGoToday = () => { _보는날 = null; 탭으로("wl"); };
+  window.worklogGoToday = () => {
+    document.querySelector('[data-wc-tab="wl"]')?.click();
+  };
 })();
