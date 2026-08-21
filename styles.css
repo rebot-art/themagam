@@ -5127,18 +5127,21 @@ body.narrow-chat-focus .room-pulse{ display: none; }
   white-space: nowrap;
   user-select: none;
 }
+/* [키움 2026-08-21 — 콩] 날짜·시각을 1px 씩 올렸습니다 (12.5→13.5, 15→16).
+   그리고 날짜를 muted → muted-strong 으로 한 단 짙게. 시각은 --text 그대로라
+   **여전히 시각이 더 진합니다** — 짙게 하되 시계와는 구분되게 (콩). */
 .head-clock-date{
-  font-size: var(--fs-xs);
-  color: var(--muted);
+  font-size: var(--fs-sm);
+  color: var(--muted-strong);
 }
 .head-clock-t{ display: inline-flex; align-items: baseline; gap: 3px; }
 .head-clock-ap{
-  font-size: calc(var(--fs-2xs) * .9);
+  font-size: calc(var(--fs-2xs) * .9 + 1px);
   font-weight: var(--fw-bold);
   color: var(--text);
 }
 .head-clock-time{
-  font-size: var(--fs-md);
+  font-size: calc(var(--fs-md) + 1px);
   font-weight: var(--fw-bold);
   color: var(--text);
   font-variant-numeric: tabular-nums;

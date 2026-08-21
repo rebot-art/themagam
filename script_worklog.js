@@ -719,11 +719,36 @@
       ${흐름HTML()}`;
   }
 
+  /* =====================================================================
+     🔥 오늘 몇 명이 썼나 (2026-08-21 — 콩)
+     ---------------------------------------------------------------------
+     ★ 새로 읽는 것이 **하나도 없습니다.** 이미 받아 둔 wordlog/{오늘}
+       (script_wordcount.js 가 구독 중)을 세기만 해요.
+
+     [왜 흐름(wordfeed)을 안 세나]
+     흐름은 limitToLast(200) 이라 바쁜 날에는 아침에 올린 사람이 목록
+     밖으로 밀려납니다. 그러면 참여자 수가 **줄어드는** 이상한 일이 나요.
+     wordlog 는 사람당 하루 한 칸이라 밀려날 일이 없습니다.
+
+     ※ 세는 기준은 "오늘 글자수를 올린 사람" 입니다. 할 일만 적고 숫자를
+       안 넣은 사람은 안 세요 — 이 자리가 글자수 흐름이라서입니다. */
+  function 오늘참여자() {
+    try {
+      const t = window.Wordcount?._state?.().today || {};
+      return Object.values(t).filter(v => Number(v?.total) > 0).length;
+    } catch (e) { return 0; }
+  }
+
+  function 흐름이름표() {
+    const n = 오늘참여자();
+    return n > 0 ? `🔥 지금 ${n}명 참여 중` : "🔥 지금 방에서";
+  }
+
   /* 🔥 방 흐름 — 함께 쓰는 기운이 이 판의 핵심입니다 (콩) */
   function 흐름HTML() {
     const st = window.Wordcount?._state?.();
     const feed = (st?.feed || []).filter(f => f && f.type !== "pomo");
-    if (!feed.length) return `<div class="wl-feed"><div class="wl-fh">🔥 지금 방에서</div>
+    if (!feed.length) return `<div class="wl-feed"><div class="wl-fh">${흐름이름표()}</div>
       <div class="wl-fempty">아직 조용해요. 첫 줄을 올려 보세요.</div></div>`;
     const 줄 = feed.slice(-14).reverse().map(f => {
       const 내것 = !!me() && f.nick === me();
@@ -742,7 +767,7 @@
         <span class="wl-what">${말}</span>
         <span class="wl-ago">${언제(f.at)}</span></div>`;
     }).join("");
-    return `<div class="wl-feed"><div class="wl-fh">🔥 지금 방에서</div>
+    return `<div class="wl-feed"><div class="wl-fh">${흐름이름표()}</div>
       <div class="wl-fb">${줄}</div></div>`;
   }
   function 언제(at) {
