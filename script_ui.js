@@ -361,7 +361,12 @@
     r.setProperty("--muted-strong", isDark ? "rgba(235,235,245,.86)" : "rgba(60,60,67,.88)");
     r.setProperty("--sub-muted", isDark ? "rgba(235,235,245,.72)" : "rgba(60,60,67,.75)");
     r.setProperty("--name-muted", isDark ? "rgba(235,235,245,.75)" : "rgba(60,60,67,.60)");
-    r.setProperty("--time-muted", isDark ? "rgba(235,235,245,.42)" : "rgba(60,60,67,.45)");
+    /* ★ [고침 2026-08-22 — 콩] 다크에서 .42 는 너무 옅었습니다.
+       이 값을 보는 곳이 전부 **잔글씨**(말풍선 옆 시각 0.58em, 날짜
+       구분선 0.64em, 레일 라벨, 빈 칸 안내)라, 밝은 테마에서 옅어 보이는
+       정도가 어두운 바탕에서는 거의 안 보이는 정도가 됩니다.
+       .58 로 올립니다 — 여전히 본문보다 뒤로 물러나되 읽히는 선. */
+    r.setProperty("--time-muted", isDark ? "rgba(235,235,245,.58)" : "rgba(60,60,67,.45)");
 
     r.setProperty("--input-bg", isDark ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.92)");
     r.setProperty("--input-text", isDark ? (t.text || "#f2f3f5") : (t.text || "#111111"));

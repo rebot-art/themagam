@@ -163,9 +163,15 @@
       h.style.removeProperty("--unzoom");
       h.removeAttribute("data-unzoom");
 
+      /* 🏷️ 뒤집힌 방이라는 표식 — CSS 가 이걸 보고 머리말 메뉴 창(팝업)을
+         105% 로 붙들어 둡니다. `data-solo` 가 아니라 이 이름을 쓰는 이유는,
+         나중에 본 방도 뒤집으면 **CSS 를 안 고쳐도 그대로 따라오게** 하려고요. */
+      h.setAttribute("data-flipped", "1");
+
       h.style.setProperty("--card-zoom", (z === 100) ? "" : String(f));
       h.toggleAttribute("data-cardzoom", z !== 100);
     } else {
+      h.removeAttribute("data-flipped");
       /* ── 옛 방식 — 뿌리를 줄이고 손잡이를 되돌립니다 (본 방) ────── */
       h.style.removeProperty("--card-zoom");
       h.removeAttribute("data-cardzoom");

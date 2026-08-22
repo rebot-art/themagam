@@ -4661,14 +4661,35 @@ html[data-cardzoom] .user-cards-grid{
      그 자는 window.panelZoom() 이고, script_zoom.js 가 **여기 걸리는
      값과 같은 셈으로** 내놓습니다. 손으로 두 번 적지 않습니다.
    ===================================================================== */
-html[data-panelzoom] .dock-panel,
-html[data-panelzoom] .modal-content{
+html[data-panelzoom] .dock-panel{
   zoom: var(--panel-zoom, 1);
 }
-/* 판 안에 팝업 알맹이가 들어가면 배율이 **곱해집니다.**
-   지금은 그런 곳이 없지만, 생기면 조용히 커질 자리라 미리 막아 둡니다. */
-html[data-panelzoom] .dock-panel .modal-content{ zoom: 1; }
 
+/* =====================================================================
+   🗂️ 머리말 메뉴 창은 **105% 로 붙들어 둡니다** (2026-08-22 — 콩)
+   ---------------------------------------------------------------------
+   공지·자료실·대숲·설정·가이드처럼 머리말에서 여는 팝업입니다.
+   처음엔 아래 알약 판과 함께 배율을 따라가게 했는데, 콩이 갈랐습니다 —
+   "글자가 작아서 안 보이는 것보단 시원하게 큰 게 좋을 거 같아."
+
+   그래서 기준이 이렇게 셋이 됐습니다:
+     · 머리말의 [− 100% +]  = 접속자 카드 크기   (사람이 고름)
+     · 설정의 슬라이더       = 하단 메뉴 창 크기 (사람이 고름)
+     · 머리말 메뉴 창        = **늘 105%**       (고정)
+   팝업은 잠깐 열었다 닫는 자리라 고를 것까지는 없다는 판단입니다.
+
+   ★ 105% 로 바꾸려면 아래 --modal-zoom 한 값만 고치면 됩니다.
+   ★ 화면 단위(100dvh)는 zoom 을 모르므로 천장도 같이 나눠야 합니다 —
+     안 나누면 창이 화면보다 5% 길어져서 넘어간 쪽을 못 봅니다.
+   ===================================================================== */
+html[data-flipped]{ --modal-zoom: 1.05; }
+html[data-flipped] .modal-content{
+  zoom: var(--modal-zoom, 1);
+  max-height: calc((100dvh - 32px) / var(--modal-zoom, 1));
+  max-width:  calc((100vw  - 32px) / var(--modal-zoom, 1));
+}
+/* 판 안에 팝업 알맹이가 들어가면 배율이 곱해집니다 — 미리 막아 둡니다 */
+html[data-flipped] .dock-panel .modal-content{ zoom: 1; }
 /* =====================================================================
    ★★★ [사고 2026-08-22 — 콩] 화면 단위(100dvh·100vw)는 zoom 을 모릅니다
    ---------------------------------------------------------------------
@@ -4694,10 +4715,8 @@ html[data-panelzoom] .dock-panel{
   max-height: calc((100vh - 190px) / var(--panel-zoom, 1));
   max-width:  calc((100vw - 24px)  / var(--panel-zoom, 1));
 }
-html[data-panelzoom] .modal-content{
-  max-height: calc((100dvh - 32px) / var(--panel-zoom, 1));
-  max-width:  calc((100vw  - 32px) / var(--panel-zoom, 1));
-}
+/* ※ 팝업 쪽 천장은 위 [머리말 메뉴 창 105%] 덩어리에 함께 적어 뒀습니다 —
+   배율이 --modal-zoom 하나뿐이라 그 옆에 두는 편이 읽기 좋아요. */
 
 /* =====================================================================
    🙋 Help — 익명 교정 문답 (2026-08-16)
@@ -5048,28 +5067,39 @@ html[data-panelzoom] .modal-content{
      왼쪽으로 붙어 버려요. 밀어내기를 탭 쪽에 두면 늘 오른쪽입니다. */
 /* [옮김 2026-08-22 — 콩] 탭 줄 왼쪽 끝 → 탭 줄 **아래 제 줄**.
    메모·기록 탭에서 이 줄이 나타나면 알약 다섯이 두 줄로 접혔습니다.
-   📆 주간 탭의 .wl-nav 와 같은 자리·같은 모양으로 맞춥니다. */
+   📆 주간 탭의 .wl-nav 와 같은 자리·같은 모양으로 맞춥니다.
+
+   ★ [고침 2026-08-22 후속 — 콩] 자리만 옮기고 **생김새를 안 맞췄더니**,
+     주간 탭은 창 너비에 꽉 차고 메모 탭은 왼쪽에 옹기종기 모여 있어
+     탭을 오갈 때 줄이 들썩였습니다.
+     이제 .wl-nav 와 같습니다 — 단추는 양 끝, 날짜는 가운데. */
 .wc-daynav{
-  display: flex; align-items: center; gap: 6px; flex: none;
-  margin: 2px 0 6px;
+  display: flex; align-items: center; gap: 4px; flex: none;
+  margin: 2px 0 8px;
 }
+.wc-daynav .wc-day-t{ flex: 1; }        /* 날짜가 남은 자리를 다 먹고 가운데 */
+.wc-daynav .wc-day-b{ flex: 0 0 auto; }
 /* ★★ [고침 2026-08-16] hidden 을 걸어도 계속 보였습니다.
    `hidden` 은 브라우저 기본 규칙 `[hidden]{display:none}` 으로 감춰지는데,
    우리가 적은 `display:flex` 가 그보다 세서 이깁니다. 스타일에 display 를
    적은 요소에 hidden 을 쓸 때는 **이 한 줄을 반드시 함께** 둬야 해요. */
 .wc-daynav[hidden]{ display: none; }
 .wc-tabs{ margin-left: auto; }
+/* ★ [맞춤 2026-08-22 — 콩] 📆 주간 탭의 .wl-nav button 과 **같은 값**입니다.
+   두 탭이 같은 자리에 같은 일을 하는 줄을 두는데 크기가 다르면, 탭을
+   오갈 때 줄이 들썩여 보여요. 한쪽을 고치면 다른 쪽도 함께 보세요. */
 .wc-day-b{
-  width: 22px; height: 22px; padding: 0;
-  border: 1px solid var(--line, #E3E7EE); border-radius: 6px;
-  background: transparent; color: var(--text-2, #5A6473);
-  font-size: 13px; line-height: 1; cursor: pointer;
+  width: 23px; height: 21px; padding: 0;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel); color: var(--sub-muted);
+  font-size: 11px; line-height: 1; cursor: pointer;
 }
 .wc-day-b:hover:not(:disabled){ background: var(--fill-1, #F2F4F8); }
 .wc-day-b:disabled{ opacity: .3; cursor: default; }
+/* 📆 주간 탭의 .wl-lbl 과 같은 값 */
 .wc-day-t{
   min-width: 74px; text-align: center;
-  font-size: 12px; font-weight: 700; color: var(--text-2, #5A6473);
+  font-size: 12px; font-weight: 700; color: var(--text);
 }
 
 /* ★★ [고침 2026-08-16] 클래스 이름이 이미 쓰이고 있었습니다.
@@ -7975,14 +8005,19 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-tag[data-tag-val="input"] { background: rgba(151,196,89,.88);  border-color: rgba(151,196,89,.95);  color: #173404; }
 .card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.88); border-color: rgba(237,147,177,.95); color: #4B1528; }
 
-:root[data-is-dark="true"] .card-tag[data-tag-val="idea"]  { color: #CECBF6; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #B5D4F4; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="polish"]{ color: #F5C4B3; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="proof"] { color: #9FE1CB; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ color: #FFCE85; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ color: #FFA59E; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="input"] { color: #C0DD97; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="etc"]   { color: #F4C0D1; }
+/* ★★ [고침 2026-08-22 — 콩 · B안] 다크에서 스티커 글자가 흐렸습니다.
+   예전 규칙은 **글자색만** 밝게 바꾸고 바탕은 밝은 파스텔(.88) 그대로
+   뒀어요 — 연한 바탕에 연한 글씨라 거의 안 읽혔습니다.
+   이제 바탕도 같은 색을 **옅게(.26)** 깔고 테두리만 또렷하게 둡니다.
+   고르기 판(.worktag-item)이 쓰는 방식과 같은 결이에요. */
+:root[data-is-dark="true"] .card-tag[data-tag-val="idea"]{ background: rgba(175,169,236,.26); border-color: rgba(175,169,236,.55); color: #CECBF6; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="draft"]{ background: rgba(133,183,235,.26); border-color: rgba(133,183,235,.55); color: #B5D4F4; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.26); border-color: rgba(240,153,123,.55); color: #F5C4B3; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="proof"]{ background: rgba(93,202,165,.26); border-color: rgba(93,202,165,.55); color: #9FE1CB; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.26); border-color: rgba(255,159,10,.55); color: #FFCE85; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ background: rgba(255,59,48,.26); border-color: rgba(255,59,48,.55); color: #FFA59E; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="input"]{ background: rgba(151,196,89,.26); border-color: rgba(151,196,89,.55); color: #C0DD97; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="etc"]{ background: rgba(237,147,177,.26); border-color: rgba(237,147,177,.55); color: #F4C0D1; }
 
 /* 고르기 판 — 상태 고르기와 같은 판(.status-pop)을 씁니다.
    항목마다 색을 살짝 깔았어요. 여덟 개나 되면 글자만으로는 찾는 데
