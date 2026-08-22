@@ -25,6 +25,10 @@
   const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
 
   let _statusCache = null;
+  /* ※ _statusRef 는 여기서 선언하지 않습니다 — script_core.js 가 이미
+     `let _statusRef` 로 세워 둔 이름을 **같이 쓰는** 것이라, 여기서 또
+     선언하면 이름이 겹쳐 두 파일 중 뒤엣것이 통째로 죽습니다.
+     (이 방의 script_*.js 들은 IIFE 로 감싸여 있지 않아 한 그릇을 씁니다) */
   Object.defineProperty(window, '_statusCache', {
     get() { return _statusCache; },
     set(v) { _statusCache = v; },
@@ -241,6 +245,22 @@
        옆 사람을 끌어들이는 것이라, 아무도 안 켜면 뜻이 없어요.
        보기 싫은 사람은 설정에서 끄면 됩니다. */
   const BOARD_KEY = "roomBoard";
+
+  /* ★★★ [되살림 2026-08-22] 아래 셋은 **선언이 사라져 있었습니다.**
+     띠를 걷어내면서 `const PULSE_ALL …` 부터 잘라냈는데, 바로 아래에
+     붙어 있던 이 선언들까지 같이 딸려 갔어요. 쓰는 코드는 그대로 남아서
+     ReferenceError 가 나고, 그 순간 **뒤 코드가 통째로 멈췄습니다.**
+
+       기록해두기()  → 하트비트가 죽음 → 내 상태가 안 올라감
+       막대띠()      → drawBoard 가 죽음 → 배경 현황판이 안 뜸
+       배경판살피기() → renderUserCards 끝에서 죽음 → 그 뒤가 다 멈춤
+                       (남의 카드·시간 집계·인사 팝업·상태표…)
+
+     ★ 앞으로 무언가를 잘라낼 때는 **바로 아래 줄에 남의 선언이 붙어
+       있지 않은지** 꼭 보세요. 주석 덩어리는 티가 나는데 선언은 조용합니다. */
+  let _pulseRef = null;
+  let _pulse    = {};                     // { 시: 그 시각 최다 인원 }
+  let _pulseDay = "";                     // 지금 듣고 있는 날짜
   /* =====================================================================
      [철거 2026-08-22 — 콩] 📊 각종 현황 띠
      ---------------------------------------------------------------------
@@ -663,6 +683,9 @@
        그 자리가 없어졌어요. 안 읽은 글 빨간 점은 **판을 열기 전에**
        켜져 있어야 뜻이 있으니, 입장할 때 바로 붙입니다. */
     window.listenNoticeBoard?.();
+    /* ★ 혹시 두 번 불려도 귀가 겹치지 않게, 붙기 전에 옛 귀를 뗍니다.
+       (귀가 둘이면 같은 스냅숏에 renderUserCards 가 두 번 돌아요) */
+    try { _statusRef?.off(); } catch (e) {}
     _statusRef = db.ref("status");
     _statusRef.on("value", snap => {
       const data = dropBanned(snap.val() || null);
