@@ -2267,6 +2267,181 @@
 
 
   /* =====================================================================
+     🩹 출석 복구 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     2026-08-22 새벽 사고(_pulse 선언이 사라져 접속자 화면을 다시 그리는
+     길이 죽었던 건) 때 들어온 분들의 출석이 안 남았습니다.
+
+     ★★★ **복원이 아니라 재구성입니다.** 원본 백업이 있는 게 아니라,
+       그날 살아남은 다른 자취로 되짚는 것이에요. 그래서 **무엇을 근거로
+       찾았는지 다 보여주고**, 방장이 확인한 것만 넣습니다.
+       자동으로 우르르 넣으면 **없는 출석이 생깁니다** — 출석은 이 방에서
+       규칙(한 달 18일)의 근거라, 없는 걸 만들면 규칙이 무너져요.
+
+     [무엇으로 되짚나 — 센 것부터]
+       ⏱️ 작업 시간  users/{닉}/timeSegs/{날}/{키} = {s,a,b}
+                     그날 가장 이른 a 가 곧 첫 입장 시각입니다. 가장 좋아요.
+       🚪 출입 기록  attendlog/{날} 의 {n,t,k:"in"} — **서버 시각**이라 정확.
+       ✍️ 글자수     wordlog/{날}/{닉} — 시각은 없지만 "그날 있었다" 는 증거.
+
+     ★ 셋 다 없는 분은 못 찾습니다. 들어와서 상태도 안 잡고 글도 안 쓰고
+       말도 안 했으면 남는 게 없어요. 그분은 손으로 넣어야 합니다.
+     ===================================================================== */
+
+  const 하루MS = 86400000;
+  const 날짜글 = (d) => {
+    const t = new Date(d);
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+  };
+  const 시각글 = (ms) => {
+    const t = new Date(Number(ms) || 0);
+    return `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
+  };
+
+  let _복구감 = [];   // { 날, 닉, 시각, 근거[] }
+
+  /** 하루치를 훑어 "자취는 있는데 출석부엔 없는" 사람을 찾습니다 */
+  async function 하루훑기(날, 명단) {
+    const [attSnap, logSnap, wordSnap] = await Promise.all([
+      db.ref(`attendance/${날}`).once("value"),
+      db.ref(`attendlog/${날}`).once("value").catch(() => null),
+      db.ref(`wordlog/${날}`).once("value").catch(() => null),
+    ]);
+    const 있는사람 = attSnap.val() || {};
+    const 찾음 = new Map();   // 닉 → { 시각, 근거[] }
+
+    const 담기 = (닉, 시각, 근거) => {
+      if (!닉 || 있는사람[닉]) return;            // 이미 출석부에 있음
+      const 옛 = 찾음.get(닉);
+      /* 여러 근거가 나오면 **가장 이른 시각**을 씁니다 — 첫 입장이니까요.
+         시각이 없는 근거(글자수)는 시각을 안 덮어씁니다. */
+      if (!옛) 찾음.set(닉, { 시각: 시각 || 0, 근거: [근거] });
+      else {
+        if (시각 && (!옛.시각 || 시각 < 옛.시각)) 옛.시각 = 시각;
+        if (!옛.근거.includes(근거)) 옛.근거.push(근거);
+      }
+    };
+
+    /* 🚪 출입 기록 — 서버 시각이라 가장 믿을 만합니다 */
+    const 로그 = logSnap && logSnap.val ? (logSnap.val() || {}) : {};
+    Object.values(로그).forEach(r => {
+      if (r && r.n && r.k === "in") 담기(r.n, Number(r.t) || 0, "🚪 출입");
+    });
+    /* ✍️ 글자수 — 시각은 없지만 "그날 있었다" 는 증거 */
+    const 글 = wordSnap && wordSnap.val ? (wordSnap.val() || {}) : {};
+    Object.keys(글).forEach(닉 => 담기(닉, 0, "✍️ 글자수"));
+
+    /* ⏱️ 작업 시간 — 사람마다 따로 읽습니다 (users 루트는 읽기 권한이 없어요).
+       ★ 이미 찾은 사람도 읽습니다 — 시각이 **더 이르고 더 정확**하거든요. */
+    for (const 닉 of 명단) {
+      if (있는사람[닉]) continue;
+      try {
+        const seg = await db.ref(`users/${닉}/timeSegs/${날}`).once("value");
+        const v = seg.val();
+        if (!v) continue;
+        let 첫 = 0;
+        Object.values(v).forEach(x => {
+          const a = Number(x && x.a) || 0;
+          if (a && (!첫 || a < 첫)) 첫 = a;
+        });
+        if (첫) 담기(닉, 첫, "⏱️ 작업 시간");
+      } catch (e) { /* 못 읽으면 건너뜁니다 */ }
+    }
+
+    return [...찾음.entries()].map(([닉, x]) => ({ 날, 닉, 시각: x.시각, 근거: x.근거 }));
+  }
+
+  async function findMissingAttendance(며칠) {
+    const box = el("adm-fix-list");
+    if (!box) return;
+    const 고른날 = el("adm-fix-date") && el("adm-fix-date").value;
+    if (!고른날) { msg("adm-fix-msg", "날짜를 먼저 골라 주세요.", true); return; }
+    box.textContent = "훑는 중…";
+    msg("adm-fix-msg", "");
+    try {
+      const owner = (await db.ref("nickOwner").once("value")).val() || {};
+      const 명단 = Object.keys(owner);
+      const 끝 = new Date(고른날 + "T12:00:00").getTime();
+      const 날들 = [];
+      for (let i = 며칠 - 1; i >= 0; i--) 날들.push(날짜글(끝 - i * 하루MS));
+
+      _복구감 = [];
+      for (const 날 of 날들) {
+        box.textContent = `훑는 중… ${날}`;
+        const r = await 하루훑기(날, 명단);
+        _복구감 = _복구감.concat(r);
+      }
+      _복구감.sort((a, b) => (a.날 < b.날 ? -1 : a.날 > b.날 ? 1 : (a.닉 < b.닉 ? -1 : 1)));
+
+      const 기간 = 며칠 > 1
+        ? `<b>${escapeHtml(날들[0])}</b> ~ <b>${escapeHtml(날들[날들.length-1])}</b>`
+        : `<b>${escapeHtml(날들[0])}</b>`;
+      if (!_복구감.length) {
+        box.innerHTML = `${기간} — 빠진 출석이 없어요. 👏`;
+        return;
+      }
+      box.innerHTML = `
+        <div style="margin-bottom:8px">${기간} — 자취는 있는데 출석부에 없는 분 <b>${_복구감.length}</b>건</div>
+        <div class="adm-scroll" style="max-height:240px">
+          ${_복구감.map((x, i) => `
+            <div class="adm-row">
+              <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">
+                <input type="checkbox" class="adm-fix-pick" data-i="${i}" checked>
+                <span class="n">${escapeHtml(x.닉)}</span>
+              </label>
+              <span class="s">${escapeHtml(x.날)} ${x.시각 ? 시각글(x.시각) : "시각 모름"}</span>
+              <span class="s">${x.근거.map(escapeHtml).join(" ")}</span>
+            </div>`).join("")}
+        </div>
+        <div class="adm-inline" style="margin-top:10px">
+          <button class="adm-btn" id="adm-fix-go">고른 것만 출석부에 넣기</button>
+        </div>
+        <p class="adm-sub" style="margin-top:6px">
+          ★ <b>시각 모름</b>은 글자수만 남은 분이에요 — 그날 <b>정오</b>로 넣습니다.
+          정확한 시각을 아시면 넣은 뒤 손으로 고쳐 주세요.
+        </p>`;
+      const go = el("adm-fix-go");
+      if (go) go.addEventListener("click", applyAttendanceFix);
+    } catch (e) {
+      box.textContent = "훑지 못했어요. " + (e.code || e.message || "");
+    }
+  }
+
+  async function applyAttendanceFix() {
+    const 고른것 = [...document.querySelectorAll(".adm-fix-pick:checked")]
+      .map(c => _복구감[Number(c.getAttribute("data-i"))]).filter(Boolean);
+    if (!고른것.length) { msg("adm-fix-msg", "고른 것이 없어요.", true); return; }
+    if (!confirm(`${고른것.length}건을 출석부에 넣을까요?\n\n` +
+                 `남은 자취로 되짚은 것이라 정확한 복원이 아닙니다.\n` +
+                 `근거를 한 번 더 확인해 주세요.`)) return;
+
+    const 단추 = el("adm-fix-go");
+    if (단추) { 단추.disabled = true; 단추.textContent = "넣는 중…"; }
+    try {
+      /* ★ 이미 있는 줄은 덮지 않습니다 — 훑을 때 걸렀지만, 그 사이에
+         본인이 들어와 적혔을 수도 있어요. 되짚은 값이 진짜를 밀어내면 안 됩니다. */
+      const 뭉치 = {};
+      for (const x of 고른것) {
+        const 있나 = await db.ref(`attendance/${x.날}/${x.닉}`).once("value");
+        if (있나.exists()) continue;
+        /* 시각을 모르면 그날 정오 — 새벽·자정으로 넣으면 하루가 어긋나 보입니다 */
+        const t = x.시각 || new Date(x.날 + "T12:00:00").getTime();
+        뭉치[`${x.날}/${x.닉}`] = { firstAt: t, at: t, fixed: true };
+      }
+      const 수 = Object.keys(뭉치).length;
+      if (수) await db.ref("attendance").update(뭉치);
+      await loadAttendance(_attOffset);
+      msg("adm-fix-msg", `✅ ${수}건을 넣었어요.` + (수 < 고른것.length
+        ? ` (${고른것.length - 수}건은 그새 본인 기록이 생겨 건드리지 않았어요)` : ""));
+      const box = el("adm-fix-list");
+      if (box) box.textContent = "다시 훑으려면 날짜를 고르고 눌러 주세요.";
+    } catch (e) {
+      if (단추) { 단추.disabled = false; 단추.textContent = "고른 것만 출석부에 넣기"; }
+      msg("adm-fix-msg", "넣지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  /* =====================================================================
      👤 탈퇴자 자료 정리 (2026-08-22 — 콩)
      ---------------------------------------------------------------------
      방을 떠난 분의 자취를 지웁니다. 승인을 풀고 출석부에서 빼도
@@ -2456,6 +2631,14 @@
     }
   }
 
+
+    /* 🩹 출석 복구 */
+    {
+      const 날 = el("adm-fix-date");
+      if (날 && !날.value) 날.value = 날짜글(Date.now());
+    }
+    el("adm-fix-day")?.addEventListener("click", () => findMissingAttendance(1));
+    el("adm-fix-week")?.addEventListener("click", () => findMissingAttendance(7));
 
     /* 👤 탈퇴자 정리 — 목록은 다시 그려지므로 위임으로 답니다 */
     el("adm-purge-list")?.addEventListener("click", e => {
