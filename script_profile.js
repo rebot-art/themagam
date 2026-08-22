@@ -2215,8 +2215,28 @@ window.rerenderUserCards = function () {
     { v: "writing", label: "🔥WRITE🔥", cls: "status-writing" },   /* 집필 */
     { v: "focus",   label: "💻JOB💻",   cls: "status-focus"   },   /* 본업·다른 작업 */
     { v: "rest",    label: "☕BREAK☕",  cls: "status-rest"    },   /* 휴식 */
-    { v: "away",    label: "💤AWAY💤",  cls: "status-away"    }    /* 자리비움 */
+    { v: "away",    label: "💤AWAY💤",  cls: "status-away"    },   /* 자리비움 */
+    /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손보는 중. **방장에게만** 보입니다.
+       ★ 여기 있다고 남에게 뜨는 게 아니라, 아래 고를수있나() 가 거릅니다.
+       ★ 시간 기록에는 따로 칸을 안 만들었습니다 — script_timelog.js 의
+         normStatus 가 모르는 값을 rest 로 접어서 **☕Break 로 쌓입니다.**
+         자리에는 있지만 집필은 아니니 그 자리가 맞고, 덕분에 39명의
+         기록 화면이 하나도 안 바뀝니다. */
+    { v: "repair",  label: "🛠️REPAIR🛠️", cls: "status-repair", 방장만: true }
   ];
+
+  /* 이 사람이 고를 수 있는 상태만 남깁니다.
+     ★ 이름을 견주는 것은 **잠금장치가 아닙니다** — 개발자도구를 열면
+       누구나 값을 바꿀 수 있어요. 여기 뜻은 "실수로 누르지 않게" 와
+       "남의 판을 어지럽히지 않게" 입니다. 방장 스티커와 같은 결이에요. */
+  function 고를수있나(c) {
+    if (!c.방장만) return true;
+    /* ★ 닉을 여기 베끼지 않습니다 — ADMIN_NICK 은 이미 두 파일을 손으로
+       맞추고 있어서, 세 번째가 생기면 언젠가 어긋납니다.
+       window.isRoomOwner() 는 script_realtime.js 가 내주는 창구예요.
+       (canAdmin() 이 아닌 이유: 그쪽은 운영진까지 포함합니다) */
+    try { return !!window.isRoomOwner?.(); } catch (e) { return false; }
+  }
 
   let _pop = null;
 
@@ -2252,7 +2272,7 @@ window.rerenderUserCards = function () {
     const pop = document.createElement("div");
     pop.className = "status-pop";
     pop.setAttribute("role", "menu");
-    pop.innerHTML = CHOICES.map(c => `
+    pop.innerHTML = CHOICES.filter(고를수있나).map(c => `
       <button type="button" class="status-pop-item ${c.cls}${c.v === cur ? " on" : ""}"
               role="menuitem" data-status-val="${c.v}">${c.label}</button>`).join("");
 

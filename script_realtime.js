@@ -1105,7 +1105,10 @@
       writing: "🔥WRITE🔥",
       focus:   "💻JOB💻",
       rest:    "☕BREAK☕",
-      away:    "💤AWAY💤"
+      away:    "💤AWAY💤",
+      /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손볼 때 거는 표시.
+         고르는 건 방장뿐이지만 **읽는 건 모두**라 여기에 있어야 합니다. */
+      repair:  "🛠️REPAIR🛠️"
     })[code] || "휴식";
   }
 
@@ -1115,7 +1118,8 @@
       writing: "status-writing",
       focus: "status-focus",
       rest: "status-rest",
-      away: "status-away"
+      away: "status-away",
+      repair: "status-repair"
     })[code] || "status-rest";
   }
 
@@ -2166,6 +2170,14 @@
     return myNick === ADMIN_NICK || _isStaff;
   }
   window.canAdmin = canAdmin;
+
+  /* 🏠 **방장 하나만** 가리는 창구 (2026-08-22).
+     ★ canAdmin() 과 다릅니다 — 그쪽은 운영진(staff)까지 포함해요.
+       "나만" 이라는 뜻일 때는 반드시 이쪽을 쓰세요.
+     ★ ADMIN_NICK 을 딴 파일에 베끼지 말 것 — 이미 두 파일(여기와
+       script_admin.js)을 손으로 맞추고 있어서, 셋이 되면 언젠가 어긋납니다. */
+  function isRoomOwner() { return myNick === ADMIN_NICK; }
+  window.isRoomOwner = isRoomOwner;
 
   function openAdminPage() {
     /* 숨은 문 밖에서(콘솔 등) 불러도 같은 검사를 지납니다 */

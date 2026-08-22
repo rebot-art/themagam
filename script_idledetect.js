@@ -109,6 +109,10 @@
     if (!myNick) return;
     const cur = _curStatus();
     if (cur === "away") return;            // 이미 자리비움 — 할 일 없음
+    /* 🛠️ [2026-08-22] REPAIR 는 건드리지 않습니다. 방을 고치는 사람은
+       딴 창(콘솔·편집기)에 있느라 이 화면에 손을 안 대요. 자동으로
+       away 로 내리면 상태가 풀려 입·퇴장 메시지가 도로 뜹니다. */
+    if (cur === "repair") return;
     _prevStatus = cur;                     // 돌아올 곳을 기억
     _autoAway = true;
     _saveTag();

@@ -264,6 +264,18 @@
       : `<p class="help-empty">아직 물어본 게 없어요.<br>
          맞춤법이든 단어든, 아래에 후다닥 적어 보세요.</p>`;
 
+    /* ★★★ [고침 2026-08-22 — 콩] 💡 를 누르면 목록이 **맨 위로 튀었습니다.**
+       render() 가 판 속을 통째로 새로 지으므로, 스크롤을 갖고 있던
+       .help-list 가 사라졌다 다시 태어나 위치가 0 으로 돌아간 거예요.
+       "누른 자리로 가려면 다시 굴려야 한다" — 답을 여럿 훑는 자리라
+       한 번 누를 때마다 처음으로 돌아가면 못 씁니다.
+
+       ★ 여기 한 곳에서 붙들어 둡니다 — 💡뿐 아니라 🔗 참고 펼치기,
+         남이 올린 글이 도착해 다시 그릴 때도 같은 일이 나니까요.
+       ※ 답이 새로 붙어 길이가 달라지면 몇 px 어긋날 수 있지만,
+         맨 위로 튀는 것과는 견줄 수 없습니다. */
+    const 굴린자리 = box.querySelector(".help-list")?.scrollTop || 0;
+
     box.innerHTML = 머리 + `<div class="help-list">${목록}</div>` + `
       ${_pickRef ? `
         <div class="help-pin">🔗 "${esc(_pickRef.text.slice(0, 20))}${_pickRef.text.length > 20 ? "…" : ""}"
@@ -285,6 +297,12 @@
              친척). 그래서 입력 이벤트가 이 상자의 속만 갈아 끼웁니다. -->
       <div class="help-sug" id="help-sug" hidden></div>
       <p class="help-note">🔒 이름은 서버에도 남지 않아요 · 2주 뒤 사라집니다</p>`;
+
+    /* 굴려 둔 자리로 되돌립니다 (위 주석 참고) */
+    if (굴린자리) {
+      const 목록칸 = box.querySelector(".help-list");
+      if (목록칸) 목록칸.scrollTop = 굴린자리;
+    }
   }
 
   /* 쓰는 중 제안 그리기 — 전체 render() 없이 제 상자 속만 바꿉니다 */

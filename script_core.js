@@ -240,7 +240,29 @@ window.AppSession = AppSession;
     _backupIntervalId = null;
   }
 
+  /* =====================================================================
+     🛠️ 조용히 드나들기 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     방장이 방을 고치는 동안에는 새로고침을 수십 번 합니다. 그때마다
+     "입장하셨습니다 / 나갔어요" 가 챗창에 쌓이면 그날 대화가 통째로
+     묻혀요. 상태표를 🛠️REPAIR🛠️ 로 걸어 두면 그 줄을 안 씁니다.
+
+     ★ 카드가 사라졌다 나타나는 것까지 막지는 않습니다 — 그건 접속
+       판정(status/onDisconnect)이라 손대면 "있는데 없다고 나오는" 쪽이
+       망가집니다. 콩도 "적어도 챗창만큼은" 이라고 했어요.
+     ★ 이 문지기를 **세 자리가 함께** 씁니다: 입장·퇴장·창 닫기(beacon).
+       한 곳만 고치면 나머지가 조용히 새 나갑니다.
+     ★ 값을 직접 읽습니다(db-status). 들어오는 길에 loadPersonalData 가
+       그 값을 되살려 놓고, 나가는 길에는 아직 살아 있으니까요.
+     ===================================================================== */
+  function 조용히드나드나() {
+    try {
+      return (document.getElementById("db-status")?.value || "") === "repair";
+    } catch (e) { return false; }
+  }
+
   async function _writeJoinSystemMessageOnce() {
+    if (조용히드나드나()) return;
     const sid = _ensureSessionId();
     // [FIX] 같은 탭 재입장 시 키가 겹치지 않도록 입장 시각을 포함해 고유화
     const key = `sys_join_${sid}_${_myJoinTs || Date.now()}`;
@@ -264,6 +286,7 @@ window.AppSession = AppSession;
   }
 
   async function _writeLeaveSystemMessageOnce() {
+    if (조용히드나드나()) return;
     const sid = _ensureSessionId();
     const key = `sys_leave_${sid}_${_myJoinTs || Date.now()}`;
 
@@ -607,7 +630,9 @@ window.AppSession = AppSession;
        하지 않습니다. 쓰기 시작할 때 WORK 를 한 번 누르면 됩니다. */
     try {
       const sel = document.getElementById("db-status");
-      if (sel) sel.value = "rest";
+      /* 🛠️ REPAIR 는 덮지 않습니다 — 덮으면 다음에 들어올 때 풀려서
+         입·퇴장 메시지가 다시 뜹니다(이 기능을 만든 이유가 그것). */
+      if (sel && sel.value !== "repair") sel.value = "rest";
       window.savePersonalData?.();
     } catch (e) {}
     try { await window.finalizeTimelogOnLeave?.(); } catch (e) {}
@@ -726,6 +751,7 @@ window.AppSession = AppSession;
 
   function _handleBeforeUnload() {
     if (!myNick || _leaveBeaconSent) return;
+    if (조용히드나드나()) { _leaveBeaconSent = true; return; }
     _leaveBeaconSent = true;
 
     const sid = _ensureSessionId();

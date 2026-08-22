@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608221538">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608221538">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608221711">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608221711">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608221538">
+  <link rel="manifest" href="manifest.json?v=202608221711">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608221538" />
+  <link rel="stylesheet" href="styles.css?v=202608221711" />
 </head>
 
 <body class="dock-mode">
@@ -483,30 +483,34 @@
         </div>
 
         <!-- =====================================================================
-             🪟 [2026-08-22 — 콩] 떠 있는 창 크기
+             🪟 [2026-08-22 — 콩] 하단 메뉴 창 크기
              ---------------------------------------------------------------------
              확대·축소가 둘로 갈렸습니다.
                · 머리말의 [− 100% +] = **접속자 카드 크기**
-               · 여기               = **떠 있는 창 크기** (판 · 팝업)
-             카드는 "몇 명이 한눈에 들어오나" 이고, 창은 "읽고 적기 편한가"
-             라서 원하는 크기가 사람마다 다릅니다.
+               · 여기               = **하단 메뉴 창 크기** (알약 줄에서 뜨는 판)
+               · 머리말 메뉴 창      = 늘 105% 고정 (고를 것 없음)
+             카드는 "몇 명이 한눈에 들어오나" 이고, 판은 "읽고 적기 편한가"
+             라서 원하는 크기가 사람마다 다릅니다. 반면 공지·자료실 같은
+             머리말 팝업은 잠깐 열었다 닫는 자리라, 콩이 105% 로 못 박았어요
+             ("글자가 작아서 안 보이는 것보단 시원하게 큰 게 낫다").
 
              ★ script_zoom.js 의 판슬라이더달기() 가 손가락을 답니다.
                판이 없는 방에서는 이 칸을 **통째로 감춥니다** — 만져도
                아무 일이 안 일어나는 손잡이는 "고장" 으로 읽히니까요.
              ===================================================================== -->
         <div class="set-block" id="set-panel-zoom-block" hidden>
-          <div class="set-title">떠 있는 창 크기</div>
+          <div class="set-title">하단 메뉴 창 크기</div>
           <div class="set-row" style="gap:10px; align-items:center;">
             <input type="range" id="set-panel-zoom" min="70" max="130" step="5" value="100"
-                   style="flex:1 1 auto; min-width:0;" aria-label="떠 있는 창 크기">
+                   style="flex:1 1 auto; min-width:0;" aria-label="하단 메뉴 창 크기">
             <span id="panel-zoom-val" class="font-pill" aria-live="polite"
                   style="min-width:52px; text-align:center;">100%</span>
             <button type="button" class="ghost-btn compact" id="set-panel-zoom-reset">100%</button>
           </div>
           <p class="hint" style="margin:6px 0 0;">
-            Work Log·뽀모 같은 <b>판</b>과 설정·가이드 같은 <b>팝업</b>이 함께 커집니다.
-            접속자 카드는 <b>머리말의 확대·축소</b>로 따로 조절해요. 이 기기에만 저장돼요.
+            아래 알약 줄에서 뜨는 <b>판</b>(Work Log·뽀모·Chat…)의 크기예요.
+            접속자 카드는 <b>머리말의 확대·축소</b>로 따로 조절하고,
+            공지·설정 같은 <b>머리말 메뉴 창은 늘 105%</b>로 고정돼 있어요. 이 기기에만 저장돼요.
           </p>
         </div>
 
@@ -1220,6 +1224,10 @@
       <option value="focus">🔥초집중🔥</option>
       <option value="rest">휴식</option>
       <option value="away">자리비움</option>
+      <!-- 🛠️ [2026-08-22 — 콩] 방장 전용. 고르기 판(script_profile.js)이
+           방장에게만 보여 주지만, **값 자리는 모두에게 있어야** 합니다 —
+           방장 카드를 보는 사람들도 이 값을 읽어 라벨·색을 그리니까요. -->
+      <option value="repair">🛠️REPAIR🛠️</option>
     </select>
 
     <!-- 저장 버튼은 없앴습니다. 목표와 상태는 입력하는 즉시 저장돼요. -->
@@ -1273,52 +1281,52 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608221538"></script>
+<script src="script_demo.js?v=202608221711"></script>
 <!-- 🧘 혼자 방 (?solo=1) — demo 와 같은 이유로 맨 앞쪽에 실립니다.
      script_core.js 가 database() 를 부르기 전에 갈아 끼워야 해요. -->
-<script src="script_solo.js?v=202608221538"></script>
-<script src="fortune_data.js?v=202608221538"></script>
-<script src="script_core.js?v=202608221538"></script>
-<script src="script_auth.js?v=202608221538"></script>
-<script src="script_ui.js?v=202608221538"></script>
-<script src="script_chat.js?v=202608221538"></script>
-<script src="script_chatty.js?v=202608221538"></script>
-<script src="script_data.js?v=202608221538"></script>
-<script src="script_realtime.js?v=202608221538"></script>
-<script src="script_dock.js?v=202608221538"></script>
-<script src="script_music.js?v=202608221538"></script>
-<script src="script_wordcount.js?v=202608221538"></script>
+<script src="script_solo.js?v=202608221711"></script>
+<script src="fortune_data.js?v=202608221711"></script>
+<script src="script_core.js?v=202608221711"></script>
+<script src="script_auth.js?v=202608221711"></script>
+<script src="script_ui.js?v=202608221711"></script>
+<script src="script_chat.js?v=202608221711"></script>
+<script src="script_chatty.js?v=202608221711"></script>
+<script src="script_data.js?v=202608221711"></script>
+<script src="script_realtime.js?v=202608221711"></script>
+<script src="script_dock.js?v=202608221711"></script>
+<script src="script_music.js?v=202608221711"></script>
+<script src="script_wordcount.js?v=202608221711"></script>
 <!-- [2026-08-21] ✍️ Work Log 줄 — 반드시 script_wordcount.js **뒤**에.
      날짜 열쇠(dayKey)를 저쪽에서 빌려 쓰기 때문입니다. -->
-<script src="script_worklog.js?v=202608221538"></script>
-<script src="script_timelog.js?v=202608221538"></script>
-<script src="script_idledetect.js?v=202608221538"></script>
-<script src="script_alive.js?v=202608221538"></script>
-<script src="script_profile.js?v=202608221538"></script>
-<script src="script_mywork.js?v=202608221538"></script>
-<script src="script_forest.js?v=202608221538"></script>
-<script src="script_pubreview.js?v=202608221538"></script>
-<script src="script_notice.js?v=202608221538"></script>
-<script src="script_achv.js?v=202608221538"></script>
-<script src="script_reactions.js?v=202608221538"></script>
-<script src="script_note.js?v=202608221538"></script>
+<script src="script_worklog.js?v=202608221711"></script>
+<script src="script_timelog.js?v=202608221711"></script>
+<script src="script_idledetect.js?v=202608221711"></script>
+<script src="script_alive.js?v=202608221711"></script>
+<script src="script_profile.js?v=202608221711"></script>
+<script src="script_mywork.js?v=202608221711"></script>
+<script src="script_forest.js?v=202608221711"></script>
+<script src="script_pubreview.js?v=202608221711"></script>
+<script src="script_notice.js?v=202608221711"></script>
+<script src="script_achv.js?v=202608221711"></script>
+<script src="script_reactions.js?v=202608221711"></script>
+<script src="script_note.js?v=202608221711"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608221538"></script>
+<script src="script_worktag.js?v=202608221711"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608221538"></script>
-<script src="script_share.js?v=202608221538"></script>
+<script src="script_sticker.js?v=202608221711"></script>
+<script src="script_share.js?v=202608221711"></script>
 <!-- 🔍 화면 확대·축소 — 머리말 [− 18px +] 오른쪽에 나란히.
      다른 파일들은 (window.uiZoom?.() || 1) 처럼 **부를 때** 물어보므로
      싣는 차례는 상관없습니다. 없으면 100% 로 봅니다. -->
 <!-- 🙋 Help — 익명 교정 문답 (2026-08-16). 대숲과 같은 익명 방식입니다. -->
-<script src="script_help.js?v=202608221538"></script>
+<script src="script_help.js?v=202608221711"></script>
 <!-- 📁 자료실 (2026-08-18) — 목록(files)과 내용(fileBlob)을 따로 담습니다. -->
-<script src="script_files.js?v=202608221538"></script>
-<script src="script_zoom.js?v=202608221538"></script>
-<script src="script_manual.js?v=202608221538"></script>
-<script src="script_guard.js?v=202608221538"></script>
+<script src="script_files.js?v=202608221711"></script>
+<script src="script_zoom.js?v=202608221711"></script>
+<script src="script_manual.js?v=202608221711"></script>
+<script src="script_guard.js?v=202608221711"></script>
 
 <script>
   window.addEventListener("load", () => {

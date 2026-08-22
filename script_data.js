@@ -530,6 +530,11 @@
   function _startStatus(saved) {
     const v = String(saved || "");
     if (v === "writing" || v === "focus") return v;
+    /* 🛠️ [2026-08-22 — 콩] REPAIR 는 **그대로 들고 들어옵니다.**
+       방을 고치는 동안은 새로고침을 수십 번 하는데, 들어올 때마다
+       상태가 풀리면 그때마다 입·퇴장 메시지가 챗창을 덮습니다 —
+       이 상태를 만든 이유가 바로 그것이라 여기서 지키지 않으면 뜻이 없어요. */
+    if (v === "repair") return v;
     return "focus";
   }
 
