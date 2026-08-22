@@ -652,6 +652,9 @@
       /* 🏅 출석률 순위 (2026-08-18) — 표가 보는 그 달 기준. ‹ › 를 따라갑니다 */
       출석률순위(rateRows);
 
+      /* 🏅 개근 명단 굳히기 (2026-08-22) — 방 배경판이 읽어 갑니다 */
+      명단굳히기(ymKey, rateRows);
+
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
@@ -1212,6 +1215,68 @@
      [기준이 0인 사람] 이 달에 아직 멤버가 아니었거나(입장 전) 휴가로
      기준이 다 깎인 사람 — 등수를 매길 수 없으니 맨 아래 흐리게.
      ===================================================================== */
+  /* =====================================================================
+     🏅 개근 명단 굳히기 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     [무엇을 하나]
+     방 배경판(오늘 접속 현황 · 지금 방에서) 아래에 "이번 달 의무 출석일을
+     채운 분들" 을 느리게 흘려 보여 주기로 했습니다. 그 명단을 여기서
+     한 번 적어 둡니다.
+
+     [왜 여기인가 — 안 고른 길들]
+     ① 방에 있는 사람마다 각자 계산하기
+        전원의 출석·휴가·입장일을 사람 수만큼 읽어야 합니다. 통신량이
+        접속자 수에 비례해 늘어요. 무엇보다 ruleOf(의무 출석일 셈)를
+        방 쪽에 **한 벌 더 베껴야** 하는데, 두 벌이 되는 순간 언젠가
+        어긋납니다. 규칙은 한 곳에만 있어야 해요.
+     ② 서버가 매일 계산하기
+        서버가 없습니다 (정적 페이지 + RTDB).
+     ③ ★ 이 길 — 출석부가 **이미** 낸 답을 그대로 적어 둔다
+        위 표가 사람마다 state("ok"/"maybe"/"bad") 를 냈습니다. 그 중
+        "ok" 만 모으면 그게 개근 명단이에요. 새로 세는 게 없습니다.
+        방 쪽은 이 작은 명단 하나만 읽으면 됩니다.
+
+     [언제 적히나]
+     방장이 출석부를 열 때마다. 콩은 하루에도 몇 번씩 새로고침하니
+     사실상 실시간입니다.
+
+     [쓸데없는 쓰기를 안 하려고]
+     명단이 **달라졌을 때만** 적습니다. 새로고침 백 번 해도 사람이
+     안 바뀌었으면 쓰기는 0번이에요.
+
+     [옛 달은 안 건드립니다]
+     배경판이 보여 주는 건 이번 달과 지난 달뿐입니다. ‹ 로 옛날을
+     들춰 봤다고 그때 명단이 새로 적히지는 않아요.
+     ===================================================================== */
+  function 달이름(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  function 최근두달() {
+    const now = new Date();
+    const 지난 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return [달이름(now), 달이름(지난)];
+  }
+
+  async function 명단굳히기(ymKey, rateRows) {
+    try {
+      if (!최근두달().includes(ymKey)) return;      // 옛 달은 지나갑니다
+      const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0)
+                          .map(r => r.n)
+                          .sort((a, b) => a.localeCompare(b, "ko"));
+      const 옛 = await db.ref(`honors/${ymKey}/list`).once("value");
+      const 옛명단 = 옛.val() || [];
+      if (JSON.stringify(옛명단) === JSON.stringify(명단)) return;   // 그대로면 안 씀
+      /* 아무도 없으면 노드를 통째로 지웁니다 — 빈 목록을 남겨 두면
+         배경판이 "달성자 0명" 칸을 괜히 그립니다. */
+      if (!명단.length) { await db.ref(`honors/${ymKey}`).remove(); return; }
+      await db.ref(`honors/${ymKey}`).set({
+        list: 명단,
+        at: firebase.database.ServerValue.TIMESTAMP,
+        by: (window.myNick || window.ADMIN_NICK || "")
+      });
+    } catch (e) { console.warn("[adm honors]", e); }
+  }
+
   function 출석률순위(rateRows) {
     const box = el("adm-streak");
     if (!box) return;

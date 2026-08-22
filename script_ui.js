@@ -407,6 +407,11 @@
     renderThemePalette();
     /* 방 배경의 덮개는 테마 종이색으로 만듭니다 — 테마가 바뀌면 다시 */
     window.applyRoomBg?.();
+    /* ★ [추가 2026-08-22 — 콩 B안] 닉네임 색은 다크에서만 밝기를 끌어
+       올립니다(script_profile.js 의 읽히는색). 이미 그려진 말풍선은
+       스스로 다시 칠하지 못하니, 테마가 바뀌는 이 자리에서 불러 줘요.
+       안 부르면 어두운 테마로 옮긴 순간부터 **새 말풍선만** 밝아집니다. */
+    window.refreshChatNickColors?.();
   }
 
   function renderThemePalette() {

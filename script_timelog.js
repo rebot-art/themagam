@@ -619,12 +619,12 @@
     return document.getElementById("mywork-panel-wc");
   }
 
-  function exportBlock(backWeeks, wcBack) {
+  function exportBlock() {
     return `
       <div class="set-block">
         <button class="ghost-btn w-full" type="button"
-                onclick="exportMyRecord(${backWeeks}, ${wcBack})">📤 보고 있는 주를 텍스트로 내보내기</button>
-        <p class="hint">작업 시간과 글자수를 한 파일(.txt)에 함께 담아요.</p>
+                onclick="exportMyRecord()">📤 이번 달을 텍스트로 내보내기</button>
+        <p class="hint">이번 달 1일부터 오늘까지, 작업 시간과 글자수를 한 파일(.txt)에 함께 담아요.</p>
       </div>`;
   }
 
@@ -651,7 +651,7 @@
           ${timeHtml}
           <div id="mw-time-month"></div>
         </div>
-        ${exportBlock(backWeeks, wcBack)}`;
+        ${exportBlock()}`;
       myMonthTimeLineHtml().then(h => {
         const box = document.getElementById("mw-time-month");
         if (box && h) box.innerHTML = h;
@@ -671,7 +671,7 @@
           ${wcHtml}
           <div id="mw-wc-month"></div>
         </div>
-        ${exportBlock(backWeeks, wcBack)}`;
+        ${exportBlock()}`;
       window.Wordcount?.myMonthLineHtml?.().then(h => {
         const box = document.getElementById("mw-wc-month");
         if (box && h) box.innerHTML = h;
@@ -789,14 +789,28 @@
   };
 
   /* [2026-08-03] 나의 작업 — 텍스트 내보내기 */
-  window.exportMyRecord = async function (backWeeks = 0, wcBack = 0) {
+  /* [바꿈 2026-08-22 — 콩] "보고 있는 주" → "이번 달".
+
+     주 단위로 내보내면 한 달을 챙기는 데 다섯 번을 눌러야 했습니다.
+     아래 꺾은선이 이미 "이번 달 하루하루" 라서, 내보내는 범위도 거기에
+     맞췄어요. 넘겨보기(backWeeks/wcBack)는 이제 안 받습니다 — 달 그림은
+     넘겨볼 수 없으니 받아 봐야 거짓말이 되니까요.
+
+     이달 1일 ~ 오늘. loadSummary 는 "오늘부터 거꾸로 N일" 이라서
+     N = 오늘 날짜 로 부르면 정확히 1일까지 닿습니다. */
+  window.exportMyRecord = async function () {
     if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
-    const rows = await loadSummary(myNick, 7, backWeeks);
+    const now = new Date();
+    const 오늘 = now.getDate();
+    const 달이름 = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    const rows = await loadSummary(myNick, 오늘, 0);
     const L = [];
     L.push(`TheMagam — ${myNick} 작업 기록`);
-    L.push(`내보낸 시각: ${new Date().toLocaleString("ko-KR")}`);
+    L.push(`내보낸 시각: ${now.toLocaleString("ko-KR")}`);
     L.push("");
-    L.push(`■ Working hours (${backWeeks === 0 ? "이번 주" : backWeeks + "주 전"})`);
+    L.push(`■ Working hours (${달이름})`);
     let tw = 0, tp = 0;
     rows.forEach(r => {
       const v = r.totals.writing + r.totals.focus;
@@ -805,24 +819,30 @@
     });
     L.push(`합계      Write+Job ${fmtDur(tw)} · 🍅 ${tp}`);
     L.push("");
-    L.push(`■ Letters (${wcBack === 0 ? "이번 주" : wcBack + "주 전"})`);
+    L.push(`■ Letters (${달이름})`);
+
+    /* 하루씩 서른 번 읽지 않습니다 — 달 하나를 한 번에 읽어서 갈라 씁니다.
+       (예전 주 단위 코드는 7번 읽었어요. 그대로 늘리면 31번이 됩니다.) */
+    let all = {};
+    try {
+      const snap = await db.ref("wordlog").orderByKey()
+        .startAt(`${ym}-01`).endAt(`${ym}-31\uf8ff`).once("value");
+      all = snap.val() || {};
+    } catch (e) {}
+
     let tc = 0;
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - (i + wcBack * 7));
-      const key = window.Wordcount?.dayKey?.(d) || "";
-      let total = 0;
-      try {
-        const s = await db.ref(`wordlog/${key}/${myNick}`).once("value");
-        total = Number(s.val()?.total || 0);
-      } catch (e) {}
+    for (let d = 1; d <= 오늘; d++) {
+      const key = `${ym}-${String(d).padStart(2, "0")}`;
+      const total = Number(all[key]?.[myNick]?.total || 0);
       tc += total;
       L.push(`${key}  ${total.toLocaleString()}자`);
     }
     L.push(`합계      ${tc.toLocaleString()}자`);
+
     const blob = new Blob([L.join("\n")], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `더마감_${myNick}_기록_${new Date().toISOString().slice(0,10)}.txt`;
+    a.download = `더마감_${myNick}_기록_${ym}.txt`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   };

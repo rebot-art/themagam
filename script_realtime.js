@@ -398,6 +398,87 @@
     }).join("");
   }
 
+  /* =====================================================================
+     🏅 개근 명단 흘리기 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     "의무 출석일을 채운 멤버들을 느리게 흘러가게."
+
+     [셈은 여기서 하지 않습니다]
+     의무 출석일(ruleOf)은 관리자 출석부에만 있습니다. 그걸 여기 한 벌
+     더 베끼면 두 곳이 언젠가 어긋나요. 그래서 출석부가 낸 답을
+     honors/{YYYY-MM}/list 에 적어 두고(script_admin.js 의 명단굳히기),
+     방은 그 **작은 명단 하나만** 읽습니다.
+       · 사람이 몇 명 접속하든 읽는 양은 이름 목록 두 줄뿐
+       · 방장이 출석부를 새로고침하면 여기도 곧바로 바뀝니다
+
+     [두 달만 봅니다]
+     지난 달 · 이번 달. 8월에는 지난 달(7월) 노드가 아예 없으니
+     이번 달만 뜹니다 — 따로 막을 것이 없어요.
+     이번 달 명단은 의무 출석일을 채워야 생기니 대개 18일 넘어서 뜹니다.
+
+     [자정을 넘겨 켜 둬도]
+     달이 바뀌면 듣는 자리도 다시 겁니다 (_honorKeys 로 판별).
+     ===================================================================== */
+  let _honors = {};        // { "2026-08": ["닉", ...] }
+  let _honorRefs = [];     // 지금 듣고 있는 곳 [[ref, handler], ...]
+  let _honorKeys = "";     // 다시 걸어야 하나
+
+  function 달키(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  /** [지난 달, 이번 달] */
+  function 두달키() {
+    const n = new Date();
+    return [달키(new Date(n.getFullYear(), n.getMonth() - 1, 1)), 달키(n)];
+  }
+
+  function 개근듣기() {
+    const keys = 두달키();
+    const 표 = keys.join("|");
+    if (표 === _honorKeys) return;
+    _honorRefs.forEach(([r, h]) => { try { r.off("value", h); } catch (e) {} });
+    _honorRefs = [];
+    _honors = {};
+    _honorKeys = 표;
+    keys.forEach(k => {
+      try {
+        const r = db.ref(`honors/${k}/list`);
+        const h = r.on("value", snap => {
+          const v = snap.val();
+          _honors[k] = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+          drawBoard();
+        }, () => {});
+        _honorRefs.push([r, h]);
+      } catch (e) {}
+    });
+  }
+
+  /** 흘릴 것이 없으면 빈 글을 돌려줍니다 — 칸 자체를 안 그려요 */
+  function 개근HTML() {
+    const [지난, 이번] = 두달키();
+    const 묶음 = [];
+    [지난, 이번].forEach(k => {
+      const arr = (_honors[k] || []).filter(Boolean);
+      if (arr.length) 묶음.push({ 달: Number(k.slice(5)) + "월", 이름: arr });
+    });
+    if (!묶음.length) return "";
+
+    const 한벌 = 묶음.map(g =>
+      `<b class="rb-hm">${g.달}</b>` +
+      g.이름.map(n => `<span class="rb-hn">${escapeHtml(n)}</span>`).join("")
+    ).join("");
+
+    /* 글이 짧으면 굳이 안 흘립니다 — 한 사람뿐인데 지나갔다 돌아오면
+       놀리는 것처럼 보여요. 길 때만 흐르고, 속도는 길이에 맞춰
+       **늘 같은 빠르기**가 되게 합니다 (사람이 늘어도 안 빨라져요). */
+    const 글자수 = 묶음.reduce((a, g) => a + g.달.length + g.이름.join("").length + g.이름.length * 2, 0);
+    if (글자수 <= 26) {
+      return `<div class="rb-hrow rb-still">${한벌}</div>`;
+    }
+    const 초 = Math.max(30, Math.round(글자수 * 1.5));
+    return `<div class="rb-hwrap"><div class="rb-hrow" style="animation-duration:${초}s">${한벌}${한벌}</div></div>`;
+  }
+
   let _board재시도 = 0;
   function drawBoard() {
     const host = document.querySelector(".cards-area");
@@ -420,17 +501,48 @@
          같이 밀려 올라갑니다. 자리는 CSS 가 absolute 로 잡아요. */
       host.insertBefore(box, host.firstChild);
     }
+    개근듣기();
+
+    /* ★ [바꿈 2026-08-22] 예전에는 이 자리에서 판 전체를 innerHTML 로
+       다시 그렸습니다. 개근 명단이 **흘러가는 글**이 되면서 그러면
+       안 되게 됐어요 — 줄 하나가 올라올 때마다 흐름이 처음으로 되감겨
+       영영 제자리걸음을 합니다.
+       그래서 뼈대는 한 번만 세우고, 매번은 **속만** 갈아 끼웁니다.
+       개근 줄은 내용이 정말 달라졌을 때만 손대요. */
+    if (!box.firstChild) {
+      box.innerHTML = `<div class="rb-inner">
+        <div class="rb-box">
+          <div class="rb-t">📊 오늘 접속 현황</div>
+          <div class="rb-bars" id="rb-bars"></div>
+        </div>
+        <div class="rb-box">
+          <div class="rb-t" id="rb-feed-t"></div>
+          <div class="rb-fb" id="rb-feed"></div>
+        </div>
+      </div>`;
+    }
     const n = 오늘참여자수();
-    box.innerHTML = `<div class="rb-inner">
-      <div class="rb-box">
-        <div class="rb-t">📊 오늘 접속 현황</div>
-        <div class="rb-bars">${막대띠()}</div>
-      </div>
-      <div class="rb-box">
-        <div class="rb-t">🔥 ${n > 0 ? `지금 ${n}명 참여 중` : "지금 방에서"}</div>
-        <div class="rb-fb">${흐름줄들()}</div>
-      </div>
-    </div>`;
+    const 막대 = box.querySelector("#rb-bars");
+    const 제목 = box.querySelector("#rb-feed-t");
+    const 흐름 = box.querySelector("#rb-feed");
+    if (막대) 막대.innerHTML = 막대띠();
+    if (제목) 제목.textContent = `🔥 ${n > 0 ? `지금 ${n}명 참여 중` : "지금 방에서"}`;
+    if (흐름) 흐름.innerHTML = 흐름줄들();
+
+    const 개근 = 개근HTML();
+    const 속 = box.querySelector(".rb-inner");
+    let 칸 = box.querySelector("#rb-honor");
+    if (!개근) { 칸?.remove(); return; }
+    if (!칸) {
+      칸 = document.createElement("div");
+      칸.id = "rb-honor";
+      칸.className = "rb-box rb-honor";
+      속?.appendChild(칸);
+    }
+    /* 같은 명단이면 손대지 않습니다 — 손대는 순간 흐름이 되감깁니다 */
+    if (칸.dataset.sig === 개근) return;
+    칸.dataset.sig = 개근;
+    칸.innerHTML = `<div class="rb-t">🏅 개근</div>${개근}`;
   }
   /* 글자수 쪽에서 새 줄이 흘러올 때 불러 줍니다 (자료를 다시 안 읽습니다) */
   window.renderRoomBoard = drawBoard;

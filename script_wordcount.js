@@ -284,14 +284,15 @@
 
     const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
 
-    const dots = pts.map((p, i) => `
-      <circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" class="wcl-dot"/>`).join("");
-
-    /* 0 인 날은 숫자를 적지 않습니다 — 바닥에 0 이 줄줄이 늘어서면
-       정작 쓴 날의 숫자가 묻힙니다. */
-    const nums = pts.map((p, i) => p.v > 0 ? `
-      <text x="${x(i).toFixed(1)}" y="${(y(p.v) - 12).toFixed(1)}"
-            class="wcl-num" text-anchor="middle">${shortNum(p.v)}</text>` : "").join("");
+    /* ★ [뺌 2026-08-22 — 콩] 점(circle)과 숫자(text)를 없앴습니다.
+       "흐름만 알 수 있게" 라는 요청이에요. 한 달치는 점이 서른 개라
+       숫자가 서로 겹쳐 읽히지도 않았고, 하루하루 정확한 값은 바로 위
+       주간 막대와 요일별 줄에서 이미 보여줍니다.
+       ★ 위 최근 7일은 **막대**라 거기서 숫자를 봅니다 — 이 꺾은선은
+         "요즘 오르막인가 내리막인가" 를 보는 자리예요.
+       ※ 되살리려면 여기 두 줄이면 됩니다 (아래 ${dots}${nums} 자리도 함께). */
+    const dots = "";
+    const nums = "";
 
     const days = pts.map((p, i) => `
       <text x="${x(i).toFixed(1)}" y="${H - 6}" class="wcl-day${p.today ? " is-today" : ""}"

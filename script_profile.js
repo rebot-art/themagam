@@ -706,8 +706,73 @@ function nickColorOf(nick) {
   const prof = (window._profileCache || {})[String(nick || "")] || {};
   return sanitizeHexColor(prof.nickColor) || "";
 }
+
+/* =====================================================================
+   🌙 다크 테마에서 닉네임 건져 올리기 (2026-08-22 — 콩이 고른 B안)
+   ---------------------------------------------------------------------
+   [무엇이 문제였나]
+   닉네임 색은 각자 고른 값을 그대로 style="color:#xxx" 로 찍습니다.
+   남색·고동색·먹색처럼 **어두운 색**을 고른 분은, 어두운 판 위에서
+   글씨가 배경에 잠겨 누가 말했는지 안 보였어요.
+
+   [고르지 않은 길]
+   · 다 같은 색으로 덮기 — 고른 색은 그 사람의 표시입니다. 뺏지 않아요.
+   · 뒤에 알약 배경 깔기 — 챗창이 시끄러워집니다.
+
+   [B안 — 색은 그대로, 밝기만 끌어올리고 살짝 차분하게]
+   고른 색을 HSL 로 풀어서
+     · 색상(H)  그대로   ← 파랑은 파랑, 자주는 자주. 정체성은 여기 있습니다
+     · 채도(S)  58% 이하 ← 밝히기만 하면 형광펜처럼 뜹니다. 눌러 줘요
+     · 밝기(L)  68% 이상 ← 어두운 판에서 읽히는 선
+   이미 밝고 차분한 색은 아무 일도 일어나지 않습니다 (그대로 통과).
+
+   ★ 다크 테마일 때만 손댑니다. 밝은 테마는 한 글자도 안 건드려요.
+   ★ 저장된 값은 그대로입니다 — 보이기만 바꿉니다. 되돌리려면
+     아래 읽히는색() 이 hex 를 그대로 돌려주게 하면 끝이에요.
+   ===================================================================== */
+const 닉_최소밝기 = 68;
+const 닉_최대채도 = 58;
+
+/** #RRGGBB → [색상, 채도, 밝기] (0~360, 0~100, 0~100) */
+function hexToHsl(hex) {
+  let h = String(hex || "").replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2;
+  let s = 0, H = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    H = mx === r ? ((g - b) / d + (g < b ? 6 : 0))
+      : mx === g ? ((b - r) / d + 2)
+      :            ((r - g) / d + 4);
+    H *= 60;
+  }
+  return [H, s * 100, l * 100];
+}
+window.hexToHsl = hexToHsl;
+
+function 어두운테마인가() {
+  return document.documentElement.getAttribute("data-is-dark") === "true";
+}
+
+/** 화면에 실제로 찍을 색 — 밝은 테마면 고른 색 그대로 */
+function 읽히는색(hex) {
+  if (!hex) return "";
+  if (!어두운테마인가()) return hex;
+  const [H, S, L] = hexToHsl(hex);
+  if (S <= 닉_최대채도 && L >= 닉_최소밝기) return hex;   // 이미 잘 보임
+  const s2 = Math.min(S, 닉_최대채도);
+  const l2 = Math.max(L, 닉_최소밝기);
+  return `hsl(${Math.round(H)} ${Math.round(s2)}% ${Math.round(l2)}%)`;
+}
+window.닉읽히는색 = 읽히는색;
+
 function nickColorStyle(nick) {
-  const c = nickColorOf(nick);
+  const c = 읽히는색(nickColorOf(nick));
   return c ? ` style="color:${c}"` : "";
 }
 window.nickColorOf = nickColorOf;
@@ -716,7 +781,7 @@ window.nickColorStyle = nickColorStyle;
 /** 이미 그려진 말풍선의 닉네임 색을 갱신합니다 */
 function refreshChatNickColors() {
   document.querySelectorAll("[data-name-of]").forEach(el => {
-    const c = nickColorOf(el.dataset.nameOf);
+    const c = 읽히는색(nickColorOf(el.dataset.nameOf));
     el.style.color = c || "";
   });
 }
