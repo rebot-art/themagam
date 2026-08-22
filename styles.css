@@ -4762,7 +4762,7 @@ html[data-panelzoom] .dock-panel{
   border-left: 2px solid var(--border);
   padding: 5px 0 5px 10px; margin: 5px 0;
 }
-.help-a.has-check{ border-left-color: rgba(186,117,23,.45); }
+.help-a.has-check{ border-left-color: var(--accent-line); }
 .help-a-h{ display: flex; align-items: center; gap: 6px; }
 .help-a-t{ margin: 2px 0 0; font-size: 13px; line-height: 1.6;
            color: var(--text-2, #5A6473); word-break: break-word; }
@@ -4773,18 +4773,29 @@ html[data-panelzoom] .dock-panel{
 }
 .help-x:hover{ color: var(--danger, #B3372B); }
 
+/* ★★ [고침 2026-08-22 — 콩] 💡 아하 스티커가 **테마를 안 따라갔습니다.**
+   호박색(#854F0B · rgba(250,199,117,…))이 박혀 있어서, 테마를 바꿔도
+   여기만 늘 노랑이었고 다크에서는 숫자가 묻혔어요
+   (콩: "다른 창들은 테마 포인트 색으로 바뀌는데 표현 공부는 고정인지 안 먹혀").
+
+   ★ 이 호박색에는 **뜻이 없었습니다** — 그냥 "도드라지게" 였어요.
+     뜻 없는 색은 테마를 따라가야 합니다. 포인트색 한 벌로 바꿉니다.
+   ※ 옆의 🔗 참고 칩(보라)은 **일부러 다른 색**입니다 — "참고" 와 "SOS" 를
+     눈으로 가르려고 둔 것이라 그대로 뒀습니다.
+   ★ 숫자가 안 눌린 상태에서도 읽혀야 해서 --muted-strong 을 씁니다.
+     이 숫자는 "몇 명이 도움받았나" 라 잔글씨로 묻히면 안 됩니다. */
 .help-check{
   flex: 0 0 auto; cursor: pointer;
-  border: 1px solid var(--line, #E3E7EE); border-radius: 999px;
-  background: transparent; color: var(--text-3, #8A93A2);
+  border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--muted-strong);
   font-size: 11px; font-weight: 700; padding: 1px 8px; font-family: inherit;
 }
 .help-check:hover{ background: var(--fill-1, #F2F4F8); }
 /* 💡 는 켜지면 "불이 들어온" 느낌으로 — 초록 체크보다 이쪽이
    "아하!" 에 맞습니다 (맞다/틀리다가 아니라 알았다는 뜻이라서요) */
 .help-check.is-on{
-  border-color: rgba(186,117,23,.45); color: #854F0B;
-  background: rgba(250,199,117,.20);
+  border-color: var(--accent-line); color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .help-more{
@@ -4996,7 +5007,7 @@ html[data-panelzoom] .dock-panel{
   background: rgba(140,120,200,.08); border-radius: 8px; padding: 6px 9px; margin-top: 5px;
 }
 .help-ref-a span:first-child{ flex: 1; }
-.help-ref-c{ flex: 0 0 auto; font-size: 10.5px; color: #8a6a12; }
+.help-ref-c{ flex: 0 0 auto; font-size: 10.5px; color: var(--accent); }
 
 /* 쓰는 중 제안 + 골라 둔 참고 핀 */
 .help-sug{
@@ -7780,8 +7791,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 :root[data-is-dark="true"] .help-pin,
 :root[data-is-dark="true"] .help-sug-h{ color: #CFC4F2; }
 :root[data-is-dark="true"] .help-ref-q{ color: #E3DCFA; }
-:root[data-is-dark="true"] .help-ref-c{ color: #E8C766; }
-:root[data-is-dark="true"] .help-check.is-on{ color: #FBDDA8; }
+/* ※ .help-check.is-on · .help-ref-c 는 이제 포인트색을 쓰므로
+   다크 대비가 따로 필요 없습니다 (테마가 알아서 갈아 줍니다). */
 :root[data-is-dark="true"] .fl-msg.bad,
 :root[data-is-dark="true"] .fl-x:hover{ color: #FFA59E; }
 :root[data-is-dark="true"] .fl-msg.ok{ color: #8CE8C6; }
