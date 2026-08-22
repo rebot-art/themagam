@@ -349,6 +349,14 @@
     r.setProperty("--modal-border", isDark ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.65)");
     r.setProperty("--focus-bg", isDark ? "rgba(255,255,255,.08)" : "#fff");
 
+    /* ★★★ [고침 2026-08-22 — 콩] --text-dim 이 여기 없었습니다.
+       styles.css 의 :root 에 rgba(28,30,34,.78) 로 한 번 적혀 있을 뿐이라,
+       테마를 어떻게 바꿔도 **늘 어두운 글씨**였어요. 다크 테마에서는
+       어두운 바탕에 어두운 글씨라 Work Log 판의 탭 알약(.wc-tab)이
+       테두리만 동그랗게 남고 글자가 통째로 사라졌습니다.
+       (콩의 캡처 3 — "가려지는 버튼이 있어")
+       옆의 --muted 들과 나란히 두어, 앞으로는 함께 뒤집히게 합니다. */
+    r.setProperty("--text-dim", isDark ? "rgba(235,235,245,.82)" : "rgba(28,30,34,.78)");
     r.setProperty("--muted", isDark ? "rgba(235,235,245,.68)" : "rgba(60,60,67,.72)");
     r.setProperty("--muted-strong", isDark ? "rgba(235,235,245,.86)" : "rgba(60,60,67,.88)");
     r.setProperty("--sub-muted", isDark ? "rgba(235,235,245,.72)" : "rgba(60,60,67,.75)");
