@@ -560,10 +560,23 @@
      그래서 **카드를 그릴 때마다 자리에 있는지 봅니다.** 있으면 아무 일도
      안 하고(값 비교 없이 요소 하나 찾는 것뿐), 없으면 다시 넣습니다.
      ===================================================================== */
+  /* ★★★ [안전벨트 2026-08-22] 여기는 renderUserCards 의 **맨 끝**에서
+     불립니다 — 토요일에 방을 얼린 바로 그 길목이에요. 배경판은 있으면
+     좋은 것이지 방이 돌아가는 데 꼭 필요한 것이 아닙니다. 그런데 여기서
+     예외가 나면 renderUserCards 밖으로 튀어 나가 **그걸 부른 쪽까지**
+     멈춰 세웁니다 (남의 카드·시간 집계·인사 팝업·상태표…).
+
+     그래서 배경판이 무슨 일을 겪든 방은 계속 돌게 가둬 둡니다.
+     ★ 조용히 삼키지는 않습니다 — console 에 남겨서, 안 뜨면 왜 안 뜨는지
+       볼 수 있게 해요. "오류 없이 조용히 틀린" 것이 제일 무섭습니다. */
   function 배경판살피기() {
-    if (!boardOn()) return;
-    if (document.getElementById("room-board")) return;   // 멀쩡하면 그냥 둡니다
-    drawBoard();
+    try {
+      if (!boardOn()) return;
+      if (document.getElementById("room-board")) return; // 멀쩡하면 그냥 둡니다
+      drawBoard();
+    } catch (e) {
+      console.warn("[배경판] 그리다 넘어졌습니다 — 방은 그대로 돕니다", e);
+    }
   }
 
   function comma(n) { return Number(n || 0).toLocaleString("ko-KR"); }
