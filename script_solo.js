@@ -570,6 +570,11 @@
 
   function 걷어내기() {
     window.mountZoomCtl?.();
+    /* 🪟 [2026-08-22] 하단 메뉴 창 크기 슬라이더.
+       script_zoom.js 의 load 손가락이 이미 답니다. 여기서 한 번 더 부르는
+       것은, 혼자 방은 이 뒤에 알약 몇 개를 걷어내므로 그때 판이 다시
+       그려질 수 있어서예요 — 두 번 불러도 탈이 없게 만들어 뒀습니다. */
+    window.mountPanelZoomCtl?.();
     ["dock-pill-chatty", "dock-pill-pub", "alive-btn",
      "chatty-tab", "chat-tab-chatty"].forEach(id => {
       const el = document.getElementById(id);
