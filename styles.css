@@ -1736,20 +1736,24 @@ body.room-bg-on{
 .card-state.status-rest   { background: rgba(48,209,88,.61);  border-color: rgba(48,209,88,.73);  color: #0B5A46; }
 .card-state.status-away   { background: var(--fill-2);        border-color: var(--border);        color: var(--muted); }
 /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손보는 중. 베이비 핑크.
-   ★ 다른 넷과 같은 규칙(꽉 찬 색 .60 대·테두리 .73 대)을 지킵니다 —
-     한 칸만 결이 다르면 덧붙인 티가 나요.
-   ★ 카드 스티커와 마찬가지로 **거의 불투명**입니다. 이 표는 남이 꾸민
-     카드 위에 앉으니까요(2026-08-22 에 배운 것). */
-.card-state.status-repair { background: rgba(247,168,193,.66); border-color: rgba(247,168,193,.80); color: #6E2440; }
+   ★★★ 여기만 **불투명**입니다. 다른 넷처럼 반투명(.60 대)으로 뒀더니
+     "흐리다" 는 말을 들었어요. 까닭은 색 자체에 있습니다 —
+       흰 카드 위        어두운 카드 위
+       WRITE  #FF8983    #A6322E     ← 진한 빨강이라 옅게 깔아도 색이 남음
+       REPAIR #FAC6D6    #AE7B8E     ← 베이비 핑크는 거의 흰색까지 옅어짐
+     옅은 색을 반투명으로 깔면 **바탕에 먹힙니다.** 그래서 고르기 판의
+     알약과 **같은 색을 그대로** 씁니다 — 고른 것과 카드에 뜨는 것이
+     같아야 사람이 헷갈리지 않기도 하고요 (콩: "선택창 모양 그대로").
+   ★ 불투명이라 낮·밤·카드 색과 무관하게 **늘 같습니다.** 다크 대비를
+     따로 두지 않는 것이 맞아요 (콩: "테마에 상관없이 유지됐으면"). */
+.card-state.status-repair { background: #F7A8C1; border-color: #EE93B0; color: #5A1B33; }
 
 :root[data-is-dark="true"] .card-state.status-writing{ color: #FFA59E; }
 :root[data-is-dark="true"] .card-state.status-focus  { color: #FFCE85; }
 :root[data-is-dark="true"] .card-state.status-rest   { color: #8CE8C6; }
-:root[data-is-dark="true"] .card-state.status-repair { color: #FFC2D6; }
-/* ★ [고침 2026-08-22] 처음엔 ".66 이면 짙으니 다크 대비가 필요 없다" 고
-   뒀는데, **자동 훑기가 잡았습니다.** 형제 넷(writing·focus·rest)이 전부
-   다크 글자색을 갖고 있으니 이것만 없으면 결이 어긋나기도 하고요.
-   검사기가 사람보다 일관성에 밝은 자리였습니다. */
+/* ※ status-repair 에는 다크 대비를 두지 않습니다 — 바탕이 불투명이라
+   낮이든 밤이든 같은 분홍 위 같은 글씨입니다. 반투명이던 시절에는
+   대비가 필요했지만(그래서 한 번 넣었다가), 불투명으로 바꾸며 뺐어요. */
 
 /* 카드 아래쪽 — 닉네임 · 목표 · 진척 바 · 지표를 한 덩어리로 묶습니다.
    둥근 상자로 감싸서 프사·배지와 시각적으로 갈라 보이게 했고,
@@ -8056,6 +8060,10 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-tag[data-tag-val="rework"]{ background: rgba(255,59,48,.88);   border-color: rgba(255,59,48,.95);   color: #8E2420; }
 .card-tag[data-tag-val="input"] { background: rgba(151,196,89,.88);  border-color: rgba(151,196,89,.95);  color: #173404; }
 .card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.88); border-color: rgba(237,147,177,.95); color: #4B1528; }
+/* 🚨 [2026-08-22 — 콩] 방장 전용 비상 표시. 그레이 계열(콩 지정).
+   ★ 여덟 형제와 같은 규칙(.88 / .95)입니다 — 남이 꾸민 카드 위에
+     앉으니 반투명이면 묻힙니다(그날 배운 것). */
+.card-tag[data-tag-val="sos"]   { background: rgba(150,155,163,.88); border-color: rgba(150,155,163,.95); color: #22262C; }
 
 /* ★★★ [번복 2026-08-22 — 콩 · C안] 작업 스티커는 **다크에서도 밝은 테마와
    똑같이** 둡니다. 다크 규칙을 아예 두지 않는 것이 곧 C 안이에요.
@@ -8086,6 +8094,7 @@ body.split-dragging #chat-box3{ user-select: none; }
 .worktag-item.tag-rework{ background: rgba(255,59,48,.16); }
 .worktag-item.tag-input { background: rgba(151,196,89,.16); }
 .worktag-item.tag-etc   { background: rgba(237,147,177,.16); }
+.worktag-item.tag-sos   { background: rgba(150,155,163,.16); }   /* 🚨 방장 전용 */
 
 /* =====================================================================
    🕛 어제 채우기 (2026-08-10)

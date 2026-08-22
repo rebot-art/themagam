@@ -39,8 +39,26 @@
     { v: "revise", emoji: "✂️", label: "수정" },
     { v: "rework", emoji: "🔧", label: "개정" },
     { v: "input",  emoji: "📚", label: "인풋" },
-    { v: "etc",    emoji: "✨", label: "기타" }
+    { v: "etc",    emoji: "✨", label: "기타" },
+    /* 🚨 [2026-08-22 — 콩] 방장 전용. **방장에게만** 고르기 판에 뜹니다.
+       ★ 목록에서 빼지 않고 표시만 붙이는 이유 — 방장이 붙여 두면
+         **모두의 화면에 떠야** 하니까요. 읽는 쪽은 이 목록을 그대로 씁니다
+         (라벨·색을 여기서 찾아 그립니다).
+       ★ 상태표의 🛠️REPAIR 와 같은 수법입니다. 한쪽을 고치면 다른 쪽도
+         보세요 — script_profile.js 의 CHOICES. */
+    { v: "sos",    emoji: "🚨", label: "비상", 방장만: true }
   ];
+
+  /* 이 사람이 고를 수 있는 스티커만 남깁니다.
+     ★ 잠금장치가 아닙니다 — 개발자도구를 열면 값을 바꿀 수 있어요.
+       뜻은 "실수로 누르지 않게"·"남의 판을 어지럽히지 않게" 까지입니다.
+     ★ 닉을 여기 베끼지 않습니다 — window.isRoomOwner() 는
+       script_realtime.js 가 내주는 창구예요 (ADMIN_NICK 사본을 늘리면
+       언젠가 어긋납니다). canAdmin() 이 아닌 이유: 그쪽은 운영진 포함. */
+  function 고를수있나(t) {
+    if (!t.방장만) return true;
+    try { return !!window.isRoomOwner?.(); } catch (e) { return false; }
+  }
   /* [고침 2026-08-09] 기본은 **아무것도 없음** 입니다.
      처음엔 '원고'를 기본으로 두었는데, 그러면 아무도 손대지 않은 카드에도
      ✍️ 원고가 붙습니다. 본인이 그렇게 말한 적이 없는데 방 전체가 사실로
@@ -150,7 +168,7 @@
       `<button type="button" class="status-pop-item worktag-item worktag-none${cur ? "" : " on"}"
                role="menuitem" data-worktag-val=""
        ><span aria-hidden="true">✕</span> 떼기</button>`
-      + TAGS.map(t => `
+      + TAGS.filter(고를수있나).map(t => `
       <button type="button" class="status-pop-item worktag-item tag-${t.v}${t.v === cur ? " on" : ""}"
               role="menuitem" data-worktag-val="${t.v}"
       ><span aria-hidden="true">${t.emoji}</span> ${t.label}</button>`).join("");
