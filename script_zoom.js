@@ -98,6 +98,54 @@
      ===================================================================== */
   const 뒤집힌방 = () => !!window.SOLO;
 
+  /* =====================================================================
+     🪟 2단계 — 판 크기를 따로 (2026-08-22, 콩 · 🧘 혼자 방 먼저)
+     ---------------------------------------------------------------------
+     머리말의 [− 100% +] 는 이제 **접속자 카드**만 줄입니다. 그런데 판은
+     읽고 적는 자리라 사람마다 원하는 크기가 다릅니다 — 그래서 판 크기는
+     설정 › 💬 채팅 에 따로 뒀습니다 (콩).
+
+     [무엇까지 따라가나] **판(.dock-panel)과 팝업(.modal-content) 둘 다**
+     입니다. 둘 다 "떠 있는 창" 이라, 하나만 커지면 "왜 이건 되고 저건
+     안 되지" 가 생깁니다. 기준을 한 줄로 말할 수 있어야 해요 —
+       · 머리말의 배율 = **접속자 카드 크기**
+       · 설정의 배율   = **떠 있는 창 크기** (판·팝업)
+     팝업은 빼고 싶어지면 아래 CSS 에서 .modal-content 줄만 지우면 됩니다.
+
+     ★ 기본은 100% 입니다. 아무도 안 만지면 지금과 똑같아요.
+     ★ 1단계와 마찬가지로 혼자 방부터입니다 — 본 방은 아직 판이 화면
+       배율을 따라 줄어듭니다.
+     ===================================================================== */
+  const 판KEY = () => (window.SOLO ? "soloPanelZoom" : "panelZoom");
+  function 판배율() {
+    if (!뒤집힌방()) return 100;            // 본 방은 아직 안 씁니다
+    const v = Number(곳간()?.getItem(판KEY()));
+    return (v >= MIN && v <= MAX) ? v : 100;
+  }
+
+  function 판배율적용(v) {
+    const z = Math.max(MIN, Math.min(MAX, Math.round(v / STEP) * STEP));
+    try { 곳간()?.setItem(판KEY(), String(z)); } catch (e) {}
+    const h = document.documentElement;
+    /* 뒤집히지 않은 방에서는 아무 일도 하지 않습니다 — 거기선 판이
+       화면 배율을 따라가야 하는데, 여기에 또 걸면 배율이 곱해집니다. */
+    const 켤까 = 뒤집힌방() && z !== 100;
+    h.style.setProperty("--panel-zoom", 켤까 ? String(z / 100) : "");
+    h.toggleAttribute("data-panelzoom", 켤까);
+    그림맞추기();
+    return z;
+  }
+
+  /* 슬라이더 옆 숫자와 판 자리를 함께 손봅니다.
+     ★ 판이 커지면 화면 밖으로 삐져나갈 수 있어서 다시 가둬야 합니다. */
+  function 그림맞추기() {
+    const pill = document.getElementById("panel-zoom-val");
+    if (pill) pill.textContent = 판배율() + "%";
+    const sl = document.getElementById("set-panel-zoom");
+    if (sl && Number(sl.value) !== 판배율()) sl.value = String(판배율());
+    try { window.dockReclampAll?.(); } catch (e) {}
+  }
+
   function 배율적용(v) {
     const z = Math.max(MIN, Math.min(MAX, Math.round(v / STEP) * STEP));
     try { 곳간()?.setItem(KEY(), String(z)); } catch (e) {}
@@ -209,8 +257,15 @@
      ===================================================================== */
   window.uiZoom   = () => (뒤집힌방() ? 1 : 배율() / 100);
   window.cardZoom = () => 배율() / 100;
+  /* 🪟 판 자(2026-08-22) — **판에 실제로 걸린 배율**입니다.
+     뿌리 배율 × 판 배율. 판을 끌고 크기를 재는 곳이 이걸 씁니다.
+     ★ 뒤집힌 방: 뿌리가 1 이라 곧 판 배율.
+       본 방    : 판 배율이 100 이라 곧 뿌리 배율 (예전과 같음). */
+  window.panelZoom = () => (뒤집힌방() ? 1 : 배율() / 100) * (판배율() / 100);
   window.setUiZoom = 배율적용;
   window.getUiZoom = 배율;
+  window.setPanelZoom = 판배율적용;
+  window.getPanelZoom = 판배율;
 
   /* 창 크기가 바뀌면 몸통 높이를 다시 잽니다 (위 계산이 화면 높이를 씁니다) */
   let _t = null;
@@ -246,8 +301,42 @@
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); 배율적용(100); }
     };
     배율적용(배율());
+    판배율적용(판배율());     // 🪟 판 크기도 기억해 둔 값으로 (2026-08-22)
     return true;
   }
+
+  /* ---------------------------------------------------------------
+     🪟 설정 › 💬 채팅 의 [판 크기] 슬라이더에 손가락 달기
+     ★ 판이 없는 방(본 방)에서는 칸 자체를 감춥니다 — 만져도 아무 일이
+       안 일어나는 손잡이가 있으면 "고장 났다" 로 읽힙니다.
+     --------------------------------------------------------------- */
+  function 판슬라이더달기() {
+    const wrap = document.getElementById("set-panel-zoom-block");
+    const sl = document.getElementById("set-panel-zoom");
+    if (!wrap || !sl) return false;
+    wrap.hidden = !뒤집힌방();
+    if (!뒤집힌방()) return true;
+    sl.min = String(MIN); sl.max = String(MAX); sl.step = String(STEP);
+    sl.value = String(판배율());
+    /* 끄는 내내가 아니라 **놓았을 때** 다시 가둡니다 — 끄는 동안 판이
+       계속 자리를 다시 잡으면 손 아래에서 덜컹거려요.
+       크기 자체는 input 으로 바로 따라옵니다(그래야 고르는 맛이 납니다). */
+    sl.oninput  = () => {
+      const z = Math.max(MIN, Math.min(MAX, Math.round(Number(sl.value) / STEP) * STEP));
+      try { 곳간()?.setItem(판KEY(), String(z)); } catch (e) {}
+      const h = document.documentElement;
+      h.style.setProperty("--panel-zoom", z === 100 ? "" : String(z / 100));
+      h.toggleAttribute("data-panelzoom", z !== 100);
+      const pill = document.getElementById("panel-zoom-val");
+      if (pill) pill.textContent = z + "%";
+    };
+    sl.onchange = () => 판배율적용(Number(sl.value));
+    const 되돌리기 = document.getElementById("set-panel-zoom-reset");
+    if (되돌리기) 되돌리기.onclick = () => 판배율적용(100);
+    그림맞추기();
+    return true;
+  }
+  window.mountPanelZoomCtl = 판슬라이더달기;
 
   /* ★★ [고침 2026-08-16] 예전에는 머리말의 글자 크기 조절(.font-ctl)을
      찾아 그 **옆에** 끼워 넣었습니다. 그런데 글자 크기 조절이 설정 창
@@ -265,5 +354,8 @@
   window.mountZoomCtl = 달기;
 
   /* 두 방 모두 머리말 제 자리에 답니다 */
-  window.addEventListener("load", () => { setTimeout(달기, 300); });
+  window.addEventListener("load", () => {
+    setTimeout(달기, 300);
+    setTimeout(판슬라이더달기, 300);
+  });
 })();
