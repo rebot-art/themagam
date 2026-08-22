@@ -7759,6 +7759,34 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-tag-slot.is-mine:hover .card-tag{ transform: rotate(-7deg) scale(1.06); }
 .card-tag-slot.is-mine:active .card-tag{ transform: rotate(-7deg) scale(.97); }
 
+
+/* =====================================================================
+   🌙 [고침 2026-08-22 — 콩] 다크에서 안 보이던 딱지·잔글씨 모음
+   ---------------------------------------------------------------------
+   콩이 다크를 안 쓰다가 오늘 켜 보고 하나씩 찾아냈습니다. 원인은 전부
+   같아요 — **반투명 바탕 + 박아 넣은 어두운 글자.** 밝은 테마에서는
+   연한 색 위 진한 글씨라 또렷한데, 어두운 바탕에서는 어두운 것끼리
+   겹쳐 사라집니다.
+
+   ★ 가르는 기준: 그 딱지가 **어디에 앉느냐**.
+     · 테마를 따라가는 그릇(공지 창·자료실·판) 안 → 여기처럼 다크에서
+       글자를 밝게 뒤집습니다.
+     · 남이 꾸민 그림 위(프로필 카드) → 뒤집지 말고 **불투명**하게.
+       위 .card-tag 주석을 보세요.
+   ===================================================================== */
+:root[data-is-dark="true"] .nt-tag-feat{ color: #B5D4F4; border-color: rgba(133,183,235,.60); }
+:root[data-is-dark="true"] .nt-tag-fix { color: #FBDDA8; border-color: rgba(250,199,117,.62); }
+:root[data-is-dark="true"] .help-ref,
+:root[data-is-dark="true"] .help-pin,
+:root[data-is-dark="true"] .help-sug-h{ color: #CFC4F2; }
+:root[data-is-dark="true"] .help-ref-q{ color: #E3DCFA; }
+:root[data-is-dark="true"] .help-ref-c{ color: #E8C766; }
+:root[data-is-dark="true"] .help-check.is-on{ color: #FBDDA8; }
+:root[data-is-dark="true"] .fl-msg.bad,
+:root[data-is-dark="true"] .fl-x:hover{ color: #FFA59E; }
+:root[data-is-dark="true"] .fl-msg.ok{ color: #8CE8C6; }
+:root[data-is-dark="true"] .panel-close:hover{ color: #FFA59E; }
+
 /* ── 🏷️ 방장 스티커 (2026-08-13) ──
 
    방장 카드에만 붙는 이름표입니다. 프사 **오른쪽 아래 모서리**에 걸치고
@@ -8005,19 +8033,20 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-tag[data-tag-val="input"] { background: rgba(151,196,89,.88);  border-color: rgba(151,196,89,.95);  color: #173404; }
 .card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.88); border-color: rgba(237,147,177,.95); color: #4B1528; }
 
-/* ★★ [고침 2026-08-22 — 콩 · B안] 다크에서 스티커 글자가 흐렸습니다.
-   예전 규칙은 **글자색만** 밝게 바꾸고 바탕은 밝은 파스텔(.88) 그대로
-   뒀어요 — 연한 바탕에 연한 글씨라 거의 안 읽혔습니다.
-   이제 바탕도 같은 색을 **옅게(.26)** 깔고 테두리만 또렷하게 둡니다.
-   고르기 판(.worktag-item)이 쓰는 방식과 같은 결이에요. */
-:root[data-is-dark="true"] .card-tag[data-tag-val="idea"]{ background: rgba(175,169,236,.26); border-color: rgba(175,169,236,.55); color: #CECBF6; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="draft"]{ background: rgba(133,183,235,.26); border-color: rgba(133,183,235,.55); color: #B5D4F4; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.26); border-color: rgba(240,153,123,.55); color: #F5C4B3; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="proof"]{ background: rgba(93,202,165,.26); border-color: rgba(93,202,165,.55); color: #9FE1CB; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.26); border-color: rgba(255,159,10,.55); color: #FFCE85; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ background: rgba(255,59,48,.26); border-color: rgba(255,59,48,.55); color: #FFA59E; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="input"]{ background: rgba(151,196,89,.26); border-color: rgba(151,196,89,.55); color: #C0DD97; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="etc"]{ background: rgba(237,147,177,.26); border-color: rgba(237,147,177,.55); color: #F4C0D1; }
+/* ★★★ [번복 2026-08-22 — 콩 · C안] 작업 스티커는 **다크에서도 밝은 테마와
+   똑같이** 둡니다. 다크 규칙을 아예 두지 않는 것이 곧 C 안이에요.
+
+   [왜 두 번 뒤집혔나] 처음엔 글자색만 밝게 바꿨다가(흐림), 바탕도 옅게
+   까는 B 안으로 갔습니다. 혼자 방에서는 좋아 보였어요 — 거기 카드는
+   **전부 기본 카드**였거든요. 그런데 본 방 카드는 사람마다 사진·격자·
+   무늬로 꾸며져 있어서, **옅은 바탕(.26)이 그 위에서 통째로 묻혔습니다.**
+
+   ★ 교훈: 이 스티커가 앉는 자리는 **테마가 아니라 남이 꾸민 그림** 위입니다.
+     배경을 예측할 수 없는 자리에서는 반투명을 쓰면 안 돼요.
+     그래서 낮이든 밤이든 **거의 불투명(.88) + 어두운 글씨** 한 벌로 갑니다.
+   ※ 같은 날 고친 📢 공지 딱지(.nt-tag-*)는 **반대로** 반투명입니다 —
+     거긴 앉는 자리가 공지 창이라 테마를 따라 어두워지니까요.
+     "어디에 앉느냐" 가 답을 가릅니다. */
 
 /* 고르기 판 — 상태 고르기와 같은 판(.status-pop)을 씁니다.
    항목마다 색을 살짝 깔았어요. 여덟 개나 되면 글자만으로는 찾는 데
