@@ -167,7 +167,28 @@
        가 못 돌 수 있습니다. 그때 껍데기가 영영 남지 않게 **느슨한 빗자루**
        하나만 남깁니다 — 30분. 이건 판정이 아니라 청소예요.
      ===================================================================== */
-  const SHARE_SWEEP_MS    = 30 * 60 * 1000;   // 30분 — 판정이 아니라 마지막 청소
+  /* ★★★ [고침 2026-08-22 · 2차 — 콩 신고] 여기 30분짜리 나이 청소를
+     뒀다가 **멀쩡히 공유 중인 사람을 치웠습니다.** 폰을 만지느라 화면이
+     30분 넘게 안 바뀌면 카드가 사라졌어요. "청소" 라고 이름 붙였지만
+     하는 일은 결국 **판정**이었습니다 — 걷어내려던 바로 그것을.
+
+     ★ 껍데기인지 아닌지는 **나이가 아니라 그 사람이 접속해 있는가**로
+       가릅니다. 접속자 정보(status)에 각자 `shareOn` 을 적어 보내고
+       있어서 새로 읽을 것도 없어요.
+         · 명단에 있고 shareOn 이면 → 살아 있는 공유. 화면이 몇 시간
+           멈춰 있어도 **그대로 둡니다.**
+         · 명단에 없거나 shareOn 이 아니면 → 껍데기. 치웁니다.
+     ★ 명단을 아직 못 받았으면(cache 가 null) 아무도 안 치웁니다 —
+       모를 때는 지우지 않는 편이 늘 안전합니다. */
+  function 껍데기인가(nick) {
+    if (window.SOLO) return false;                  // 혼자 방 사진은 늙지 않습니다
+    const cache = window._statusCache;
+    if (!cache) return false;                       // 아직 모릅니다 — 두고 봅니다
+    const row = cache[nick];
+    if (!row || row.shareOn !== true) return true;  // 나갔거나 공유를 껐습니다
+    if (typeof window.isOnline === "function" && !window.isOnline(row, Date.now())) return true;
+    return false;
+  }
   const SHARE_LEVEL_KEY   = "shareLevel";
   const SHARE_NOTICE_KEY  = "shareNoticeSeen";
 
@@ -527,6 +548,15 @@
     try { _video && _video.remove(); } catch (e) {}
     _video = null;
 
+    /* ★★★ [고침 2026-08-22 · 2차 — 콩 신고] 지문을 **반드시** 비웁니다.
+       지문은 "마지막으로 보낸 화면의 모양" 이라, 안 비우고 끄면 다시 켰을 때
+       첫 판에서 "안 바뀌었네" 하고 건너뜁니다. 화면이 실제로 바뀔 때까지
+       **영영 아무것도 안 보내요** — 서버에 그림이 없으니 카드도 안 뜹니다.
+       콩이 겪은 그대로예요: "껐다 켜도 안 나오다가, 원고를 좀 쓰니 나오더라".
+       ★ 다시 켤 때는 늘 한 장부터. 재연결 때도 같은 이유로 비웁니다. */
+    _지문 = null;
+    _마지막보냄 = 0;
+
     detachScreens();
     _screensCache = null;
     _lastShareHtml = null;
@@ -737,11 +767,9 @@
       if (!img) continue;
       const at = Number(r.at || 0);
       const age = t - at;
-      /* 🧘 혼자 방의 가짜 화면은 늙지 않습니다 — 보내는 사람이 없으니
-         "소식이 끊겼다" 는 판정이 뜻을 잃어요 */
-      /* [뒤엎음 2026-08-22] 나이로 빼지 않습니다 — onDisconnect 가 지웁니다.
-         여기 남은 것은 30분짜리 마지막 청소뿐이에요. */
-      if (!window.SOLO && at && age > SHARE_SWEEP_MS) continue;
+      /* [고침 2026-08-22 · 2차] 나이가 아니라 **아직 공유 중인가**로 가릅니다.
+         화면이 몇 시간 멈춰 있어도 접속해 있으면 그대로 둡니다. */
+      if (껍데기인가(nick)) continue;
       /* 모르는 값이 오면 예전처럼 "채우기" — 옛 기록과 섞여도 안 깨집니다 */
       const fit = (r.fit === "contain") ? "contain" : "cover";
       rows.push({ nick, img, at, age, fit });
@@ -1019,14 +1047,12 @@
     if (window.SOLO) return;
 
     const t = now();
-    /* [뒤엎음 2026-08-22] 나이로 흐리게 하거나 지우지 않습니다.
-       마지막 그림을 그대로 둬요 — "지금 화면이 안 바뀌는 중" 이라는 뜻이고,
-       그건 흐려질 일이 아니라 그냥 사실입니다.
-       ★ 아주 오래된 껍데기만 치웁니다(30분). onDisconnect 가 못 돈
-         드문 경우를 위한 마지막 청소예요. */
+    /* [고침 2026-08-22 · 2차] 나이로 흐리게 하지도, 지우지도 않습니다.
+       화면이 안 바뀌는 건 흐려질 일이 아니라 그냥 사실이에요.
+       껍데기(나갔거나 공유를 끈 사람의 그림)만 치웁니다 — 위 껍데기인가() 참고. */
     document.querySelectorAll(".share-card").forEach(card => {
-      const at = Number(card.getAttribute("data-share-at") || 0);
-      if (at && (t - at) > SHARE_SWEEP_MS) { card.remove(); _lastShareHtml = null; }
+      const nick = card.getAttribute("data-share-nick");
+      if (nick && 껍데기인가(nick)) { card.remove(); _lastShareHtml = null; }
     });
   }
 
