@@ -7513,6 +7513,41 @@ body.split-dragging #chat-box3{ user-select: none; }
   pointer-events: none;
 }
 
+/* =====================================================================
+   🖥 머리말 공유 단추 — 색 대신 **불빛**으로 알립니다 (2026-08-22 — 콩)
+   ---------------------------------------------------------------------
+   [무엇이 문제였나] 다크에서 "공유 중" 이 옆 단추와 안 갈렸습니다.
+   반투명 붉은 바탕이 어두운 머리말에 먹혀서요 —
+       밝은 테마 · 머리말 #EEF0F3 위 → #F0DEE0  (분홍기가 남음)
+       다크 테마 · 머리말 #15171B 위 → #3A2325  (그냥 어두운 벽돌색)
+   오늘 스티커·공지 딱지에서 겪은 것과 **같은 뿌리**입니다.
+   → **옅은 색을 반투명으로 깔면 바탕에 먹힌다.**
+
+   [고른 답 — C안] 색을 진하게 키우는 대신 **작은 점**을 답니다. 머리말은
+   늘 보이는 자리라 시끄러워지면 피곤해요. 점은 조용한데 눈에는 걸립니다.
+     · 내가 공유 중  → 점이 **깜빡입니다** (내 화면이 지금 나가는 중)
+     · 남이 공유 중  → 점이 **가만히** 있습니다 (저기 볼 게 있다)
+   깜빡임 여부로 둘이 갈리므로, 예전의 "내가 켠 건가?" 헷갈림도 그대로
+   막힙니다.
+
+   ★ 점은 ::before 라 index.html 을 안 건드립니다. 단추를 옮기거나
+     이름을 바꿔도 따라옵니다.
+   ★ 움직임이 불편한 분에게는 깜빡이지 않습니다 (맨 아래 규칙).
+   ===================================================================== */
+.icon-btn.share-on,
+.icon-btn.share-others{ gap: 5px; }
+.icon-btn.share-on::before,
+.icon-btn.share-others::before{
+  content: "";
+  flex: 0 0 auto;
+  width: 6px; height: 6px;
+  border-radius: var(--r-full);
+  background: currentColor;   /* 글자색을 따라가므로 테마마다 챙길 필요 없음 */
+}
+/* 내가 공유 중 — 점이 깜빡입니다 */
+@keyframes share-dot-blink{ 0%,100%{ opacity: 1; } 50%{ opacity: .25; } }
+.icon-btn.share-on::before{ animation: share-dot-blink 1.4s ease-in-out infinite; }
+
 /* 머리말 버튼 — 공유 중이면 붉게 */
 .icon-btn.share-on{
   color: var(--on-danger-btn);
@@ -7537,6 +7572,14 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* 움직임이 불편한 분에게는 깜빡이지 않고 색으로만 알립니다 */
 @media (prefers-reduced-motion: reduce){
   .icon-btn.share-resume{ animation: none; box-shadow: 0 0 0 2px var(--danger-soft); }
+  /* 🖥 공유 중 점도 안 깜빡입니다 — 점 자체는 남으므로 알아보는 데는
+     지장이 없어요. 다만 '남이 공유 중' 과 갈리지 않으니, 그쪽 점은
+     테두리만 남겨 속을 비웁니다. */
+  .icon-btn.share-on::before{ animation: none; }
+  .icon-btn.share-others::before{
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px currentColor;
+  }
 }
 
 /* [2026-08-07] 남이 공유 중 — 같은 붉은 계열이되 한 겹 옅게.
