@@ -9588,6 +9588,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   padding: 2px 2px 7px;
   border-bottom: 1px dashed var(--border);
   font-size: var(--fs-xs); color: var(--muted-strong);
+  /* [2026-08-22] 정렬이 셋이 되면서 400px 판에서 아슬아슬해졌습니다.
+     "9곳 · 레이블 5 · 품평 34개" 처럼 왼쪽 글이 길어지는 날이 있어서,
+     넘치면 알약 묶음이 **아랫줄로 통째로** 내려가게 둡니다.
+     (억지로 한 줄에 욱여넣으면 글자가 잘려요) */
+  flex-wrap: wrap; row-gap: 5px;
 }
 .pub-tally b{ color: var(--text); }
 .pub-sort{
@@ -9597,6 +9602,7 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .pub-sort-btn{
   border: none; background: var(--glass2); cursor: pointer;
   padding: 4px 11px; font-size: var(--fs-xs); color: var(--muted-strong);
+  white-space: nowrap;      /* "가나 / 다순" 으로 접히지 않게 */
 }
 .pub-sort-btn.on{ background: var(--accent); color: var(--on-accent-btn, #fff); }
 

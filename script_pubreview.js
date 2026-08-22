@@ -64,10 +64,19 @@
   let _query = "";       // 찾는 말
   let _genre = null;     // 골라 둔 장르 칩
 
-  /* ── 정렬 (2026-08-13) — 가나다순 / 💬 많은 순. 고른 쪽은 이 기기에 남습니다 */
+  /* ── 정렬 (2026-08-13) — 가나다순 / 💬 많은 순. 고른 쪽은 이 기기에 남습니다
+     [넓힘 2026-08-22 — 콩] 🆕 최신순을 더했습니다.
+       "최신" 은 **최근에 품평이 달린 순** 입니다 (명패를 등록한 차례가
+       아니에요 — 콩 확정). 말이 오가는 곳이 위로 올라오는 자리입니다.
+     ★ 서버를 더 읽지 않습니다. 품평 한 줄마다 at 이 이미 들어와 있어요.
+     ★ 품평이 하나도 없는 곳은 맨 뒤로 갑니다 — 올릴 근거가 없으니까요. */
   const SORT_KEY = "pubSort";
-  let _sort = "abc";     // "abc" | "talk"
-  try { if (window.AppStore?.getItem(SORT_KEY) === "talk") _sort = "talk"; } catch (e) {}
+  const SORTS = ["abc", "talk", "new"];
+  let _sort = "abc";     // "abc" | "talk" | "new"
+  try {
+    const v = window.AppStore?.getItem(SORT_KEY);
+    if (SORTS.includes(v)) _sort = v;
+  } catch (e) {}
 
   /* ── 🏢 같은 출판사 묶기 (2026-08-13) ──
      등록 규칙이 "출판사 / 레이블" 이라, / 앞이 같으면 한 지붕입니다.
@@ -230,6 +239,11 @@
 
     /* ── 🏢 같은 출판사끼리 묶기 — / 앞이 같으면 한 지붕 ── */
     const 품평수 = (pid) => Object.keys(_revs[pid] || {}).length;
+    /* 🆕 이 명패에 **마지막으로 품평이 달린 때**. 없으면 0 — 맨 뒤로 갑니다.
+       ★ at 이 빠진 옛 줄이 있을 수 있어 Number(...)||0 으로 받칩니다.
+         NaN 이 하나 섞이면 견줌이 통째로 어그러져요. */
+    const 마지막품평 = (pid) => Object.values(_revs[pid] || {})
+      .reduce((a, r) => Math.max(a, Number(r?.at) || 0), 0);
     const 묶음맵 = {};                        // coKey → { co, pids }
     const 단위들 = [];                        // { name, pids, co? } — 낱장 또는 묶음
     pids.forEach(pid => {
@@ -248,15 +262,23 @@
       }
       u.talk = u.pids.reduce((a, pid) => a + 품평수(pid), 0);
       u.labels = u.pids.reduce((a, pid) => a + 레이블수(_pubs[pid].name), 0);
+      /* 🆕 이 지붕 아래에서 **가장 최근에 달린 품평**의 시각.
+         묶음은 그 안 명패들 중 가장 새것을 대표로 삼습니다 —
+         한 지붕이니 어느 레이블에 달렸든 "여기 말이 오갔다" 니까요. */
+      u.last = u.pids.reduce((a, pid) => Math.max(a, 마지막품평(pid)), 0);
     });
 
-    /* ── 정렬 — 가나다순 / 💬 많은 순 (수가 같으면 그 안에서 가나다) ── */
+    /* ── 정렬 — 가나다순 / 💬 많은 순 / 🆕 최신순 ──
+       ★ 갈래가 무엇이든 **마지막은 늘 가나다**입니다. 값이 같을 때 차례가
+         들쭉날쭉하면, 판이 다시 그려질 때마다 줄이 흔들려 보입니다. */
     const 이름견줌 = (a, b) => 견줌.compare(String(a.name).trim(), String(b.name).trim());
-    단위들.sort(_sort === "talk"
-      ? (a, b) => (b.talk - a.talk) || 이름견줌(a, b)
+    단위들.sort(
+      _sort === "talk" ? (a, b) => (b.talk - a.talk) || 이름견줌(a, b)
+      : _sort === "new" ? (a, b) => (b.last - a.last) || 이름견줌(a, b)
       : 이름견줌);
     const 안견줌 = (a, b) => {
       if (_sort === "talk") { const d = 품평수(b) - 품평수(a); if (d) return d; }
+      if (_sort === "new")  { const d = 마지막품평(b) - 마지막품평(a); if (d) return d; }
       return 견줌.compare(회사쪼개기(_pubs[a].name).label, 회사쪼개기(_pubs[b].name).label);
     };
 
@@ -302,6 +324,8 @@
                      data-pub-sort="abc">가나다순</button>
              <button type="button" class="pub-sort-btn${_sort === "talk" ? " on" : ""}"
                      data-pub-sort="talk">💬 많은 순</button>
+             <button type="button" class="pub-sort-btn${_sort === "new" ? " on" : ""}"
+                     data-pub-sort="new" title="최근에 품평이 달린 순">🆕 최신순</button>
            </span>
          </div>
        </div>` +
@@ -450,7 +474,7 @@
       }
       const srt = e.target.closest("[data-pub-sort]");
       if (srt) {
-        _sort = srt.dataset.pubSort === "talk" ? "talk" : "abc";
+        _sort = SORTS.includes(srt.dataset.pubSort) ? srt.dataset.pubSort : "abc";
         try { window.AppStore?.setItem(SORT_KEY, _sort); } catch (err) {}
         render();
       }
