@@ -265,11 +265,24 @@ window.AppSession = AppSession;
      ===================================================================== */
   function 조용히드나드나() {
     try {
+      /* ★★★ [고침 2026-08-22 · 2차 — 콩 신고] **이 열쇠를 가장 먼저** 봅니다.
+         `repair_{닉}` 은 상태표에서 REPAIR 를 고르는 **그 순간** 적힙니다
+         (script_profile.js 의 pick). 디바운스도, 다른 함수도 안 거쳐요.
+
+         1차 고침에서는 backup_{닉} 을 봤는데, 그 값은
+           디바운스 700ms → savePersonalData → backupLocal
+         이라는 긴 사슬 끝에 적힙니다. 사슬이 길면 어긋날 자리가 많아요 —
+         자동감지가 away 로 덮거나, 고르자마자 새로고침하면 옛 값입니다.
+         실제로 그래서 입장 줄이 또 떴습니다.
+         ★ 짧은 길이 곧 튼튼한 길입니다. 값 하나가 여러 손을 거칠수록
+           "왜 안 되지" 를 찾는 데 드는 시간이 곱으로 늘어납니다. */
+      const 나 = myNick || window.myNick || "";
+      if (나 && window.AppStore?.getItem(`repair_${나}`) === "1") return true;
+
       const 화면 = document.getElementById("db-status")?.value || "";
       if (화면) return 화면 === "repair";
-      /* 아직 안 불러왔습니다 — 기기에 남은 마지막 값으로 판단합니다.
-         (script_data.js 의 backupLocal 이 적어 두는 자리) */
-      const raw = window.AppStore?.getItem(`backup_${myNick}`);
+      /* 예비 — 옛 기기에는 위 열쇠가 아직 없을 수 있습니다 */
+      const raw = window.AppStore?.getItem(`backup_${나}`);
       if (!raw) return false;
       return (JSON.parse(raw)?.status || "") === "repair";
     } catch (e) { return false; }

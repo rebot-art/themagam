@@ -1333,6 +1333,27 @@
       });
       if (Object.keys(wlUpd).length) await db.ref("wordlog").update(wlUpd);
 
+      /* ★★★ [넓힘 2026-08-22 — 콩] 이 함수가 만들어진 뒤에 **새 자리들이
+         생겼습니다.** 업적·회차 기록·작품 이름·할 일 집계예요. 여기에
+         안 더해 두면 사람은 지워졌는데 자취만 서버에 떠돕니다 —
+         nickOwner 가 사라져서 **누구 것인지도 알 수 없는 채로.**
+         ※ 📮 쪽지(notes·notesOut)는 보안규칙이 주인에게만 열려 있어
+           방장도 못 지웁니다. 규칙을 손대야 하는 일이라 남겨 둡니다.
+         ★ 자리를 새로 만들 때는 여기도 함께 보세요. */
+      const 새자리 = ["achv", "worklog", "workname"];
+      for (const p of 새자리) {
+        try { await db.ref(`${p}/${nick}`).remove(); } catch (e) { console.warn("[adm remove]", p, e); }
+      }
+      /* todostat 은 날짜별이라 attendance·wordlog 과 같은 방식으로 */
+      try {
+        const tsSnap = await db.ref("todostat").once("value");
+        const tsUpd = {};
+        Object.entries(tsSnap.val() || {}).forEach(([day, byNick]) => {
+          if (byNick && Object.prototype.hasOwnProperty.call(byNick, nick)) tsUpd[`${day}/${nick}`] = null;
+        });
+        if (Object.keys(tsUpd).length) await db.ref("todostat").update(tsUpd);
+      } catch (e) { console.warn("[adm remove todostat]", e); }
+
       await db.ref("users/" + nick).remove();
       await db.ref("status/" + nick).remove();
       await db.ref("nickOwner/" + nick).remove();     // 맨 마지막 — 도장 반납
@@ -2288,40 +2309,56 @@
   async function loadPurgeList() {
     const box = el("adm-purge-list");
     if (!box) return;
+    box.textContent = "훑는 중…";
     try {
-      /* ★★★ [고침 2026-08-22 — 콩 신고 PERMISSION_DENIED]
-         처음엔 `users` 를 통째로 읽어 명단을 만들었는데, **users 루트에는
-         읽기 권한이 없습니다.** 낱개(users/{닉})만 주인과 방장에게 열려
-         있어요. 그래서 목록이 통째로 안 떴고, "여태 나간 멤버가 안 뜬다" 로
-         보였습니다 — 오늘부터 적용되는 게 아니라 그냥 못 읽은 것이었어요.
+      /* ★★★ [다시 만듦 2026-08-22 — 콩 신고 "명단이 안 뜬다"]
+         처음엔 "승인이 풀린 사람" 을 목록으로 삼았습니다. 그런데 이 방에는
+         **이미 지우는 기능이 있었어요** — 출근부 이름 옆 [✕](removeMember).
+         그게 `nickOwner` 까지 지웁니다. 콩은 그걸로 탈퇴자를 정리해 왔고요.
+         그래서 명단에 뜰 사람이 애초에 없었습니다. 제가 기존 기능을
+         살펴보지 않고 새로 만든 탓입니다.
 
-         명단은 **nickOwner** 에서 가져옵니다. 루트가 열려 있고, "이 방에서
-         닉을 만든 적 있는 사람" 이라는 뜻이라 명단으로 더 정확하기도 합니다.
-         ★ 규칙을 고치지 않아도 되는 길을 고른 것입니다 — 콘솔에 규칙을
-           다시 올리는 일은 잘못 올리면 방이 안 열리는 위험한 걸음이라,
-           안 해도 되면 안 하는 편이 낫습니다. */
-      const [allowSnap, ownerSnap] = await Promise.all([
-        db.ref("config/allow").once("value"),
+         진짜로 남아 있는 것은 **떠도는 자취**입니다. [✕] 는 2026-08 이전에
+         만들어져서 그때 있던 자리만 지웁니다. 그 뒤에 생긴 업적·회차 기록·
+         작품 이름·할 일 집계는 그대로 남았어요. nickOwner 가 지워졌으니
+         **누구 것인지도 알 수 없는 채로** 떠돕니다.
+
+         그래서 이 카드는 이제 그걸 줍습니다 — 자료에는 있는데 명단
+         (nickOwner)에는 없는 닉을 찾아냅니다.
+         ★ [✕] 쪽도 새 자리를 함께 지우도록 넓혔으니, 앞으로는 여기에
+           새로 쌓이지 않습니다. 이 카드는 **지난 것을 치우는 빗자루**예요. */
+      const [ownerSnap, ...조각들] = await Promise.all([
         db.ref("nickOwner").once("value"),
+        ...지울자리.map(z => db.ref(z.p).once("value").catch(() => null)),
       ]);
-      const allow = allowSnap.val() || {};
-      const owner = ownerSnap.val() || {};
-      /* 승인이 **풀린** 사람만. 현역은 애초에 목록에 안 올립니다 —
-         고를 수 없으면 실수로 지울 수도 없어요. */
-      _지울후보 = Object.keys(owner)
-        .filter(n => allow[n] !== true)
-        .filter(n => n !== ADMIN_NICK)          // 방장은 절대 목록에 안 올림
-        .sort();
+      const 명단 = new Set(Object.keys(ownerSnap.val() || {}));
 
+      /* 자료에 이름이 보이는 닉을 모읍니다 */
+      const 자취 = new Map();          // 닉 → [자리 이름…]
+      지울자리.forEach((자리, i) => {
+        const snap = 조각들[i];
+        const v = snap && snap.val ? (snap.val() || {}) : {};
+        const 닉들 = 자리.kind === "직접"
+          ? Object.keys(v)
+          : [...new Set(Object.values(v).flatMap(byNick => Object.keys(byNick || {})))];
+        닉들.forEach(n => {
+          if (명단.has(n) || n === ADMIN_NICK) return;   // 아직 있는 사람·방장은 뺌
+          if (!자취.has(n)) 자취.set(n, []);
+          자취.get(n).push(자리.이름);
+        });
+      });
+
+      _지울후보 = [...자취.keys()].sort();
       box.innerHTML = _지울후보.length
         ? _지울후보.map(n => `
             <div class="adm-row">
               <span class="n">${escapeHtml(n)}</span>
+              <span class="s">${escapeHtml(자취.get(n).length)}곳</span>
               <button class="adm-btn ghost" data-purge-pick="${escapeHtml(n)}">자취 보기</button>
             </div>`).join("")
-        : "지울 자료가 남은 분이 없어요. (승인이 풀린 분만 여기 뜹니다)";
+        : "떠도는 자취가 없어요. 깨끗합니다. 👏";
     } catch (e) {
-      box.textContent = "불러오지 못했어요. " + (e.code || e.message || "");
+      box.textContent = "훑지 못했어요. " + (e.code || e.message || "");
     }
   }
 

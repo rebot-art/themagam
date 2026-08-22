@@ -2253,6 +2253,26 @@ window.rerenderUserCards = function () {
   function onKey(e) { if (e.key === "Escape") close(); }
 
   function pick(v) {
+    /* 🛠️ [고침 2026-08-22 — 콩 신고] REPAIR 는 **고르는 그 순간** 기기에
+       적어 둡니다.
+
+       [왜] 입장 메시지 문지기가 이 값을 봅니다. 그런데 여태는 그 값이
+       *디바운스 700ms → savePersonalData → backupLocal* 이라는 **긴 사슬**
+       끝에 적혔어요. 사슬이 길면 어긋날 자리가 많습니다 —
+         · 고르자마자 새로고침하면 아직 안 적힘
+         · 자동감지가 away 로 바꾸면 그 값으로 덮임
+         · 딴 이유로 savePersonalData 가 안 돌면 옛 값 그대로
+       그래서 REPAIR 만은 **사슬을 끊고** 여기서 곧장 적습니다.
+       (다른 상태는 예전 그대로 — 이 표는 방장 혼자 쓰는 것이라
+        기기 열쇠 하나를 더 두는 값이 쌉니다) */
+    try {
+      const 나 = (typeof myNick === "string" && myNick) ? myNick : (window.myNick || "");
+      if (나) {
+        if (v === "repair") window.AppStore?.setItem(`repair_${나}`, "1");
+        else window.AppStore?.removeItem(`repair_${나}`);
+      }
+    } catch (e) {}
+
     const sel = document.getElementById("db-status");
     if (sel) {
       sel.value = v;

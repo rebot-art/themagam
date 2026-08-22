@@ -113,6 +113,11 @@
        딴 창(콘솔·편집기)에 있느라 이 화면에 손을 안 대요. 자동으로
        away 로 내리면 상태가 풀려 입·퇴장 메시지가 도로 뜹니다. */
     if (cur === "repair") return;
+    /* 화면 칸이 아직 안 채워졌어도 열쇠로 알아봅니다 */
+    try {
+      const 나 = (typeof myNick === "string" && myNick) ? myNick : "";
+      if (나 && AppStore.getItem(`repair_${나}`) === "1") return;
+    } catch (e) {}
     _prevStatus = cur;                     // 돌아올 곳을 기억
     _autoAway = true;
     _saveTag();
