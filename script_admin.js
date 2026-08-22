@@ -2244,6 +2244,162 @@
       if (b) delBan(b.getAttribute("data-ban-del"));
     });
 
+
+  /* =====================================================================
+     👤 탈퇴자 자료 정리 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     방을 떠난 분의 자취를 지웁니다. 승인을 풀고 출석부에서 빼도
+     프로필·기록·쪽지는 서버에 그대로 남아 있어서요.
+
+     ★★★ **되돌릴 수 없습니다.** 문지기가 셋입니다 —
+       ① 승인이 **풀린** 닉만 목록에 뜹니다 (현역은 아예 안 보임)
+       ② 지우기 전에 **무엇이 얼마나 있는지 세어서** 보여줍니다
+       ③ 닉네임을 **손으로 한 번 더** 적어야 단추가 열립니다
+
+     ★★★ **세는 목록과 지우는 목록이 같아야 합니다.** 둘을 따로 적으면
+       "보여준 것보다 더 지우는" 일이 생겨요 — 되돌릴 수 없는 기능에서
+       그건 가장 나쁜 고장입니다. 그래서 아래 자리들 한 벌로 둘 다 합니다.
+     ===================================================================== */
+
+  /* 지울 자리 — **닉 하나로 곧장 찾아가는 것만.**
+     kind:"직접" → 그 경로를 통째로
+     kind:"날짜" → {날}/{닉} 이라 날짜를 훑어야 함 */
+  const 지울자리 = [
+    { p: "users",     kind: "직접", 이름: "프로필·할 일·목표·꾸밈·작업 시간" },
+    { p: "achv",      kind: "직접", 이름: "업적" },
+    { p: "worklog",   kind: "직접", 이름: "회차 기록" },
+    { p: "workname",  kind: "직접", 이름: "작품 이름" },
+    { p: "notes",     kind: "직접", 이름: "받은 쪽지" },
+    { p: "notesOut",  kind: "직접", 이름: "보낸 쪽지" },
+    { p: "status",    kind: "직접", 이름: "접속 상태" },
+    { p: "attendance", kind: "날짜", 이름: "출석" },
+    { p: "wordlog",    kind: "날짜", 이름: "글자수" },
+    { p: "todostat",   kind: "날짜", 이름: "할 일 집계" },
+  ];
+
+  /* ⚠️ 일부러 **안 지우는** 것들 — 지우려다 마음이 흔들릴 때 여기를 보세요.
+       messages·messages2·wordfeed  그 사람 말만 빼면 대화에 구멍이 납니다
+       forest·help·pubreview        누가 썼는지 서버에 **없습니다** (익명)
+       nickOwner                    지우면 그 닉을 아무나 새로 가져갑니다
+       music                        방 전체가 함께 쓰는 추천 목록입니다 */
+
+  let _지울후보 = [];
+
+  async function loadPurgeList() {
+    const box = el("adm-purge-list");
+    if (!box) return;
+    try {
+      const [allowSnap, usersSnap] = await Promise.all([
+        db.ref("config/allow").once("value"),
+        db.ref("users").once("value"),
+      ]);
+      const allow = allowSnap.val() || {};
+      const users = usersSnap.val() || {};
+      /* 승인이 **풀린** 사람만. 현역은 애초에 목록에 안 올립니다 —
+         고를 수 없으면 실수로 지울 수도 없어요. */
+      _지울후보 = Object.keys(users)
+        .filter(n => allow[n] !== true)
+        .filter(n => n !== ADMIN_NICK)          // 방장은 절대 목록에 안 올림
+        .sort();
+
+      box.innerHTML = _지울후보.length
+        ? _지울후보.map(n => `
+            <div class="adm-row">
+              <span class="n">${escapeHtml(n)}</span>
+              <button class="adm-btn ghost" data-purge-pick="${escapeHtml(n)}">자취 보기</button>
+            </div>`).join("")
+        : "지울 자료가 남은 분이 없어요. (승인이 풀린 분만 여기 뜹니다)";
+    } catch (e) {
+      box.textContent = "불러오지 못했어요. " + (e.code || e.message || "");
+    }
+  }
+
+  /** 그 닉의 자취를 **세어서** 지울 경로 목록과 함께 돌려줍니다.
+      ★ 세기와 지우기가 같은 목록을 쓰도록, 여기서 경로까지 만들어 둡니다. */
+  async function 자취세기(nick) {
+    const 경로 = [];      // 실제로 지울 곳
+    const 요약 = [];      // 사람에게 보여줄 줄
+
+    for (const 자리 of 지울자리) {
+      if (자리.kind === "직접") {
+        const snap = await db.ref(`${자리.p}/${nick}`).once("value");
+        if (!snap.exists()) continue;
+        경로.push(`${자리.p}/${nick}`);
+        const n = snap.numChildren();
+        요약.push(`${자리.이름} ${n ? `(${n}칸)` : "있음"}`);
+      } else {
+        const snap = await db.ref(자리.p).once("value");
+        const v = snap.val() || {};
+        const 날들 = Object.keys(v).filter(d => v[d] && v[d][nick] !== undefined);
+        if (!날들.length) continue;
+        날들.forEach(d => 경로.push(`${자리.p}/${d}/${nick}`));
+        요약.push(`${자리.이름} ${날들.length}일치`);
+      }
+    }
+    return { 경로, 요약 };
+  }
+
+  async function showPurgeDetail(nick) {
+    const box = el("adm-purge-detail");
+    if (!box) return;
+    box.style.display = "";
+    box.innerHTML = `<b>${escapeHtml(nick)}</b> — 세는 중…`;
+    let 것;
+    try { 것 = await 자취세기(nick); }
+    catch (e) { box.innerHTML = "세지 못했어요. " + escapeHtml(e.code || e.message || ""); return; }
+
+    if (!것.경로.length) {
+      box.innerHTML = `<b>${escapeHtml(nick)}</b> — 지울 자료가 없어요. 이미 깨끗합니다.`;
+      return;
+    }
+    /* ③ 닉을 손으로 한 번 더 — 목록에서 잘못 누르는 것을 막습니다.
+       되돌릴 수 없는 일이라 "확인" 한 번으로는 부족해요. */
+    box.innerHTML = `
+      <div style="line-height:1.9">
+        <b>${escapeHtml(nick)}</b> 님의 자취 — 모두 <b>${것.경로.length}곳</b>
+        <div style="margin:6px 0 10px">${것.요약.map(escapeHtml).join(" · ")}</div>
+        <div class="adm-inline">
+          <input type="text" id="adm-purge-confirm" autocomplete="off"
+                 placeholder="지우려면 ${escapeHtml(nick)} 을(를) 그대로 적어주세요">
+          <button class="adm-btn danger" id="adm-purge-go" disabled>완전히 지우기</button>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#6B5F52">
+          ⚠️ 되돌릴 수 없어요. 채팅·대숲·표현 공부·품평 글과 로그인 계정은 남습니다.
+        </div>
+      </div>`;
+    const 칸 = el("adm-purge-confirm"), 단추 = el("adm-purge-go");
+    칸?.addEventListener("input", () => { 단추.disabled = (칸.value.trim() !== nick); });
+    단추?.addEventListener("click", () => purgeMember(nick, 것.경로));
+    칸?.focus();
+  }
+
+  async function purgeMember(nick, 경로) {
+    if (!nick || !경로?.length) return;
+    const 단추 = el("adm-purge-go");
+    if (단추) { 단추.disabled = true; 단추.textContent = "지우는 중…"; }
+    try {
+      /* 한 번에 지웁니다 — 중간에 끊겨 절반만 지워지는 일이 없게.
+         ★ 파이어베이스는 update 의 값이 null 이면 그 자리를 지웁니다. */
+      const 뭉치 = {};
+      경로.forEach(p => { 뭉치[p] = null; });
+      await db.ref().update(뭉치);
+      el("adm-purge-detail").style.display = "none";
+      await loadPurgeList();
+      msg("adm-purge-msg", `✅ ${nick} — ${경로.length}곳을 지웠어요.`);
+    } catch (e) {
+      if (단추) { 단추.disabled = false; 단추.textContent = "완전히 지우기"; }
+      msg("adm-purge-msg", "지우지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+
+    /* 👤 탈퇴자 정리 — 목록은 다시 그려지므로 위임으로 답니다 */
+    el("adm-purge-list")?.addEventListener("click", e => {
+      const b = e.target.closest("[data-purge-pick]");
+      if (b) showPurgeDetail(b.getAttribute("data-purge-pick"));
+    });
+    loadPurgeList();
+
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);
     el("adm-forest-clear")?.addEventListener("click", clearForest);
