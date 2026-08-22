@@ -134,7 +134,10 @@
 /* ═══ [통합 2026-08-12] 한 장 설명 (옛 manual.html) — #onepage 안에서만 ═══ */
 #onepage .paper{ background:#FAF6EC;
     background-image:repeating-linear-gradient(90deg,transparent 0 23px,rgba(163,88,70,.12) 23px 24px),repeating-linear-gradient(0deg,transparent 0 23px,rgba(163,88,70,.12) 23px 24px);
-    border-radius:16px; padding:24px 22px; max-width:720px; width:100%; }
+    /* [넓힘 2026-08-22 — 콩] 720px → 폭 가득. 좁아서 아래 알약 줄이
+       두 줄로 접혔습니다. 이 그림은 **한눈에 보는 것**이 목적이라
+       접히면 뜻이 반으로 줄어요. */
+    border-radius:16px; padding:24px 22px; max-width:none; width:100%; }
 #onepage .head{ text-align:center; margin-bottom:18px; }
 #onepage .eyebrow{ font-size:11px; color:#B3372B; letter-spacing:2px; font-weight:500; }
 #onepage .title{ font-family:'Noto Serif KR',serif; font-size:21px; font-weight:700; color:#2B2620; margin-top:2px; }
@@ -144,7 +147,11 @@
 #onepage .topbar{ display:flex; align-items:center; flex-wrap:wrap; row-gap:9px; gap:5px; background:#F4EEDF; border-radius:8px; padding:7px 10px; margin-bottom:8px; font-size:11px; color:#6B5F52; }
 #onepage .brand{ font-family:'Noto Serif KR',serif; font-weight:700; color:#2B2620; font-size:13px; }
 #onepage .redpill{ background:#B3372B; color:#FFFDF6; border-radius:5px; padding:2px 6px; font-size:10px; }
-#onepage .tool{ background:#FFFDF6; border:1px solid rgba(150,120,80,.4); border-radius:6px; padding:3px 7px; font-size:10.5px; white-space:nowrap; position:relative; }
+/* [2026-08-22] 머리말 알약이 열 개라 아슬아슬합니다 — 재어 보니 1052px
+   자리에 1001px 이었어요. 화면이 조금만 좁아도 두 줄로 접힙니다.
+   글자와 여백을 한 눈금씩 줄여 숨통을 틔웁니다(≈1001 → 900px). */
+#onepage .tool{ background:#FFFDF6; border:1px solid rgba(150,120,80,.4); border-radius:6px; padding:2.5px 6px; font-size:10px; white-space:nowrap; position:relative; }
+#onepage .topbar{ gap:4px; }
 #onepage .cols{ display:flex; gap:8px; }
 #onepage .panel{ background:#FFFDF6; border:1px solid rgba(150,120,80,.35); border-radius:8px; padding:8px; position:relative; min-height:150px; }
 #onepage .p-chat{ flex:0 0 27%; }
@@ -152,14 +159,25 @@
 #onepage .p-right{ flex:0 0 27%; display:flex; flex-direction:column; gap:8px; min-height:0; }
 #onepage .p-title{ font-size:11px; font-weight:500; color:#2B2620; margin-bottom:6px; }
 #onepage .bubble{ background:#F4EEDF; border-radius:8px; padding:4px 8px; font-size:10px; color:#6B5F52; margin-bottom:4px; width:fit-content; }
-#onepage .card{ width:64px; border:1px solid rgba(150,120,80,.4); border-radius:6px; overflow:hidden; font-size:9px; text-align:center; background:#FFFDF6; position:relative; }
-#onepage .card .ph{ height:34px; background:#E8DFCB; }
+/* ★★ [고침 2026-08-22 — 콩] 번호 배지가 **잘려서** 안 보였습니다.
+   카드에 overflow:hidden 이 걸려 있는데, 배지는 top:-8px 처럼 카드
+   **밖으로** 나가 앉거든요. 잘린 줄 모르고 "번호가 왜 없지" 가 됩니다.
+   → 카드는 넘치게 두고, 안쪽 조각들이 각자 모서리를 둥글게 처리합니다. */
+#onepage .card{ width:78px; border:1px solid rgba(150,120,80,.4); border-radius:6px; overflow:visible; font-size:9.5px; text-align:center; background:#FFFDF6; position:relative; }
+#onepage .card .ph{ height:40px; background:#E8DFCB; border-radius:5px 5px 0 0; }
+#onepage .card .nm{ border-radius:0 0 5px 5px; }
 #onepage .card .st{ background:#B3372B; color:#FFFDF6; font-size:8px; padding:1px 0; }
 #onepage .card .nm{ padding:3px 2px; color:#2B2620; }
 #onepage .mini{ background:#FFFDF6; border:1px solid rgba(150,120,80,.35); border-radius:8px; padding:8px; position:relative; flex:1; }
 #onepage .num{ position:absolute; width:20px; height:20px; border-radius:50%; background:#B3372B; color:#FFFDF6; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.25); z-index:2; }
 #onepage /* ── 설명 목록 ── */
-  .desc{ background:rgba(255,253,246,.96); border:1px solid rgba(150,120,80,.45); border-radius:12px; padding:16px; }
+  /* [2026-08-22 — 콩] 두 칸으로. 그림이 넓어진 만큼 설명도 나란히 놓으면
+     한 화면에 훨씬 많이 들어옵니다. 좁아지면 저절로 한 칸으로 돌아가요.
+     ★ 칸을 넘나들며 잘리지 않게 break-inside 를 막습니다. */
+  .desc{ background:rgba(255,253,246,.96); border:1px solid rgba(150,120,80,.45); border-radius:12px; padding:18px 20px;
+         columns:2; column-gap:28px; }
+#onepage .desc .item{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin-bottom:16px; }
+@media (max-width:900px){ #onepage .desc{ columns:1; } }
 #onepage .item{ display:flex; gap:10px; margin-bottom:12px; }
 #onepage .item:last-child{ margin-bottom:0; }
 #onepage .dnum{ flex:0 0 22px; height:22px; border-radius:50%; background:#B3372B; color:#FFFDF6; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
@@ -529,7 +547,7 @@
     <div class="topbar">
       <span class="brand">TheMagam</span>
       <span class="redpill">9명 집필 중</span>
-      <span class="tool" style="background:transparent;border:none;">8월 22일 (토) PM 2:33 🦉</span>
+      <span class="tool" style="background:transparent;border:none;padding-left:0;">8/22 (토) 2:33 🦉</span>
       <span style="flex:1"></span>
       <span class="tool">📢 공지<span class="num" style="top:-10px; right:-8px;">2</span></span>
       <span class="tool">📁 자료실</span>
