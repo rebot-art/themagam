@@ -67,22 +67,75 @@
        그러면 예전처럼 화면이 통째로 줄었다 커집니다. */
   const 손잡이는그대로 = () => true;
 
+  /* =====================================================================
+     🔄 뒤집기 — "다 줄이고 되돌리기" 에서 "줄일 것만 줄이기" 로
+                 (2026-08-22, 콩 · 🧘 혼자 방 먼저)
+     ---------------------------------------------------------------------
+     [옛 방식이 왜 무거웠나] 위의 2026-08-15 방식은 뿌리(html)를 통째로
+     줄이고, 안 줄이고 싶은 것들을 하나씩 도로 키웠습니다. 되돌리는 규칙이
+     다섯 군데로 늘었고, 그때마다 **재는 자가 하나씩 더 생겼어요.**
+     실제로 판을 끌 때 커서를 안 따라가는 사고가 났습니다(2026-08-22).
+     몸통 높이를 손으로 다시 재는 꼼수(100dvh 보정)도 그 방식 때문입니다.
+
+     [뒤집으면] 줄이고 싶은 것은 **접속자 카드 마당** 하나뿐입니다.
+     거기만 줄이면 —
+       · 머리말·알약 줄·판·팝업·배경판은 **아무것도 안 해도** 제 크기
+       · 몸통 높이 보정이 필요 없음 (뿌리가 안 줄어드니까)
+       · 판을 재는 자는 그냥 1
+     되돌리기 규칙도, 자도 함께 사라집니다.
+
+     [자가 둘로 갈립니다 — 헷갈리지 마세요]
+       window.uiZoom()   = **뿌리** 배율. 화면 좌표(clientX·getBoundingClientRect)
+                           와 요소 좌표(style.left·offsetWidth) 사이의 자.
+                           뒤집힌 방에서는 뿌리를 안 건드리므로 **늘 1**.
+       window.cardZoom() = **카드 마당** 배율. 카드에 붙는 떠다니는 판
+                           (상태표·작업 스티커·화면공유)이 쓰는 자.
+     ★ 옛 방식에서는 이 둘이 늘 같았습니다. 그래서 여태 uiZoom() 하나로
+       버틴 거예요. 이제는 다릅니다.
+
+     [1단계는 혼자 방만] 본 방은 옛 방식 그대로 둡니다. 아래 한 줄이
+     스위치예요 — 며칠 써 보고 본 방에도 켜려면 `true` 로 바꾸면 됩니다.
+     ===================================================================== */
+  const 뒤집힌방 = () => !!window.SOLO;
+
   function 배율적용(v) {
     const z = Math.max(MIN, Math.min(MAX, Math.round(v / STEP) * STEP));
     try { 곳간()?.setItem(KEY(), String(z)); } catch (e) {}
-
-    /* 100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
-       어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
-    document.documentElement.style.zoom = (z === 100) ? "" : (z / 100);
-    document.body.style.zoom = "";
     const f = z / 100;
-    document.body.style.height = (z === 100) ? "" : (window.innerHeight / f) + "px";
+    const h = document.documentElement;
 
-    /* 되돌려 키울 값 — CSS 가 이 값을 읽어 머리말·알약 줄에만 겁니다 */
-    const 되돌림 = (z === 100 || !손잡이는그대로()) ? "" : String(1 / f);
-    document.documentElement.style.setProperty("--unzoom", 되돌림);
-    document.documentElement.toggleAttribute("data-unzoom", !!되돌림);
+    if (뒤집힌방()) {
+      /* ── 새 방식 — 카드 마당만 줄입니다 ───────────────────────────
+         ★ 뿌리와 몸통은 **손도 대지 않습니다.** 옛 방식에서 남았을지 모를
+           값까지 지웁니다 — 한 번 켜졌던 브라우저가 그대로 오면
+           두 방식이 겹쳐 배율이 곱해집니다. */
+      h.style.zoom = "";
+      document.body.style.zoom = "";
+      document.body.style.height = "";
+      h.style.removeProperty("--unzoom");
+      h.removeAttribute("data-unzoom");
 
+      h.style.setProperty("--card-zoom", (z === 100) ? "" : String(f));
+      h.toggleAttribute("data-cardzoom", z !== 100);
+    } else {
+      /* ── 옛 방식 — 뿌리를 줄이고 손잡이를 되돌립니다 (본 방) ────── */
+      h.style.removeProperty("--card-zoom");
+      h.removeAttribute("data-cardzoom");
+
+      /* 100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
+         어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
+      h.style.zoom = (z === 100) ? "" : f;
+      document.body.style.zoom = "";
+      document.body.style.height = (z === 100) ? "" : (window.innerHeight / f) + "px";
+
+      /* 되돌려 키울 값 — CSS 가 이 값을 읽어 머리말·알약 줄에만 겁니다 */
+      const 되돌림 = (z === 100 || !손잡이는그대로()) ? "" : String(1 / f);
+      h.style.setProperty("--unzoom", 되돌림);
+      h.toggleAttribute("data-unzoom", !!되돌림);
+    }
+
+    /* 격자는 카드 마당의 배경입니다 — 카드가 줄면 격자도 함께 줄어요.
+       두 방 모두 **카드 배율**을 따릅니다. */
     격자맞춤(f);
 
     const pill = document.getElementById("zoom-pill");
@@ -130,8 +183,32 @@
      그때도 다시 맞춰야 해요. resize 는 그 순간에도 옵니다. */
   window.addEventListener("load", () => { try { 격자맞춤(배율() / 100); } catch (e) {} });
 
-  /** 좌표를 재는 파일들이 부르는 자 — 100% 면 1 */
-  window.uiZoom = () => 배율() / 100;
+  /* =====================================================================
+     📏 자 둘 — 무엇을 재느냐에 따라 골라 쓰세요 (2026-08-22)
+     ---------------------------------------------------------------------
+     uiZoom()   **뿌리** 배율입니다.
+                화면에서 잰 값(clientX · getBoundingClientRect)을 요소 값
+                (style.left · offsetWidth)으로 옮길 때 나눕니다.
+                판 옮기기·크기 조절이 이걸 씁니다.
+                → 뒤집힌 방에서는 뿌리를 안 건드리므로 **늘 1** 입니다.
+
+     cardZoom() **카드 마당** 배율입니다.
+                카드에서 잰 값을 **다른 카드에 입힐 때** 씁니다.
+                지금 쓰는 곳은 딱 하나 — script_share.js 의 공유 카드
+                높이 맞추기입니다 (카드 높이를 재서 카드에 입힘).
+
+     [헷갈리기 쉬운 자리 — 미리 적어 둡니다]
+     상태표·작업 스티커·화면공유 팝업은 **카드 옆에 뜨지만 cardZoom 이
+     아닙니다.** 그것들은 document.body 에 붙거든요. 카드에서 잰 화면
+     좌표를 **몸통 자리**로 옮기는 셈이라 뿌리 자(uiZoom)가 맞습니다.
+     → 가르는 기준은 "어디에 붙느냐" 이지 "무엇 옆에 뜨느냐" 가 아닙니다.
+
+     ★ 옛 방식에서는 둘이 늘 같았습니다. 그래서 여태 uiZoom() 하나로
+       버텼어요. 새로 코드를 쓸 때는 **값을 써넣을 곳이 어디인지**를
+       먼저 보세요 — 몸통이면 uiZoom, 카드 안이면 cardZoom 입니다.
+     ===================================================================== */
+  window.uiZoom   = () => (뒤집힌방() ? 1 : 배율() / 100);
+  window.cardZoom = () => 배율() / 100;
   window.setUiZoom = 배율적용;
   window.getUiZoom = 배율;
 

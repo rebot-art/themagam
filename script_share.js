@@ -846,8 +846,14 @@
        getBoundingClientRect 는 **확대된 뒤**의 화면 값이고, style.height 는
        **확대 전**의 요소 값입니다. 95% 로 줄여 놓으면 잰 값이 이미 0.95배라,
        그걸 그대로 입히면 공유 카드만 5% 짧아졌어요 (실제 제보).
-       100% 로 돌리면 멀쩡해 보이니 더 찾기 어려운 종류의 어긋남입니다. */
-    const z = (window.uiZoom?.() || 1);
+       100% 로 돌리면 멀쩡해 보이니 더 찾기 어려운 종류의 어긋남입니다.
+
+       ★★★ [2026-08-22] 여기는 **카드 자(cardZoom)** 입니다. 뿌리 자
+         (uiZoom)가 아니에요 — 재는 것도 카드고 입히는 것도 카드거든요.
+         배율 방식을 뒤집으면서(카드 마당만 줄임) 둘이 갈라졌습니다.
+         옛 방식에서는 둘이 늘 같아서 uiZoom 으로도 맞았습니다.
+         여기만 못 갈면 70% 에서 공유 카드가 **1.4배 길어집니다.** */
+    const z = (window.cardZoom?.() || window.uiZoom?.() || 1);
     let h = 0;
     list.querySelectorAll(".user-card:not(.share-card)").forEach(el => {
       h = Math.max(h, el.getBoundingClientRect().height / z);
