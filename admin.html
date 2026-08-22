@@ -630,8 +630,27 @@
         <div id="adm-fix-list" class="adm-msg">날짜를 고르고 눌러 주세요.</div>
         <p class="adm-sub" style="margin-top:6px">
           ★ <b>재구성</b>이에요 — 근거를 보고 방장이 확인한 것만 들어갑니다.<br>
-          ★ 아무 자취도 없는 분은 못 찾아요. 그분은 손으로 넣어 주세요.
+          ★ 아무 자취도 없는 분은 못 찾아요. <b>아래에서 손으로</b> 넣어 주세요.
         </p>
+
+        <!-- ★★★ [2026-08-22] "손으로 넣어 주세요" 라고 써 놓고 **넣을 곳을
+             안 만들었습니다.** 콩이 물어봐서 알았어요 — 안내는 있는데 길이
+             없으면 그 안내는 없느니만 못합니다.
+             ★ 무언가를 "손으로 하세요" 라고 적을 때는, 그 손이 닿을 자리가
+               정말 있는지 먼저 보세요. -->
+        <div style="border-top:1px dashed rgba(150,120,80,.45); margin-top:12px; padding-top:12px;">
+          <div class="adm-sub" style="margin-bottom:8px"><b>손으로 넣기</b> —
+            자취가 없어 못 찾은 분을 직접 적어 넣습니다.</div>
+          <div class="adm-inline">
+            <input type="text" id="adm-hand-nick" placeholder="닉네임" autocomplete="off">
+            <input type="date" id="adm-hand-date">
+            <input type="time" id="adm-hand-time" value="12:00" style="max-width:120px">
+            <button class="adm-btn" id="adm-hand-add">넣기</button>
+          </div>
+          <p class="adm-sub" style="margin:6px 0 0">
+            ★ 시각을 모르면 <b>12:00</b> 그대로 두세요 · 이미 그날 기록이 있으면 <b>안 덮습니다</b>.
+          </p>
+        </div>
         <div class="adm-msg" id="adm-fix-msg"></div>
       </div>
 
@@ -772,7 +791,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608230019"></script>
+  <script src="script_admin.js?v=202608230028"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

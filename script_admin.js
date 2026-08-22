@@ -2407,6 +2407,52 @@
     }
   }
 
+  /* =====================================================================
+     ✍️ 손으로 넣기 (2026-08-22)
+     ---------------------------------------------------------------------
+     되짚기로 못 찾는 분이 있습니다 — 들어와서 상태도 안 잡고 글도 안 쓰고
+     말도 안 했으면 서버에 남는 게 없어요. 본인이 말해 주면 넣어야 하는데,
+     **넣을 곳을 안 만들어 놓고 "손으로 넣어 주세요" 라고만 적어 뒀습니다.**
+     안내는 있는데 길이 없으면 그 안내는 없느니만 못하죠.
+
+     ★ 되짚기와 같은 규칙을 지킵니다 —
+       · 이미 있는 기록은 **안 덮습니다** (진짜가 우선)
+       · 넣은 줄에는 fixed 표를 남깁니다 (나중에 가릴 수 있게)
+       · 방장만 할 수 있습니다
+     ===================================================================== */
+  async function addAttendanceByHand() {
+    if (!ownerOnly("출석을 손으로 넣는 것")) return;
+    const nick = (el("adm-hand-nick")?.value || "").trim();
+    const 날   = el("adm-hand-date")?.value || "";
+    const 시각 = el("adm-hand-time")?.value || "12:00";
+    if (!nick || !날) { msg("adm-fix-msg", "닉네임과 날짜를 적어 주세요.", true); return; }
+    if (/[.#$/\[\]]/.test(nick)) {
+      msg("adm-fix-msg", "닉네임에 . $ # [ ] / 는 쓸 수 없어요.", true); return;
+    }
+    try {
+      /* ★ 명단에 있는 닉인지 봅니다 — 오타로 없는 사람을 만들면
+         출석부에 유령 줄이 생기고, 그 줄은 아무도 못 지웁니다. */
+      const owner = (await db.ref("nickOwner/" + nick).once("value")).val();
+      if (!owner) {
+        msg("adm-fix-msg", `"${nick}" 은 명단에 없는 닉네임이에요. 오타가 아닌지 봐주세요.`, true);
+        return;
+      }
+      const 있나 = await db.ref(`attendance/${날}/${nick}`).once("value");
+      if (있나.exists()) {
+        msg("adm-fix-msg", `${nick} 님은 ${날} 에 이미 기록이 있어요 — 덮지 않았습니다.`, true);
+        return;
+      }
+      const t = new Date(`${날}T${시각}:00`).getTime();
+      if (!Number.isFinite(t)) { msg("adm-fix-msg", "시각을 읽지 못했어요.", true); return; }
+      await db.ref(`attendance/${날}/${nick}`).set({ firstAt: t, at: t, fixed: true });
+      await loadAttendance(_attOffset);
+      const inp = el("adm-hand-nick"); if (inp) inp.value = "";
+      msg("adm-fix-msg", `✅ ${nick} — ${날} ${시각} 로 넣었어요.`);
+    } catch (e) {
+      msg("adm-fix-msg", "넣지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   async function applyAttendanceFix() {
     const 고른것 = [...document.querySelectorAll(".adm-fix-pick:checked")]
       .map(c => _복구감[Number(c.getAttribute("data-i"))]).filter(Boolean);
@@ -2637,6 +2683,11 @@
       const 날 = el("adm-fix-date");
       if (날 && !날.value) 날.value = 날짜글(Date.now());
     }
+    {
+      const 날2 = el("adm-hand-date");
+      if (날2 && !날2.value) 날2.value = 날짜글(Date.now());
+    }
+    el("adm-hand-add")?.addEventListener("click", addAttendanceByHand);
     el("adm-fix-day")?.addEventListener("click", () => findMissingAttendance(1));
     el("adm-fix-week")?.addEventListener("click", () => findMissingAttendance(7));
 
