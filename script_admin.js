@@ -2289,15 +2289,26 @@
     const box = el("adm-purge-list");
     if (!box) return;
     try {
-      const [allowSnap, usersSnap] = await Promise.all([
+      /* ★★★ [고침 2026-08-22 — 콩 신고 PERMISSION_DENIED]
+         처음엔 `users` 를 통째로 읽어 명단을 만들었는데, **users 루트에는
+         읽기 권한이 없습니다.** 낱개(users/{닉})만 주인과 방장에게 열려
+         있어요. 그래서 목록이 통째로 안 떴고, "여태 나간 멤버가 안 뜬다" 로
+         보였습니다 — 오늘부터 적용되는 게 아니라 그냥 못 읽은 것이었어요.
+
+         명단은 **nickOwner** 에서 가져옵니다. 루트가 열려 있고, "이 방에서
+         닉을 만든 적 있는 사람" 이라는 뜻이라 명단으로 더 정확하기도 합니다.
+         ★ 규칙을 고치지 않아도 되는 길을 고른 것입니다 — 콘솔에 규칙을
+           다시 올리는 일은 잘못 올리면 방이 안 열리는 위험한 걸음이라,
+           안 해도 되면 안 하는 편이 낫습니다. */
+      const [allowSnap, ownerSnap] = await Promise.all([
         db.ref("config/allow").once("value"),
-        db.ref("users").once("value"),
+        db.ref("nickOwner").once("value"),
       ]);
       const allow = allowSnap.val() || {};
-      const users = usersSnap.val() || {};
+      const owner = ownerSnap.val() || {};
       /* 승인이 **풀린** 사람만. 현역은 애초에 목록에 안 올립니다 —
          고를 수 없으면 실수로 지울 수도 없어요. */
-      _지울후보 = Object.keys(users)
+      _지울후보 = Object.keys(owner)
         .filter(n => allow[n] !== true)
         .filter(n => n !== ADMIN_NICK)          // 방장은 절대 목록에 안 올림
         .sort();
@@ -2320,23 +2331,34 @@
     const 경로 = [];      // 실제로 지울 곳
     const 요약 = [];      // 사람에게 보여줄 줄
 
+    /* ★ 읽기가 막힌 자리가 있습니다 — 📮 쪽지(notes·notesOut)는 보안규칙이
+       **주인에게만** 열려 있어서 방장도 못 읽고 못 지웁니다. 한 자리가
+       막혔다고 나머지까지 통째로 실패하면 안 되니 건너뜁니다.
+       ★ 다만 **조용히 넘어가지는 않습니다.** "지웠다" 고 했는데 실은 남아
+         있는 것이 이 기능에서 가장 나쁜 거짓말이라, 화면에 적어 보여줍니다. */
+    const 못본것 = [];
+
     for (const 자리 of 지울자리) {
-      if (자리.kind === "직접") {
-        const snap = await db.ref(`${자리.p}/${nick}`).once("value");
-        if (!snap.exists()) continue;
-        경로.push(`${자리.p}/${nick}`);
-        const n = snap.numChildren();
-        요약.push(`${자리.이름} ${n ? `(${n}칸)` : "있음"}`);
-      } else {
-        const snap = await db.ref(자리.p).once("value");
-        const v = snap.val() || {};
-        const 날들 = Object.keys(v).filter(d => v[d] && v[d][nick] !== undefined);
-        if (!날들.length) continue;
-        날들.forEach(d => 경로.push(`${자리.p}/${d}/${nick}`));
-        요약.push(`${자리.이름} ${날들.length}일치`);
+      try {
+        if (자리.kind === "직접") {
+          const snap = await db.ref(`${자리.p}/${nick}`).once("value");
+          if (!snap.exists()) continue;
+          경로.push(`${자리.p}/${nick}`);
+          const n = snap.numChildren();
+          요약.push(`${자리.이름} ${n ? `(${n}칸)` : "있음"}`);
+        } else {
+          const snap = await db.ref(자리.p).once("value");
+          const v = snap.val() || {};
+          const 날들 = Object.keys(v).filter(d => v[d] && v[d][nick] !== undefined);
+          if (!날들.length) continue;
+          날들.forEach(d => 경로.push(`${자리.p}/${d}/${nick}`));
+          요약.push(`${자리.이름} ${날들.length}일치`);
+        }
+      } catch (e) {
+        못본것.push(자리.이름);
       }
     }
-    return { 경로, 요약 };
+    return { 경로, 요약, 못본것 };
   }
 
   async function showPurgeDetail(nick) {
@@ -2349,7 +2371,10 @@
     catch (e) { box.innerHTML = "세지 못했어요. " + escapeHtml(e.code || e.message || ""); return; }
 
     if (!것.경로.length) {
-      box.innerHTML = `<b>${escapeHtml(nick)}</b> — 지울 자료가 없어요. 이미 깨끗합니다.`;
+      box.innerHTML = `<b>${escapeHtml(nick)}</b> — 지울 자료가 없어요.`
+        + (것.못본것.length
+            ? ` <span style="color:#B3372B">(다만 ${것.못본것.map(escapeHtml).join("·")} 은 읽을 수 없어 확인 못 했어요)</span>`
+            : " 이미 깨끗합니다.");
       return;
     }
     /* ③ 닉을 손으로 한 번 더 — 목록에서 잘못 누르는 것을 막습니다.
@@ -2365,6 +2390,8 @@
         </div>
         <div style="margin-top:6px;font-size:12px;color:#6B5F52">
           ⚠️ 되돌릴 수 없어요. 채팅·대숲·표현 공부·품평 글과 로그인 계정은 남습니다.
+          ${것.못본것.length ? `<br><b style="color:#B3372B">· 못 지우는 것: ${것.못본것.map(escapeHtml).join(" · ")}</b>
+             — 보안규칙이 주인에게만 열어 둔 자리라 방장도 못 읽어요.` : ""}
         </div>
       </div>`;
     const 칸 = el("adm-purge-confirm"), 단추 = el("adm-purge-go");

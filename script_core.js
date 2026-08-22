@@ -252,12 +252,26 @@ window.AppSession = AppSession;
        망가집니다. 콩도 "적어도 챗창만큼은" 이라고 했어요.
      ★ 이 문지기를 **세 자리가 함께** 씁니다: 입장·퇴장·창 닫기(beacon).
        한 곳만 고치면 나머지가 조용히 새 나갑니다.
-     ★ 값을 직접 읽습니다(db-status). 들어오는 길에 loadPersonalData 가
-       그 값을 되살려 놓고, 나가는 길에는 아직 살아 있으니까요.
+     ★★★ [고침 2026-08-22 — 콩 신고] 처음엔 화면의 상태 칸(#db-status)만
+       봤습니다. 그런데 **입장 메시지는 loadPersonalData 보다 먼저 나갑니다**
+       (아래 3-5 와 3-6 의 차례를 보세요). 그때는 그 칸이 아직 비어 있어서
+       문지기가 늘 "평소대로" 로 답했고, REPAIR 를 걸어 둬도 입장 줄이
+       그대로 떴어요. 제가 차례를 확인하지 않고 넘겨짚은 자리입니다.
+
+       그래서 **기기에 남은 값(backup_{닉})도 함께** 봅니다. 이건 서버를
+       기다릴 필요가 없어서 입장 첫 순간에도 이미 있습니다.
+         · 화면 칸에 값이 있으면 그것이 진실입니다 (방금 사람이 고른 값)
+         · 비어 있으면(=아직 안 불러옴) 기기에 남은 값을 봅니다
      ===================================================================== */
   function 조용히드나드나() {
     try {
-      return (document.getElementById("db-status")?.value || "") === "repair";
+      const 화면 = document.getElementById("db-status")?.value || "";
+      if (화면) return 화면 === "repair";
+      /* 아직 안 불러왔습니다 — 기기에 남은 마지막 값으로 판단합니다.
+         (script_data.js 의 backupLocal 이 적어 두는 자리) */
+      const raw = window.AppStore?.getItem(`backup_${myNick}`);
+      if (!raw) return false;
+      return (JSON.parse(raw)?.status || "") === "repair";
     } catch (e) { return false; }
   }
 
