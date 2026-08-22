@@ -3022,6 +3022,12 @@ body.room-bg-on{
 }
 .rec-week s.on{ color: var(--accent); font-weight: var(--fw-bold); }
 
+/* ✍️ 글자수 탭의 최근 7일 막대 (2026-08-22 — 콩)
+   모양은 ⏱️ 작업 시간과 같이 쓰고 **색만** 갈라 둡니다.
+   글자수 자리의 다른 그림들(요일별 줄·이번 달 꺾은선)이 전부
+   포인트색이라, 여기만 초록이면 남의 그림처럼 보여요. */
+.wc-week7 i{ background: var(--accent); opacity: .55; }
+
 .rec-foot{
   margin-top: 14px;
   padding: 9px 12px;
@@ -4589,6 +4595,29 @@ body.solo-mode .card-avatar-wrap{ cursor: pointer; }
    ===================================================================== */
 html[data-unzoom] .app-head,
 html[data-unzoom] #dock-bar{
+  zoom: var(--unzoom, 1);
+}
+
+/* =====================================================================
+   🧘 팝업도 제 크기로 — **혼자 방에서만** 먼저 (2026-08-22, 콩)
+   ---------------------------------------------------------------------
+   [무엇을 하나] 머리말·알약 줄과 똑같은 되돌리기를 팝업 알맹이
+   (.modal-content)에도 겁니다. 줄여 놓고 설정이나 설명서를 열면
+   글씨까지 작아져서 읽기 힘들었어요.
+
+   ★ 껍데기가 아니라 **알맹이**에 겁니다. 껍데기(position:fixed)에 걸면
+     화면 기준 좌표가 어긋나요. 배경 현황판의 .rb-inner 와 같은 수법이고,
+     이미 잘 돌고 있는 방식입니다.
+
+   ★ 겹친 배율이 정확히 1 이 되므로 안쪽 100dvh 계산도 화면과 맞습니다.
+
+   [왜 혼자 방부터인가] 축소해 둔 사람에게는 팝업이 화면을 훨씬 많이
+   덮게 됩니다. 읽기는 편한데 낯설 수 있어서, 며칠 써 보고 본 방에
+   켜기로 했습니다 (콩).
+     · 본 방에도 켜려면 → 아래 줄에서 [data-solo] 만 지우면 됩니다.
+     · 되돌리려면      → 이 덩어리를 통째로 지우면 됩니다.
+   ===================================================================== */
+html[data-solo][data-unzoom] .modal-content{
   zoom: var(--unzoom, 1);
 }
 
@@ -8398,12 +8427,9 @@ body.split-dragging #chat-box3{ user-select: none; }
   border-radius: var(--r-md);
   background: var(--panel2);
 }
-.wcl-h{
-  padding: 0 10px 2px;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  color: var(--muted);
-}
+/* [철거 2026-08-22 — 콩] .wcl-h — 그림 안 딱지("최근 7일 · 글자수").
+   바로 위 제목과 같은 말이 두 번 나왔고, 이 그림을 같이 쓰는 ⏱️ 작업
+   시간 쪽에서는 단위가 분인데 "글자수" 라고 나왔습니다. */
 /* 세로 비율을 고정해 두면 창 폭이 달라져도 선이 뭉개지지 않습니다 */
 .wcl{ display: block; width: 100%; height: auto; overflow: visible; }
 .wcl-base{ stroke: var(--border); stroke-width: 1; }

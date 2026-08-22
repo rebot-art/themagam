@@ -297,15 +297,50 @@
       <text x="${x(i).toFixed(1)}" y="${H - 6}" class="wcl-day${p.today ? " is-today" : ""}"
             text-anchor="middle">${p.label}</text>`).join("");
 
+    /* [2026-08-22 — 콩] 그림 안 딱지("최근 7일 · 글자수")를 뺐습니다.
+       ① 바로 위에 이미 제목이 있어서 같은 말이 두 번 나왔고,
+       ② 이 함수를 ⏱️ 작업 시간 그래프도 같이 쓰는데 거기에도
+          "글자수" 라고 적혀 나왔습니다 — 단위가 분인 자리에요. */
     return `
       <div class="wcl-wrap">
-        <div class="wcl-h">최근 7일 · 글자수</div>
         <svg class="wcl" viewBox="0 0 ${W} ${H}"
-             role="img" aria-label="최근 7일 글자수 꺾은선 그래프">
+             role="img" aria-label="하루하루 꺾은선 그래프">
           <line x1="${L}" y1="${T + ih}" x2="${W - R}" y2="${T + ih}" class="wcl-base"/>
           <polyline points="${line}" class="wcl-line"/>
           ${dots}${nums}${days}
         </svg>
+      </div>`;
+  }
+
+  /* =====================================================================
+     📊 최근 7일 세로 막대 (2026-08-22 — 콩)
+     ---------------------------------------------------------------------
+     [왜 바꿨나] 글자수 탭에 꺾은선이 둘(최근 7일 · 이번 달)이라 생김새가
+     똑같아 오히려 복잡해 보였습니다. "둘 중 하나를 막대로" 라는 요청.
+
+     [왜 최근 7일을 막대로 골랐나] 막대는 **그날 얼마**를 재기 좋고,
+     꺾은선은 **오르내림**을 보기 좋습니다. 7일은 하루하루를 견주는
+     자리고 한 달은 흐름을 보는 자리라, 이 짝이 자연스럽습니다.
+     ⏱️ 작업 시간 탭이 이미 이 모양(.rec-week)이라 두 탭이 닮게도 됩니다.
+
+     ★ 모양은 .rec-week 를 그대로 빌려 씁니다 — CSS 를 새로 만들지
+       않아야 나중에 한쪽만 바뀌는 일이 없어요.
+     ★ 날짜 딱지는 요일이 아니라 **8/16 꼴**입니다. 바로 위 "요일별" 과
+       구별되어야 두 그림을 볼 이유가 갈립니다.
+     ===================================================================== */
+  function barChartHtml(pts) {
+    const max = Math.max(1, ...pts.map(p => Number(p.v) || 0));   // 0 나누기 막이
+    return `
+      <div class="rec-week wc-week7">
+        ${pts.map(p => {
+          const v = Number(p.v) || 0;
+          const h = Math.max(3, Math.round(v / max * 74));
+          return `<span title="${p.label} · ${fmt(v)}자">
+                    <b class="rec-bar-v">${v ? shortNum(v) : ""}</b>
+                    <i style="height:${h}px${v ? "" : ";background:var(--fill-2)"}"></i>
+                    <s${p.today ? ' class="on"' : ""}>${p.label}</s>
+                  </span>`;
+        }).join("")}
       </div>`;
   }
 
@@ -1403,7 +1438,8 @@
       </div>
       <div class="wc-rows" style="max-height:none">${drawRows(vals, isThisWeek ? vals.length - 1 : -1)}</div>
       <div class="rec-foot">${weekLabel} <b>${fmt(week)}자</b></div>
-      ${lineChartHtml(linePts)}
+      <div class="rec-h2">최근 7일</div>
+      ${barChartHtml(linePts)}
       ${isThisWeek && (base === null || base === undefined)
         ? `<p class="hint">아직 출발선을 안 잡았어요. 글자수 칸에서 지금 원고의 전체 글자수를 적어주세요.</p>`
         : ""}`;
