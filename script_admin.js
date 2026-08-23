@@ -2128,6 +2128,174 @@
     } catch (e) { return 0; }
   }
 
+  /* =====================================================================
+     📊 사용 현황 (2026-08-23 — 콩)
+     ---------------------------------------------------------------------
+     [무엇을 묻는 것인가]
+     "어떤 걸 많이 쓰고 어떤 걸 아무도 안 쓰는지. 누가 뭘 쓰는지가 아니라
+      전체 통계. 아무도 안 쓰는 기능을 유지할 이유는 없으니까."
+     그래서 **적게 쓰는 것이 위로** 옵니다 — 찾으려는 게 그것이니까요.
+
+     ★★★ [방 코드는 한 줄도 안 건드립니다]
+     새로 기록을 남기기 시작하면 그날부터 세는 셈이라 지금은 아무 답도
+     안 나옵니다. 대신 **이미 서버에 쌓여 있는 흔적**만 읽어요. 덕분에
+     멤버 쪽에서 달라지는 것이 하나도 없고, 이 단추를 안 누르면 통신량도 0.
+
+     ★★★ [읽으면 안 되는 것 — 돈이 됩니다]
+     2026-08-22 에 Blaze 로 바뀌어 무료치를 넘으면 **잠기는 게 아니라
+     청구**됩니다. 그래서 큰 노드는 일부러 피합니다.
+       · messages / messages2  ← 채팅 전체. 대신 achv 의 cChat 을 씁니다
+       · wordlog / wordfeed    ← 이미 위 그래프가 보여 줍니다
+       · users/{닉} 통째로     ← 안에 timeSegs 가 들어 있어 무겁습니다.
+                                 **작은 자식만 골라** 읽어요 (아래 잔가지).
+     작은 것을 여러 번 읽는 건 괜찮습니다 — RTDB 요금은 **주고받은 바이트**
+     이지 요청 횟수가 아니라서요.
+
+     ★ [못 세는 것은 못 센다고 적습니다]
+       · 판 여닫기·방 배경·접속 유지·카드 정렬·확대축소 → 각자 브라우저에만
+       · 대숲·표현 공부·품평 → 익명이라 글 수만 (그게 이 기능들이 굴러가는 조건)
+       · 📮 쪽지 → 보안규칙이 주인에게만 열려 있어 방장도 못 읽음
+     ===================================================================== */
+
+  /** 큰 노드를 건드리지 않고 통째로 읽어도 되는 것들 */
+  async function 통째로(경로) {
+    try { return (await db.ref(경로).once("value")).val() || {}; }
+    catch (e) { return null; }              // null = 못 읽음 (권한·오류)
+  }
+
+  /** users/{닉} 아래 **작은 잔가지 하나**만 (timeSegs 를 안 끌고 오려고) */
+  async function 잔가지(닉, 가지) {
+    try { return (await db.ref(`users/${닉}/${가지}`).once("value")).val(); }
+    catch (e) { return null; }
+  }
+
+  async function runUsage() {
+    const box = el("adm-usage");
+    if (!box) return;
+    box.innerHTML = `<div class="adm-msg">훑는 중…</div>`;
+    msg("adm-usage-msg", "");
+
+    try {
+      /* ── ① 통째로 읽어도 되는 것 (요청 여덟 번) ── */
+      const [ownerMap, achv, music, files, forest, help, pubs, pubrev] =
+        await Promise.all([
+          통째로("nickOwner"), 통째로("achv"), 통째로("music"), 통째로("files"),
+          통째로("forest"), 통째로("help"), 통째로("pubs"), 통째로("pubreview")
+        ]);
+      const 명단 = Object.keys(ownerMap || {});
+      const 총원 = 명단.length;
+      if (!총원) { box.innerHTML = `<div class="adm-msg">명단을 못 읽었어요.</div>`; return; }
+
+      /* ── ② 잔가지 — 닉마다 작은 것만 골라서 ── */
+      const 잔 = {};
+      await Promise.all(명단.map(async n => {
+        const [prof, prefs, idle, start, pomoP, mine] = await Promise.all([
+          잔가지(n, "profile"), 잔가지(n, "prefs"), 잔가지(n, "idleDetect"),
+          잔가지(n, "startStatus"), 잔가지(n, "pomoParticipation"), 잔가지(n, "musicMine")
+        ]);
+        잔[n] = { prof: prof || {}, prefs: prefs || {}, idle, start, pomoP, mine: mine || {} };
+      }));
+
+      /* ── ③ 세기 ── */
+      const 셈 = (거르개) => 명단.filter(거르개).length;
+      const c = (n, k) => Number((achv?.[n]?.c || {})[k] || 0);
+      /* achv 의 c 에는 `cha_2026-08-20` 처럼 **날짜별 열쇠**로 쌓이는 것이
+         있습니다 — 접두어로 세면 "며칠 썼나" 가 나옵니다 */
+      const 접두 = (n, pre) => Object.keys(achv?.[n]?.c || {})
+        .filter(k => k.indexOf(pre) === 0).length;
+
+      const 꾸밈칸 = ["photo", "cardBg", "cardPattern", "nickColor", "snowBg", "shareImg"];
+
+      const 줄 = [
+        /* [이름, 쓴 사람 수, 곁말] */
+        /* ✍️ 글자수는 계량기가 따로 없습니다. 대신 **글자수 업적을 하나라도
+           땄나**로 봅니다 — 첫 배지가 "하루 1,000자" 라 한 번이라도 제대로
+           적은 사람은 잡히고, 이건 지난 기록까지 소급돼요. */
+        ["✍️ Work Log 글자수", 셈(n => Object.keys(achv?.[n]?.got || {}).some(g => g.indexOf("wc") === 0)), "글자수 배지를 하나라도"],
+        ["💬 Chat", 셈(n => c(n, "cChat") > 0), "8/11부터 센 것"],
+        ["📌 할 일 완료", 셈(n => c(n, "cTodo") > 0), "8/11부터"],
+        ["☕ 수다방", 셈(n => 접두(n, "cha_") > 0), "참여한 날이 하루라도"],
+        ["🎋 대숲 글쓰기", 셈(n => c(n, "cForest") > 0), "익명이지만 업적이 셉니다"],
+        ["🖥 화면 공유", 셈(n => 접두(n, "shr_") > 0), "하루 2시간 넘긴 날만 잡힘"],
+        ["😊 감정 스티커", 셈(n => c(n, "cGreet") + c(n, "cPat") + c(n, "cCheer") > 0), ""],
+        ["🏷 카드 스티커", 셈(n => 접두(n, "stk_") > 0), ""],
+        ["🔖 작업 스티커", 셈(n => 접두(n, "tag_") > 0), ""],
+        ["📝 퇴고·수정 딱지", 셈(n => 접두(n, "rew_") + 접두(n, "rev_") > 0), ""],
+        ["👤 프로필 꾸미기", 셈(n => 꾸밈칸.some(k => 잔[n].prof[k])), "하나라도 만졌으면"],
+        ["🖼 프사 올리기", 셈(n => !!잔[n].prof.photo), ""],
+        ["🎨 카드 색·무늬", 셈(n => !!(잔[n].prof.cardBg || 잔[n].prof.cardPattern)), ""],
+        ["🎨 테마 바꾸기", 셈(n => !!잔[n].prefs.themeName), "기본 테마면 안 잡힘"],
+        ["🎯 목표 시간 정하기", 셈(n => Number(잔[n].prefs.goalHours) > 0), ""],
+        ["🖱 자리비움 자동감지", 셈(n => 잔[n].idle?.enabled === true), "크롬·엣지만 됨"],
+        ["🚪 들어올 때 상태 고르기", 셈(n => !!잔[n].start), "8/23에 생긴 것"],
+        ["🍅 뽀모 참가", 셈(n => 잔[n].pomoP?.participating === true), ""],
+        ["♪ 나의 BGM 리스트", 셈(n => Object.keys(잔[n].mine).length > 0), ""],
+        ["♪ BGM 추천 올리기", 새사람수(music, "nick"), "곡 " + 개수(music) + "개"],
+        ["📁 자료실 올리기", 새사람수(files, "by"), "파일 " + 개수(files) + "개"],
+      ];
+
+      /* 익명이라 사람 수를 못 세는 것 — 개수만 */
+      const 익명줄 = [
+        ["🎋 대숲", 개수(forest), "쪽지"],
+        ["📓 표현 공부", 개수(help), "글"],
+        ["🏢 출판사 품평", 개수(pubs), "명패"],
+        ["🏢 품평 글", 품평수(pubrev), "품평"],
+      ];
+
+      /* ── ④ 그리기 — 적은 것이 위로 ── */
+      줄.sort((a, b) => a[1] - b[1]);
+      const 칸 = (이름, 명, 곁) => {
+        const p = 총원 ? Math.round(명 / 총원 * 100) : 0;
+        const 빛 = 명 === 0 ? "bad" : (p < 25 ? "maybe" : "ok");
+        return `<div class="adm-use-row">
+          <span class="adm-use-n">${escapeHtml(이름)}</span>
+          <span class="adm-use-bar"><i class="${빛}" style="width:${Math.max(p, 명 ? 3 : 0)}%"></i></span>
+          <span class="adm-use-v ${빛}">${명}명 <small>${p}%</small></span>
+          <span class="adm-use-c">${escapeHtml(곁 || "")}</span>
+        </div>`;
+      };
+      const 안쓰는것 = 줄.filter(r => r[1] === 0);
+
+      box.innerHTML = `
+        <p class="adm-use-head">멤버 <b>${총원}명</b> 가운데 몇 명이 쓰고 있나</p>
+        ${안쓰는것.length ? `<p class="adm-use-warn">🕳 <b>아무도 안 쓰는 것 ${안쓰는것.length}가지</b> — ${
+          안쓰는것.map(r => escapeHtml(r[0])).join(" · ")}</p>` : ""}
+        ${줄.map(r => 칸(r[0], r[1], r[2])).join("")}
+        <p class="adm-use-head" style="margin-top:14px;">익명이라 <b>사람 수는 못 세는 것</b> — 글 수만</p>
+        ${익명줄.map(([이름, n, 단위]) =>
+          `<div class="adm-use-row"><span class="adm-use-n">${escapeHtml(이름)}</span>
+             <span class="adm-use-v ${n ? "ok" : "bad"}">${n}${escapeHtml(단위)}</span>
+             <span class="adm-use-c"></span></div>`).join("")}
+        <p class="adm-use-foot">
+          ★ <b>여기 안 나오는 것</b>은 서버에 흔적이 없어서예요 —
+          판 여닫기·🖼방 배경·🔌접속 유지·🎲카드 정렬·🔍확대축소·채팅 글자 크기는
+          각자 브라우저에만 남습니다. 📮쪽지는 보안규칙이 주인에게만 열려 있어 방장도 못 읽어요.<br>
+          ★ 업적으로 세는 줄(💬Chat·📌할 일·🎋대숲·😊스티커·🖥공유)은
+          <b>2026-08-11부터</b>라 그 전에 쓴 것은 안 잡힙니다.
+        </p>`;
+      msg("adm-usage-msg", `${총원}명을 훑었어요.`);
+    } catch (e) {
+      console.warn("[adm usage]", e);
+      box.innerHTML = `<div class="adm-msg">불러오지 못했어요.</div>`;
+    }
+  }
+
+  /** 목록에서 서로 다른 사람이 몇 명인가 (닉이 든 칸 이름을 알려주세요) */
+  function 새사람수(뭉치, 칸) {
+    if (!뭉치) return 0;
+    const s = new Set();
+    Object.values(뭉치).forEach(v => { const n = v && v[칸]; if (n) s.add(String(n)); });
+    return s.size;
+  }
+  function 개수(뭉치) { return 뭉치 ? Object.keys(뭉치).length : 0; }
+  /** pubreview 는 {명패: {품평id: …}} 라 두 겹입니다 */
+  function 품평수(뭉치) {
+    if (!뭉치) return 0;
+    let n = 0;
+    Object.values(뭉치).forEach(v => { n += Object.keys(v || {}).length; });
+    return n;
+  }
+
   async function runDiligent() {
     const box = el("adm-diligent");
     if (!box) return;
@@ -2306,6 +2474,7 @@
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-diligent-run")?.addEventListener("click", runDiligent);
+    el("adm-usage-run")?.addEventListener("click", runUsage);
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));
