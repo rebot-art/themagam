@@ -539,15 +539,16 @@
        ★★★ [2026-08-23 — 콩] 여기가 **작업 시간 업적 일곱 개 전부의 관문**
        입니다 (🎯집중왕 · 🧿초집중왕 · ⛰하루 8시간 · ⏳100시간 · 🗿500시간 ·
        🦉올빼미 · 🐓아침형). 예전에는 `writing·focus 만` 이라고 손으로 적혀
-       있었는데, 📓multiT(절반) 가 생기면서 규칙이 하나 늘었어요.
+       있었는데, 상태마다 무게가 달라지면서 규칙이 늘었어요
+       (🔥WRITE·📓multiT 전액 · 💻JOB 70%).
 
        규칙을 여기 또 적지 않고 script_timelog.js 의 workMs 를 부릅니다 —
        그 파일이 이 파일보다 **먼저** 실려서(index.html 1302 → 1310)
        화면이 그려질 때쯤엔 늘 있습니다.
 
-       ★ 콩이 고른 것: **업적에도 절반을 적용.** 안 그러면 multiT 로
-         집중왕 따는 게 WRITE 보다 쉬워져서, 정직하게 WRITE 를 쓴 분이
-         손해를 봅니다.
+       ★ 콩이 고른 것: **업적에도 같은 무게를 적용.** 안 그러면 무게가
+         가벼운 상태로 집중왕 따는 게 더 쉬워져서, 정직하게 WRITE 를
+         쓴 분이 손해를 봅니다.
        ★ 이미 딴 업적은 안 뺏깁니다 (achv/{닉}/got 에 박혀 있어요).
          새 규칙은 앞으로 쌓는 것에만 걸립니다. */
     let msTotal = 0, bestSeg = 0, bestDayMs = 0, owlDays = 0, larkDays = 0;
@@ -812,10 +813,10 @@
           const list = ACHV.filter(a => a.g === g);
           const done = list.filter(a => _got[a.id]).length;
           /* 📓 [2026-08-23 — 콩] 작업 시간 갈래에만 기준을 한 줄 밝힙니다.
-             업적 일곱 개의 설명에 저마다 "multiT 는 절반" 을 적으면 목록이
-             시끄러워져요. 갈래 이름 아래 한 번이면 충분합니다. */
+             업적 일곱 개의 설명에 저마다 무게를 적으면 목록이 시끄러워져요.
+             갈래 이름 아래 한 번이면 충분합니다. */
           const 기준 = (g === "작업 시간")
-            ? `<p class="achv-gnote">🔥WRITE + 💻JOB + 📓multiT의 <b>절반</b>으로 셉니다</p>` : "";
+            ? `<p class="achv-gnote">🔥WRITE·📓multiT는 <b>그대로</b>, 💻JOB은 <b>70%</b>로 셉니다</p>` : "";
           return `<div class="achv-g">${esc(g)} <small>${done}/${list.length}</small></div>
                   ${기준}
                   <ul class="achv-list">${list.map(rowHtml).join("")}</ul>`;

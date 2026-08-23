@@ -63,25 +63,38 @@
 
      그래서 규칙을 여기 한 곳에 두고, 세는 곳은 전부 이걸 부릅니다.
 
-     [📓 multiT 는 왜 절반인가 — 콩의 말]
-     "직장에서 본업하는 중간중간 글을 쓴다거나 하는 거. 아무래도 온전히
-      집중하기 어려울 테니까." JOB 을 쓸지 multiT 를 쓸지는 **본인 선택**
-     입니다 — 철저하게 세고 싶은 사람을 위한 자리예요.
+     [무엇을 얼마나 인정하나 — ★ 2026-08-23 운영진 회의에서 뒤집혔습니다]
+
+         🔥WRITE   100%   집필 — 이 방이 하려는 바로 그 일
+         📓multiT  100%   여러 일을 병행하면서도 **원고를 붙들고 있는 것**
+         💻JOB      70%   집필이 아닌 **다른 일**
+
+     처음(같은 날 오전)에는 반대였어요 — JOB 전액, multiT 절반. multiT 를
+     "온전히 집중하기 어려운 시간" 으로 봤기 때문입니다. 회의에서 뒤집힌
+     까닭은 **무엇을 하고 있느냐**가 기준이 돼야 한다는 것이었습니다.
+     multiT 는 곁눈질을 하더라도 원고 앞에 있는 것이고, JOB 은 아예 다른
+     일이니까요.
+
+     ★ 들어올 때 기본값은 **여전히 JOB** 입니다 (script_data.js 의
+       _startStatus). 버튼을 안 눌러도 시간이 쌓이게 하려는 장치라
+       그대로 두었어요. 70% 가 아쉬우면 본인이 바꾸면 됩니다 —
+       그 문턱이 오히려 "지금 무슨 일을 하는지" 를 한 번 생각하게 해요.
 
      ★★★ [깎는 것은 저장할 때가 아니라 **셀 때**]
-     timeSegs 에는 진짜 시간을 그대로 적습니다. 절반은 더할 때만 쳐요.
-     저장할 때 깎으면 원본이 사라져서, 나중에 "절반 말고 6할" 로 바꾸고
-     싶어도 지난 기록이 안 따라옵니다. 여기 숫자 하나만 고치면 과거까지
-     한꺼번에 다시 셈해지는 것이 이 방식의 값어치입니다.
+     timeSegs 에는 진짜 시간을 그대로 적습니다. 무게는 더할 때만 쳐요.
+     저장할 때 깎으면 원본이 사라져서, 규칙이 바뀌어도 지난 기록이 안
+     따라옵니다. **오늘 오전에 정한 규칙이 오후에 뒤집혔는데도** 위
+     숫자 세 개만 고치면 지난 기록까지 한꺼번에 다시 셈해졌어요 —
+     이 방식의 값어치가 바로 그것입니다.
      ===================================================================== */
-  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 0.5 };
+  const WORK_WEIGHT = { writing: 1, multi: 1, focus: 0.7 };
 
   /** 한 구간(또는 상태별 합)이 작업 시간에 얼마나 들어가는가 */
   function workMs(status, ms) {
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;
   }
-  /** { 상태: ms } 그릇을 작업 시간 합계로 (Write + Job + multiT 절반) */
+  /** { 상태: ms } 그릇을 작업 시간 합계로 (WRITE·multiT 전액 + JOB 70%) */
   function workSum(totals) {
     let n = 0;
     for (const s in WORK_WEIGHT) n += workMs(s, (totals || {})[s]);
@@ -574,7 +587,7 @@
     const today = rows[rows.length - 1];
     const isThisWeek = backWeeks === 0;
     /* ★ [2026-08-23] 손으로 더하지 않습니다 — workSum 하나가 규칙을 압니다
-       (📓 multiT 는 절반. 위 WORK_WEIGHT 주석 참고) */
+       (상태마다 무게가 다릅니다. 위 WORK_WEIGHT 주석 참고) */
     const sumWork = workSum(today.totals);
     const maxDay = Math.max(1, ...rows.map(r => workSum(r.totals)));
     const weekWork = rows.reduce((a, r) => a + workSum(r.totals), 0);
@@ -585,8 +598,8 @@
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 작업 시간 — Write(집필) + Job(다른 일) + 📓multiT(병행)<br>
-          <b>📓multiT는 절반만 들어가요</b> — 여러 일을 함께 하는 중이라 온전히 집중하기 어려우니까요.<br>
+        <div class="rec-sub">오늘 작업 시간 — 🔥WRITE·📓multiT는 <b>그대로</b>, 💻JOB은 <b>70%</b>만 쌓여요<br>
+          JOB은 집필이 아닌 <b>다른 일</b>이라서요. 원고를 붙들고 있는 시간은 곁눈질을 하더라도 온전히 인정합니다.<br>
           <b>카드의 타이머를 리셋해도 이 기록은 그대로예요.</b></div>
       </div>
 
@@ -754,7 +767,7 @@
     }
     const h = Math.floor(합분 / 60), m = 합분 % 60;
     const 꼬리 = h ? (m ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
-    return `<div class="rec-h2">이번 달 하루하루 <span class="hint">(Write + Job + multiT 절반 · 분)</span></div>
+    return `<div class="rec-h2">이번 달 하루하루 <span class="hint">(Write·multiT 전액 + Job 70% · 분)</span></div>
             ${그림(pts)}
             <div class="rec-foot">이번 달 <b>${꼬리}</b></div>`;
   }
@@ -860,9 +873,9 @@
       tw += v; tp += r.pomo;
       L.push(`${r.date}  Write ${fmtDur(r.totals.writing)} · Job ${fmtDur(r.totals.focus)} · multiT ${fmtDur(r.totals.multi)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
     });
-    /* ★ 값(tw)은 workSum 이라 multiT 절반이 이미 들어가 있습니다.
-       라벨만 "Write+Job" 이면 더해 봐도 안 맞아서 사람이 헷갈려요. */
-    L.push(`합계      작업 시간 ${fmtDur(tw)} (Write + Job + multiT 절반) · 🍅 ${tp}`);
+    /* ★ 값(tw)은 workSum 이라 무게가 이미 쳐져 있습니다. 라벨이 단순히
+       "Write+Job" 이면 위 줄을 손으로 더해 봐도 안 맞아 헷갈려요. */
+    L.push(`합계      작업 시간 ${fmtDur(tw)} (Write·multiT 전액 + Job 70%) · 🍅 ${tp}`);
     L.push("");
     L.push(`■ Letters (${달이름})`);
 

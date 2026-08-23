@@ -241,7 +241,7 @@
       <div class="stat"><div class="k">이번 주 누적</div><div class="v" id="me-week">—</div></div>
     </div>
     <p class="sub" style="margin:8px 0 0; line-height:1.6;">
-      작업 시간은 <b>🔥WRITE + 💻JOB + 📓multiT의 절반</b>이에요. ☕BREAK·💤AWAY는 안 셉니다.
+      작업 시간은 <b>🔥WRITE·📓multiT 전액 + 💻JOB 70%</b>예요. ☕BREAK·💤AWAY는 안 셉니다.
     </p>
 
     <div class="goal" id="me-goal" hidden></div>
@@ -311,7 +311,7 @@
   ];
   /* ⏱ 작업 시간 무게 — ★★★ script_timelog.js 의 WORK_WEIGHT 와 **같아야** 합니다.
      이 페이지는 작업방 스크립트를 안 싣습니다. checks.js 가 두 표를 견줍니다. */
-  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 0.5 };
+  const WORK_WEIGHT = { writing: 1, multi: 1, focus: 0.7 };
   function 작업ms(status, ms){
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;
@@ -444,7 +444,7 @@
            이름을 잘못 짚으면 조용히 전부 0 으로 나옵니다. */
         Object.values(snap.val() || {}).forEach(seg => {
           if (!seg) return;
-          // Write + Job 전액, 📓multiT 는 절반 (작업방과 같은 셈)
+          // WRITE·multiT 전액, JOB 70% (작업방과 같은 셈)
           ms += 작업ms(seg.s, Math.max(0, Number(seg.b || 0) - Number(seg.a || 0)));
         });
       } catch(e){}

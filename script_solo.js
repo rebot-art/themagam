@@ -502,7 +502,7 @@
       if (n === 내닉()) return;
       const r = cache[n];
       if (!r) return;
-      /* 유령의 작업 시간 — 진짜 방과 같은 셈(📓multiT 는 절반) */
+      /* 유령의 작업 시간 — 진짜 방과 같은 셈(WRITE·multiT 전액, JOB 70%) */
       r.workMs += (window.workMs ? window.workMs(r.status, 30000)
                                  : ((r.status === "writing" || r.status === "focus") ? 30000 : 0));
       /* 유령도 숨은 쉬어야 합니다 — lastSeen 이 멈추면 "오래된 기록"으로
