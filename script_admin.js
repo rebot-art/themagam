@@ -1042,7 +1042,7 @@
       </p>
       <p class="adm-word-sum" style="opacity:.72; font-size:11.5px;">
         ※ 여기는 <b>자리에 있었던 시간</b> 전부예요 — 상태를 안 가립니다(☕BREAK·💤AWAY도 들어감).
-        카드의 ⏱ 이나 ✨성실 멤버가 세는 <b>작업 시간</b>(WRITE·multiT 전액 + JOB 70%)과는 다른 값이에요.
+        카드의 ⏱ 이나 ✨성실 멤버가 세는 <b>작업 시간</b>(WRITE 전액 + JOB·multiT 70%)과는 다른 값이에요.
       </p>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ymKey} 방 전체 작업 시간과 한 사람당 평균">
         ${주말}${눈금}
@@ -2079,7 +2079,7 @@
   // ------------------------------------------------- ③-3.9 ✨ 성실 멤버
   /* 최근 7일 출석부(attendance)와 작업시간(timeSegs)으로 자동 선정.
      기준(콩): 출석 5일 이상 + 하루 5시간 넘게 작업한 날 3일 이상.
-       · "작업"은 카드의 작업시간과 같은 셈 — WRITE·multiT 전액 + JOB 70%
+       · "작업"은 카드의 작업시간과 같은 셈 — WRITE 전액 + JOB·multiT 70%
        · 휴가일은 출석에 안 들어갑니다 (출석부에 입장 기록이 없으니 저절로)
        · 중복 구간 흉터는 돋보기와 같은 규칙으로 걸러 셉니다
      읽기량: 출석부 7번 + 후보×출석일 만큼의 timeSegs — 방장 페이지에서
@@ -2094,7 +2094,7 @@
      ★ 대신 checks.js 가 **두 표를 직접 견줘서** 다르면 실패합니다.
        한쪽만 고치면 방에서 본 숫자와 성실 멤버 기준이 조용히 어긋나요.
      ===================================================================== */
-  const WORK_WEIGHT = { writing: 1, multi: 1, focus: 0.7 };
+  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7 };
   function 작업ms(status, ms) {
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;

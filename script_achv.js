@@ -540,7 +540,7 @@
        입니다 (🎯집중왕 · 🧿초집중왕 · ⛰하루 8시간 · ⏳100시간 · 🗿500시간 ·
        🦉올빼미 · 🐓아침형). 예전에는 `writing·focus 만` 이라고 손으로 적혀
        있었는데, 상태마다 무게가 달라지면서 규칙이 늘었어요
-       (🔥WRITE·📓multiT 전액 · 💻JOB 70%).
+       (🔥WRITE 전액 · 💻JOB·📓multiT 70%).
 
        규칙을 여기 또 적지 않고 script_timelog.js 의 workMs 를 부릅니다 —
        그 파일이 이 파일보다 **먼저** 실려서(index.html 1302 → 1310)
@@ -816,7 +816,7 @@
              업적 일곱 개의 설명에 저마다 무게를 적으면 목록이 시끄러워져요.
              갈래 이름 아래 한 번이면 충분합니다. */
           const 기준 = (g === "작업 시간")
-            ? `<p class="achv-gnote">🔥WRITE·📓multiT는 <b>그대로</b>, 💻JOB은 <b>70%</b>로 셉니다</p>` : "";
+            ? `<p class="achv-gnote">🔥WRITE는 <b>그대로</b>, 💻JOB·📓multiT는 <b>70%</b>로 셉니다</p>` : "";
           return `<div class="achv-g">${esc(g)} <small>${done}/${list.length}</small></div>
                   ${기준}
                   <ul class="achv-list">${list.map(rowHtml).join("")}</ul>`;

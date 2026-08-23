@@ -1303,7 +1303,7 @@
       idle:    "☕BREAK☕",
       writing: "🔥WRITE🔥",
       focus:   "💻JOB💻",
-      /* 📓 [2026-08-23 — 콩] 병행 작업. 작업 시간에 전액 들어갑니다 */
+      /* 📓 [2026-08-23 — 콩] 병행 작업. 작업 시간에 70% 들어갑니다 */
       multi:   "📓multiT💻",
       rest:    "☕BREAK☕",
       away:    "💤AWAY💤",

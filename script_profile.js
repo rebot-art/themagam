@@ -2279,14 +2279,14 @@ window.rerenderUserCards = function () {
   const CHOICES = [
     { v: "writing", label: "🔥WRITE🔥", cls: "status-writing" },   /* 집필 */
     { v: "focus",   label: "💻JOB💻",   cls: "status-focus"   },   /* 본업·다른 작업 */
-    /* 📓 [2026-08-23 — 콩] 여러 일을 **병행** 중. 작업 시간에 **전액**
-       들어갑니다 (규칙은 script_timelog.js 의 WORK_WEIGHT 한 곳에).
-       ★ 같은 날 오전에는 "절반" 이었다가 운영진 회의에서 뒤집혔습니다 —
-         곁눈질을 하더라도 **원고를 붙들고 있는 것**이라서요. 대신
-         집필이 아닌 💻JOB 이 70% 로 내려갔습니다.
+    /* 📓 [2026-08-23 — 콩] 여러 일을 **병행** 중. 작업 시간에 **70%**
+       들어갑니다 — 💻JOB 과 같은 무게예요
+       (규칙은 script_timelog.js 의 WORK_WEIGHT 한 곳에).
+       ★ 전액은 🔥WRITE 뿐입니다. 집필과 그 밖을 가르는 것이 이 방의 뜻이고,
+         JOB 과 multiT 사이에 굳이 등급을 더 두지는 않기로 했습니다.
        ★ REPAIR 와 달리 STATUSES 에 **정식 등록**했습니다 — 안 그러면
          normStatus 가 rest 로 접어서 Break 로 쌓입니다. */
-    { v: "multi",   label: "📓multiT💻", cls: "status-multi"  },   /* 병행 — 전액 */
+    { v: "multi",   label: "📓multiT💻", cls: "status-multi"  },   /* 병행 — 70% */
     { v: "rest",    label: "☕BREAK☕",  cls: "status-rest"    },   /* 휴식 */
     { v: "away",    label: "💤AWAY💤",  cls: "status-away"    },   /* 자리비움 */
     /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손보는 중. **방장에게만** 보입니다.
