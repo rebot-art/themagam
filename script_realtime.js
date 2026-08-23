@@ -479,6 +479,77 @@
     return `<div class="rb-hwrap"><div class="rb-hrow" style="animation-duration:${초}s">${한벌}${한벌}</div></div>`;
   }
 
+  /* =====================================================================
+     🙋 총원 중 몇 명 출석 (2026-08-23 — 콩)
+     ---------------------------------------------------------------------
+     "오늘 접속 현황" 제목 옆에 `41명 중 17명 출석`.
+
+     [무엇을 세는가 — 아래 칸과 다릅니다]
+     아래 `지금 n명 참여 중` 은 **오늘 글자수를 올린 사람**입니다.
+     여기 `출석` 은 **입장 도장**(attendance/{오늘}) — 관리자 출석부가
+     세는 것과 똑같은 값이에요. 두 숫자가 다른 게 정상입니다
+     (들어와 있지만 아직 글자수를 안 올린 분이 있으니까요).
+
+     [총원]
+     `nickOwner` 의 개수. 관리자 출석부도 이걸 명단으로 씁니다 —
+     같은 자를 써야 방에서 본 숫자와 출석부 숫자가 안 어긋나요.
+     한 판에 한 번만 읽습니다(1.5KB 남짓). 새 멤버가 중간에 들어오면
+     다음에 들어올 때 반영돼요 — 총원은 하루에 몇 번 바뀌는 값이 아닙니다.
+
+     [출석 — child_added 로 듣습니다]
+     `.on("value")` 로 들으면 누가 도장 찍을 때마다 **오늘 것 전부**가
+     다시 옵니다. `child_added` 는 처음에 한 번 훑고, 그 뒤로는
+     **새로 찍힌 한 사람분(60바이트 남짓)**만 와요.
+
+     [자정을 넘겨 켜 둬도]
+     날이 바뀌면 듣는 자리를 옮기고 0부터 다시 셉니다.
+     ===================================================================== */
+  let _총원 = 0;
+  let _오늘출석 = 0;
+  let _출석듣는곳 = null;     // { ref, h }
+  let _출석날 = "";
+  let _총원읽음 = false;
+  let _출석다시그리기 = null;
+
+  /* 처음 들어올 때 도장이 수십 개 우르르 옵니다. 하나마다 그리면
+     판을 마흔 번 그려요 — 한 박자 묶어서 한 번만 그립니다. */
+  function 출석바뀜() {
+    if (_출석다시그리기) return;
+    _출석다시그리기 = setTimeout(() => { _출석다시그리기 = null; drawBoard(); }, 250);
+  }
+
+  function 출석듣기() {
+    const 날 = ymd(Date.now());
+    if (날 !== _출석날) {
+      if (_출석듣는곳) {
+        try { _출석듣는곳.ref.off("child_added", _출석듣는곳.h); } catch (e) {}
+      }
+      _출석날 = 날;
+      _오늘출석 = 0;
+      try {
+        const r = db.ref(`attendance/${날}`);
+        const h = r.on("child_added", () => { _오늘출석++; 출석바뀜(); }, () => {});
+        _출석듣는곳 = { ref: r, h };
+      } catch (e) { _출석듣는곳 = null; }
+    }
+    if (!_총원읽음) {
+      _총원읽음 = true;
+      try {
+        db.ref("nickOwner").once("value").then(snap => {
+          _총원 = Object.keys(snap.val() || {}).length;
+          출석바뀜();
+        }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  /** 제목 옆 글. 아직 아무것도 못 읽었으면 빈 글 (숫자 0 을 안 보여줍니다) */
+  function 출석글() {
+    if (!_총원 && !_오늘출석) return "";
+    if (!_총원) return `${_오늘출석}명 출석`;
+    return `${_총원}명 중 ${_오늘출석}명 출석`;
+  }
+
   let _board재시도 = 0;
   function drawBoard() {
     const host = document.querySelector(".cards-area");
@@ -502,6 +573,7 @@
       host.insertBefore(box, host.firstChild);
     }
     개근듣기();
+    출석듣기();
 
     /* ★ [바꿈 2026-08-22] 예전에는 이 자리에서 판 전체를 innerHTML 로
        다시 그렸습니다. 개근 명단이 **흘러가는 글**이 되면서 그러면
@@ -512,7 +584,7 @@
     if (!box.firstChild) {
       box.innerHTML = `<div class="rb-inner">
         <div class="rb-box">
-          <div class="rb-t">📊 오늘 접속 현황</div>
+          <div class="rb-t rb-t-row"><span>📊 오늘 접속 현황</span><span class="rb-att" id="rb-att"></span></div>
           <div class="rb-bars" id="rb-bars"></div>
         </div>
         <div class="rb-box">
@@ -526,6 +598,8 @@
     const 제목 = box.querySelector("#rb-feed-t");
     const 흐름 = box.querySelector("#rb-feed");
     if (막대) 막대.innerHTML = 막대띠();
+    const 출석칸 = box.querySelector("#rb-att");
+    if (출석칸) 출석칸.textContent = 출석글();
     if (제목) 제목.textContent = `🔥 ${n > 0 ? `지금 ${n}명 참여 중` : "지금 방에서"}`;
     if (흐름) 흐름.innerHTML = 흐름줄들();
 
