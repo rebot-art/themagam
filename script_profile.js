@@ -2279,6 +2279,14 @@ window.rerenderUserCards = function () {
   const CHOICES = [
     { v: "writing", label: "🔥WRITE🔥", cls: "status-writing" },   /* 집필 */
     { v: "focus",   label: "💻JOB💻",   cls: "status-focus"   },   /* 본업·다른 작업 */
+    /* 📓 [2026-08-23 — 콩] 여러 일을 **병행** 중. 작업 시간에 **절반**만
+       들어갑니다 (규칙은 script_timelog.js 의 WORK_WEIGHT 한 곳에).
+       콩의 말: "직장에서 본업하는 중간중간 글을 쓴다거나 하는 거.
+       아무래도 온전히 집중하기 어려울 테니까. 하지만 선택인 거지,
+       JOB 을 쓸지 철저한 계산을 위해 멀티태스킹을 쓸지."
+       ★ REPAIR 와 달리 STATUSES 에 **정식 등록**했습니다 — 안 그러면
+         normStatus 가 rest 로 접어서 Break 로 쌓입니다. */
+    { v: "multi",   label: "📓multiT💻", cls: "status-multi"  },   /* 병행 — 절반만 */
     { v: "rest",    label: "☕BREAK☕",  cls: "status-rest"    },   /* 휴식 */
     { v: "away",    label: "💤AWAY💤",  cls: "status-away"    },   /* 자리비움 */
     /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손보는 중. **방장에게만** 보입니다.

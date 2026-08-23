@@ -144,6 +144,7 @@
   }
   .st-writing{ background:rgba(255,59,48,.74); border-color:rgba(255,59,48,.86); color:#7A1C18; }
   .st-focus  { background:rgba(133,183,235,.74); border-color:rgba(133,183,235,.86); color:#0C3255; }
+  .st-multi  { background:rgba(217,164,65,.78); border-color:rgba(217,164,65,.90); color:#4A3106; }
   .st-rest   { background:rgba(93,202,165,.74); border-color:rgba(93,202,165,.86); color:#04342C; }
   .st-away   { background:var(--fill2); border-color:var(--line); color:var(--muted); }
 
@@ -301,9 +302,17 @@
   const STATUSES = [
     { v:"writing", cls:"st-writing", label:"🔥WRITE🔥" },
     { v:"focus",   cls:"st-focus",   label:"💻JOB💻" },
+    { v:"multi",   cls:"st-multi",   label:"📓multiT💻" },
     { v:"rest",    cls:"st-rest",    label:"☕BREAK☕" },
     { v:"away",    cls:"st-away",    label:"💤AWAY💤" }
   ];
+  /* ⏱ 작업 시간 무게 — ★★★ script_timelog.js 의 WORK_WEIGHT 와 **같아야** 합니다.
+     이 페이지는 작업방 스크립트를 안 싣습니다. checks.js 가 두 표를 견줍니다. */
+  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 0.5 };
+  function 작업ms(status, ms){
+    const w = WORK_WEIGHT[status] || 0;
+    return w ? Math.round((Number(ms) || 0) * w) : 0;
+  }
   const TAGS = {
     idea:"💭 구상", draft:"✍️ 원고", polish:"📝 퇴고", proof:"🔍 교정",
     revise:"✂️ 수정", rework:"🔧 개정", input:"📚 인풋", etc:"✨ 기타"
@@ -432,8 +441,8 @@
            이름을 잘못 짚으면 조용히 전부 0 으로 나옵니다. */
         Object.values(snap.val() || {}).forEach(seg => {
           if (!seg) return;
-          if (seg.s !== "writing" && seg.s !== "focus") return;   // Write + Job 만
-          ms += Math.max(0, Number(seg.b || 0) - Number(seg.a || 0));
+          // Write + Job 전액, 📓multiT 는 절반 (작업방과 같은 셈)
+          ms += 작업ms(seg.s, Math.max(0, Number(seg.b || 0) - Number(seg.a || 0)));
         });
       } catch(e){}
       week += ms;

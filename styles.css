@@ -1747,6 +1747,15 @@ body.room-bg-on{
    ★ 불투명이라 낮·밤·카드 색과 무관하게 **늘 같습니다.** 다크 대비를
      따로 두지 않는 것이 맞아요 (콩: "테마에 상관없이 유지됐으면"). */
 .card-state.status-repair { background: #F7A8C1; border-color: #EE93B0; color: #5A1B33; }
+/* 📓 [2026-08-23 — 콩] 여러 일을 병행 중 (작업 시간에 절반만 들어갑니다).
+   ★★★ REPAIR 와 **같은 이유로 불투명**입니다. 노랑은 옅은 색이라
+     반투명으로 깔면 밝은 카드 위에서 거의 흰색이 됩니다 —
+       흰 카드 위 rgba(239,194,74,.62) → #F5DFA9 (거의 안 보임)
+     JOB(#FF9F0A 주황)과 헷갈리지 않게 **더 노란 쪽**으로 잡았고,
+     고르기 판 알약과 **같은 색**을 씁니다 (고른 것과 뜨는 것이 같게).
+   ★ 불투명이라 테마·다크와 무관하게 늘 같습니다 — 다크 대비도,
+     테마별 덮어쓰기도 두지 않는 것이 맞아요 (REPAIR 와 같은 결). */
+.card-state.status-multi  { background: #EFC24A; border-color: #E0AE2E; color: #4A3106; }
 
 :root[data-is-dark="true"] .card-state.status-writing{ color: #FFA59E; }
 :root[data-is-dark="true"] .card-state.status-focus  { color: #FFCE85; }
@@ -5783,6 +5792,49 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
 .status-pop-item.status-focus  { background:#5B7BB8; color:#F2F6FF; }
 .status-pop-item.status-rest   { background:#3FA974; color:#F0FFF7; }
 .status-pop-item.status-away   { background:#8A8F98; color:#F4F5F7; }
+.status-pop-item.status-multi  { background:#EFC24A; color:#4A3106; }
+
+/* =====================================================================
+   ⚙️ 설정 항목 두 줄 펴기 + 🚪 들어올 때 상태 (2026-08-23 — 콩)
+   ===================================================================== */
+.set-grid2{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+/* ★ 좁아지면 한 줄로 도로 접습니다 — 320px 짜리 두 칸에 긴 설명을
+   욱여넣으면 글이 세로로 길어져서 두 줄로 편 뜻이 없어집니다. */
+@media (max-width: 620px){
+  .set-grid2{ grid-template-columns: 1fr; }
+}
+
+.start-pick{ display: flex; flex-wrap: wrap; gap: 6px; }
+/* 고르기 판 알약과 **같은 색**을 씁니다 — 여기서 고른 것이 카드에
+   그대로 뜨니까요. 안 고른 것은 색을 빼고 테두리만 남겨서, 지금
+   무엇이 걸려 있는지 한눈에 보이게 합니다. */
+.start-pick-b{
+  flex: 1 1 auto; min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 12px; font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: .62;
+}
+.start-pick-b:hover{ opacity: .85; }
+/* 고른 것만 제 색으로. 배경·글자색은 위 .status-pop-item 규칙이 줍니다 */
+.start-pick-b.is-on{
+  opacity: 1;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+.start-pick-b.is-on.status-writing{ background:#E85D4A; color:#FFF4EC; }
+.start-pick-b.is-on.status-focus  { background:#5B7BB8; color:#F2F6FF; }
+.start-pick-b.is-on.status-multi  { background:#EFC24A; color:#4A3106; }
 /* 🛠️ 방장 전용 — 고르기 판에는 방장에게만 뜹니다 (script_profile.js) */
 .status-pop-item.status-repair { background:#F7A8C1; color:#5A1B33; }
 

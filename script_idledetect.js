@@ -27,6 +27,20 @@
 (function () {
   /* IdleDetector threshold 는 최소 60000ms 제약이 있습니다. 20분이면 넉넉. */
   const IDLE_THRESHOLD_MS = 20 * 60 * 1000;
+  /* 📓 [2026-08-23 — 콩] multiT 는 **한 번 더 기다립니다.**
+
+     multiT 는 본업을 하다가 짬짬이 쓰는 상태예요. 손이 이 화면에 안
+     오는 시간이 길 수밖에 없어서, 다른 상태와 똑같이 20분에 자리비움을
+     걸면 자꾸 떨어져 **정작 절반도 못 쌓입니다.**
+
+     ★ 아예 면제하지는 않았습니다 (콩이 고른 쪽) — 진짜로 자리를 뜬
+       경우까지 계속 쌓이면 그것도 사실과 다르니까요. 20분이 아니라
+       40분으로 늦출 뿐입니다.
+     ★ IdleDetector 의 threshold 는 시작할 때 한 번만 정할 수 있어서,
+       감지기를 다시 켜지 않고 **한 번 더 기다렸다 다시 보는** 방식으로
+       늦춥니다. 기다리는 사이 사람이 돌아오면 그냥 없던 일이 돼요. */
+  const MULTI_EXTRA_MS = 20 * 60 * 1000;
+  let _multi대기 = null;
 
   let _idleEnabled = false;      // 토글 상태 (저장값과 동기)
   let _idleDetector = null;      // 돌고 있는 IdleDetector
@@ -113,6 +127,24 @@
        딴 창(콘솔·편집기)에 있느라 이 화면에 손을 안 대요. 자동으로
        away 로 내리면 상태가 풀려 입·퇴장 메시지가 도로 뜹니다. */
     if (cur === "repair") return;
+
+    /* 📓 multiT — 20분 더 기다렸다가, 그래도 조용하면 그때 내립니다 */
+    if (cur === "multi") {
+      if (_multi대기) return;                  // 이미 기다리는 중
+      _multi대기 = setTimeout(() => {
+        _multi대기 = null;
+        /* 그 사이에 돌아왔거나 상태를 바꿨으면 없던 일로 */
+        if (_idleDetector?.userState !== "idle") return;
+        if (_curStatus() !== "multi") return;
+        _prevStatus = "multi";
+        _autoAway = true;
+        _saveTag();
+        _setStatus("away");
+        console.log("[자동감지] 무입력 40분 (📓multiT) → away 자동 전환");
+      }, MULTI_EXTRA_MS);
+      return;
+    }
+
     /* 화면 칸이 아직 안 채워졌어도 열쇠로 알아봅니다 */
     try {
       const 나 = (typeof myNick === "string" && myNick) ? myNick : "";
@@ -126,6 +158,8 @@
   }
 
   function _restoreIfAutoAway() {
+    /* 📓 기다리던 중에 돌아왔으면 그 예약부터 거둡니다 — 상태가 무엇이든 */
+    if (_multi대기) { clearTimeout(_multi대기); _multi대기 = null; }
     if (!myNick) return;
     if (!_autoAway) return;                // 사람이 직접 고른 AWAY — 건드리지 않음
     /* 상태 칸이 비어 있으면 아직 안 불러온 것입니다 — 판단을 미룹니다.
@@ -206,6 +240,9 @@
     try { _idleAbort?.abort(); } catch (e) {}
     _idleAbort = null;
     _idleDetector = null;
+    /* 📓 감지기를 끄는데 예약만 살아 있으면, 꺼 놓고도 20분 뒤에 자리비움이
+       걸립니다 — 자동감지를 껐다고 믿은 사람에게는 유령 같은 일이에요. */
+    if (_multi대기) { clearTimeout(_multi대기); _multi대기 = null; }
   }
 
   /* ---------------------------------------------------------------

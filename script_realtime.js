@@ -1303,6 +1303,8 @@
       idle:    "☕BREAK☕",
       writing: "🔥WRITE🔥",
       focus:   "💻JOB💻",
+      /* 📓 [2026-08-23 — 콩] 병행 작업. 작업 시간에 절반만 들어갑니다 */
+      multi:   "📓multiT💻",
       rest:    "☕BREAK☕",
       away:    "💤AWAY💤",
       /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손볼 때 거는 표시.
@@ -1316,6 +1318,7 @@
       idle: "status-rest",
       writing: "status-writing",
       focus: "status-focus",
+      multi: "status-multi",
       rest: "status-rest",
       away: "status-away",
       repair: "status-repair"

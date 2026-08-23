@@ -527,14 +527,73 @@
      갇히는 일이 있었습니다. 자동감지는 **제가 내린 AWAY** 만 되돌리므로
      이건 손대지 않는 게 맞고요 — 그래서 여기서 걸러 냅니다.
      ===================================================================== */
+  /* =====================================================================
+     🚪 [2026-08-23 — 콩] 들어올 때 상태를 **각자** 고릅니다
+     ---------------------------------------------------------------------
+     여태는 모두에게 JOB 이 강요됐습니다 (위 주석의 사정 때문에요).
+     이제 설정 › 💬 채팅 에서 본인이 고를 수 있어요.
+
+     [고를 수 있는 것은 셋뿐 — 시간이 쌓이는 것만]
+       🔥WRITE · 💻JOB · 📓multiT
+     ☕BREAK·💤AWAY 는 일부러 뺐습니다. 그걸 기본으로 걸어두면 들어와서
+     한참 쓴 뒤에야 "시간이 왜 0이지" 하고 알아채게 되는데, JOB 기본값이
+     바로 그 사고를 막으려고 만든 것이라 다시 열어줄 이유가 없었어요.
+
+     [안 고른 사람은 하나도 안 바뀝니다]
+     고른 값이 없으면 예전 규칙 그대로 흘러갑니다 — 39명의 방이
+     오늘과 똑같이 돌아가는 게 먼저예요.
+
+     저장 자리: users/{닉}/startStatus (계정 귀속 — 집에서 고른 것이
+     회사 컴퓨터에서도 그대로여야 하니까요). AppStore 에도 거울을
+     하나 둬서, 서버를 못 읽었을 때(restoreLocal)도 지켜집니다.
+     ===================================================================== */
+  const START_PICKS = ["writing", "focus", "multi"];
+  const KEY_START = "startStatus";
+  let _startPick = "";
+
+  function _loadStartPick() {
+    try { return String(AppStore.getItem(KEY_START) || ""); } catch (e) { return ""; }
+  }
+  function getStartStatus() {
+    const v = _startPick || _loadStartPick();
+    return START_PICKS.includes(v) ? v : "";
+  }
+  async function setStartStatus(v) {
+    const 고른것 = START_PICKS.includes(String(v)) ? String(v) : "";
+    _startPick = 고른것;
+    try {
+      if (고른것) AppStore.setItem(KEY_START, 고른것);
+      else AppStore.removeItem(KEY_START);
+    } catch (e) {}
+    renderStartStatusPicker();
+    if (!myNick) return;
+    try { await db.ref(`users/${myNick}/${KEY_START}`).set(고른것 || null); } catch (e) {}
+  }
+  function renderStartStatusPicker() {
+    const now = getStartStatus() || "focus";
+    document.querySelectorAll("[data-start-status]").forEach(b => {
+      const on = b.dataset.startStatus === now;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
   function _startStatus(saved) {
-    const v = String(saved || "");
-    if (v === "writing" || v === "focus") return v;
     /* 🛠️ [2026-08-22 — 콩] REPAIR 는 **그대로 들고 들어옵니다.**
        방을 고치는 동안은 새로고침을 수십 번 하는데, 들어올 때마다
        상태가 풀리면 그때마다 입·퇴장 메시지가 챗창을 덮습니다 —
-       이 상태를 만든 이유가 바로 그것이라 여기서 지키지 않으면 뜻이 없어요. */
-    if (v === "repair") return v;
+       이 상태를 만든 이유가 바로 그것이라 여기서 지키지 않으면 뜻이 없어요.
+       ★ 고른 기본 상태보다 **앞**에 둡니다 — 안 그러면 방을 고치는 중에
+         새로고침할 때마다 REPAIR 가 풀립니다. */
+    if (String(saved || "") === "repair") return "repair";
+
+    /* 본인이 고른 것이 있으면 그것으로 (2026-08-23) */
+    const 고른것 = getStartStatus();
+    if (고른것) return 고른것;
+
+    /* 안 고른 사람은 예전 그대로 */
+    const v = String(saved || "");
+    if (v === "writing" || v === "focus") return v;
     return "focus";
   }
 
@@ -565,6 +624,12 @@
              away 를 찍어 두어서, 다시 들어와도 💤AWAY 에 갇히는 일이
              있었습니다(그 코드는 고쳤지만, 이미 저장된 값은 남아 있어요).
              자리를 비울 거면 들어와서 직접 고르면 됩니다. */
+          /* 🚪 서버에 적힌 "들어올 때 상태" 를 먼저 손에 쥡니다 —
+             _startStatus 가 그걸 보고 정하니까요 (2026-08-23) */
+          if (START_PICKS.includes(String(data.startStatus || ""))) {
+            _startPick = String(data.startStatus);
+            try { AppStore.setItem(KEY_START, _startPick); } catch (e) {}
+          }
           const st = _startStatus(data.statusChoice);
           document.getElementById("db-status").value = st;
         }
@@ -574,6 +639,7 @@
 
       updatePersonalProgressUI();
       renderQuickStatusBtn();
+      renderStartStatusPicker();
       setTimeout(fetchWeeklyStats, 300);
 
       // ✅ NEW: 참가/사운드 설정 로드(닉 귀속)
@@ -697,6 +763,9 @@
 
   window.toggleWritingStatus = toggleWritingStatus;
   window.renderQuickStatusBtn = renderQuickStatusBtn;
+  window.setStartStatus = setStartStatus;
+  window.getStartStatus = getStartStatus;
+  window.renderStartStatusPicker = renderStartStatusPicker;
   window.savePersonalData = savePersonalData;
   window.savePersonalDataDebounced = savePersonalDataDebounced;
   window.saveNow = saveNow;

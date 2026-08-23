@@ -45,10 +45,50 @@
   const STATUSES = [
     { id: "writing", label: "Write(집필)",   color: "#C0392B" },
     { id: "focus",   label: "Job(다른 일)",  color: "#5B7BB8" },
+    { id: "multi",   label: "multiT(병행)",  color: "#D9A441" },
     { id: "rest",    label: "Break(휴식)",   color: "#2E8B6B" },
     { id: "away",    label: "Away(자리비움)", color: "#8A8F98" }
   ];
   const STATUS_IDS = STATUSES.map(s => s.id);
+
+  /* =====================================================================
+     ⏱ 작업 시간을 세는 **단 하나의 규칙** (2026-08-23 — 콩)
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     "작업 시간" 은 여태 `writing + focus` 였습니다. 그런데 그 판단이
+     **다섯 벌로 복사**돼 있었어요 — 내 기록 화면, 카드에 뜨는 ⏱,
+     업적(script_achv.js), 성실 멤버(script_admin.js), 모바일(m.html).
+     여기에 "절반만 세는 상태" 를 더하면, 한 벌만 빠뜨려도 **오류 하나 없이
+     숫자만 어긋납니다.** 이 방에서 제일 여러 번 데인 방식이에요.
+
+     그래서 규칙을 여기 한 곳에 두고, 세는 곳은 전부 이걸 부릅니다.
+
+     [📓 multiT 는 왜 절반인가 — 콩의 말]
+     "직장에서 본업하는 중간중간 글을 쓴다거나 하는 거. 아무래도 온전히
+      집중하기 어려울 테니까." JOB 을 쓸지 multiT 를 쓸지는 **본인 선택**
+     입니다 — 철저하게 세고 싶은 사람을 위한 자리예요.
+
+     ★★★ [깎는 것은 저장할 때가 아니라 **셀 때**]
+     timeSegs 에는 진짜 시간을 그대로 적습니다. 절반은 더할 때만 쳐요.
+     저장할 때 깎으면 원본이 사라져서, 나중에 "절반 말고 6할" 로 바꾸고
+     싶어도 지난 기록이 안 따라옵니다. 여기 숫자 하나만 고치면 과거까지
+     한꺼번에 다시 셈해지는 것이 이 방식의 값어치입니다.
+     ===================================================================== */
+  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 0.5 };
+
+  /** 한 구간(또는 상태별 합)이 작업 시간에 얼마나 들어가는가 */
+  function workMs(status, ms) {
+    const w = WORK_WEIGHT[status] || 0;
+    return w ? Math.round((Number(ms) || 0) * w) : 0;
+  }
+  /** { 상태: ms } 그릇을 작업 시간 합계로 (Write + Job + multiT 절반) */
+  function workSum(totals) {
+    let n = 0;
+    for (const s in WORK_WEIGHT) n += workMs(s, (totals || {})[s]);
+    return n;
+  }
+  /** 작업 시간에 조금이라도 들어가는 상태인가 */
+  function isWorkStatus(s) { return !!WORK_WEIGHT[s]; }
 
   const OFFLINE_MIN_MS = 5 * 60 * 1000;   // 이보다 오래 끊겼으면 그 구간을 집계에서 뺍니다
   const SEG_CAP_MS     = 6 * 60 * 60 * 1000; // 한 구간의 상한 (상식 밖 값 방지)
@@ -469,7 +509,7 @@
         if (len > 0) totals[s] += len;
 
         /* 리셋 이전에 쌓여 있던 만큼 — 안내 문구에 씁니다 */
-        if (resetAtRaw && (s === "writing" || s === "focus")) {
+        if (resetAtRaw && isWorkStatus(s)) {
           const cut = Math.min(Number(seg.b || 0), resetAtRaw) - Number(seg.a || 0);
           if (cut > 0) beforeReset += cut;
         }
@@ -533,9 +573,11 @@
   function recordHtml(rows, backWeeks = 0, wcBack = 0) {
     const today = rows[rows.length - 1];
     const isThisWeek = backWeeks === 0;
-    const sumWork = today.totals.writing + today.totals.focus;
-    const maxDay = Math.max(1, ...rows.map(r => r.totals.writing + r.totals.focus));
-    const weekWork = rows.reduce((a, r) => a + r.totals.writing + r.totals.focus, 0);
+    /* ★ [2026-08-23] 손으로 더하지 않습니다 — workSum 하나가 규칙을 압니다
+       (📓 multiT 는 절반. 위 WORK_WEIGHT 주석 참고) */
+    const sumWork = workSum(today.totals);
+    const maxDay = Math.max(1, ...rows.map(r => workSum(r.totals)));
+    const weekWork = rows.reduce((a, r) => a + workSum(r.totals), 0);
     const weekPomo = rows.reduce((a, r) => a + r.pomo, 0);
     const weekLabel = isThisWeek ? "지난 7일" : `${backWeeks}주 전`;
 
@@ -548,7 +590,7 @@
       </div>
 
       <div class="rec-bars">
-        ${["writing", "rest", "away", "focus"].map(id => {
+        ${["writing", "focus", "multi", "rest", "away"].map(id => {
           const st = STATUSES.find(x => x.id === id);
           return { label: st.label, color: st.color, v: today.totals[id] };
         }).map(s2 => {
@@ -573,7 +615,7 @@
       </div>
       <div class="rec-week">
         ${rows.map(r => {
-          const v = r.totals.writing + r.totals.focus;
+          const v = workSum(r.totals);
           const h = Math.max(3, Math.round(v / maxDay * 74));
           const d = new Date(r.date + "T00:00:00");
           const isToday = isThisWeek && r === today;
@@ -701,7 +743,7 @@
     catch (e) { return ""; }
 
     const pts = rows.map((r, i) => {
-      const ms = Number(r.totals?.writing || 0) + Number(r.totals?.focus || 0);
+      const ms = workSum(r.totals);
       return { v: Math.round(ms / 60000), label: `${now.getMonth() + 1}/${i + 1}` };
     });
     const 합분 = pts.reduce((a, p) => a + p.v, 0);
@@ -763,7 +805,7 @@
     try {
       /* 카드의 타이머만 표시를 반영합니다 (나의 작업 기록은 그대로) */
       const rows = await loadSummary(myNick, 1, 0, { applyReset: true });
-      _todayWork = { ms: rows[0].totals.writing + rows[0].totals.focus, at: nowMs() };
+      _todayWork = { ms: workSum(rows[0].totals), at: nowMs() };
       window.updateStatus?.(true);   // 새 값을 카드에 반영
       renderTimerResetNote(rows[0]);
     } catch (e) {}
@@ -813,9 +855,9 @@
     L.push(`■ Working hours (${달이름})`);
     let tw = 0, tp = 0;
     rows.forEach(r => {
-      const v = r.totals.writing + r.totals.focus;
+      const v = workSum(r.totals);
       tw += v; tp += r.pomo;
-      L.push(`${r.date}  Write ${fmtDur(r.totals.writing)} · Job ${fmtDur(r.totals.focus)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
+      L.push(`${r.date}  Write ${fmtDur(r.totals.writing)} · Job ${fmtDur(r.totals.focus)} · multiT ${fmtDur(r.totals.multi)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
     });
     L.push(`합계      Write+Job ${fmtDur(tw)} · 🍅 ${tp}`);
     L.push("");
@@ -913,7 +955,9 @@
     }
   };
 
-  window.TimeLog = { STATUSES, STATUS_IDS, GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
+  window.workMs = workMs; window.workSum = workSum; window.isWorkStatus = isWorkStatus;
+  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, isWorkStatus,
+                     GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;
 })();

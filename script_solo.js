@@ -400,7 +400,7 @@
     return 뽑음;
   }
 
-  const 상태들 = ["writing", "writing", "focus", "rest"];
+  const 상태들 = ["writing", "writing", "focus", "multi", "rest"];
   let _친구 = [];
 
   function 내닉() {
@@ -502,7 +502,9 @@
       if (n === 내닉()) return;
       const r = cache[n];
       if (!r) return;
-      if (r.status === "writing" || r.status === "focus") r.workMs += 30000;
+      /* 유령의 작업 시간 — 진짜 방과 같은 셈(📓multiT 는 절반) */
+      r.workMs += (window.workMs ? window.workMs(r.status, 30000)
+                                 : ((r.status === "writing" || r.status === "focus") ? 30000 : 0));
       /* 유령도 숨은 쉬어야 합니다 — lastSeen 이 멈추면 "오래된 기록"으로
          걸러져 한참 뒤에 하나씩 사라집니다 */
       r.lastSeen = 지금;

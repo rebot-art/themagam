@@ -1842,7 +1842,8 @@
        (메모리 절약 모드) 그 순간부터 비어요 — 접속유지 가이드가 막는
        것이 바로 이것입니다.
      ===================================================================== */
-  const SEG_LABEL = { writing: "🔥 Write", focus: "💻 Job", rest: "☕ Break", away: "💤 Away" };
+  const SEG_LABEL = { writing: "🔥 Write", focus: "💻 Job", multi: "📓 multiT",
+                      rest: "☕ Break", away: "💤 Away" };
 
   function bindDig(host) {
     if (host.dataset.digBound === "true") return;
@@ -2050,8 +2051,8 @@
   `;
 
   const ST_LABEL = { idle:"☕BREAK☕", writing:"🔥WRITE🔥", focus:"💻JOB💻",
-                     rest:"☕BREAK☕", away:"💤AWAY💤" };
-  const ST_CLASS = { writing:"writing", focus:"focus", rest:"rest", away:"away" };
+                     multi:"📓multiT💻", rest:"☕BREAK☕", away:"💤AWAY💤" };
+  const ST_CLASS = { writing:"writing", focus:"focus", multi:"multi", rest:"rest", away:"away" };
 
   /* 닉네임으로 눈사람 배경색을 만듭니다 (작업방 script_profile.js 와 같은 방식) */
   function snowBg(nick) {
@@ -2073,11 +2074,27 @@
   // ------------------------------------------------- ③-3.9 ✨ 성실 멤버
   /* 최근 7일 출석부(attendance)와 작업시간(timeSegs)으로 자동 선정.
      기준(콩): 출석 5일 이상 + 하루 5시간 넘게 작업한 날 3일 이상.
-       · "작업"은 카드의 작업시간과 같은 셈 — Write(writing) + Job(focus)
+       · "작업"은 카드의 작업시간과 같은 셈 — Write + Job + 📓multiT는 절반
        · 휴가일은 출석에 안 들어갑니다 (출석부에 입장 기록이 없으니 저절로)
        · 중복 구간 흉터는 돋보기와 같은 규칙으로 걸러 셉니다
      읽기량: 출석부 7번 + 후보×출석일 만큼의 timeSegs — 방장 페이지에서
      단추를 눌렀을 때만 도니 부담 없습니다. */
+  /* =====================================================================
+     ⏱ 작업 시간 무게 — ★★★ script_timelog.js 의 WORK_WEIGHT 와 **같아야** 합니다
+     ---------------------------------------------------------------------
+     관리자 페이지(admin.html)는 script_timelog.js 를 싣지 않습니다. 그래서
+     어쩔 수 없이 표를 한 벌 더 둡니다 — ADMIN_NICK·ADMIN_PIN 이 두 파일에
+     들어 있는 것과 같은 사정이에요.
+
+     ★ 대신 checks.js 가 **두 표를 직접 견줘서** 다르면 실패합니다.
+       한쪽만 고치면 방에서 본 숫자와 성실 멤버 기준이 조용히 어긋나요.
+     ===================================================================== */
+  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 0.5 };
+  function 작업ms(status, ms) {
+    const w = WORK_WEIGHT[status] || 0;
+    return w ? Math.round((Number(ms) || 0) * w) : 0;
+  }
+
   const DIL_DAYS = 7;
   const DIL_NEED_ATT = 5;        // 출석 5일 이상
   const DIL_NEED_5H = 3;         // 5시간 넘게 일한 날 3일 이상
@@ -2101,9 +2118,7 @@
         if (!best[k] || s.b > best[k].b) best[k] = s;
       });
       let ms = 0;
-      Object.values(best).forEach(s => {
-        if (s.s === "writing" || s.s === "focus") ms += s.b - s.a;
-      });
+      Object.values(best).forEach(s => { ms += 작업ms(s.s, s.b - s.a); });
       return ms;
     } catch (e) { return 0; }
   }

@@ -535,16 +535,33 @@
 
     /* ── 작업 시간 ──
        timeSegs/{날짜} 는 { s(상태), a(시작), b(끝) } 들입니다.
-       ⏱️ 작업 시간 화면과 같은 기준으로 writing·focus 만 셉니다. */
+
+       ★★★ [2026-08-23 — 콩] 여기가 **작업 시간 업적 일곱 개 전부의 관문**
+       입니다 (🎯집중왕 · 🧿초집중왕 · ⛰하루 8시간 · ⏳100시간 · 🗿500시간 ·
+       🦉올빼미 · 🐓아침형). 예전에는 `writing·focus 만` 이라고 손으로 적혀
+       있었는데, 📓multiT(절반) 가 생기면서 규칙이 하나 늘었어요.
+
+       규칙을 여기 또 적지 않고 script_timelog.js 의 workMs 를 부릅니다 —
+       그 파일이 이 파일보다 **먼저** 실려서(index.html 1302 → 1310)
+       화면이 그려질 때쯤엔 늘 있습니다.
+
+       ★ 콩이 고른 것: **업적에도 절반을 적용.** 안 그러면 multiT 로
+         집중왕 따는 게 WRITE 보다 쉬워져서, 정직하게 WRITE 를 쓴 분이
+         손해를 봅니다.
+       ★ 이미 딴 업적은 안 뺏깁니다 (achv/{닉}/got 에 박혀 있어요).
+         새 규칙은 앞으로 쌓는 것에만 걸립니다. */
     let msTotal = 0, bestSeg = 0, bestDayMs = 0, owlDays = 0, larkDays = 0;
     let seg3hCount = 0, day8hCount = 0;
+    const 작업ms = (s, ms) => (window.workMs ? window.workMs(s, ms)
+                                             : ((s === "writing" || s === "focus") ? ms : 0));
     Object.keys(segs).forEach(d => {
       if (!셀날(d)) return;
       let dayMs = 0, owl = false, lark = false;
       Object.values(segs[d] || {}).forEach(seg => {
         if (!seg) return;
-        if (seg.s !== "writing" && seg.s !== "focus") return;
-        const len = Math.max(0, Number(seg.b || 0) - Number(seg.a || 0));
+        const 날것 = Math.max(0, Number(seg.b || 0) - Number(seg.a || 0));
+        const len = 작업ms(seg.s, 날것);
+        if (len <= 0) return;
         dayMs += len;
         if (len >= 3 * 3600e3) seg3hCount++;
         if (len > bestSeg) bestSeg = len;
