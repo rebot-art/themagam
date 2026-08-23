@@ -8792,6 +8792,12 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-weight: var(--fw-medium);
   color: var(--accent);
 }
+/* 갈래 아래 기준 한 줄 (2026-08-23 — 작업 시간 갈래에만) */
+.achv-gnote{
+  margin: -2px 0 6px; padding: 0 2px;
+  font-size: 11px; line-height: 1.5;
+  color: var(--muted);
+}
 .achv-g small{ color: var(--muted); font-weight: var(--fw-normal); }
 .achv-list{ list-style: none; margin: 0; padding: 0; }
 

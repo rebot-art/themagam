@@ -1040,6 +1040,10 @@
         이 달 <b>${시간글(총분)}</b> · 하루 평균 <b>${시간글(하루평균)}</b> ·
         한 사람당 하루 <b class="warm">${시간글(인당)}</b>
       </p>
+      <p class="adm-word-sum" style="opacity:.72; font-size:11.5px;">
+        ※ 여기는 <b>자리에 있었던 시간</b> 전부예요 — 상태를 안 가립니다(☕BREAK·💤AWAY도 들어감).
+        카드의 ⏱ 이나 ✨성실 멤버가 세는 <b>작업 시간</b>(WRITE+JOB+multiT 절반)과는 다른 값이에요.
+      </p>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ymKey} 방 전체 작업 시간과 한 사람당 평균">
         ${주말}${눈금}
         <polyline fill="none" stroke="#BA7517" stroke-width="2" stroke-linejoin="round" points="${선.join(" ")}"/>
@@ -1896,7 +1900,8 @@
         <button type="button" class="adm-dig-x" onclick="this.closest('#adm-dig').remove()">✕</button></div>
       ${rows || `<div class="adm-msg">이 날 기록된 구간이 없어요 — 출석 도장만 찍히고
                  연결이 바로 끊긴 경우예요.</div>`}
-      <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b></div>
+      <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b>
+        <span style="font-weight:400; opacity:.7;">— 상태를 안 가린 자리 지킨 시간이에요</span></div>
       <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
         <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분께
         <b>접속 유지 가이드</b>(크롬 탭 안 재우기)를 안내해 주세요.</div>`;

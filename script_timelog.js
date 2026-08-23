@@ -585,7 +585,8 @@
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 작업 시간 — Write(집필)와 Job(다른 일)을 더한 합계예요<br>
+        <div class="rec-sub">오늘 작업 시간 — Write(집필) + Job(다른 일) + 📓multiT(병행)<br>
+          <b>📓multiT는 절반만 들어가요</b> — 여러 일을 함께 하는 중이라 온전히 집중하기 어려우니까요.<br>
           <b>카드의 타이머를 리셋해도 이 기록은 그대로예요.</b></div>
       </div>
 
@@ -753,7 +754,7 @@
     }
     const h = Math.floor(합분 / 60), m = 합분 % 60;
     const 꼬리 = h ? (m ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
-    return `<div class="rec-h2">이번 달 하루하루 <span class="hint">(Write + Job · 분)</span></div>
+    return `<div class="rec-h2">이번 달 하루하루 <span class="hint">(Write + Job + multiT 절반 · 분)</span></div>
             ${그림(pts)}
             <div class="rec-foot">이번 달 <b>${꼬리}</b></div>`;
   }
@@ -859,7 +860,9 @@
       tw += v; tp += r.pomo;
       L.push(`${r.date}  Write ${fmtDur(r.totals.writing)} · Job ${fmtDur(r.totals.focus)} · multiT ${fmtDur(r.totals.multi)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
     });
-    L.push(`합계      Write+Job ${fmtDur(tw)} · 🍅 ${tp}`);
+    /* ★ 값(tw)은 workSum 이라 multiT 절반이 이미 들어가 있습니다.
+       라벨만 "Write+Job" 이면 더해 봐도 안 맞아서 사람이 헷갈려요. */
+    L.push(`합계      작업 시간 ${fmtDur(tw)} (Write + Job + multiT 절반) · 🍅 ${tp}`);
     L.push("");
     L.push(`■ Letters (${달이름})`);
 

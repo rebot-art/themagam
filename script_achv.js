@@ -811,7 +811,13 @@
         ${GROUPS.map(g => {
           const list = ACHV.filter(a => a.g === g);
           const done = list.filter(a => _got[a.id]).length;
+          /* 📓 [2026-08-23 — 콩] 작업 시간 갈래에만 기준을 한 줄 밝힙니다.
+             업적 일곱 개의 설명에 저마다 "multiT 는 절반" 을 적으면 목록이
+             시끄러워져요. 갈래 이름 아래 한 번이면 충분합니다. */
+          const 기준 = (g === "작업 시간")
+            ? `<p class="achv-gnote">🔥WRITE + 💻JOB + 📓multiT의 <b>절반</b>으로 셉니다</p>` : "";
           return `<div class="achv-g">${esc(g)} <small>${done}/${list.length}</small></div>
+                  ${기준}
                   <ul class="achv-list">${list.map(rowHtml).join("")}</ul>`;
         }).join("")}
       </div>
