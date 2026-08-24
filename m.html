@@ -299,8 +299,16 @@
   const esc = (s) => String(s == null ? "" : s)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
-  /* 작업방과 **같은 규칙**이어야 합니다 (script_realtime.js) */
-  const DISCONNECT_GRACE_MS = 30 * 60 * 1000;
+  /* 작업방과 **같은 규칙**이어야 합니다 (script_realtime.js)
+     ★★★ [고침 2026-08-25 — 콩 신고] 30분으로 굳어 있었습니다.
+       작업방은 2026-08-15 에 30분 → **5분**으로 줄였는데(창을 닫을 때 즉시
+       사라지는 길이 뚫려서, 유예는 이제 비정상 상황만 덮으면 됩니다)
+       이 파일이 안 따라왔어요. 그래서 5~30분 사이에 끊긴 사람이
+       **작업방에서는 사라졌는데 폰에서는 접속 중**으로 보였습니다.
+       — 콩이 실제로 겪음: 작업방 "1명 집필 중" / 폰 "온라인 2"
+       ★ 주석은 "같은 규칙이어야 한다"고 맞는 말을 하고 있었는데 값만
+         안 따라갔습니다. 그래서 checks.js 가 **두 값을 직접 견주게** 했어요. */
+  const DISCONNECT_GRACE_MS = 5 * 60 * 1000;
   const ONLINE_STALE_MS     = 12 * 60 * 60 * 1000;
   const STATUSES = [
     { v:"writing", cls:"st-writing", label:"🔥WRITE🔥" },
