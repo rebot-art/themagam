@@ -490,6 +490,19 @@
     return `<div class="rb-hwrap"><div class="rb-hrow" style="animation-duration:${초}s">${한벌}${한벌}</div></div>`;
   }
 
+  /* [추가 2026-08-26 — 콩] 🏅 개근 제목 오른쪽 — `8월 21명, 9월 3명`.
+     ★ 같은 _honors 를 개근HTML() 과 함께 보므로 새로 읽는 자료가 없습니다.
+     ★ 명단이 없는 달(예: 18일 전의 9월)은 그 달만 조용히 빠집니다 —
+       개근HTML() 이 "흘릴 것이 없으면 그 달을 안 넣는" 규칙과 같습니다. */
+  function 개근수글() {
+    const [지난, 이번] = 두달키();
+    return [지난, 이번]
+      .map(k => ({ 달: Number(k.slice(5)), n: (_honors[k] || []).filter(Boolean).length }))
+      .filter(g => g.n > 0)
+      .map(g => `${g.달}월 ${g.n}명`)
+      .join(", ");
+  }
+
   /* =====================================================================
      🙋 총원 중 몇 명 출석 (2026-08-23 — 콩)
      ---------------------------------------------------------------------
@@ -632,7 +645,7 @@
     /* 같은 명단이면 손대지 않습니다 — 손대는 순간 흐름이 되감깁니다 */
     if (칸.dataset.sig === 개근) return;
     칸.dataset.sig = 개근;
-    칸.innerHTML = `<div class="rb-t">🏅 개근</div>${개근}`;
+    칸.innerHTML = `<div class="rb-t rb-t-row"><span>🏅 개근</span><span class="rb-att">${escapeHtml(개근수글())}</span></div>${개근}`;
   }
   /* 글자수 쪽에서 새 줄이 흘러올 때 불러 줍니다 (자료를 다시 안 읽습니다) */
   window.renderRoomBoard = drawBoard;
