@@ -515,11 +515,25 @@ const CARD_PATTERNS = [
   /* [추가 2026-08-26 — 콩] 링도트 — 채운 원이 아니라 테만 남긴 원.
      기존 넷은 전부 "꽉 찬 점" 계열이라, 속이 빈 것 하나로 결을 바꿨습니다. */
   { id: "dots-ring",      label: "링도트 (테두리만)" },
+  /* [추가 2026-08-26 — 콩] 폴카도트 큰판 — 기존 폴카도트를 30% 키워
+     미리보기로 보여드렸는데, 콩이 "그 미리보기의 80%로" 요청해서
+     결과적으로 원래 크기의 약 1.04배(29px→23px 타일)가 됐습니다. */
+  { id: "dots-polka-big", label: "폴카도트 (큰판)" },
   { id: "grid",           label: "그리드" },
+  /* [추가 2026-08-26 — 콩] 원고지 — 콩이 보내준 캡처(빨간 격자)에서.
+     기존 그리드(16px/1px)보다 칸을 넓히고 선도 굵혀(20px/1.5px) 원고지
+     느낌을 냈습니다. 색은 무늬 색을 빨강으로 고르면 진짜 원고지 같아요 —
+     이 방은 무늬마다 기본색을 따로 두지 않고 다 같은 색 고르개를
+     씁니다(위 curPatColor). */
+  { id: "grid-manuscript", label: "원고지" },
   { id: "grid-wide",      label: "성근 그리드" },
   { id: "grid-diamond",   label: "마름모 격자 ◇" },
   { id: "cross",          label: "십자" },
   { id: "check",          label: "체크" },
+  /* [추가 2026-08-26 — 콩] 체스판 체크 — 선이 아니라 칸을 통째로 채우는
+     진짜 체스판. conic-gradient 로 그립니다. 미리보기(20px)를 보고
+     "80% 크기로" 요청해 16px 로 줄였습니다. */
+  { id: "check-chess",    label: "체스판 체크" },
   { id: "check-gingham",  label: "깅엄 체크" },
   /* [추가 2026-08-26 — 콩] 타탄·버팔로 — 둘 다 체크의 결이지만 굵기가
      다릅니다. 타탄은 굵은 선 사이에 가는 선을 한 겹 더 넣어 격자무늬
@@ -528,7 +542,15 @@ const CARD_PATTERNS = [
        크기의 70%로" 요청해 10px/20px 로 줄였습니다. */
   { id: "check-tartan",   label: "타탄 체크" },
   { id: "check-buffalo",  label: "버팔로 체크" },
+  /* [추가 2026-08-26 — 콩] 깅엄 큰판 — 폴카도트 큰판과 같은 사연으로
+     30% 키운 미리보기를 다시 80%로 줄여, 원래보다 약간 큰 정도(8px/17px). */
+  { id: "check-gingham-big", label: "깅엄 체크 (큰판)" },
   { id: "line",           label: "가로 줄무늬" },
+  /* [추가 2026-08-26 — 콩] 세로·굵은 가로·굵은 세로 — 기존엔 가로 줄무늬
+     (가는 것) 하나뿐이었습니다. 방향과 굵기를 갖췄습니다. */
+  { id: "line-vert",      label: "세로 줄무늬" },
+  { id: "line-bold",      label: "굵은 가로 줄무늬" },
+  { id: "line-bold-vert", label: "굵은 세로 줄무늬" },
   { id: "stripe",         label: "사선 줄무늬 ／" },
   { id: "stripe-rev",     label: "사선 줄무늬 ＼" },
   /* [추가 2026-08-26 — 콩] 이중·굵은 사선 — 기존 사선(2px/10px)의 다른
@@ -544,6 +566,13 @@ const CARD_PATTERNS = [
      잔물결은 칸마다 동심원을 겹쳐 잔잔한 파문처럼 보입니다. */
   { id: "wave",           label: "물결" },
   { id: "wave-ripple",    label: "잔물결" },
+  /* [추가 2026-08-26 — 콩] 벌집 — 캡처로 보여주신 육각형 무늬. 잘 알려진
+     6겹 linear-gradient 기법으로 그립니다(이미지 없이). 표준 크기(40×70)
+     그대로면 카드에서 너무 커서 0.8배(32×56)로 미리 줄여 보여드렸고,
+     거기서 다시 "70%와 50%" 를 요청하셔서 두 크기만 넣습니다
+     (0.8배 자체는 넣지 않음 — 콩이 고른 건 이 둘뿐이라). */
+  { id: "hex",            label: "벌집" },
+  { id: "hex-mini",       label: "잔벌집 (더 촘촘)" },
   { id: "shape-star",     label: "⭐ 별" },
   { id: "shape-sun",      label: "☀️ 해" },
   { id: "shape-moon",     label: "🌙 달" },
@@ -551,7 +580,14 @@ const CARD_PATTERNS = [
   { id: "shape-flower",   label: "🌸 꽃" },
   { id: "shape-paw",      label: "🐾 발바닥" },
   { id: "shape-cloud",    label: "☁️ 구름" },
-  { id: "shape-leaf",     label: "🌿 잎" }
+  { id: "shape-leaf",     label: "🌿 잎" },
+  /* [추가 2026-08-26 — 콩] 카드 무늬 세 종 — 리본은 빼고 이 셋만.
+     다른 shape-* 와 같은 틀(::before, mask-size 26px)을 그대로 쓰므로
+     "기존 하트와 같은 사이즈" 가 저절로 됩니다 — 크기를 담당하는 규칙이
+     shape-* 전체에 공용이라, 새로 넣기만 하면 자동으로 맞습니다. */
+  { id: "shape-spade",    label: "♠️ 스페이드" },
+  { id: "shape-diamond",  label: "♦️ 다이아" },
+  { id: "shape-club",     label: "♣️ 클로버" }
 ];
 function sanitizePattern(v) {
   const t = String(v || "none");

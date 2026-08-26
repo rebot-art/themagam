@@ -1302,6 +1302,27 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M20%204C10%204%204%209%204%2016c0%201.6.4%203%201.1%204.2C8.6%2013.9%2012.6%2011%2018%209.6%2013.4%2012%209.6%2015.6%207.6%2020.6%209%2021.5%2010.8%2022%2012.8%2022%2018%2022%2020%2015%2020%204z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M20%204C10%204%204%209%204%2016c0%201.6.4%203%201.1%204.2C8.6%2013.9%2012.6%2011%2018%209.6%2013.4%2012%209.6%2015.6%207.6%2020.6%209%2021.5%2010.8%2022%2012.8%2022%2018%2022%2020%2015%2020%204z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
 }
+/* [추가 2026-08-26 — 콩] ♠️ 스페이드 · ♦️ 다이아 · ♣️ 클로버.
+   다른 shape-* 와 똑같은 틀(mask-repeat, mask-size 26px)을 그대로 써서
+   하트와 같은 크기·간격으로 흩뿌려집니다. 리본은 콩이 빼기로 했습니다. */
+.user-card.pat-shape-spade::before,
+.card-preview.pat-shape-spade::before{
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M12%202C7.5%208%204%2011.8%204%2015a5%205%200%200%200%208%204c-.4%202-1.3%203.3-2.7%204h5.4c-1.4-.7-2.3-2-2.7-4a5%205%200%200%200%208-4c0-3.2-3.5-7-8-13z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M12%202C7.5%208%204%2011.8%204%2015a5%205%200%200%200%208%204c-.4%202-1.3%203.3-2.7%204h5.4c-1.4-.7-2.3-2-2.7-4a5%205%200%200%200%208-4c0-3.2-3.5-7-8-13z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
+}
+.user-card.pat-shape-diamond::before,
+.card-preview.pat-shape-diamond::before{
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M12%202L20.5%2012%2012%2022%203.5%2012z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M12%202L20.5%2012%2012%2022%203.5%2012z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
+}
+.user-card.pat-shape-club::before,
+.card-preview.pat-shape-club::before{
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cg%20fill%3D%27black%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%277.5%27%20r%3D%274%27%2F%3E%3Ccircle%20cx%3D%277.5%27%20cy%3D%2713.5%27%20r%3D%274%27%2F%3E%3Ccircle%20cx%3D%2716.5%27%20cy%3D%2713.5%27%20r%3D%274%27%2F%3E%3Cpath%20d%3D%27M10.7%2015h2.6l1.2%207h-5z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cg%20fill%3D%27black%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%277.5%27%20r%3D%274%27%2F%3E%3Ccircle%20cx%3D%277.5%27%20cy%3D%2713.5%27%20r%3D%274%27%2F%3E%3Ccircle%20cx%3D%2716.5%27%20cy%3D%2713.5%27%20r%3D%274%27%2F%3E%3Cpath%20d%3D%27M10.7%2015h2.6l1.2%207h-5z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+}
 .user-card.pat-stripe-rev{
   background-image: repeating-linear-gradient(-45deg,
     var(--cpat) 0 2px, transparent 2px 10px);
@@ -1569,6 +1590,28 @@ body.room-bg-on{
   background-size: 16px 16px;
 }
 
+/* [추가 2026-08-26] 폴카도트 큰판 — 폴카도트(위)를 30% 키운 미리보기를
+   다시 80%로 줄여, 결과적으로 원래보다 약간만 큽니다(22px→23px 타일) */
+.user-card.pat-dots-polka-big,
+.card-preview.pat-dots-polka-big{
+  background-image:
+    radial-gradient(var(--cpat) 2.7px, transparent 2.9px),
+    radial-gradient(var(--cpat) 2.7px, transparent 2.9px);
+  background-size: 23px 23px;
+  background-position: 0 0, 11.5px 11.5px;
+}
+
+/* [추가 2026-08-26 — 콩 캡처] 원고지 — 기존 그리드(16px/1px)보다 칸을
+   넓히고 선도 굵혀(20px/1.5px) 만년필로 칸을 채우던 원고지 느낌을 냅니다.
+   ★ 색은 정하지 않습니다 — 무늬 색을 빨강으로 고르면 진짜 원고지 같아요. */
+.user-card.pat-grid-manuscript,
+.card-preview.pat-grid-manuscript{
+  background-image:
+    linear-gradient(var(--cpat) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--cpat) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
 /* 성근 그리드 — 기존 그리드(16px)의 큰 칸(34px) 판. 셔츠의 윈도판 체크 */
 .user-card.pat-grid-wide,
 .card-preview.pat-grid-wide{
@@ -1585,6 +1628,17 @@ body.room-bg-on{
   background-image:
     repeating-linear-gradient(45deg,  var(--cpat) 0 1px, transparent 1px 14px),
     repeating-linear-gradient(-45deg, var(--cpat) 0 1px, transparent 1px 14px);
+}
+
+/* [추가 2026-08-26] 체스판 체크 — 선이 아니라 칸 자체를 채우는 진짜
+   체스판. conic-gradient 한 장으로 그립니다 — 2×2 칸이 한 바퀴(360도)에
+   다 들어가서, 네 칸 중 마주보는 두 칸만 색을 칠하면 격자가 됩니다.
+   ★ 미리보기(20px)를 보고 콩이 "80% 크기로" 요청해 16px 로 줄였습니다. */
+.user-card.pat-check-chess,
+.card-preview.pat-check-chess{
+  background-image: conic-gradient(var(--cpat) 90deg,
+    transparent 90deg 180deg, var(--cpat) 180deg 270deg, transparent 270deg);
+  background-size: 16px 16px;
 }
 
 /* 깅엄 체크 — 반투명 띠를 가로세로로 겹칩니다. 겹친 자리만 진해져서
@@ -1620,6 +1674,35 @@ body.room-bg-on{
   background-image:
     repeating-linear-gradient(0deg,  var(--cpat) 0 10px, transparent 10px 20px),
     repeating-linear-gradient(90deg, var(--cpat) 0 10px, transparent 10px 20px);
+}
+
+/* [추가 2026-08-26] 깅엄 큰판 — 폴카도트 큰판과 같은 사연: 30% 키운
+   미리보기를 다시 80%로 줄여, 원래(8px/16px)보다 살짝 큰 8px/17px */
+.user-card.pat-check-gingham-big,
+.card-preview.pat-check-gingham-big{
+  background-image:
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 17px),
+    repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 17px);
+}
+
+/* [추가 2026-08-26] 세로·굵은 가로·굵은 세로 줄무늬 — 기존 가로 줄무늬
+   (line, 1px/9px)의 방향·굵기 짝. 굵은 쪽은 5px/16px 로 훨씬 도드라져요 */
+.user-card.pat-line-vert,
+.card-preview.pat-line-vert{
+  background-image: repeating-linear-gradient(90deg,
+    var(--cpat) 0 1px, transparent 1px 9px);
+}
+.user-card.pat-line-bold,
+.card-preview.pat-line-bold{
+  background-image: repeating-linear-gradient(0deg,
+    var(--cpat) 0 5px, transparent 5px 16px);
+}
+.user-card.pat-line-bold-vert,
+.card-preview.pat-line-bold-vert{
+  background-image: repeating-linear-gradient(90deg,
+    var(--cpat) 0 5px, transparent 5px 16px);
 }
 
 /* [추가 2026-08-26] 이중·굵은 사선 — 기존 사선(2px/10px)과 다른 굵기
@@ -1692,6 +1775,36 @@ body.room-bg-on{
   background-image: repeating-radial-gradient(circle at center,
     var(--cpat) 0 1.5px, transparent 1.5px 9px);
   background-size: 32px 32px;
+}
+
+/* [추가 2026-08-26] 벌집 — 잘 알려진 6겹 linear-gradient 육각형 기법
+   (이미지 없이 순수 CSS). 표준 크기(40×70)를 카드에 맞춰 0.8배(32×56)로
+   줄여 미리보였고, 거기서 다시 콩이 고른 두 크기(70%·50%)만 넣습니다.
+   ★ 여섯 겹 중 앞 넷은 육각형 테두리, 뒤 둘은 절반 톤으로 안쪽 능선을
+     그려 입체감을 냅니다 — 숫자만 비율대로 줄이면 크기가 바뀝니다. */
+.user-card.pat-hex,
+.card-preview.pat-hex{
+  background-image:
+    linear-gradient(30deg,  var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(150deg, var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(30deg,  var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(150deg, var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(60deg,  color-mix(in srgb, var(--cpat) 55%, transparent) 25%, transparent 25.5%, transparent 75%, color-mix(in srgb, var(--cpat) 55%, transparent) 75%, color-mix(in srgb, var(--cpat) 55%, transparent)),
+    linear-gradient(60deg,  color-mix(in srgb, var(--cpat) 55%, transparent) 25%, transparent 25.5%, transparent 75%, color-mix(in srgb, var(--cpat) 55%, transparent) 75%, color-mix(in srgb, var(--cpat) 55%, transparent));
+  background-size: 22px 39px;
+  background-position: 0 0, 0 0, 11px 20px, 11px 20px, 0 0, 11px 20px;
+}
+.user-card.pat-hex-mini,
+.card-preview.pat-hex-mini{
+  background-image:
+    linear-gradient(30deg,  var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(150deg, var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(30deg,  var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(150deg, var(--cpat) 12%, transparent 12.5%, transparent 87%, var(--cpat) 87.5%, var(--cpat)),
+    linear-gradient(60deg,  color-mix(in srgb, var(--cpat) 55%, transparent) 25%, transparent 25.5%, transparent 75%, color-mix(in srgb, var(--cpat) 55%, transparent) 75%, color-mix(in srgb, var(--cpat) 55%, transparent)),
+    linear-gradient(60deg,  color-mix(in srgb, var(--cpat) 55%, transparent) 25%, transparent 25.5%, transparent 75%, color-mix(in srgb, var(--cpat) 55%, transparent) 75%, color-mix(in srgb, var(--cpat) 55%, transparent));
+  background-size: 16px 28px;
+  background-position: 0 0, 0 0, 8px 14px, 8px 14px, 0 0, 8px 14px;
 }
 
 /* [삭제] 카드 강조색 띠와 "내 카드" 테두리는 요청에 따라 없앴습니다.
