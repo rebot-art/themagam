@@ -378,6 +378,17 @@
     } catch (e) { return 0; }
   }
 
+  /* [추가 2026-08-26 — 콩] 🔥 지금 n명 참여 중 오른쪽 끝에 당일 방 전체
+     글자수. 위 "📊 오늘 접속 현황"의 출석글() 과 같은 자리(rb-t-row·
+     rb-att)를 그대로 씁니다 — 새 CSS도, 새로 읽는 자료도 없습니다.
+     오늘참여자수() 와 같은 _today 를 보므로 요청이 하나도 안 늘어요. */
+  function 오늘글자수합() {
+    try {
+      const t = window.Wordcount?._state?.().today || {};
+      return Object.values(t).reduce((a, v) => a + Number(v?.total || 0), 0);
+    } catch (e) { return 0; }
+  }
+
   function 흐름줄들() {
     let feed = [];
     try { feed = (window.Wordcount?._state?.().feed || []).filter(f => f && f.type !== "pomo"); }
@@ -588,7 +599,7 @@
           <div class="rb-bars" id="rb-bars"></div>
         </div>
         <div class="rb-box">
-          <div class="rb-t" id="rb-feed-t"></div>
+          <div class="rb-t rb-t-row"><span id="rb-feed-t"></span><span class="rb-att" id="rb-wc"></span></div>
           <div class="rb-fb" id="rb-feed"></div>
         </div>
       </div>`;
@@ -601,6 +612,11 @@
     const 출석칸 = box.querySelector("#rb-att");
     if (출석칸) 출석칸.textContent = 출석글();
     if (제목) 제목.textContent = `🔥 ${n > 0 ? `지금 ${n}명 참여 중` : "지금 방에서"}`;
+    const 글자수칸 = box.querySelector("#rb-wc");
+    if (글자수칸) {
+      const 합 = 오늘글자수합();
+      글자수칸.textContent = 합 > 0 ? `오늘 ${comma(합)}자` : "";
+    }
     if (흐름) 흐름.innerHTML = 흐름줄들();
 
     const 개근 = 개근HTML();
