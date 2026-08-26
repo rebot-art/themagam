@@ -1560,6 +1560,15 @@ body.room-bg-on{
   background-position: 0 0, 11px 11px;
 }
 
+/* [추가 2026-08-26] 링도트 — 꽉 찬 원이 아니라 테만 남깁니다.
+   transparent → 색 → transparent 세 단으로, 가운데 구멍을 뚫습니다 */
+.user-card.pat-dots-ring,
+.card-preview.pat-dots-ring{
+  background-image: radial-gradient(circle,
+    transparent 3.2px, var(--cpat) 3.2px 4.2px, transparent 4.2px);
+  background-size: 16px 16px;
+}
+
 /* 성근 그리드 — 기존 그리드(16px)의 큰 칸(34px) 판. 셔츠의 윈도판 체크 */
 .user-card.pat-grid-wide,
 .card-preview.pat-grid-wide{
@@ -1589,6 +1598,55 @@ body.room-bg-on{
       color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 16px);
 }
 
+/* [추가 2026-08-26] 타탄 체크 — 깅엄과 달리 반투명 겹침이 아니라, 굵은
+   선(3px/22px) 사이에 가는 선(1px/11px)을 한 겹 더 넣어 격자 원단처럼
+   두 굵기가 함께 보이게 합니다 */
+.user-card.pat-check-tartan,
+.card-preview.pat-check-tartan{
+  background-image:
+    repeating-linear-gradient(0deg,  var(--cpat) 0 3px, transparent 3px 22px),
+    repeating-linear-gradient(90deg, var(--cpat) 0 3px, transparent 3px 22px),
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 1px, transparent 1px 11px);
+}
+
+/* [추가 2026-08-26] 버팔로 체크 — 굵은 두 줄만 큼직하게, 남방 체크 느낌.
+   ★ 원래 굵기는 14px/28px 이었는데, 미리보기를 보고 콩이 "미리보기
+     크기의 70%로" 요청해 10px/20px 로 줄였습니다. */
+.user-card.pat-check-buffalo,
+.card-preview.pat-check-buffalo{
+  background-image:
+    repeating-linear-gradient(0deg,  var(--cpat) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(90deg, var(--cpat) 0 10px, transparent 10px 20px);
+}
+
+/* [추가 2026-08-26] 이중·굵은 사선 — 기존 사선(2px/10px)과 다른 굵기
+   두 가지. 기존처럼 정방향(45deg)·역방향(-45deg)을 짝으로 둡니다. */
+.user-card.pat-stripe-double,
+.card-preview.pat-stripe-double{
+  background-image: repeating-linear-gradient(45deg,
+    var(--cpat) 0 2px, transparent 2px 5px,
+    var(--cpat) 5px 7px, transparent 7px 16px);
+}
+.user-card.pat-stripe-double-rev,
+.card-preview.pat-stripe-double-rev{
+  background-image: repeating-linear-gradient(-45deg,
+    var(--cpat) 0 2px, transparent 2px 5px,
+    var(--cpat) 5px 7px, transparent 7px 16px);
+}
+.user-card.pat-stripe-bold,
+.card-preview.pat-stripe-bold{
+  background-image: repeating-linear-gradient(45deg,
+    var(--cpat) 0 6px, transparent 6px 18px);
+}
+.user-card.pat-stripe-bold-rev,
+.card-preview.pat-stripe-bold-rev{
+  background-image: repeating-linear-gradient(-45deg,
+    var(--cpat) 0 6px, transparent 6px 18px);
+}
+
 /* 지그재그 — 삼각형 네 겹으로 산줄기를 잇는 고전 셰브론 기법 */
 .user-card.pat-zigzag,
 .card-preview.pat-zigzag{
@@ -1611,6 +1669,29 @@ body.room-bg-on{
       transparent 9px, var(--cpat) 9px 10px, transparent 10.5px);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
+}
+
+/* [추가 2026-08-26] 물결 — 비늘(scallop)과 같은 반원 기법입니다. 비늘은
+   반원 두 겹을 **같은 자리**에 겹쳐 두었는데, 물결은 위아래로 반 칸씩
+   엇갈려 두어 반원이 서로 이어지며 물결선이 됩니다. */
+.user-card.pat-wave,
+.card-preview.pat-wave{
+  background-image:
+    radial-gradient(circle at 50% -6px,
+      transparent 9px, var(--cpat) 9px 10px, transparent 10.5px),
+    radial-gradient(circle at 50% 16px,
+      transparent 9px, var(--cpat) 9px 10px, transparent 10.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 0;
+}
+
+/* [추가 2026-08-26] 잔물결 — 칸마다 동심원을 겹쳐 파문처럼 보이게 합니다.
+   물결(줄)과 달리 방향이 없는 잔잔한 무늬예요. */
+.user-card.pat-wave-ripple,
+.card-preview.pat-wave-ripple{
+  background-image: repeating-radial-gradient(circle at center,
+    var(--cpat) 0 1.5px, transparent 1.5px 9px);
+  background-size: 32px 32px;
 }
 
 /* [삭제] 카드 강조색 띠와 "내 카드" 테두리는 요청에 따라 없앴습니다.

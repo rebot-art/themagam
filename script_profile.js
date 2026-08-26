@@ -512,17 +512,38 @@ const CARD_PATTERNS = [
   { id: "dots",           label: "도트" },
   { id: "dots-coin",      label: "코인도트 (큼)" },
   { id: "dots-polka",     label: "폴카도트 (엇갈림)" },
+  /* [추가 2026-08-26 — 콩] 링도트 — 채운 원이 아니라 테만 남긴 원.
+     기존 넷은 전부 "꽉 찬 점" 계열이라, 속이 빈 것 하나로 결을 바꿨습니다. */
+  { id: "dots-ring",      label: "링도트 (테두리만)" },
   { id: "grid",           label: "그리드" },
   { id: "grid-wide",      label: "성근 그리드" },
   { id: "grid-diamond",   label: "마름모 격자 ◇" },
   { id: "cross",          label: "십자" },
   { id: "check",          label: "체크" },
   { id: "check-gingham",  label: "깅엄 체크" },
+  /* [추가 2026-08-26 — 콩] 타탄·버팔로 — 둘 다 체크의 결이지만 굵기가
+     다릅니다. 타탄은 굵은 선 사이에 가는 선을 한 겹 더 넣어 격자무늬
+     원단처럼, 버팔로는 굵은 두 줄만 큼직하게 — 남방 체크 느낌입니다.
+     ★ 버팔로는 원래 굵기(14px/28px)를 미리보기에서 보고 콩이 "미리보기
+       크기의 70%로" 요청해 10px/20px 로 줄였습니다. */
+  { id: "check-tartan",   label: "타탄 체크" },
+  { id: "check-buffalo",  label: "버팔로 체크" },
   { id: "line",           label: "가로 줄무늬" },
   { id: "stripe",         label: "사선 줄무늬 ／" },
   { id: "stripe-rev",     label: "사선 줄무늬 ＼" },
+  /* [추가 2026-08-26 — 콩] 이중·굵은 사선 — 기존 사선(2px/10px)의 다른
+     굵기 두 가지. 기존처럼 정방향(／)·역방향(＼)을 짝으로 둡니다. */
+  { id: "stripe-double",     label: "이중 사선 ／" },
+  { id: "stripe-double-rev", label: "이중 사선 ＼" },
+  { id: "stripe-bold",       label: "굵은 사선 ／" },
+  { id: "stripe-bold-rev",   label: "굵은 사선 ＼" },
   { id: "zigzag",         label: "지그재그" },
   { id: "scallop",        label: "비늘 (스캘럽)" },
+  /* [추가 2026-08-26 — 콩] 물결 — 이 방에 없던 갈래. 비늘(scallop)과
+     같은 반원 기법이지만, 위아래로 엇갈려 이으면 물결선이 됩니다.
+     잔물결은 칸마다 동심원을 겹쳐 잔잔한 파문처럼 보입니다. */
+  { id: "wave",           label: "물결" },
+  { id: "wave-ripple",    label: "잔물결" },
   { id: "shape-star",     label: "⭐ 별" },
   { id: "shape-sun",      label: "☀️ 해" },
   { id: "shape-moon",     label: "🌙 달" },
