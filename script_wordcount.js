@@ -440,6 +440,7 @@
          오늘 탭과 같은 흐르는 기록이지만, 내가 올린 것만 골라 보여줍니다. */
       const myFeed = _feed.filter(f => f.nick === me() && f.type !== "pomo");
       rows.innerHTML = drawRows(vals, vals.length - 1)
+        + weekRankHtml()
         + `<div class="wc-me-h">오늘 내 기록</div>`
         + (myFeed.length
             ? drawFeed(myFeed)
@@ -781,6 +782,57 @@
       });
     });
     return out;
+  }
+
+  /* =====================================================================
+     🏆 이번 주 랭킹 — '기록' 탭, 요일 그래프 아래 (2026-08-26 — 콩)
+     ---------------------------------------------------------------------
+     이 방은 줄 세우지 않는 게 취지라, 오늘 탭도 채팅처럼 흐르게 만들었을
+     정도입니다(파일 맨 위 [순위를 보여주지 않는 이유] 참고). 그런데 "내가
+     잘 하고 있나" 를 알고 싶다는 건의가 있었고, 콩이 고른 절충안은 —
+
+       ① 등수는 매기되 **이름은 안 보여줍니다** (1~3위는 등수만. 빈칸으로
+          두면 오히려 "누굴 가렸다" 는 티가 나서, 그 자리를 등수 글자로 채웁니다)
+       ② **내 등수만** 내 이름과 함께 보여줍니다.
+       ③ 1~3위 안에 없으면 그 아래에 내 줄만 하나 더 붙입니다(⋯ 로 구분).
+          전체 명단을 쭉 보여주는 게 아니라 "내가 몇 등인지" 에만 답합니다.
+
+     ★ [탭이 아니라 섹션인 이유] Work Log 판은 폭이 챗 창과 같게(352px)
+       고정돼 있고, 탭이 다섯을 넘으면 두 줄로 접힙니다(styles.css
+       #dock-panel-wc, 2026-08-22 확정). 여섯째 탭 대신, 이미 있는 '기록'
+       탭 안에 카드 하나를 더 붙이는 쪽을 콩이 골랐습니다.
+     ★ 새로 읽는 자료가 없습니다 — sumWeek() 이 '기록' 탭이 이미 붙여 둔
+       _week(이번 주 wordlog, 방 전체) 를 그대로 더합니다.
+     ★ (전체 n명 중) 의 n 은 방 전체 인원이 아니라, 이번 주 글자수를
+       한 번이라도 올린 사람 수입니다 — 콩이 그렇게 요청했습니다. */
+  function weekRankHtml() {
+    const 랭킹 = Object.entries(sumWeek())
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1]);
+    if (!랭킹.length) return "";   // 아무도 안 썼으면 카드 자체를 안 띄웁니다
+
+    const 나 = me();
+    const 내등수 = 랭킹.findIndex(([n]) => n === 나);   // -1 = 이번 주 기록 없음
+    const TOP = 3;
+
+    const 줄들 = 랭킹.slice(0, TOP).map(([n, v], i) => {
+      const 내것 = n === 나;
+      return `<div class="wc-row${내것 ? " me" : ""}">
+                <span class="wc-nm">${i + 1}위${내것 ? " " + esc(n) : ""}</span>
+                <span class="wc-n">${fmt(v)}자</span>
+              </div>`;
+    });
+    if (내등수 >= TOP) {
+      if (내등수 > TOP) 줄들.push(`<div class="wc-empty" style="text-align:center">⋯</div>`);
+      const [n, v] = 랭킹[내등수];
+      줄들.push(`<div class="wc-row me">
+                   <span class="wc-nm">${내등수 + 1}위 ${esc(n)}</span>
+                   <span class="wc-n">${fmt(v)}자</span>
+                 </div>`);
+    } else if (내등수 < 0) {
+      줄들.push(`<div class="wc-empty">아직 이번 주 기록이 없어요 — 글자수를 올리면 순위에 들어가요.</div>`);
+    }
+    return `<div class="wc-me-h">🏆 이번 주 랭킹 · 전체 ${랭킹.length}명 중</div>${줄들.join("")}`;
   }
 
   function drawRows(list, meIdx) {
