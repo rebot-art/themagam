@@ -1633,12 +1633,13 @@ body.room-bg-on{
 /* [추가 2026-08-26] 체스판 체크 — 선이 아니라 칸 자체를 채우는 진짜
    체스판. conic-gradient 한 장으로 그립니다 — 2×2 칸이 한 바퀴(360도)에
    다 들어가서, 네 칸 중 마주보는 두 칸만 색을 칠하면 격자가 됩니다.
-   ★ 미리보기(20px)를 보고 콩이 "80% 크기로" 요청해 16px 로 줄였습니다. */
+   ★ 한때 80%(16px)로 줄였다가, 콩이 "맛이 안 산다"고 해서
+     미리보기 크기인 20px 로 되돌렸습니다. */
 .user-card.pat-check-chess,
 .card-preview.pat-check-chess{
   background-image: conic-gradient(var(--cpat) 90deg,
     transparent 90deg 180deg, var(--cpat) 180deg 270deg, transparent 270deg);
-  background-size: 16px 16px;
+  background-size: 20px 20px;
 }
 
 /* 깅엄 체크 — 반투명 띠를 가로세로로 겹칩니다. 겹친 자리만 진해져서
@@ -1676,15 +1677,18 @@ body.room-bg-on{
     repeating-linear-gradient(90deg, var(--cpat) 0 10px, transparent 10px 20px);
 }
 
-/* [추가 2026-08-26] 깅엄 큰판 — 폴카도트 큰판과 같은 사연: 30% 키운
-   미리보기를 다시 80%로 줄여, 원래(8px/16px)보다 살짝 큰 8px/17px */
+/* [추가 2026-08-26] 깅엄 큰판 — 기본 깅엄(8px/16px)을 30% 키운 판.
+   ★ 한때 80%(8px/17px)로 줄였다가, 콩이 "맛이 안 산다"고 해서
+     미리보기 크기인 10.4px/20.8px 로 되돌렸습니다. 기본 깅엄과 똑같이
+     띠와 빈칸이 정확히 반반이라야 식탁보 느낌이 살아서, 소수점을
+     그대로 씁니다 */
 .user-card.pat-check-gingham-big,
 .card-preview.pat-check-gingham-big{
   background-image:
     repeating-linear-gradient(0deg,
-      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 17px),
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 10.4px, transparent 10.4px 20.8px),
     repeating-linear-gradient(90deg,
-      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 17px);
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 10.4px, transparent 10.4px 20.8px);
 }
 
 /* [추가 2026-08-26] 세로·굵은 가로·굵은 세로 줄무늬 — 기존 가로 줄무늬
