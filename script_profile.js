@@ -2343,7 +2343,7 @@ window.rerenderUserCards = function () {
          JOB 과 multiT 사이에 굳이 등급을 더 두지는 않기로 했습니다.
        ★ REPAIR 와 달리 STATUSES 에 **정식 등록**했습니다 — 안 그러면
          normStatus 가 rest 로 접어서 Break 로 쌓입니다. */
-    { v: "multi",   label: "📓multiT💻", cls: "status-multi"  },   /* 병행 — 70% */
+    { v: "multi",   label: "💻multiT📓", cls: "status-multi"  },   /* 병행 — 70% */
     { v: "rest",    label: "☕BREAK☕",  cls: "status-rest"    },   /* 휴식 */
     { v: "away",    label: "💤AWAY💤",  cls: "status-away"    },   /* 자리비움 */
     /* 🛠️ [2026-08-22 — 콩] 방장이 방을 손보는 중. **방장에게만** 보입니다.
