@@ -15,8 +15,27 @@
    이해를 못해."
 
    [자리]
-       worklog/{닉}/ep/{id} = { w, ep, cnt, base, stage, done, doneDay, c, at }
-       workname/{닉}/{id}   = { name, unit }        A · B … / 화 · 챕터
+       worklog/{닉}/ep/{id}  = { w, ep, cnt, base, stage, done, doneDay, c, at }
+       worklog/{닉}/box/{id} = 위와 **똑같은 줄** — 치워 둔 회차
+       workname/{닉}/{id}    = { name, unit }       A · B … / 화 · 챕터
+
+   [★ 서랍이 둘인 이유 — 2026-08-28, 콩]
+   전에는 마친 회차가 오늘 목록에 영원히 쌓였습니다. 300화를 쓰면
+   300줄이 그대로 남아요. 그런데 ✕ 로 치우면 **작품 탭 기록까지**
+   사라졌습니다 — 작품 탭은 따로 쌓아 둔 기록이 아니라 이 줄들을
+   그 자리에서 세는 화면이거든요. 콩이 프롤로그를 그렇게 잃었습니다.
+
+   그래서 서랍을 둘로 갈랐습니다. **치우기는 지우기가 아니라 이사예요.**
+
+       ✓ 마친 것 치우기   ep → box    작품 탭은 그대로
+       ↩ 다시 꺼내기      box → ep    작품 탭은 그대로
+       ✕ 지우기           아주 없앰   작품 탭에서도 빠짐 (확인창을 띄웁니다)
+
+   ★ 줄을 **id 째로 통째** 옮깁니다. 새로 만드는 게 아니라 서랍만
+     오가는 것이라, 꺼내면 치우기 전과 완전히 같은 줄이 돌아와요.
+   ★ 늘 켜 두는 구독은 ep 뿐입니다. box 는 처음 한 번만 읽어요 —
+     예전엔 worklog/{닉} 통째로 듣느라, 글자수 한 칸만 고쳐도 회차
+     전체가 다시 내려왔습니다. 300화 작가에게는 그게 곧 통신량이에요.
 
        w        작품 id (선택)
        ep       회차 — "1" 도 "프롤로그" 도 됩니다
@@ -82,13 +101,16 @@
   /* ── 손안의 값 ──────────────────────────────────────────────────
      _eps[id]   = { w, ep, cnt, base, stage, done, doneDay, c, at }
      _works[id] = { name, unit }
+     _box[id]   = 치워 둔 회차 — _eps 와 **같은 모양**입니다
      _old[날짜] = { id: {…} }   예전 날짜별 줄 — **읽기만** 합니다        */
   let _eps = {};
+  let _box = {};
   let _works = {};
   let _old = {};
   let _ref = null, _wref = null;
 
   const 회차들 = () => _eps;
+  const 치운것들 = () => _box;
   const 작품 = (id) => _works[id] || null;
   const 옛줄 = (day) => _old[day] || {};
 
@@ -99,18 +121,33 @@
     const nick = me();
     if (!nick || !window.db) return;
     stop();
-    _ref = window.db.ref("worklog/" + nick);
+
+    /* ── ① 늘 켜 두는 것은 **ep 뿐** (2026-08-28) ────────────────────
+       예전에는 worklog/{닉} 통째로 들었습니다. 그러면 글자수 한 칸만
+       고쳐도 노드 전체가 다시 내려와요 — 회차가 쌓일수록 비싸집니다.
+       치워 둔 줄(box)과 옛 날짜별 줄은 아래 ② 에서 한 번만 읽습니다. */
+    _ref = window.db.ref("worklog/" + nick + "/ep");
     _ref.on("value", (snap) => {
-      const v = snap.val() || {};
-      _eps = v.ep || {};
-      /* 예전에 날짜별로 적어 둔 줄 — 주간 달력에서 함께 보여 줍니다.
-         새로 쓰지는 않아요 (2026-08-22 개편). */
-      _old = {};
-      Object.keys(v).forEach(k => { if (/^\d{4}-\d{2}-\d{2}$/.test(k)) _old[k] = v[k] || {}; });
+      _eps = snap.val() || {};
       기준맞추기();
       window.renderWorklogIfOpen?.();
       window.renderRoomBoard?.();
     });
+
+    /* ── ② 치운 줄 · 옛 줄은 처음 한 번만 ───────────────────────────
+       둘 다 저 혼자 바뀌지 않습니다. 치우거나 꺼낼 때는 이 파일이
+       _box 를 손수 맞춰 두니까요 (마친것치우기 · 꺼내기 참고).
+       ★ 여기서 못 읽어도 오늘 목록은 멀쩡히 돕니다 — 작품 탭 숫자만
+         잠깐 덜 나올 뿐이라, 실패해도 조용히 넘어갑니다. */
+    window.db.ref("worklog/" + nick).once("value").then((snap) => {
+      const v = snap.val() || {};
+      _box = v.box || {};
+      /* 예전에 날짜별로 적어 둔 줄 — 주간 달력에서 함께 보여 줍니다.
+         새로 쓰지는 않아요 (2026-08-22 개편). */
+      _old = {};
+      Object.keys(v).forEach(k => { if (/^\d{4}-\d{2}-\d{2}$/.test(k)) _old[k] = v[k] || {}; });
+      window.renderWorklogIfOpen?.();
+    }).catch(e => console.warn("[worklog] 치운 줄·옛 줄 읽기 실패", e));
     _wref = window.db.ref("workname/" + nick);
     _wref.on("value", (snap) => {
       _works = snap.val() || {};
@@ -197,6 +234,60 @@
       _eps = { ..._eps, [id]: 전 };
       window.renderWorklogIfOpen?.();
     }
+  }
+
+  /* =====================================================================
+     ★★ 치우기 · 꺼내기 — 서랍 사이를 오갑니다 (2026-08-28, 콩)
+     ---------------------------------------------------------------------
+     ★ 이것은 **지우기가 아닙니다.** 줄을 id 째로 box 로 옮길 뿐이라,
+       작품 탭의 편수·평균·진도는 하나도 안 변합니다 (작품회차 참고).
+     ★ 여러 갈래를 한 번의 update 로 보냅니다 — 나눠 보내면 중간에
+       끊겼을 때 ep 에서는 빠졌는데 box 에는 없는 줄이 생겨요.
+       파이어베이스의 여러갈래 쓰기는 **전부 되거나 전부 안 됩니다.**
+     ===================================================================== */
+  const 서랍옮기기 = async (줄들, 이쪽, 저쪽) => {
+    const nick = me();
+    if (!nick || !window.db || !줄들.length) return 0;
+    const 짐 = {};
+    줄들.forEach(([id, r]) => { 짐[`${저쪽}/${id}`] = r; 짐[`${이쪽}/${id}`] = null; });
+    try { await window.db.ref(`worklog/${nick}`).update(짐); return 줄들.length; }
+    catch (e) { console.warn("[worklog] 서랍 옮기기 실패", e); return 0; }
+  };
+
+  /** 마친 회차를 몽땅 box 로. 옮긴 id 들을 돌려줍니다 (되돌리기에 씁니다) */
+  async function 마친것치우기() {
+    const 줄들 = Object.entries(_eps).filter(([, r]) => r.done);
+    if (!줄들.length) return [];
+    const 전eps = _eps, 전box = _box;
+    const 남길 = { ..._eps };
+    줄들.forEach(([id]) => delete 남길[id]);
+    _eps = 남길;
+    _box = { ..._box, ...Object.fromEntries(줄들) };
+    window.renderWorklogIfOpen?.();
+    if (await 서랍옮기기(줄들, "ep", "box")) return 줄들.map(([id]) => id);
+    _eps = 전eps; _box = 전box;
+    window.renderWorklogIfOpen?.();
+    return [];
+  }
+
+  /** 치워 둔 회차를 오늘 목록으로 되돌립니다 (id 하나여도 배열로) */
+  async function 꺼내기(ids) {
+    const 목 = (Array.isArray(ids) ? ids : [ids]).filter(id => _box[id]);
+    if (!목.length) return 0;
+    const 줄들 = 목.map(id => [id, _box[id]]);
+    const 전eps = _eps, 전box = _box;
+    const 남길 = { ..._box };
+    목.forEach(id => delete 남길[id]);
+    _box = 남길;
+    _eps = { ..._eps, ...Object.fromEntries(줄들) };
+    /* ★ 기준을 지금 값으로 다시 세웁니다. 안 그러면 꺼낸 줄의 누적이
+       통째로 "오늘 새로 쓴 글자"로 잡혀 흐름과 업적이 부풀어요. */
+    줄들.forEach(([id, r]) => { _보낸[id] = Number(r.cnt) || 0; });
+    window.renderWorklogIfOpen?.();
+    if (await 서랍옮기기(줄들, "box", "ep")) return 목.length;
+    _eps = 전eps; _box = 전box;
+    window.renderWorklogIfOpen?.();
+    return 0;
   }
 
   /* =====================================================================
@@ -362,34 +453,47 @@
       const t = Number(r.at) || 0;
       if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
     });
-    /* 예전 날짜별 줄에도 같은 회차가 있을 수 있습니다 */
-    Object.values(_old).forEach(rows => Object.values(rows || {}).forEach(r => {
+    /* ★ 치워 둔 줄과 예전 날짜별 줄에도 같은 회차가 있을 수 있습니다.
+       여기를 빠뜨리면 치운 회차를 다시 만들 때 기준이 0 으로 잡혀,
+       이미 쓴 분량이 통째로 오늘 쓴 것으로 셈해집니다. */
+    const 훑기 = (r) => {
       if ((r.w || null) !== (wid || null) || String(r.ep) !== String(ep)) return;
       const t = Number(r.at) || 0;
       if (!최신 || t >= 최신.at) 최신 = { cnt: Number(r.cnt) || 0, at: t };
-    }));
+    };
+    Object.values(_box).forEach(훑기);
+    Object.values(_old).forEach(rows => Object.values(rows || {}).forEach(훑기));
     return 최신 ? 최신.cnt : 0;
   }
 
-  /** 그 날 마친 회차들 — 주간 달력이 씁니다 */
+  /** 그 날 마친 회차들 — 주간 달력이 씁니다.
+      ★ 치워 둔 줄도 함께 봅니다. 안 그러면 치우는 순간 지난 주 달력이
+        텅 비어요 — 치우기는 기록을 없애는 게 아니니까요. */
   function 날마침(day) {
-    return Object.entries(_eps)
+    return [...Object.entries(_eps), ...Object.entries(_box)]
       .filter(([, r]) => r.done && r.doneDay === day)
       .map(([id, r]) => ({ id, ...r }));
   }
 
-  /** 작품 하나의 회차별 글자수 — { "45": {cnt, stage}, … } */
+  /** 작품 하나의 회차별 글자수 — { "45": {cnt, stage, boxId}, … }
+      ★★ 여기가 "치우기는 기록을 안 없앤다" 를 지탱하는 자리입니다.
+         _box 를 빠뜨리면 치우는 순간 편수·평균·진도가 뚝 떨어져요.
+      ★ boxId 가 있으면 치워 둔 회차라는 뜻입니다 — 작품 탭에서 눌러
+        오늘 목록으로 다시 꺼낼 수 있게 id 를 실어 보냅니다. */
   function 작품회차(wid) {
     const m = {};
-    const 담기 = (r) => {
+    const 담기 = (boxId) => (r, id) => {
       if ((r.w || null) !== (wid || null) || !r.ep) return;
       const 전 = m[r.ep];
       if (!전 || (Number(r.at) || 0) >= (전.at || 0)) {
-        m[r.ep] = { cnt: Number(r.cnt) || 0, stage: r.stage || null, at: Number(r.at) || 0 };
+        m[r.ep] = { cnt: Number(r.cnt) || 0, stage: r.stage || null,
+                    at: Number(r.at) || 0, boxId: boxId ? id : null };
       }
     };
-    Object.values(_eps).forEach(담기);
-    Object.values(_old).forEach(rows => Object.values(rows || {}).forEach(담기));
+    Object.entries(_eps).forEach(([id, r]) => 담기(false)(r, id));
+    Object.entries(_box).forEach(([id, r]) => 담기(true)(r, id));
+    Object.values(_old).forEach(rows =>
+      Object.entries(rows || {}).forEach(([id, r]) => 담기(false)(r, id)));
     return m;
   }
 
@@ -406,11 +510,12 @@
   window.Worklog = {
     STAGES, UNITS, dayKey,
     listen, stop, 기준맞추기,
-    회차들, 옛줄, 작품, 작품들: () => _works, 단위,
+    회차들, 치운것들, 옛줄, 작품, 작품들: () => _works, 단위,
     회차더하기, 회차여럿, 고치기, 지우기, 체크, 상태돌리기, 글자수바뀜,
+    마친것치우기, 꺼내기,
     작품만들기, 작품지우기, 단위바꾸기,
     지난분량, 날마침, 작품회차,
-    _state: () => ({ eps: _eps, works: _works, old: _old, sent: _보낸 })
+    _state: () => ({ eps: _eps, box: _box, works: _works, old: _old, sent: _보낸 })
   };
 })();
 
@@ -497,6 +602,22 @@
   let _열린작품 = null;
   let _회페이지 = {};
 
+  /* ★ 방금 치운 회차 id 들 — 되돌리기 한 줄이 이걸 보고 뜹니다.
+     20초 뒤 저절로 사라져요. 오래 남겨 두면 "언제 적 되돌리기인지"
+     헷갈리고, 그때쯤이면 작품 탭에서 꺼내는 편이 낫습니다. */
+  let _방금치움 = [];
+  let _되돌리기시계 = null;
+  function 되돌리기띄우기(ids) {
+    _방금치움 = ids || [];
+    clearTimeout(_되돌리기시계);
+    if (_방금치움.length) {
+      _되돌리기시계 = setTimeout(() => {
+        _방금치움 = [];
+        window.renderWorklogIfOpen?.();
+      }, 20000);
+    }
+  }
+
 
   const 오늘키 = () => W().dayKey();
   /* [철거 2026-08-22] _보는날 — 오늘 탭이 날짜를 안 봅니다.
@@ -564,6 +685,24 @@
     } catch (e) {}
     const 마친것 = W.날마침(W.dayKey()).map(r => 회차글(r.w, r.ep));
 
+    /* ★ [2026-08-28 — 콩] 마친 것 치우기
+       ---------------------------------------------------------------
+       콩: "아무래도 직접 치우는 게 좋을 거 같아. 리스트 아래쪽에
+            마친 회차 치우기. 이런 버튼이 있으면 좋을 거 같아."
+       자동으로 치우지 않습니다 — 언제 사라질지 모르는 목록은 불안해요.
+       ★ 마친 게 없으면 버튼도 안 뜹니다 (누를 일 없는 단추는 짐이라서).
+       ★ 지우기가 아니라 이사라서 확인창을 안 띄웁니다. 대신 치운 직후
+         되돌리기 한 줄을 띄워요 — 잘못 눌러도 한 번에 돌아옵니다. */
+    const 마친수 = Object.values(eps).filter(r => r.done).length;
+    const 치우기줄 = 마친수
+      ? `<button type="button" class="wl-sweep" data-wl="sweep"
+                 title="작품 탭 기록은 그대로 남습니다">✓ 마친 ${마친수}편 치우기</button>`
+      : "";
+    const 되돌리기줄 = _방금치움.length
+      ? `<div class="wl-undo">방금 <b>${_방금치움.length}편</b>을 치웠어요
+           <button type="button" data-wl="unsweep">↩ 되돌리기</button></div>`
+      : "";
+
     return `<div class="wl-epadd">
         ${작품고르개()}
         <input class="wl-epnum" id="wl-ep-new" maxlength="16"
@@ -571,6 +710,7 @@
         <button type="button" class="wl-add compact" data-wl="addep">＋ 만들기</button>
       </div>
       <div class="wl-eps">${줄HTML}</div>
+      ${되돌리기줄}${치우기줄}
       <div class="wl-sum">
         <span class="wl-t">오늘 <b>+${콤마(오늘늘)}</b>자</span>
         <span class="wl-g">${마친것.length ? esc(마친것.join(" · ")) + " 마침" : ""}</span>
@@ -735,16 +875,14 @@
         const 칸 = [];
         for (let n = 0; n < 15; n++) {
           const 번 = 시작 + n, rec = m[String(번)];
-          칸.push(rec
-            ? `<div class="wl-epc"><i style="background:${상태색(rec.stage)}"></i><span class="e">${번}${u}</span><span class="c">${콤마(rec.cnt)}자</span></div>`
-            : `<div class="wl-epc none"><span class="e">${번}</span></div>`);
+          칸.push(rec ? 회차칸(rec, `${번}${u}`) : `<div class="wl-epc none"><span class="e">${번}</span></div>`);
         }
         /* 세로로 읽히게 열 우선으로 다시 깝니다 (1~5 / 6~10 / 11~15) */
         const 세로 = [];
         for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) 세로.push(칸[c * 5 + r]);
         표 = `<div class="wl-pjb">
           ${글자.length && 쪽 === 0 ? `<div class="wl-eptbl">${
-            글자.map(k => `<div class="wl-epc"><i style="background:${상태색(m[k].stage)}"></i><span class="e">${esc(k)}</span><span class="c">${콤마(m[k].cnt)}자</span></div>`).join("")
+            글자.map(k => 회차칸(m[k], esc(k))).join("")
             + Array((3 - 글자.length % 3) % 3).fill(`<div class="wl-epc none"></div>`).join("")
           }</div>` : ""}
           <div class="wl-epnav">
@@ -781,6 +919,19 @@
         </div>${표}</div>`;
     });
     return html + `<button class="wl-add" data-wl="newwork">＋ 작품 만들기</button></div>`;
+  }
+  /* 회차표 칸 하나. ★ 치워 둔 회차(boxId 가 있는 것)는 눌러서 오늘
+     목록으로 다시 꺼낼 수 있습니다 — 2026-08-28 콩:
+     "치우고 나서 다시 불러오기도 가능해?"
+     ★ 꺼내도 여기 숫자는 안 변합니다. 서랍만 옮기는 것이라서요. */
+  function 회차칸(rec, 이름) {
+    const 치움 = !!rec.boxId;
+    return `<div class="wl-epc${치움 ? " boxed" : ""}"${치움
+        ? ` data-wl="unbox" data-id="${rec.boxId}" title="치워 둔 회차 — 눌러서 오늘 목록으로 꺼내기"` : ""}>
+      <i style="background:${상태색(rec.stage)}"></i>
+      <span class="e">${이름}</span>
+      <span class="c">${콤마(rec.cnt)}자</span>
+    </div>`;
   }
   function 상태색(s) {
     return ({ 초고: "#B08640", 수정: "#8C5A93", 퇴고: "#C0654A",
@@ -900,6 +1051,24 @@
       await W.지우기(id); return;
     }
     if (act === "stage") { await W.상태돌리기(id); return; }
+
+    /* ── 마친 것 치우기 · 되돌리기 · 다시 꺼내기 (2026-08-28) ──────────
+       ★ 셋 다 **지우지 않습니다.** ep 서랍과 box 서랍 사이를 오갈 뿐이라
+         작품 탭 숫자는 하나도 안 변해요. 그래서 확인창이 없습니다. */
+    if (act === "sweep") {
+      되돌리기띄우기(await W.마친것치우기());
+      window.renderWorklogIfOpen(); return;
+    }
+    if (act === "unsweep") {
+      const 돌릴것 = _방금치움;
+      되돌리기띄우기([]);
+      await W.꺼내기(돌릴것);
+      window.renderWorklogIfOpen(); return;
+    }
+    if (act === "unbox") {
+      await W.꺼내기(id);
+      window.renderWorklogIfOpen(); return;
+    }
 
     /* ── 작품 ── */
     if (act === "newwork") {

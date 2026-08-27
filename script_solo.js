@@ -109,10 +109,12 @@
     return cur === undefined ? null : cur;
   }
 
-  function _put(path, val) {
+  /* 나무만 손대고 저장·알림은 안 합니다 — 여러 갈래를 한 번에 쓸 때
+     스무 번 저장하지 않으려고 갈라 두었습니다 (아래 _put · update). */
+  function _설정(path, val) {
     const ks = 조각(path);
     _ensure();
-    if (!ks.length) { _tree = (val && typeof val === "object") ? val : {}; _save(); _fire(""); return; }
+    if (!ks.length) { _tree = (val && typeof val === "object") ? val : {}; return; }
     let cur = _tree;
     for (let i = 0; i < ks.length - 1; i++) {
       if (cur[ks[i]] === null || typeof cur[ks[i]] !== "object") cur[ks[i]] = {};
@@ -121,8 +123,12 @@
     const last = ks[ks.length - 1];
     if (val === null || val === undefined) delete cur[last];
     else cur[last] = val;
+  }
+
+  function _put(path, val) {
+    _설정(path, val);
     _save();
-    _fire(path);
+    _fire(조각(path).length ? path : "");
   }
 
   /* ---- 듣는 사람들 ---- */
@@ -244,10 +250,26 @@
     };
 
     ref.set    = (v) => { _put(path, v); return Promise.resolve(); };
+    /* ★ [2026-08-28] 진짜 파이어베이스처럼 **여러 갈래 쓰기**를 받습니다.
+       ---------------------------------------------------------------
+       열쇠에 "/" 가 있으면 그 아래 자리를 가리키고, 값이 null 이면
+       그 자리를 **지웁니다**.
+       [무엇이 잘못돼 있었나] 예전에는 { ...base, ...v } 로 얕게 덮어
+       썼습니다. 그래서 worklog 의 서랍 옮기기
+           update({ "box/abc": 줄, "ep/abc": null })
+       이 box 아래로 들어가는 대신 **"box/abc" 라는 이름의 칸**을 만들고,
+       ep/abc 는 안 지워진 채 null 만 박혔어요. 혼자 방에서만 조용히
+       어긋나서 찾기 어려운 종류입니다.
+       ★ 저장·알림은 마지막에 한 번만 — 열두 줄을 옮기면서 스물네 번
+         localStorage 를 쓰면 눈에 띄게 버벅입니다. */
     ref.update = (v) => {
-      const cur = _get(path);
-      const base = (cur && typeof cur === "object") ? cur : {};
-      _put(path, { ...base, ...(v || {}) });
+      const 짐 = v || {};
+      const 열쇠 = Object.keys(짐);
+      if (!열쇠.length) return Promise.resolve();
+      _ensure();
+      열쇠.forEach(k => _설정(path + "/" + k, 짐[k] === undefined ? null : 짐[k]));
+      _save();
+      _fire(path);
       return Promise.resolve();
     };
     ref.remove = () => { _put(path, null); return Promise.resolve(); };
@@ -540,6 +562,17 @@
      "renderProfilePanel", "musicInit", "renderShareButton", "startAchv",
      "listenScreens"]           // 🖥️ 가짜 화면 액자
       .forEach(fn => { try { window[fn]?.(); } catch (e) {} });
+
+    /* ★ [2026-08-28] ✍️ Work Log 회차 듣기
+       ---------------------------------------------------------------
+       위 목록은 window[이름]() 꼴만 부를 수 있어서 Worklog.listen 은
+       못 넣습니다. 그래서 따로 한 줄.
+       [왜 필요한가] 이게 빠져 있어서 혼자 방에서는 **회차를 만들면
+       보이는데 새로고침하면 사라진 것처럼** 보였습니다. 저장은 멀쩡히
+       됐어요 (tm:soloDb 의 worklog/{닉}/ep) — 읽어 오는 쪽이 없었을
+       뿐입니다. 진짜 방은 script_core.js 의 join() 이 부릅니다. */
+    try { window.Worklog?.listen(); } catch (e) {}
+    setTimeout(() => { try { window.Worklog?.기준맞추기(); } catch (e) {} }, 1200);
 
     /* 꾸밈을 다 읽은 뒤에 액자를 채웁니다 */
     setTimeout(화면동기, 800);
