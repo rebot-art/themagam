@@ -2056,7 +2056,7 @@
   `;
 
   const ST_LABEL = { idle:"☕BREAK☕", writing:"🔥WRITE🔥", focus:"💻JOB💻",
-                     multi:"📓multiT💻", rest:"☕BREAK☕", away:"💤AWAY💤" };
+                     multi:"💻multiT📓", rest:"☕BREAK☕", away:"💤AWAY💤" };
   const ST_CLASS = { writing:"writing", focus:"focus", multi:"multi", rest:"rest", away:"away" };
 
   /* 닉네임으로 눈사람 배경색을 만듭니다 (작업방 script_profile.js 와 같은 방식) */
