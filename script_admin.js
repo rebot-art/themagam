@@ -381,8 +381,13 @@
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 
+  /* 닉 → { days, cap } — 방장이 휴가를 찍을 때 상한을 견주는 데 씁니다.
+     표를 그릴 때마다 새로 채웁니다 (달을 넘기면 상한도 달라지니까요). */
+  let _vac셈 = {};
+
   async function loadAttendance(monthOffset) {
     _attOffset = monthOffset;
+    _vac셈 = {};
     const body = el("adm-att-body");
     body.innerHTML = "불러오는 중…";
 
@@ -586,7 +591,16 @@
           if (dk === todayKey) cls += " today";
           /* 출석한 칸은 눌러서 그날 구간 내역을 볼 수 있습니다 (돋보기) */
           const dig = inAt ? ` data-dig-nick="${n}" data-dig-day="${dk}"` : "";
-          cells += `<td class="${cls}"${dig}>${txt}</td>`;
+          /* ★ [2026-08-28 — 콩] 방장은 **더블 클릭**으로 남의 휴가를 켜고 끕니다.
+             ---------------------------------------------------------------
+             ★ 출석 여부와 상관없이 **모든 날 칸**에 답니다 — 안 나온 날에
+               휴가를 찍어 주는 게 이 기능의 본뜻이라서요. 돋보기(dig)는
+               예전대로 출석한 칸에만 답니다.
+             ★ 운영진에게는 아예 안 답니다. 보안규칙상 users 쓰기는 방장뿐이라
+               눌러 봐야 permission denied 만 봅니다. */
+          const vac = isOwner ? ` data-vac-nick="${escapeHtml(n)}" data-vac-day="${dk}"` : "";
+          if (isOwner) cls += " vac-able";
+          cells += `<td class="${cls}"${dig}${vac}>${txt}</td>`;
         }
         /* ── 규칙 칸 ──
            ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
@@ -614,6 +628,10 @@
              이미 쓴 휴가를 뒤늦게 뺏지는 않아요. */
         const vacCap = vacCapOf({ daysInMonth, beforeN });
         const vacOver = vacDays > vacCap;
+        /* ★ 방장이 휴가를 찍을 때 상한을 넘기는지 물어보려면 이 둘이
+           필요합니다. 다시 세지 않고 표가 낸 값을 그대로 빌려 씁니다
+           (출석률 순위가 rateRows 를 빌려 쓰는 것과 같은 방식). */
+        _vac셈[n] = { days: vacDays, cap: vacCap };
         const vacCell =
           `<td class="sum-c vac-c${vacOver ? " over" : ""}" title="${
             vacOver ? `상한 ${vacCap}일을 넘겨 찍힌 휴가예요 (상한이 줄기 전에 찍은 날 — 그대로 둡니다)`
@@ -1849,14 +1867,82 @@
   const SEG_LABEL = { writing: "🔥 Write", focus: "💻 Job", multi: "📓 multiT",
                       rest: "☕ Break", away: "💤 Away" };
 
+  /* ★★ [2026-08-28] 한 칸에 손가락 둘 — 단일 클릭은 돋보기, 더블은 휴가.
+     ---------------------------------------------------------------------
+     ★ 그냥 두 리스너를 나란히 달면 **더블 클릭 때 돋보기가 먼저 뜹니다**
+       (더블은 click 을 두 번 흘리니까요). 그래서 돋보기를 DBL_MS 만큼
+       미뤄 두고, 그 사이 dblclick 이 오면 취소합니다.
+     ★ 방(나의 작업)의 출석 달력이 쓰는 것과 **같은 손가락**입니다
+       (script_mywork.js 의 onClick/onDblClick) — 방장이 두 곳에서 다른
+       손놀림을 외울 이유가 없어서요. */
+  const DBL_MS = 280;
+  let _digTimer = null;
+
   function bindDig(host) {
     if (host.dataset.digBound === "true") return;
     host.dataset.digBound = "true";
-    host.addEventListener("click", async (e) => {
+    host.addEventListener("click", (e) => {
       const td = e.target.closest("[data-dig-nick]");
       if (!td) return;
-      await openDig(td.dataset.digNick, td.dataset.digDay);
+      const nick = td.dataset.digNick, day = td.dataset.digDay;
+      clearTimeout(_digTimer);
+      _digTimer = setTimeout(() => { openDig(nick, day); }, DBL_MS);
     });
+    host.addEventListener("dblclick", async (e) => {
+      const td = e.target.closest("[data-vac-nick]");
+      if (!td) return;
+      clearTimeout(_digTimer);              // 돋보기가 뜨려던 것을 거둡니다
+      await toggleVacAdmin(td.dataset.vacNick, td.dataset.vacDay);
+    });
+  }
+
+  /* =====================================================================
+     🏖️ 방장이 남의 휴가를 켜고 끄기 (2026-08-28 — 콩)
+     ---------------------------------------------------------------------
+     [왜 필요한가] 휴가는 본인이 🗂️ 나의 작업 달력에서 더블 클릭해 찍는
+     것이 원칙입니다. 그런데 못 찍고 지나간 사람, 경조사처럼 뒤늦게
+     알려진 사정은 방장이 대신 손봐 줄 데가 없었어요.
+
+     ★★ 보안규칙은 이미 열려 있습니다 — users/$nick/.write 에 방장 uid
+        예외가 있어서 규칙을 고칠 필요가 없습니다. 다만 **운영진은 안
+        됩니다**(users 쓰기는 방장 전용). 그래서 ownerOnly 로 먼저 막고,
+        칸에 data-vac-* 자체를 안 답니다.
+     ★ 상한(7일 비례)은 넘겨 찍을 수 있습니다 — 다만 **물어봅니다**.
+       멤버 쪽(script_mywork.js)은 alert 로 막지만, 경조사 같은 예외를
+       판단하는 것이 방장의 일이라서요.
+     ★ 휴가 하나가 바뀌면 기준(need)·남은 날·입장일(born)·상한·출석률
+       순위·개근 명단이 **줄줄이** 달라집니다. 그래서 화면을 손으로
+       고치지 않고 표를 통째로 다시 그립니다 (removeMember 와 같은 방식).
+     ===================================================================== */
+  async function toggleVacAdmin(nick, dk) {
+    if (!ownerOnly("남의 휴가를 고치는 것")) return;
+    try {
+      const ref = db.ref(`users/${nick}/vacations/${dk}`);
+      /* 화면 값이 아니라 **서버 값**을 보고 켤지 끌지 정합니다 —
+         표를 그린 뒤에 본인이 직접 바꿨을 수 있어요. */
+      const 지금 = (await ref.once("value")).val() === true;
+
+      if (!지금) {
+        const 셈 = _vac셈[nick] || { days: 0, cap: 0 };
+        if (셈.days + 1 > 셈.cap) {
+          if (!confirm(
+            `${nick}님의 이 달 휴가 상한은 ${셈.cap}일인데, ` +
+            `${셈.days + 1}일째가 됩니다.\n\n` +
+            `그래도 ${dk} 을(를) 휴가로 찍을까요?\n` +
+            `※ 출석 기준(need)이 그만큼 내려가고, 휴가 칸이 붉게 보입니다.`)) return;
+        }
+        await ref.set(true);
+      } else {
+        await ref.remove();
+      }
+
+      await loadAttendance(_attOffset);
+      msg("adm-att-msg", 지금 ? `🏖️ ${nick}님의 ${dk} 휴가를 뺐어요.`
+                              : `🏖️ ${nick}님의 ${dk} 을(를) 휴가로 찍었어요.`);
+    } catch (e) {
+      console.warn("[adm toggleVacAdmin]", e);
+      msg("adm-att-msg", "휴가를 못 고쳤어요 — 방장 계정인지, 보안규칙에 관리자 예외가 있는지 확인해 주세요.", true);
+    }
   }
 
   async function openDig(nick, dk) {
