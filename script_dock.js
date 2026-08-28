@@ -107,6 +107,14 @@
          저장해 둔 판 높이·자리가 통째로 날아갑니다.
        [2026-08-21] 이름표만 📓 표현 공부‼️ 로 (콩). 하는 일은 그대로예요. */
     { id: "help",   label: "📓 표현 공부‼️",      stay: true,  size: 1.35, move: null, drag: true, resize: true },
+    /* [2026-08-28] 🤔 Q&A — 업계에 관한 것이라면 무엇이든 (script_qna.js).
+       표현 공부의 형제입니다 (콩: "표현공부와 동일한 형태면 돼").
+       익명·판 열 때만 듣기까지 같고, 갈리는 것은 셋 —
+         ① 💡 아하 → ❤️ 이 답 도움 됐어요   ② 14일 → **안 사라짐**
+         ③ 답을 ❤️ 많은 차례로 세움
+       ★ 표현 공부 **바로 옆**에 둡니다. 둘 다 "묻고 답하는" 자리라
+         나란히 있어야 "여긴 표현, 저긴 업계" 로 갈래가 읽혀요. */
+    { id: "qna",    label: "🤔 Q&A",             stay: true,  size: 1.35, move: null, drag: true, resize: true },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
@@ -676,6 +684,7 @@
     if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
     if (pid === "pub")    window.openPubReview?.();
     if (pid === "help")   window.openHelp?.();
+    if (pid === "qna")    window.openQna?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
@@ -765,7 +774,9 @@
      본 적 없는 기기에 점 세 개가 켜져 있으면 반가운 게 아니라 숙제입니다.
      기억이 없으면 "지금까지는 다 본 것" 으로 치고 조용히 시작해요.
      ===================================================================== */
-  const NEW_BOARDS = ["pub", "help", "music"];
+  /* [2026-08-28] qna 를 더했습니다 — 표현 공부와 같은 이유로, 판을
+     열 때만 듣는 게시판이라 표식(newmark/qna) 숫자 하나만 봅니다. */
+  const NEW_BOARDS = ["pub", "help", "music", "qna"];
   const SEEN_KEY = (id) => "dockSeen:" + id;
   const _newAt = {};
 
