@@ -9713,7 +9713,8 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
    값을 베껴 적지 않고 선택자만 나란히 붙여요 — 베끼면 챗을 고치는 날
    둘이 조용히 어긋납니다. 하는 일이 같으니 몸집도 같이 갑니다. */
 #dock-panel-chat,
-#dock-panel-sroom{ width: min(352px, calc(100vw - 24px)); }
+#dock-panel-sroom,
+#dock-panel-proom{ width: min(352px, calc(100vw - 24px)); }
 /* ☕ 수다방 520 → 416 → 374 (2026-08-13 다시 10% 줄임) */
 #dock-panel-chatty{ width: min(374px, calc(100vw - 24px)); }
 
@@ -10951,3 +10952,83 @@ html[data-lite] .user-card{
 /* 배경판의 영구 흐르기 애니메이션도 멈춥니다 — 페이지가 늘 "움직이는 중"
    이면 브라우저가 매 프레임 다시 합성할 기회를 갖거든요. */
 html[data-lite] .rb-hrow{ animation: none; }
+
+/* =====================================================================
+   ⏱️ 뽀모방 (2026-08-29, 콩) — script_proom.js
+   ---------------------------------------------------------------------
+   뽀모가 늘 돌고 있는 방. 미리보기에서 콩이 고른 값 그대로입니다.
+   ★ 판 폭·높이는 챗과 같습니다 (아래 #dock-panel-chat 묶음 참고).
+   ===================================================================== */
+.pr-board{ display:flex; flex-direction:column; height:100%; min-height:0;
+           padding:10px 11px; gap:8px; }
+
+/* ★★ 밑선 맞춤 — 이 방에서 눈으로 잡아낸 자리 (콩 2026-08-29)
+   align-items:flex-end 만으로는 **상자**의 밑이 맞습니다. 그런데 숫자
+   상자 안쪽 아래에는 글꼴이 남겨 둔 '내림 여백'(g·y 가 내려가는 자리)이
+   있어요. 숫자에는 내려가는 획이 없으니 그 여백이 빈칸으로 남아, 글자
+   밑이 줄 밑보다 **위에 떠** 보입니다.
+   → 숫자를 그 여백만큼 아래로 내려 글자 밑과 줄 밑을 한 선에 둡니다.
+   ※ 값(0.19em)은 미리보기에서 슬라이더로 눈으로 맞춘 것입니다. */
+.pr-clock{ flex:none; display:flex; align-items:flex-end; gap:12px; }
+.pr-big{
+  flex:none; font-size:35px; font-weight:var(--fw-bold); letter-spacing:-1px;
+  line-height:1; font-variant-numeric:tabular-nums; color:var(--accent);
+  margin-bottom:-0.19em;
+}
+.pr-big.rest{ color:#5E8C61; }
+.pr-right{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.pr-lab{ display:flex; align-items:center; gap:5px; font-size:11px;
+         color:var(--text-3, #8A93A2); white-space:nowrap; }
+.pr-ph{ font-weight:var(--fw-bold); color:var(--accent); }
+.pr-ph.rest{ color:#5E8C61; }
+.pr-sp{ flex:1; }
+.pr-bell{ flex:none; border:none; background:transparent; cursor:pointer;
+          padding:0 0 0 3px; font-size:12px; line-height:1; opacity:.85;
+          font-family:inherit; }
+.pr-bell:hover{ opacity:1; }
+.pr-bell.off{ opacity:.38; filter:grayscale(1); }
+.pr-bar{ height:7px; border-radius:999px; background:var(--fill-1); overflow:hidden; }
+.pr-bar i{ display:block; height:100%; border-radius:999px; background:var(--accent);
+           transition:width .9s linear; }
+.pr-bar i.rest{ background:#5E8C61; }
+
+/* 단계가 바뀔 때 한 번 반짝 — 소리를 꺼 둔 사람도 알아채라고 */
+.pr-flash{ animation: prFlash .9s ease; }
+@keyframes prFlash{ 0%{ background: var(--accent-softer, rgba(179,55,43,.10)); } 100%{ background: transparent; } }
+
+/* 대화 — 비밀방과 같은 결 (남은 왼쪽, 나는 오른쪽) */
+.pr-log{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:2px;
+         border-top:1px dashed var(--border); padding-top:7px; }
+.pr-empty{ text-align:center; font-size:12.5px; color:var(--text-3, #8A93A2);
+           padding:20px 8px; line-height:1.7; }
+.pr-line{ display:flex; align-items:baseline; gap:6px; padding:3px 2px;
+          font-size:13px; line-height:1.6; word-break:break-word; }
+.pr-line.mine{ flex-direction:row-reverse; text-align:right; }
+.pr-line.mine .pr-who{ color:var(--accent); }
+.pr-who{ flex:0 0 auto; font-size:11.5px; font-weight:var(--fw-bold);
+         color:var(--text-2, #5A6473); }
+.pr-msg{ flex:1 1 auto; min-width:0; color:var(--text); white-space:pre-wrap; }
+.pr-t{ flex:0 0 auto; font-size:10px; color:var(--text-3, #8A93A2); }
+.pr-sys{ text-align:center; font-size:11px; color:var(--text-3, #8A93A2); padding:5px 0; }
+.pr-sys b{ color:var(--text-2, #5A6473); }
+
+.pr-write{ flex:none; display:flex; gap:5px; align-items:flex-end; }
+.pr-in{
+  flex:1; min-width:0; resize:none; max-height:120px;
+  font:inherit; font-size:13px; line-height:1.5; font-family:inherit;
+  padding:7px 9px; color:var(--text);
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-md, 10px);
+}
+.pr-in:focus{ outline:none; border-color:var(--accent); }
+.pr-send{
+  flex:0 0 auto; width:32px; height:32px; cursor:pointer;
+  font-size:15px; font-weight:var(--fw-bold); font-family:inherit;
+  color:var(--accent); background:transparent;
+  border:1px solid var(--border); border-radius:999px;
+}
+.pr-send:hover{ background:var(--accent-softer, var(--fill-1)); }
+.pr-send:active{ transform:scale(.96); }
+
+/* 🪶 가볍게 보기에서는 반짝임도 멈춥니다 */
+html[data-lite] .pr-flash{ animation:none; }

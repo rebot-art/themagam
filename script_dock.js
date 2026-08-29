@@ -64,6 +64,11 @@
        ★ 붉은 점(NEW_BOARDS)에 **안 넣습니다.** newmark 는 모두가 읽을 수
          있어서, 점 하나로 "저 방에서 지금 얘기 중" 이 새 나갑니다. */
     { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, move: null, drag: true, resize: true },
+    /* [2026-08-29] ⏱️ 뽀모방 — 뽀모가 **늘 돌고 있는** 방. 누구나 들어옵니다.
+       ★ 알약 🍅 Pomodoro 와는 아무 상관 없습니다. 그건 각자 켜고 끄는
+         것이고, 이쪽은 시계처럼 저 혼자 돌아요 (script_proom.js).
+       ★ 이름에 🍅 를 안 씁니다 — 나란히 두면 둘이 헷갈려요 (콩). */
+    { id: "proom",  label: "⏱️ 뽀모방", stay: true, size: 1.2, move: null, drag: true, resize: true },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -693,6 +698,7 @@
     if (pid === "help")   window.openHelp?.();
     if (pid === "qna")    window.openQna?.();
     if (pid === "sroom")  window.openSroom?.();
+    if (pid === "proom")  window.openProom?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
@@ -712,6 +718,9 @@
     /* ⚙️ 비밀방은 닫으면 듣기를 끊습니다 — 안 끊으면 창을 닫아도 통신이
        이어지고, 무엇보다 명단에서 빠진 뒤에도 잠깐 들립니다 */
     if (pid === "sroom") window.closeSroom?.();
+    /* ⏱️ 뽀모방도 닫으면 멈춥니다 — 안 보는 판 때문에 250ms 마다
+       시계를 돌릴 이유가 없어요 */
+    if (pid === "proom") window.closeProom?.();
     if (pid === "chatty" && _tab === "chatty") setTab("main");
     if (pid === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
     syncPills();
