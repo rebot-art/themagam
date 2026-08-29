@@ -312,6 +312,39 @@
     return `rgba(${r},${g},${b},${alpha})`;
   }
 
+  /* =====================================================================
+     🪶 가볍게 보기 (2026-08-29 — 콩)
+     ---------------------------------------------------------------------
+     [왜 생겼나] 콩이 아이맥에서만 타자가 밀린다고 했습니다. 원인은 화면
+     **크기**가 아니라 **레티나(픽셀 밀도)** 였어요.
+         아이맥 2048×1152 → 실제로 칠하는 픽셀 4096×2304 = 943만
+         일반 모니터 1920×1080                        = 207만
+     **4.5배**입니다. 그리고 이 방에는 픽셀 수에 정비례하는 것이 많아요 —
+     흐림(backdrop-filter), 고정 배경(background-attachment:fixed),
+     카드마다 여섯 겹 그림자. 그 4.5배가 그대로 곱해집니다.
+
+     ★ 모두에게 꾸밈을 뺏지 않습니다. **기기별 스위치**로 둡니다 —
+       아이맥에서만 켜고 노트북에서는 예쁜 그대로 두시라고요.
+       (접속 유지·화면 공유 보기와 같은 결. 서버에 안 보냅니다.)
+     ★ 실제로 무엇이 꺼지는지는 styles.css 의 `html[data-lite]` 를 보세요.
+     ===================================================================== */
+  const LITE_KEY = "liteMode";
+  function isLiteMode() {
+    try { return window.AppStore?.getItem(LITE_KEY) === "1"; } catch (e) { return false; }
+  }
+  function applyLiteMode() {
+    const on = isLiteMode();
+    document.documentElement.toggleAttribute("data-lite", on);
+    const box = document.getElementById("set-lite");
+    if (box) box.checked = on;
+  }
+  window.setLiteMode = function (on) {
+    try { window.AppStore?.setItem(LITE_KEY, on ? "1" : "0"); } catch (e) {}
+    applyLiteMode();
+  };
+  window.applyLiteMode = applyLiteMode;
+  window.isLiteMode = isLiteMode;
+
   function applyTheme(name) {
     /* 옛 테마(파스텔 30여 종) 저장값 마이그레이션 —
        목록에 없는 이름이 오면 기본 테마로 흘려보냅니다. */
@@ -1574,6 +1607,7 @@
 
     applySavedFontSize();
     applySavedCardScale();
+    applyLiteMode();          // 🪶 가볍게 보기 — 그리기 전에 먼저 (번쩍임 방지)
     applyTheme(currentTheme);
     renderThemePalette();
     renderTodaySessionCount();

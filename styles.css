@@ -10901,3 +10901,53 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
    보여서, 기록은 멀쩡하다는 뜻이 흐려집니다. */
 .wl-epc.boxed{ border-style: dashed; cursor: pointer; }
 .wl-epc.boxed:hover{ border-style: solid; border-color: var(--accent); }
+
+/* =====================================================================
+   🪶 가볍게 보기 — html[data-lite] (2026-08-29, 콩)
+   ---------------------------------------------------------------------
+   [왜 있나] 아이맥에서만 타자가 밀렸습니다. 원인은 화면 크기가 아니라
+   **레티나(픽셀 밀도)** 였어요 — 2048×1152 로 보이지만 실제로 칠하는
+   픽셀은 4096×2304 = 943만입니다. 일반 모니터(207만)의 **4.5배**예요.
+
+   아래 셋은 **칠하는 픽셀 수에 정비례**하는 것들이라, 그 4.5배가 그대로
+   곱해집니다. 그래서 같은 방인데 아이맥에서만 타자가 밀렸습니다.
+       ① 흐림(backdrop-filter) — "내 뒤를 통째로 떠서 흐리게 만들라".
+          그 '뒤'의 범위는 화면 전체입니다.
+       ② 고정 배경(background-attachment: fixed) — 캐시가 안 돼서
+          다시 칠할 때마다 배경을 새로 만듭니다.
+       ③ 카드마다 그림자 여섯 겹 × 접속자 수.
+
+   ★ 켜고 끄는 것은 **기기별**입니다 (script_ui.js 의 liteMode).
+     아이맥에서만 켜고 노트북에서는 예쁜 그대로 두시라고요.
+   ★ 되돌리려면 이 덩어리를 지우면 됩니다 — 다른 규칙을 고치지 않고
+     **덮어쓰기만** 하도록 짰어요.
+   ===================================================================== */
+html[data-lite] .card-foot,
+html[data-lite] .card-preview-foot,
+html[data-lite] .dock-panel,
+html[data-lite] #dock-panel-wc,
+html[data-lite] .rb-box,
+html[data-lite] .share-live,
+html[data-lite] .share-foot,
+html[data-lite] .pub-find{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 흐림을 뗀 자리는 뒤가 비쳐서 글이 묻힙니다 — 바탕을 조금 더 채웁니다 */
+html[data-lite] .dock-panel{ background: var(--panel, #FFFDF6); }
+html[data-lite] .card-foot{ background: var(--fill-1, rgba(255,255,255,.86)); }
+
+/* ② 배경을 고정하지 않습니다. 이 방은 본문이 스크롤하지 않아서
+      눈에는 거의 그대로인데, 그리는 값은 크게 줄어요. */
+html[data-lite] body.room-bg-on{ background-attachment: scroll, scroll, scroll, scroll; }
+
+/* ③ 카드 그림자 여섯 겹 → 두 겹. 종이 겹친 느낌은 옅어지지만
+      그림자 자체는 남습니다 (카드가 붕 뜬 느낌은 지켜요). */
+html[data-lite] .user-card{
+  box-shadow: 0 1px 2px rgba(90,70,40,.10), 0 6px 14px rgba(90,70,40,.08);
+}
+
+/* 배경판의 영구 흐르기 애니메이션도 멈춥니다 — 페이지가 늘 "움직이는 중"
+   이면 브라우저가 매 프레임 다시 합성할 기회를 갖거든요. */
+html[data-lite] .rb-hrow{ animation: none; }
