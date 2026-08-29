@@ -64,11 +64,6 @@
        ★ 붉은 점(NEW_BOARDS)에 **안 넣습니다.** newmark 는 모두가 읽을 수
          있어서, 점 하나로 "저 방에서 지금 얘기 중" 이 새 나갑니다. */
     { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, move: null, drag: true, resize: true },
-    /* [2026-08-29] ⏱️ 뽀모방 — 뽀모가 **늘 돌고 있는** 방. 누구나 들어옵니다.
-       ★ 알약 🍅 Pomodoro 와는 아무 상관 없습니다. 그건 각자 켜고 끄는
-         것이고, 이쪽은 시계처럼 저 혼자 돌아요 (script_proom.js).
-       ★ 이름에 🍅 를 안 씁니다 — 나란히 두면 둘이 헷갈려요 (콩). */
-    { id: "proom",  label: "⏱️ 뽀모방", stay: true, size: 1.2, move: null, drag: true, resize: true },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -89,6 +84,11 @@
        "여기에 쓰기" 줄이 남아서, 누르면 펜이 그리로 옵니다.
        ===================================================================== */
     { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, drag: true, tab: "chatty", resize: true },
+    /* [2026-08-29] ⏱️ 뽀모방 — **수다방 오른쪽**에 (콩 지정 08-30) — 뽀모가 **늘 돌고 있는** 방. 누구나 들어옵니다.
+       ★ 알약 🍅 Pomodoro 와는 아무 상관 없습니다. 그건 각자 켜고 끄는
+         것이고, 이쪽은 시계처럼 저 혼자 돌아요 (script_proom.js).
+       ★ 이름에 🍅 를 안 씁니다 — 나란히 두면 둘이 헷갈려요 (콩). */
+    { id: "proom",  label: "⏱️ 뽀모방", stay: true, size: 1.2, move: null, drag: true, resize: true },
     /* 🏢 출판사 품평 — 익명 게시판 (2026-08-12, script_pubreview.js).
        공지처럼 목록형이지만 댓글이 길게 달리는 곳이라 키울 수 있게 했어요. */
     { id: "pub", label: "🏢 출판사 품평", stay: true, size: 1.35, move: null, drag: true, resize: true },
@@ -699,6 +699,34 @@
     if (pid === "qna")    window.openQna?.();
     if (pid === "sroom")  window.openSroom?.();
     if (pid === "proom")  window.openProom?.();
+
+    /* =====================================================================
+       ★★★ 빈 판 지킴이 (2026-08-30 — 콩 신고 "뽀모방이 이렇게만 뜨고 있어")
+       ---------------------------------------------------------------------
+       판을 채우는 파일이 안 실렸거나 도중에 죽으면, 위 `window.openXxx?.()`
+       가 **조용히 아무 일도 안 합니다.** 그러면 머리말만 있고 속이 텅 빈
+       판이 떠요 — 사람은 "고장인지 원래 그런지" 알 길이 없습니다.
+       (실제로 캐시에 옛 index.html 이 남아 뽀모방이 빈 채로 떴습니다.)
+
+       ★ 이 지킴이는 **고쳐 주지 않습니다.** 다만 조용한 고장을 말이 되게
+         바꿔요 — 무엇이 없는지 이름까지 적어 줍니다.
+       ★ 판을 여는 함수가 비동기라 조금 늦게 채워질 수 있어서, 한 박자
+         뒤에 봅니다. 그때까지도 비어 있으면 진짜 안 온 것입니다.
+       ===================================================================== */
+    {
+      const 채우는것 = { pub: "openPubReview", help: "openHelp", qna: "openQna",
+                        sroom: "openSroom", proom: "openProom" }[pid];
+      if (채우는것) setTimeout(() => {
+        const body = el("dock-body-" + pid);
+        if (!body || body.childElementCount > 0) return;
+        body.innerHTML =
+          `<div class="dock-blank">
+             <b>이 판을 준비하지 못했어요.</b>
+             <span>새로고침해 보세요 — 그래도 그러면 방장에게 알려 주세요.</span>
+             <code>${채우는것} 없음</code>
+           </div>`;
+      }, 400);
+    }
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
