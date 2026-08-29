@@ -46,6 +46,9 @@
 
   const SROOM_MAX  = 400;          // 한 번에 들고 있는 줄 수
   const SROOM_LEN  = 2000;         // 한 줄 최대 글자
+  /* 🔤 글씨 크기 — 이 판에서만 씁니다 (기기별로 기억) */
+  const SROOM_FS_KEY = "sroomFont";
+  const SROOM_FS_MIN = 11, SROOM_FS_MAX = 20, SROOM_FS_DEF = 13;
 
   let _sroomRef = null;
   let _sroomRows = [];
@@ -54,6 +57,7 @@
   let _sroomBusy = false;
   let _sroomList = false;          // 방장 명단 창을 펼쳤나
   let _sroomAllow = {};            // uid → 닉 (방장만 읽힙니다)
+  let _sroom틀 = "";               // 지금 지어 둔 틀의 모양 (아래 그리기 참고)
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
@@ -126,29 +130,74 @@
       </div>`;
   }
 
-  function sroom그리기() {
+  /* 🔤 글씨 크기 — 이 판에서만. 기기에 남습니다(서버에 안 보냅니다) */
+  function sroom글씨() {
+    const v = Number(window.AppStore?.getItem(SROOM_FS_KEY));
+    return Number.isFinite(v) && v >= SROOM_FS_MIN && v <= SROOM_FS_MAX ? v : SROOM_FS_DEF;
+  }
+  function sroom글씨바꾸기(d) {
+    const v = Math.max(SROOM_FS_MIN, Math.min(SROOM_FS_MAX, sroom글씨() + d));
+    try { window.AppStore?.setItem(SROOM_FS_KEY, String(v)); } catch (e) {}
+    /* ★★ 여기서 **다시 그리지 않습니다.** CSS 값 하나만 갈아 끼워요.
+       다시 그리면 글칸이 새로 태어나 쓰던 글과 커서가 날아갑니다. */
+    const 판 = el("dock-body-sroom")?.querySelector(".sr-board");
+    if (판) 판.style.setProperty("--sr-fs", v + "px");
+    const 숫 = el("sroom-fs");
+    if (숫) 숫.textContent = v;
+  }
+
+  /* =====================================================================
+     ★★★ [고침 2026-08-29 — 콩] 틀은 한 번만 짓고, 줄만 갈아 끼웁니다
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     콩: "엔터쳐서 대화 하나 날리고 나면 커서가 날아가서 연속으로 치기가
+          어려워." — 글을 보내면 서버가 알려주고, 그때 판 **전체**를
+     다시 그렸습니다. 그러면 <textarea> 가 통째로 새로 태어나요. 커서는
+     물론이고 초점도 사라집니다.
+
+     ★ 남이 글을 보내도 똑같이 일어났습니다. 게다가 그 순간 내가 한글을
+       **조합 중이었다면 그것까지 날아가요** — 2026-08-13 자소 분리 사고와
+       같은 집안입니다. 그때 얻은 교훈이 이거였어요:
+       **글 쓰는 칸은 다시 만들지 말 것.**
+
+     [그래서]
+       · sroom틀짓기() — 판의 뼈대를 짓습니다. 모양이 달라질 때만 부릅니다.
+       · sroom줄그리기() — .sr-log 속만 갈아 끼웁니다. 글칸은 안 건드려요.
+     "모양이 달라졌나" 는 _sroom틀 에 적어 두고 견줍니다.
+     ===================================================================== */
+  function sroom틀모양() {
+    return [_sroomOk, _sroomList, !!window.isRoomOwner?.(),
+            Object.keys(_sroomAllow).join(",")].join("|");
+  }
+
+  function sroom틀짓기() {
     const box = el("dock-body-sroom");
     if (!box) return;
+    _sroom틀 = sroom틀모양();
 
     if (_sroomOk === null) { box.innerHTML = `<div class="sr-wait">…</div>`; return; }
     if (_sroomOk === false) { box.innerHTML = sroom준비중(); return; }
-
-    /* 굴려 둔 자리를 붙듭니다 — 안 그러면 새 줄이 올 때마다 위로 튀어요 */
-    const 목록칸 = box.querySelector(".sr-log");
-    const 바닥 = !목록칸 || (목록칸.scrollHeight - 목록칸.scrollTop - 목록칸.clientHeight < 60);
 
     /* ★★ 아래 글 쓰는 칸은 **제 것**입니다 (#sroom-in).
        챗·수다방의 글칸을 옮겨 오지 않아요 — 그 이사가 2026-08-13
        한글 자소 분리 사고의 자리였습니다 (맨 위 머리말 참고).
        ※ 화면에 그려지는 조각에는 옛 이름을 적지 않습니다. 검사가
          "옛 얼개가 돌아왔나" 를 글자로 훑거든요. */
-    const 줄 = _sroomRows.map(sroom줄HTML).join("");
     box.innerHTML = `
-      <div class="sr-board">
-        ${window.isRoomOwner?.()
-          ? `<button type="button" class="sr-key" data-sroom-list="1">👥 승인</button>` : ""}
+      <div class="sr-board" style="--sr-fs:${sroom글씨()}px">
+        <div class="sr-top">
+          ${window.isRoomOwner?.()
+            ? `<button type="button" class="sr-key" data-sroom-list="1">👥 승인</button>` : ""}
+          <span class="sr-sp"></span>
+          <!-- 🔤 글씨 크기 — 이 판에서만, 이 기기에서만 (콩 2026-08-29) -->
+          <span class="sr-fs" title="이 방의 글씨 크기 (이 기기에서만)">
+            <button type="button" data-sroom-font="-1" aria-label="글씨 작게">－</button>
+            <b id="sroom-fs">${sroom글씨()}</b>
+            <button type="button" data-sroom-font="1" aria-label="글씨 크게">＋</button>
+          </span>
+        </div>
         ${sroom명단HTML()}
-        <div class="sr-log">${줄 || `<p class="sr-empty">아직 아무 말도 없어요.</p>`}</div>
+        <div class="sr-log"></div>
         <div class="sr-write">
           <textarea id="sroom-in" class="sr-in" rows="1" maxlength="${SROOM_LEN}"
                     placeholder="여기에 적어요"></textarea>
@@ -156,9 +205,28 @@
                   aria-label="보내기" title="보내기">↑</button>
         </div>
       </div>`;
+    sroom줄그리기();
+  }
 
-    const 새목록 = box.querySelector(".sr-log");
-    if (새목록) 새목록.scrollTop = 바닥 ? 새목록.scrollHeight : (목록칸?.scrollTop || 0);
+  /** 대화 줄만 갈아 끼웁니다 — 글칸은 손대지 않아요 (커서·조합 지킴) */
+  function sroom줄그리기() {
+    const 목록칸 = el("dock-body-sroom")?.querySelector(".sr-log");
+    if (!목록칸) return;
+    /* 바닥 언저리를 보고 있었으면 새 줄을 따라 내려갑니다. 위를 읽는
+       중이었으면 그 자리를 지켜요 — 남의 글에 끌려다니지 않게. */
+    const 바닥 = 목록칸.scrollHeight - 목록칸.scrollTop - 목록칸.clientHeight < 60;
+    const 전 = 목록칸.scrollTop;
+    목록칸.innerHTML = _sroomRows.map(sroom줄HTML).join("")
+      || `<p class="sr-empty">아직 아무 말도 없어요.</p>`;
+    목록칸.scrollTop = 바닥 ? 목록칸.scrollHeight : 전;
+  }
+
+  /** 모양이 달라졌으면 틀부터, 아니면 줄만 */
+  function sroom그리기() {
+    const box = el("dock-body-sroom");
+    if (!box) return;
+    if (_sroom틀 !== sroom틀모양() || !box.querySelector(".sr-board")) sroom틀짓기();
+    else sroom줄그리기();
   }
 
   /* =====================================================================
@@ -191,7 +259,7 @@
     const t = String(칸?.value || "").trim().slice(0, SROOM_LEN);
     if (!t || _sroomBusy || !window.db || !_sroomOk) return;
     _sroomBusy = true;
-    if (칸) 칸.value = "";
+    if (칸) { 칸.value = ""; 칸.focus(); }   // ★ 보낸 뒤에도 손이 그대로 있게
     try {
       await window.db.ref("sroom").push().set({
         user: sroomMe(), msg: t, time: Date.now()
@@ -199,7 +267,12 @@
     } catch (e) {
       if (칸) 칸.value = t;               // 못 보냈으면 쓰던 글을 돌려줍니다
       alert("보내지 못했어요. 연결을 확인해 주세요.");
-    } finally { _sroomBusy = false; }
+    } finally {
+      _sroomBusy = false;
+      /* ★ 연달아 칠 수 있게 초점을 다시 둡니다 (콩 2026-08-29).
+         ※ 이건 덤이에요 — 진짜 고침은 "글칸을 다시 안 만드는 것"입니다. */
+      el("sroom-in")?.focus();
+    }
   }
 
   /* =====================================================================
@@ -249,6 +322,8 @@
     _sroomBound = true;
 
     host.addEventListener("click", async (e) => {
+      const 글씨 = e.target.closest("[data-sroom-font]");
+      if (글씨) { sroom글씨바꾸기(Number(글씨.dataset.sroomFont)); el("sroom-in")?.focus(); return; }
       if (e.target.closest("[data-sroom-send]")) { sroom보내기(); return; }
       if (e.target.closest("[data-sroom-add]"))  { sroom넣기();  return; }
       const 뺄 = e.target.closest("[data-sroom-out]");

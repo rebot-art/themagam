@@ -6555,7 +6555,7 @@ html[data-theme-style="studio"] .user-card{
    ★ 색으로 튀게 하지 않는 것도 같은 뜻입니다. 내 줄이 도드라지면
      남의 줄이 배경처럼 보입니다 (0821 콩 판단). */
 .sr-line{ display: flex; align-items: baseline; gap: 6px; padding: 3px 2px;
-          font-size: 13px; line-height: 1.6; word-break: break-word; }
+          font-size: var(--sr-fs, 13px); line-height: 1.6; word-break: break-word; }
 .sr-line.mine{ flex-direction: row-reverse; text-align: right; }
 .sr-line.mine .sr-who{ color: var(--accent); }
 .sr-who{ flex: 0 0 auto; font-size: 11.5px; font-weight: var(--fw-bold);
@@ -6566,7 +6566,7 @@ html[data-theme-style="studio"] .user-card{
 .sr-write{ flex: none; display: flex; gap: 5px; align-items: flex-end; }
 .sr-in{
   flex: 1; min-width: 0; resize: none; max-height: 120px;
-  font: inherit; font-size: 13px; line-height: 1.5; font-family: inherit;
+  font: inherit; font-size: var(--sr-fs, 13px); line-height: 1.5; font-family: inherit;
   padding: 7px 9px; color: var(--text);
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-md, 10px);
@@ -6589,6 +6589,27 @@ html[data-theme-style="studio"] .user-card{
   border: 1px dashed var(--border); border-radius: 999px;
 }
 .sr-key:hover{ color: var(--accent); border-color: var(--accent); }
+/* 맨 윗줄 — 왼쪽에 👥 승인(방장만), 오른쪽에 🔤 글씨 크기 */
+.sr-top{ flex: none; display: flex; align-items: center; gap: 6px; }
+.sr-sp{ flex: 1; }
+
+/* 🔤 글씨 크기 — **이 판에서만, 이 기기에서만** (콩 2026-08-29).
+   ★ 머리말의 [− 18px +] 와 따로 놉니다. 저건 방 전체 글씨고, 이건
+     비밀방 한 곳이에요. 서버에 안 보내니 남의 화면은 그대로입니다. */
+.sr-fs{
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px;
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 3px;
+}
+.sr-fs button{
+  width: 18px; height: 18px; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: var(--fw-bold); line-height: 1;
+  color: var(--text-3, #8A93A2); background: transparent; border: none; border-radius: 999px;
+}
+.sr-fs button:hover{ color: var(--accent); background: var(--fill-1); }
+.sr-fs b{ min-width: 15px; text-align: center; font-size: 10.5px;
+          font-weight: var(--fw-bold); color: var(--text-2, #5A6473); }
+
 /* 👥 승인 — ★ 가로로 흐릅니다. 세로로 쌓으면 사람이 늘 때마다
    대화가 밀려 내려가요 (콩 2026-08-29). 열 명이 넘어도 두어 줄. */
 .sr-allow{
