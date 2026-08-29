@@ -1278,6 +1278,14 @@
      한 장을 데려오면 이번엔 윗줄이 외로워져요.
      ===================================================================== */
   let _lonelySig = "";
+  /* 카드 마당 폭 — 창 크기가 바뀔 때만 다시 잽니다 (위 고침 참고) */
+  let _마당폭 = 0;
+  function 마당폭(list) {
+    if (!_마당폭) _마당폭 = list.clientWidth;
+    return _마당폭;
+  }
+  window.addEventListener("resize", () => { _마당폭 = 0; });
+
   function fixLonelyCard(force) {
     const list = document.getElementById("user-cards");
     if (!list) return;
@@ -1286,8 +1294,16 @@
        재는 일(getBoundingClientRect)은 브라우저에게 "지금 당장 배치를
        계산하라"고 시키는 것이라, 15초마다 하트비트가 올 때마다 하면
        괜히 화면이 들썩입니다. */
+    /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+       위 주석이 "다시 재지 않습니다" 라고 했는데, **재지 않으려고 재고
+       있었습니다** — 열쇠(sig)를 만드느라 list.clientWidth 를 읽는데,
+       그것부터가 브라우저에게 "지금 배치를 계산하라" 는 명령이거든요.
+       하트비트는 사람 수 × 분당 4회로 오니, 20명이면 0.75초에 한 번씩
+       배치계산이 끼어듭니다. 그게 콩의 타자와 겹쳤어요.
+       ★ 폭은 **창 크기가 바뀔 때만** 새로 잽니다. 그 사이에는 마지막에
+         잰 값을 씁니다 — 창이 안 변하면 폭도 안 변하니까요. */
     const cards0 = list.querySelectorAll(":scope > .user-card");
-    const sig = cards0.length + "@" + Math.round(list.clientWidth / 20);
+    const sig = cards0.length + "@" + Math.round(마당폭(list) / 20);
     if (!force && sig === _lonelySig) return;
     _lonelySig = sig;
 
@@ -1302,9 +1318,12 @@
     const cs = getComputedStyle(list);
     const gap = parseFloat(cs.columnGap) || 12;
     const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    /* 여기까지 왔다는 건 사람 수나 창 폭이 진짜로 달라졌다는 뜻입니다.
+       이때는 제대로 재요 — 자주 오지 않으니 값을 치를 만합니다. */
     const cw = first.getBoundingClientRect().width;
     if (!cw) return;
-    const C = Math.floor((list.clientWidth - padX + gap) / (cw + gap));
+    _마당폭 = list.clientWidth;
+    const C = Math.floor((_마당폭 - padX + gap) / (cw + gap));
     if (C < 3 || n <= C || n % C !== 1) return;
 
     const br = document.createElement("div");
@@ -1930,15 +1949,40 @@
 
     _msgLiveQuery = _msgRef.orderByChild("time").startAt(joinTs);
 
+    /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+       ---------------------------------------------------------------------
+       말풍선을 화면에서 **걷어내는 코드가 없었습니다.** 서버 기록은
+       checkAndTrimChat() 이 250개로 자르는데, 그건 파이어베이스 쪽 얘기고
+       화면 DOM 은 append 만 했어요. 접속을 하루 켜 두면 수천 개가 쌓입니다.
+
+       왜 타자가 느려지나 — 글자를 칠 때마다 글칸 높이를 맞추느라 배치를
+       한 번 다시 재는데(script_chat.js 글칸손질), 그 **대상이 쌓인 말풍선
+       전부**입니다. 개수가 늘수록 한 글자의 값이 비싸져요. 게다가 큰
+       화면에서는 한 번에 칠해지는 말풍선도 서너 배 많습니다.
+
+       ★ 처음 불러오는 양(histCount, 최대 300)보다 넉넉히 잡습니다 —
+         읽던 자리가 갑자기 사라지면 그게 더 놀라워요.
+       ★ 위에서부터 걷어냅니다. 아래(최신)가 사람이 보는 쪽이니까요.
+       ※ 지운 것은 화면에서만 없어집니다. 서버 기록은 그대로예요. */
+    const 화면말풍선한도 = 400;
+    function 말풍선걷어내기() {
+      const box = document.getElementById("chat-box");
+      if (!box) return;
+      let 넘침 = box.childElementCount - 화면말풍선한도;
+      while (넘침-- > 0 && box.firstElementChild) box.firstElementChild.remove();
+    }
+
     _msgLiveQuery.on("child_added", (snap) => {
       const key = snap.key;
       const data = snap.val();
       if (!data || !key) return;
 
+
       if (_seenMsgKeys.has(key)) return;
       _seenMsgKeys.add(key);
 
       window.renderChatMessage?.(document.getElementById("chat-box"), data, key);
+      말풍선걷어내기();
 
       const isSystemLike = (data.type === "system" || data.type === "fx");
       const isMine = (data.user && data.user === myNick);

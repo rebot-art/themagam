@@ -236,6 +236,7 @@
   let _effectCtx       = null;
   let _effectParticles = [];
   let _effectRafId     = null;
+  let _effect리스너    = false;   // resize 리스너를 한 번만 달기 위한 표시
 
   function _ensureEffectCanvas() {
     if (_effectCanvas) return _effectCanvas;
@@ -245,9 +246,15 @@
     document.body.appendChild(canvas);
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
-    window.addEventListener("resize", () => {
-      if (_effectCanvas) { _effectCanvas.width = window.innerWidth; _effectCanvas.height = window.innerHeight; }
-    });
+    /* ★ [고침 2026-08-29] 리스너는 **딱 한 번만** 답니다.
+       이제 이펙트가 끝나면 캔버스를 치우고 다시 만들거든요(_치우기).
+       그때마다 새로 달면 리스너가 이펙트 횟수만큼 쌓입니다. */
+    if (!_effect리스너) {
+      _effect리스너 = true;
+      window.addEventListener("resize", () => {
+        if (_effectCanvas) { _effectCanvas.width = window.innerWidth; _effectCanvas.height = window.innerHeight; }
+      });
+    }
     _effectCanvas = canvas;
     _effectCtx    = canvas.getContext("2d");
     return canvas;
@@ -332,7 +339,24 @@
       cancelAnimationFrame(_effectRafId);
       _effectRafId = null;
       _effectCtx.clearRect(0, 0, _effectCanvas.width, _effectCanvas.height);
+      /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+         다 끝났으면 **캔버스를 치웁니다.**
+         예전에는 그리기만 멈추고 요소는 세션 내내 남겨 뒀어요. 그런데
+         이건 `position:fixed; inset:0` 짜리 **화면 전체 크기** 캔버스라,
+         가만히 있어도 그만한 합성 층(GPU 텍스처)을 붙들고 있습니다.
+         27인치 아이맥이면 노트북의 세 배쯤 돼요. 그 위로 무언가 다시
+         칠해질 때마다 값을 치릅니다.
+         ★ 다시 필요하면 _ensureEffectCanvas() 가 새로 만듭니다 —
+           만드는 값은 한 번뿐이고, 남겨 두는 값은 세션 내내입니다. */
+      _치우기();
     }
+  }
+
+  /** 이펙트 캔버스를 화면에서 걷어냅니다 (다음에 필요하면 새로 만듭니다) */
+  function _치우기() {
+    try { _effectCanvas?.remove(); } catch (e) {}
+    _effectCanvas = null;
+    _effectCtx = null;
   }
 
   function runEffect(emojis, colors, count) {
@@ -357,6 +381,18 @@
       overlay.style.opacity = "0";
       const inner = document.getElementById("shout-inner");
       if (inner) inner.style.transform = "scale(.92)";
+      /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+         예전에는 opacity 만 0 으로 두고 요소를 **남겨** 뒀습니다. 그런데
+         이건 `position:fixed; inset:0` 짜리 전체화면이고, 그 안에
+         **backdrop-filter: blur(20px)** 이 걸려 있어요. 투명해도 브라우저는
+         "내 뒤를 흐리게 떠 두라" 는 일을 계속 준비합니다 — 그 뒤의 범위는
+         화면 전체고, 흐림 값은 픽셀 수에 정비례합니다.
+         누가 /외치기 를 한 번만 써도 그 뒤로 세션 내내 무거워졌어요.
+         ★ 사라지는 모습(0.25s)이 끝난 뒤에 걷어냅니다. */
+      setTimeout(() => {
+        const 아직 = document.getElementById("shout-overlay");
+        if (아직 && 아직.style.opacity === "0") 아직.remove();
+      }, 400);
     }
     _shoutExpiresAt = 0;
     if (_shoutTimer) { clearTimeout(_shoutTimer); _shoutTimer = null; }
@@ -1273,14 +1309,43 @@
        자라요. 드롭다운(@·/)도 같이 미룹니다 — 어차피 @ 와 / 는 조합되는
        글자가 아니라서 늦어지는 일이 없습니다.
        ===================================================================== */
+    /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+       ---------------------------------------------------------------------
+       주석은 "높이는 **달라질 때만** 씁니다" 라고 약속해 놓고, 정작 그
+       방어가 **죽은 코드**였습니다:
+
+           ta.style.height = "auto";              ← 배치를 무효로 만들고
+           const 새높이 = ta.scrollHeight …       ← 바로 읽어 **강제 배치계산**
+           if (지금 === 새높이) return 새높이;     ← 아래 return 과 같은 값 (무의미)
+
+       "auto" 를 먼저 쓰고 scrollHeight 를 읽는 순간 이미 문서 전체 배치가
+       한 번 끝납니다. 견주기는 그 **뒤에** 있어서 아무것도 막지 못했어요.
+       글자 하나마다 이게 한 번씩 돌았고, 그 배치의 대상은 쌓인 말풍선
+       전부 + 접속자 카드 전부입니다. 화면이 클수록 값이 비싸집니다.
+
+       [고친 방식] 한 줄짜리일 때가 대부분이라는 데 기댑니다.
+         · 글이 짧고 줄바꿈이 없으면 **재보지도 않고** 한 줄 높이로 둡니다.
+         · 그 밖에만 예전처럼 재요.
+         · 재고 나서도 값이 같으면 style 을 안 건드립니다.
+       ※ 한 줄 높이(_한줄h)는 처음 한 번만 재서 들고 있습니다. */
+    let _한줄h = 0;
     function 글칸손질(ta) {
-      /* 높이는 **달라질 때만** 씁니다. 같은 값을 다시 넣어도 배치를
-         다시 재게 되는데, 그 한 번이 조합을 깨뜨릴 자리를 만듭니다. */
+      const 짧은가 = ta.value.length <= 40 && ta.value.indexOf("\n") < 0;
+
+      if (짧은가 && _한줄h) {
+        const 한줄 = _한줄h + "px";
+        if (ta.style.height !== 한줄) ta.style.height = 한줄;
+        return 한줄;                       // ★ 배치를 아예 안 건드립니다
+      }
+
       const 지금 = ta.style.height;
       ta.style.height = "auto";
-      const 새높이 = Math.min(ta.scrollHeight, 110) + "px";
-      ta.style.height = 새높이;
-      if (지금 === 새높이) return 새높이;
+      const 잰값 = ta.scrollHeight;
+      if (!_한줄h && 짧은가) _한줄h = 잰값;   // 한 줄 높이를 한 번만 기억
+      const 새높이 = Math.min(잰값, 110) + "px";
+      /* ★ 이제 진짜로 **달라질 때만** 씁니다 */
+      if (지금 !== 새높이) ta.style.height = 새높이;
+      else ta.style.height = 지금;
       return 새높이;
     }
 

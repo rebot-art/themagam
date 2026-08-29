@@ -1774,21 +1774,33 @@
       document.removeEventListener("selectionchange", onSel, true);
       window._imeDiagStop = null;
       try { window.AppStore?.removeItem("imeDiagOn"); } catch (e) {}
-      console.log("[imeDiag] 껐습니다. (다음 접속에도 안 켜집니다)");
+      console.log("[imeDiag] 껐습니다.");
     };
-    /* ★ 증상이 드물게 나서, 한 번 켜면 **다음 접속에도 켜진 채**로 둡니다.
-       그날그날 콘솔을 다시 열 필요 없이, 걸리는 순간만 기다리면 돼요. */
-    try { window.AppStore?.setItem("imeDiagOn", "1"); } catch (e) {}
-    console.log("[imeDiag] 지켜보는 중 — 한글을 쳐서 증상을 재현해 주세요. 끄기: _imeDiagStop()");
+    /* ★★★ [고침 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+       ---------------------------------------------------------------------
+       예전에는 한 번 켜면 **다음 접속에도 저절로 켜졌습니다**(AppStore 에
+       imeDiagOn 을 적어 두고, 입장 800ms 뒤 다시 켰어요). 증상이 드물게
+       나니 계속 지켜보자는 뜻이었는데, 그게 덫이 됐습니다.
+
+       이 블랙박스는 **가볍지 않습니다.**
+         · MutationObserver 로 document.body 를 subtree 째 감시 —
+           카드 마당이 15초마다 다시 그려지니 끊임없이 돕니다
+         · compositionupdate(자모 한 획마다) · selectionchange(커서 한 칸마다)
+         · input 마다 정규식
+       게다가 끄는 길이 **콘솔 한 줄뿐**이라, 한 번 켜고 잊으면 그 기기는
+       그 뒤로 영영 무거워집니다. 화면이 클수록 더 티가 나고요.
+
+       ★ 그래서 **기억하지 않습니다.** 켜고 싶으면 그때 켜고, 새로고침하면
+         꺼집니다. 잊고 켜 둘 수가 없어요.
+       ※ 옛 기록이 남아 있는 기기를 위해, 있으면 조용히 지우기만 합니다. */
+    console.log("[imeDiag] 지켜보는 중 — 한글을 쳐서 증상을 재현해 주세요.\n" +
+                "  끄기: _imeDiagStop()  ·  새로고침해도 꺼집니다 (기억하지 않아요)");
     return "켜짐";
   };
 
-  /* 지난번에 켜 뒀으면 입장하자마자 다시 켭니다 */
-  try {
-    if (window.AppStore?.getItem("imeDiagOn") === "1") {
-      setTimeout(() => window.imeDiag(), 800);
-    }
-  } catch (e) {}
+  /* 옛 기기에 남아 있을 수 있는 자동 켜기 표시를 걷어냅니다.
+     ★ 여기서 imeDiag() 를 다시 부르지 않는 것이 이 고침의 핵심입니다. */
+  try { window.AppStore?.removeItem("imeDiagOn"); } catch (e) {}
 
   /* =====================================================================
      ⇪ Caps Lock 지킴이 (2026-08-13)
