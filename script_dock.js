@@ -57,6 +57,13 @@
      알약 줄 위 📊 띠에서 각자 골라 보면 되니까요.
      남은 아래 줄은 "함께 떠드는 것 → 오늘 할 일 → 내가 쌓는 것" 순서입니다. */
   const DOCK = [
+    /* [2026-08-29] ⚙️ 비밀 대화방 — **챗 왼쪽 맨 앞**에 (콩 지정).
+       이름표가 이모지 하나뿐입니다. 알약은 모두에게 보이지만, 명단 밖
+       사람이 누르면 "준비중입니다." 만 떠요 (script_sroom.js).
+       ★ 크기는 챗과 같은 1.2 — 하는 일이 같으니 몸집도 같아야 손에 익습니다.
+       ★ 붉은 점(NEW_BOARDS)에 **안 넣습니다.** newmark 는 모두가 읽을 수
+         있어서, 점 하나로 "저 방에서 지금 얘기 중" 이 새 나갑니다. */
+    { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, move: null, drag: true, resize: true },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -685,6 +692,7 @@
     if (pid === "pub")    window.openPubReview?.();
     if (pid === "help")   window.openHelp?.();
     if (pid === "qna")    window.openQna?.();
+    if (pid === "sroom")  window.openSroom?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
@@ -701,6 +709,9 @@
     _open.delete(pid);
     /* ✍️ 펜이 놓여 있던 판을 닫으면 펜은 다른 방으로 옮겨 둡니다 —
        안 그러면 글칸이 감춰진 판에 갇혀 아무 데도 못 씁니다. */
+    /* ⚙️ 비밀방은 닫으면 듣기를 끊습니다 — 안 끊으면 창을 닫아도 통신이
+       이어지고, 무엇보다 명단에서 빠진 뒤에도 잠깐 들립니다 */
+    if (pid === "sroom") window.closeSroom?.();
     if (pid === "chatty" && _tab === "chatty") setTab("main");
     if (pid === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
     syncPills();

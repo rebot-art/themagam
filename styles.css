@@ -6530,6 +6530,78 @@ html[data-theme-style="studio"] .user-card{
   word-break: break-all;
 }
 
+/* =====================================================================
+   ⚙️ 비밀 대화방 (2026-08-29) — script_sroom.js
+   ---------------------------------------------------------------------
+   ★ 챗과 **같은 몸집**(알약 size 1.2)이라 안도 비슷한 결로 둡니다.
+   ★ 다만 말풍선은 안 씁니다 — 조용한 방이라 담백한 편이 어울려요.
+   ===================================================================== */
+.sr-board{ display: flex; flex-direction: column; height: 100%; min-height: 0;
+           padding: 8px 10px; gap: 6px; }
+.sr-wait{
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; min-height: 120px;
+  font-size: 13px; font-weight: var(--fw-bold); color: var(--text-3, #8A93A2);
+  letter-spacing: .5px;
+}
+.sr-log{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px; }
+.sr-empty{ text-align: center; font-size: 12.5px; color: var(--text-3, #8A93A2); padding: 20px 8px; }
+.sr-line{ display: flex; align-items: baseline; gap: 6px; padding: 3px 2px;
+          font-size: 13px; line-height: 1.6; word-break: break-word; }
+.sr-line.mine .sr-who{ color: var(--accent); }
+.sr-who{ flex: 0 0 auto; font-size: 11.5px; font-weight: var(--fw-bold);
+         color: var(--text-2, #5A6473); }
+.sr-msg{ flex: 1 1 auto; min-width: 0; color: var(--text); white-space: pre-wrap; }
+.sr-t{ flex: 0 0 auto; font-size: 10px; color: var(--text-3, #8A93A2); }
+
+.sr-write{ flex: none; display: flex; gap: 5px; align-items: flex-end; }
+.sr-in{
+  flex: 1; min-width: 0; resize: none; max-height: 120px;
+  font: inherit; font-size: 13px; line-height: 1.5; font-family: inherit;
+  padding: 7px 9px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+}
+.sr-in:focus{ outline: none; border-color: var(--accent); }
+.sr-send{
+  flex: 0 0 auto; width: 32px; height: 32px; cursor: pointer;
+  font-size: 15px; font-weight: var(--fw-bold); font-family: inherit;
+  color: var(--accent); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px;
+}
+.sr-send:hover{ background: var(--accent-softer, var(--fill-1)); }
+.sr-send:active{ transform: scale(.96); }
+
+/* 👥 명단 — 방장에게만 */
+.sr-key{
+  flex: none; align-self: flex-start; cursor: pointer; font-family: inherit;
+  padding: 2px 9px; font-size: 11px; font-weight: var(--fw-bold);
+  color: var(--text-3, #8A93A2); background: transparent;
+  border: 1px dashed var(--border); border-radius: 999px;
+}
+.sr-key:hover{ color: var(--accent); border-color: var(--accent); }
+.sr-allow{
+  flex: none; border: 1px solid var(--border); border-radius: var(--r-md, 10px);
+  padding: 8px 10px; background: var(--fill-1);
+}
+.sr-allow-h{ font-size: 11.5px; font-weight: var(--fw-bold); margin-bottom: 5px;
+             color: var(--text-2, #5A6473); }
+.sr-allow-r{ display: flex; align-items: center; justify-content: space-between;
+             gap: 8px; font-size: 12.5px; padding: 2px 0; }
+.sr-allow-r button{ border: none; background: transparent; cursor: pointer;
+                    color: rgba(90,70,40,.35); font-size: 11px; font-weight: var(--fw-bold); }
+.sr-allow-r button:hover{ color: var(--danger, #B3372B); }
+.sr-allow-e{ margin: 0; font-size: 11.5px; color: var(--text-3, #8A93A2); }
+.sr-allow-add{
+  width: 100%; margin-top: 6px; padding: 5px; cursor: pointer; font-family: inherit;
+  font-size: 11.5px; font-weight: var(--fw-bold); color: var(--text-3, #8A93A2);
+  background: transparent; border: 1px dashed var(--border); border-radius: 8px;
+}
+.sr-allow-add:hover{ color: var(--accent); border-color: var(--accent); }
+
+/* ⚙️ 알약은 이름표가 이모지 하나뿐이라 좁게 (콩 지정) */
+#dock-pill-sroom .dock-pill-label{ letter-spacing: 0; }
+
 /* [치움 2026-08-28] 🔒 세 번째 탭(비밀방)의 옷을 걷어냈습니다.
    기능은 2026-08-07 에 없앴는데 여기 CSS 네 덩어리와 주석이 남아
    있었어요 — 역검사가 styles.css 를 안 보고 있어서 통과한 것입니다
