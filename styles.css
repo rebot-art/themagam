@@ -6619,9 +6619,10 @@ html[data-theme-style="studio"] .user-card{
 
 /* ⚙️ 알약은 이름표가 이모지 하나뿐이라 좁게 (콩 지정) */
 #dock-pill-sroom .dock-pill-label{ letter-spacing: 0; }
-/* 판 폭은 기본(460px)의 **85%** — 콩 2026-08-29.
-   ※ 다른 판들처럼 100vw 를 넘지 않게 묶어 둡니다 (좁은 화면 대비). */
-#dock-panel-sroom{ width: min(391px, calc(100vw - 24px)); }
+/* 판 폭은 **챗과 똑같이** — 콩 2026-08-29.
+   ★ 값을 여기 또 적지 않습니다. 아래 #dock-panel-chat 규칙에 ⚙️ 를
+     나란히 붙여 뒀어요 (styles.css 의 "알약 판 폭" 자리).
+     베껴 두면 챗 폭을 고치는 날 둘이 조용히 어긋납니다. */
 
 /* [치움 2026-08-28] 🔒 세 번째 탭(비밀방)의 옷을 걷어냈습니다.
    기능은 2026-08-07 에 없앴는데 여기 CSS 네 덩어리와 주석이 남아
@@ -9687,7 +9688,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 /* 📢 공지 — 글이 짧아서 오른쪽이 휑했습니다. 460 → 356 */
 #dock-panel-notice{ width: min(356px, calc(100vw - 24px)); }
 /* 💬 챗 460 → 391 → 352 (2026-08-13 다시 10% 줄임) */
-#dock-panel-chat{ width: min(352px, calc(100vw - 24px)); }
+/* ★ ⚙️ 비밀방은 챗과 **한 몸으로** 둡니다 (콩 2026-08-29 "챗 창의 폭과 동일하게").
+   값을 베껴 적지 않고 선택자만 나란히 붙여요 — 베끼면 챗을 고치는 날
+   둘이 조용히 어긋납니다. 하는 일이 같으니 몸집도 같이 갑니다. */
+#dock-panel-chat,
+#dock-panel-sroom{ width: min(352px, calc(100vw - 24px)); }
 /* ☕ 수다방 520 → 416 → 374 (2026-08-13 다시 10% 줄임) */
 #dock-panel-chatty{ width: min(374px, calc(100vw - 24px)); }
 
