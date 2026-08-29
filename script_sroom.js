@@ -105,20 +105,24 @@
       </div>`;
   }
 
+  /* ★ [고침 2026-08-29 — 콩] 명단을 **가로로** 늘어놓습니다.
+     세로로 한 줄씩 쌓으면 사람이 늘 때마다 대화가 밀려 내려가요.
+     이름표(칩)로 옆으로 흐르게 두면 열 명이 넘어도 두어 줄에 들어갑니다.
+     ★ "들어올 수 있는 사람" 이라는 머리글도 뺐습니다 — 👥 하나로 뜻이
+       통하고, 좁은 판에서 한 줄은 큰 자리예요. */
   function sroom명단HTML() {
     if (!window.isRoomOwner?.() || !_sroomList) return "";
     const 줄 = Object.entries(_sroomAllow);
     return `
       <div class="sr-allow">
-        <div class="sr-allow-h">👥 들어올 수 있는 사람</div>
+        <span class="sr-allow-ic" title="들어올 수 있는 사람">👥</span>
         ${줄.length
           ? 줄.map(([uid, 닉]) => `
-              <div class="sr-allow-r">
-                <span>${esc(닉)}</span>
-                <button type="button" data-sroom-out="${esc(uid)}" title="빼기">✕</button>
-              </div>`).join("")
-          : `<p class="sr-allow-e">아직 아무도 없어요. 방장은 늘 들어옵니다.</p>`}
-        <button type="button" class="sr-allow-add" data-sroom-add="1">＋ 닉네임으로 넣기</button>
+              <span class="sr-chip">${esc(닉)}<button type="button"
+                    data-sroom-out="${esc(uid)}" title="빼기" aria-label="빼기">✕</button></span>`).join("")
+          : `<span class="sr-allow-e">아직 아무도 없어요 · 방장은 늘 들어옵니다</span>`}
+        <button type="button" class="sr-allow-add" data-sroom-add="1"
+                title="닉네임으로 넣기">＋</button>
       </div>`;
   }
 
@@ -142,7 +146,7 @@
     box.innerHTML = `
       <div class="sr-board">
         ${window.isRoomOwner?.()
-          ? `<button type="button" class="sr-key" data-sroom-list="1">👥 명단</button>` : ""}
+          ? `<button type="button" class="sr-key" data-sroom-list="1">👥 승인</button>` : ""}
         ${sroom명단HTML()}
         <div class="sr-log">${줄 || `<p class="sr-empty">아직 아무 말도 없어요.</p>`}</div>
         <div class="sr-write">
