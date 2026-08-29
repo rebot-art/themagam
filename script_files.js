@@ -29,10 +29,33 @@
         실행 파일(.exe .bat …)이 목록에 없는 이유이기도 해요.
 
    =====================================================================
+   🔗 링크 자료 (2026-08-28 — 콩)
+   ---------------------------------------------------------------------
+   [왜 생겼나] 콩이 만든 편집기 프로그램(설치 파일)을 방에 두고 싶은데,
+   ① 2MB 를 한참 넘고 ② 실행 파일은 일부러 안 받고 ③ 무엇보다 파일이
+   DB 에 살면 **받을 때마다 요금이 나갑니다**(2026-08-22 Blaze 전환).
+
+   그래서 **파일은 밖에 두고 목록에는 이름표만** 놓습니다.
+       files/{id} = { name, size, by, at, url, note }   ← url 이 있으면 링크 자료
+   위 "Storage 로 옮길 때" 를 위해 비워 뒀던 url 칸을 그대로 씁니다.
+
+   ★★ 링크는 **방장만** 걸 수 있습니다 (isRoomOwner, 규칙도 같은 조건).
+      아무나 걸 수 있으면 "원고양식.hwp" 라는 이름으로 엉뚱한 주소를
+      가리키게 할 수 있어요. 자료실은 서로 믿고 받는 자리라 더 위험합니다.
+   ★ https 만 받습니다. 목록에 **주소의 집(도메인)을 그대로 보여 줍니다** —
+     어디로 가는지 눈으로 보고 누르시라고요.
+   ★ 링크 자료는 90일에 안 사라집니다. 방장이 걸어 둔 도구는 계속 쓰니까요.
+   ★ 파일이 DB 에 없으므로 **통신량·요금이 0** 입니다.
+
+   [설치 파일을 걸 때] 서명이 없는 프로그램은 윈도우가 "알 수 없는 게시자"
+   라며 막습니다. 그건 정상이라는 안내를 note 칸에 적어 두세요 — 안 적으면
+   절반은 못 깔고 포기합니다.
+
+   =====================================================================
    ★ 나중에 Firebase Storage 로 옮길 때 (요금제 결정 후)
    ---------------------------------------------------------------------
    목록(files)은 **그대로 쓰고** 내용만 옮기면 됩니다.
-     · files/{id} 에 url 한 칸이 생기고,
+     · files/{id} 에 url 한 칸이 생기고,   ← 2026-08-28 에 실제로 생겼습니다
      · 받기가 "url 이 있으면 url, 없으면 fileBlob" 을 보게 하면 끝.
    섞여 있어도 돌아가므로 한꺼번에 옮길 필요도 없어요. 새로 올리는
    것부터 Storage 로 보내면, 옛 파일은 90일 뒤 저절로 사라져 이사가
@@ -91,10 +114,18 @@
       size: Math.max(0, Number(v.size) || 0),
       by: String(v.by || ""),
       at: Number(v.at) || 0,
-      /* Storage 로 옮긴 뒤에 채워질 칸 — 지금은 늘 비어 있습니다 */
-      url: typeof v.url === "string" ? v.url : ""
+      /* url 이 있으면 🔗 링크 자료 — 파일은 밖에 있고 여기엔 이름표만 */
+      url: typeof v.url === "string" ? v.url : "",
+      note: String(v.note || "").slice(0, 200)
     };
   }
+
+  /** 주소의 집만 — 어디로 가는지 눈에 보이라고 목록에 적습니다 */
+  function 집(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ""); }
+    catch (e) { return "링크"; }
+  }
+  const 링크인가 = (r) => !!r.url;
 
   /* =====================================================================
      그리기
@@ -111,20 +142,27 @@
 
     const 줄 = list.map(r => {
       const ext = 확장자(r.name);
+      const 링크 = 링크인가(r);
+      /* ★ 링크 자료는 안 사라집니다 — 방장이 걸어 둔 도구는 계속 쓰니까요 */
       const 남은 = Math.max(0, 90 - Math.floor((Date.now() - r.at) / DAY_MS));
-      const 곧 = 남은 <= 14;
+      const 곧 = !링크 && 남은 <= 14;
       const 내것 = r.by === me();
       /* 지우기는 올린 사람 + 방장·운영진 (규칙도 같은 조건) */
       const 지울수 = 내것 || !!window.canAdmin?.();
+      const 곁 = 링크
+        ? `${esc(집(r.url))} · ${esc(r.by)}${r.size ? " · " + 크기글(r.size) : ""}`
+        : `${크기글(r.size)} · ${esc(r.by)} · ${언제(r.at)}${
+            곧 ? ` <b class="fl-old">· ${남은}일 뒤 사라져요</b>` : ""}`;
       return `
-        <div class="fl-row">
-          <span class="fl-ic ${ICON_OF[ext] || "txt"}">${esc(ext.toUpperCase().slice(0, 4))}</span>
+        <div class="fl-row${링크 ? " link" : ""}">
+          <span class="fl-ic ${링크 ? "lnk" : (ICON_OF[ext] || "txt")}">${
+            링크 ? "🔗" : esc(ext.toUpperCase().slice(0, 4))}</span>
           <span class="fl-m">
             <span class="fl-n">${esc(r.name)}</span>
-            <span class="fl-s">${크기글(r.size)} · ${esc(r.by)} · ${언제(r.at)}${
-              곧 ? ` <b class="fl-old">· ${남은}일 뒤 사라져요</b>` : ""}</span>
+            <span class="fl-s">${곁}</span>
+            ${링크 && r.note ? `<span class="fl-note">${esc(r.note)}</span>` : ""}
           </span>
-          <button type="button" class="fl-dl" data-file-get="${esc(r.id)}">받기</button>
+          <button type="button" class="fl-dl" data-file-get="${esc(r.id)}">${링크 ? "열기" : "받기"}</button>
           ${지울수 ? `<button type="button" class="fl-x" data-file-del="${esc(r.id)}"
                               title="지우기" aria-label="지우기">✕</button>` : ""}
         </div>`;
@@ -134,7 +172,9 @@
       <div class="fl-usage">
         <span>${list.length}개 · ${크기글(총량)}</span>
         <span class="fl-bar"><i style="width:${참}%"></i></span>
-        <span>90일 뒤 사라져요</span>
+        <!-- ★ 링크 자료가 섞여 있으면 "90일 뒤 사라져요" 한마디로 뭉뚱그리면
+             안 됩니다 — 링크는 안 사라지거든요. 걸린 게 있을 때만 덧붙여요. -->
+        <span>90일 뒤 사라져요${list.some(링크인가) ? " <b>· 🔗 링크는 그대로</b>" : ""}</span>
       </div>
       <div class="fl-list">${list.length ? 줄
         : `<p class="fl-empty">아직 올라온 자료가 없어요.<br>아래에서 파일을 골라 올려 보세요.</p>`}</div>
@@ -145,6 +185,10 @@
         </label>
         <input type="file" id="files-pick" hidden
                accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.csv,.txt,.pdf,.zip">
+        ${window.isRoomOwner?.() ? `
+          <button type="button" class="fl-link" data-file-link="1">
+            🔗 큰 파일은 링크로 걸기
+          </button>` : ""}
         <p class="fl-msg" id="files-msg"></p>
       </div>`;
   }
@@ -173,11 +217,13 @@
     });
   }
 
-  /** 90일 지난 것은 조용히 걷어냅니다 (목록과 내용 둘 다) */
+  /** 90일 지난 것은 조용히 걷어냅니다 (목록과 내용 둘 다)
+      ★ 🔗 링크 자료는 빼 둡니다 — DB 를 안 쓰니 걷어낼 이유가 없고,
+        방장이 걸어 둔 도구가 90일 뒤 말없이 사라지면 곤란해요. */
   async function sweep() {
     if (!window.db || window.FOREST_NO_WITHER) return;
     const cut = Date.now() - KEEP_MS;
-    const dead = _rows.filter(r => r.at && r.at < cut);
+    const dead = _rows.filter(r => !링크인가(r) && r.at && r.at < cut);
     for (const r of dead) {
       try { await window.db.ref("files/" + r.id).remove(); } catch (e) {}
       try { await window.db.ref("fileBlob/" + r.id).remove(); } catch (e) {}
@@ -249,6 +295,19 @@
   async function 받기(id) {
     const r = _rows.find(x => x.id === id);
     if (!r || !window.db) return;
+
+    /* ★ 🔗 링크 자료는 **새 창으로 엽니다.**
+       download 속성은 남의 집(다른 도메인) 파일에는 안 먹어요 — 브라우저가
+       무시하고 그냥 열어 버립니다. 그러느니 처음부터 새 창이 정직해요.
+       ★ noopener 를 붙입니다 — 안 붙이면 열린 쪽이 window.opener 로 이
+         방을 딴 주소로 돌려버릴 수 있습니다(탭내빙 수법). */
+    if (링크인가(r)) {
+      알림(`${집(r.url)} 로 갑니다…`);
+      window.open(r.url, "_blank", "noopener,noreferrer");
+      setTimeout(() => 알림(""), 2000);
+      return;
+    }
+
     알림(`${r.name} 받는 중…`);
     try {
       /* Storage 로 옮긴 뒤에는 url 이 채워집니다 — 그때는 그리로 갑니다 */
@@ -261,6 +320,47 @@
       알림("");
     } catch (e) {
       알림("받지 못했어요. 연결을 확인해 주세요.", "bad");
+    }
+  }
+
+  /* =====================================================================
+     🔗 링크 걸기 — **방장만** (2026-08-28)
+     ---------------------------------------------------------------------
+     ★ 여기 문고리는 화면일 뿐이고 진짜 자물쇠는 보안규칙입니다
+       (files/$id 에 url 이 있으면 방장 uid 만 쓸 수 있게 잠갔어요).
+     ★ https 만 받습니다 — http 는 중간에서 바꿔치기가 됩니다.
+     ===================================================================== */
+  async function 링크걸기() {
+    if (!window.isRoomOwner?.()) {
+      알림("링크는 방장만 걸 수 있어요.", "bad"); return;
+    }
+    const 주소 = String(prompt(
+      "파일이 있는 주소를 붙여 넣어 주세요.\n\n" +
+      "★ https:// 로 시작해야 합니다.\n" +
+      "★ 큰 설치 파일은 GitHub Releases 에 올리고 그 주소를 쓰세요 —\n" +
+      "   2GB 까지 되고, 요금이 안 나갑니다.") || "").trim();
+    if (!주소) return;
+    if (!/^https:\/\//i.test(주소)) {
+      알림("❌ https:// 로 시작하는 주소만 걸 수 있어요.", "bad"); return;
+    }
+    const 이름 = String(prompt(
+      "목록에 보일 이름을 적어 주세요.", "") || "").trim().slice(0, 120);
+    if (!이름) return;
+    const 안내 = String(prompt(
+      "받는 분께 한 줄 안내 (없으면 비워 두세요)\n\n" +
+      "설치 프로그램이라면 이렇게 적어 두시길 권해요:\n" +
+      "「설치할 때 '알 수 없는 게시자' 경고가 떠요 — 추가 정보 › 실행을 누르시면 됩니다」",
+      "") || "").trim().slice(0, 200);
+
+    try {
+      const ref = window.db.ref("files").push();
+      const 짐 = { name: 이름, size: 0, by: me(), at: Date.now(), url: 주소 };
+      if (안내) 짐.note = 안내;
+      await ref.set(짐);
+      window.dockMarkNew?.("files");
+      알림(`✅ ${이름} 을(를) 걸었어요. (${집(주소)})`, "ok");
+    } catch (e) {
+      알림("걸지 못했어요 — 방장 계정인지, 보안규칙을 콘솔에 올렸는지 확인해 주세요.", "bad");
     }
   }
 
@@ -290,6 +390,7 @@
       if (g) { 받기(g.dataset.fileGet); return; }
       const d = e.target.closest("[data-file-del]");
       if (d) { 지우기(d.dataset.fileDel); return; }
+      if (e.target.closest("[data-file-link]")) { 링크걸기(); return; }
     });
     host.addEventListener("change", (e) => {
       if (e.target?.id === "files-pick") 골랐을때(e.target.files?.[0]);

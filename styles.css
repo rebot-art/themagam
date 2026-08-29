@@ -5244,6 +5244,24 @@ html[data-panelzoom] .dock-panel{
 .fl-drop:hover{ border-color: var(--accent); background: var(--accent-softer); color: var(--text-1); }
 .fl-drop b{ color: inherit; }
 .fl-drop small{ display: block; margin-top: 5px; font-size: 10.5px; }
+/* 🔗 링크 자료 (2026-08-28) — 파일은 밖에 있고 여기엔 이름표만.
+   ★ 딴 물건이라는 게 한눈에 보여야 합니다. 누르면 **밖으로 나가니까요.**
+     그래서 딱지를 보라로 두고 왼쪽에 선을 하나 세웁니다. */
+.fl-row.link{ border-left: 2px solid #8C78C8; padding-left: 8px; }
+.fl-ic.lnk{ background: #8C78C8; font-size: 12px; }
+.fl-note{
+  display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.5;
+  color: var(--text-2, #5A6473);
+}
+.fl-link{
+  width: 100%; margin-top: 8px; padding: 7px 10px;
+  font-size: 11.5px; font-weight: var(--fw-bold); font-family: inherit;
+  color: var(--text-3, #8A93A2); background: transparent;
+  border: 1px dashed var(--border); border-radius: var(--r-md, 10px); cursor: pointer;
+}
+.fl-link:hover{ color: #8C78C8; border-color: #8C78C8; border-style: solid;
+                background: rgba(140,120,200,.08); }
+
 .fl-msg{ margin: 8px 0 0; font-size: 11.5px; min-height: 1.4em; color: var(--text-3, #8A93A2); }
 .fl-msg.bad{ color: #B3372B; font-weight: var(--fw-bold); }
 .fl-msg.ok{ color: #2E6B2B; }
