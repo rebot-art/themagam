@@ -1280,6 +1280,10 @@
           if (data[n] && data[n].proom && isOnline(data[n], now)) 뽀모방인원++;
         });
         window.dockBadge?.("proom", 뽀모방인원);
+        /* ★ 판 안의 "n명" 도 **같은 숫자**를 씁니다 (2026-08-30 고침).
+           예전엔 판이 proomHere 를 따로 봐서, 유령이 남으면 배지와
+           어긋났어요 — 콩이 "2명인데 배지는 1" 로 잡아냈습니다. */
+        window.proomSetCount?.(뽀모방인원);
       } catch (e) {}
 
       startHeaderTicker();

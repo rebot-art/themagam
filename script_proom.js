@@ -54,8 +54,8 @@
   const PROOM_LEN  = 2000;
   const PROOM_종키  = "proomBell"; // 🔔 알림 — 기기별
 
-  let _proomRef = null, _proomHereRef = null, _proom나여기 = null;
-  let _proomRows = [], _proomHere = 0;
+  let _proomRef = null;
+  let _proomRows = [], _proom인원 = 0;
   let _proomBound = false, _proomBusy = false;
   let _proom열림 = false;
   let _proom틀 = "";
@@ -218,7 +218,7 @@
       bar.classList.toggle("rest", st.휴식);
     }
     const cnt = el("proom-cnt");
-    if (cnt) cnt.textContent = (_proomHere || 1) + "명";
+    if (cnt) cnt.textContent = (_proom인원 || 1) + "명";
 
     /* 단계가 바뀌는 순간 — 소리 한 번, 줄 한 번 */
     const 단계 = st.휴식 ? "휴식" : "뽀모";
@@ -362,32 +362,40 @@
         proom줄그리기();
       });
     }
-    /* 인원 — 들어와 있는 동안만. 끊기면 서버가 지웁니다 */
-    const 나 = proomMe();
-    if (나 && !_proom나여기) {
-      try {
-        _proom나여기 = window.db.ref("proomHere/" + 나);
-        _proom나여기.onDisconnect().remove();
-        _proom나여기.set(Date.now());
-      } catch (e) {}
-    }
-    if (!_proomHereRef) {
-      _proomHereRef = window.db.ref("proomHere");
-      _proomHereRef.on("value", (s) => {
-        _proomHere = s.numChildren() || 0;
-        const c = el("proom-cnt");
-        if (c) c.textContent = (_proomHere || 1) + "명";
-      });
-    }
   }
 
   function proom그만듣기() {
     try { _proomRef?.off(); } catch (e) {}
-    try { _proomHereRef?.off(); } catch (e) {}
-    try { _proom나여기?.remove(); } catch (e) {}
-    _proomRef = null; _proomHereRef = null; _proom나여기 = null;
+    _proomRef = null;
     clearInterval(_proom시계기); _proom시계기 = null;
   }
+
+  /* =====================================================================
+     ★★★ [고침 2026-08-30 — 콩 신고 "인원이 2명인데 배지는 1"]
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     인원을 **두 군데서** 세고 있었습니다.
+       · 판 안의 "n명"  ← proomHere 노드 (판을 연 사람만 구독)
+       · 알약 배지       ← status 의 proom 칸 (모두가 이미 듣는 자리)
+     둘이 어긋난 까닭은 proomHere 에 **유령이 남기 때문**입니다.
+     onDisconnect 예약은 **그 연결 하나에만** 걸려서, 끊겼다 다시 붙으면
+     사라져 있어요. 그러면 나간 사람이 영영 명단에 남습니다.
+     ★ 이 방이 화면 공유에서 똑같이 데인 자리예요 — 거기서는 재연결마다
+       예약을 다시 걸어서 막았습니다(script_share.js 의 맥살피기).
+
+     [그래서 — 세는 곳을 하나로]
+     proomHere 를 **통째로 걷어냈습니다.** status 쪽은
+       · 이미 모두가 듣고 있고 (새 구독 0)
+       · isOnline 로 걸러서 **저절로 청소되며**
+       · 알약 배지와 같은 숫자라 어긋날 수가 없습니다.
+     ★ 노드 하나, 구독 하나, 쓰기 하나, onDisconnect 함정 하나가 함께
+       사라졌습니다. **고치는 대신 없앨 수 있으면 없애는 쪽이 낫습니다.**
+     ===================================================================== */
+  window.proomSetCount = function (n) {
+    _proom인원 = Math.max(0, Number(n) || 0);
+    const c = el("proom-cnt");
+    if (c) c.textContent = (_proom인원 || 1) + "명";
+  };
 
   async function proom보내기() {
     const 칸 = el("proom-in");
