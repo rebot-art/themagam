@@ -9926,6 +9926,14 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-panel.can-drag.dragging .dock-head{ cursor: grabbing; }
 .dock-panel.dragging{ box-shadow: 0 -10px 34px rgba(0,0,0,.24); }
 .dock-title{ font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text); }
+/* 제목 옆 잔글씨 한 마디 (콩 2026-08-30) — 제목과 확실히 구분되게:
+   작고, 가늘고, 흐리게. 좁은 판에서는 말없이 줄어들다 사라집니다. */
+.dock-note{
+  font-size: var(--fs-2xs); font-weight: var(--fw-regular, 400);
+  color: var(--text-3, #8A93A2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0; flex: 0 1 auto;
+}
 .dock-x{
   margin-left: auto;
   width: 26px; height: 26px;
