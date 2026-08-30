@@ -385,6 +385,16 @@
      표를 그릴 때마다 새로 채웁니다 (달을 넘기면 상한도 달라지니까요). */
   let _vac셈 = {};
 
+  /* 🌿 [2026-08-30] 출석부를 **앞으로도** 넘길 수 있게 했습니다.
+     ---------------------------------------------------------------
+     개인사정은 대개 **미리** 알려집니다 — "다음 달 초에 수술이라
+     보름쯤 못 나와요". 그런데 출석부는 지난 달로만 넘어가서, 방장이
+     9월이 올 때까지 기다렸다가 찍어야 했어요.
+     monthOffset 은 원래 "몇 달 전" 이었습니다. 이제 **음수면 앞달**.
+     ★ 앞달은 `앞달한도` 까지만 — 무한정 열면 아무도 안 볼 빈 표를
+       계속 그리고, 실수로 2027년에 병가를 찍어 놓고 못 찾습니다. */
+  const 앞달한도 = 2;          // 다음 달, 다다음 달까지
+
   async function loadAttendance(monthOffset) {
     _attOffset = monthOffset;
     _vac셈 = {};
@@ -398,7 +408,10 @@
     const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
     const todayKey = dayKey(new Date());
     el("adm-att-month").textContent = ymKey.replace("-", "년 ") + "월";
-    el("adm-att-next").disabled = monthOffset === 0;
+    el("adm-att-next").disabled = monthOffset <= -앞달한도;
+    /* 앞달은 "아직 오지 않은 달" 이라고 이름 옆에 적어 둡니다 —
+       출석이 텅 비어 있는 이유가 고장이 아니라는 뜻이에요 */
+    el("adm-att-month").textContent += monthOffset < 0 ? " (앞으로)" : "";
 
     try {
       /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번 */
@@ -483,8 +496,15 @@
       /* 표 만들기 — ① 인원 수 줄 ② 날짜 머리글 줄 ③ 멤버 줄들 */
       /* 이번 달이면 오늘 **다음** 날부터가 아직 남은 날입니다.
          지난 달을 보고 있으면 남은 날은 없어요(0). */
-      const todayD = new Date().getDate();
-      const isThisMonth = (monthOffset === 0);
+      /* ★★ 앞달을 **"오늘이 0일인 이번 달"** 로 셈합니다 (2026-08-30).
+         새 가지를 치지 않고 이 두 값만 바꾸면 아래가 전부 맞습니다:
+           · 남은 날 = 1일부터 말일까지 (휴가·개인사정 뺀 전부)
+           · 총원 줄의 '앞날' 이 그 달 통째로 비워짐
+           · 네 그래프도 같은 값을 받아 앞날을 안 그림
+         새 if 를 여기저기 심으면 언젠가 한 군데를 빠뜨립니다. */
+      const 앞달 = monthOffset < 0;
+      const todayD = 앞달 ? 0 : new Date().getDate();
+      const isThisMonth = 앞달 || (monthOffset === 0);
 
       /* =====================================================================
          [2026-08-15] 머리글을 **두 줄로** 갈랐습니다.
@@ -636,8 +656,45 @@
            다른 기준을 말합니다). 대신 넣는 값에 개인사정을 얹습니다:
            쉰 날은 기준에서 빠진다는 점에서 휴가와 셈이 같아요. */
         const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays + leaveDays, attended: attDays, daysLeft });
+
+        /* ★★★ [2026-08-30 — 콩] **할인 전 기준**도 함께 냅니다.
+           ---------------------------------------------------------------
+           처음엔 "개인사정이 하루라도 있으면 순위에서 뺀다" 였습니다.
+           그런데 콩이 짚었어요 — "이미 100%인 사람은 억울하지 않을까?"
+           맞습니다. 빼야 할 것은 **쉰 사람**이 아니라 **할인 덕을 본
+           사람**이었어요. 이 둘은 다릅니다:
+
+             · 15일 쉬어 기준이 9일로 내려갔고, 9일 나옴  → 할인 덕
+             · 15일 쉬었는데 **원래 기준 18일을 다 채움** → 순수하게 잘함
+
+           두 번째 사람을 뺄 이유가 없습니다. 아픈 와중에 원래 몫을
+           해낸 사람이니까요. 그래서 개인사정을 **안 뺀** 기준을 한 번
+           더 내서, 그걸 넘었으면 순위에 그대로 둡니다.
+           ★ ruleOf 를 한 번 더 부를 뿐 — 순수 산수, 서버 요청 0.
+           ★ 등수도 **할인 전 기준**으로 매깁니다(rateRows.need 가
+             원래 기준). 할인 후로 매기면 15일 쉬고 18일 나온 사람이
+             200%로 1등을 독차지해, 안 쉬고 18일 나온 사람이 이길
+             방법이 없어져요. */
+        const 원래 = leaveDays
+          ? ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays, attended: attDays, daysLeft })
+          : r;
+        /* ★★ 문턱은 "지금 못 채웠다" 가 아니라 **"남은 날을 다 나와도
+           못 채운다"**(state === "bad") 입니다. 달 중간에 att < need 는
+           **모두가** 그렇습니다 — 10일에 18일을 채운 사람은 없어요.
+           거기서 자르면 쉰 사람만 달 내내 순위 밖에 있게 되어, 콩이
+           짚은 억울함이 달 중간으로 옮겨갈 뿐입니다.
+           bad 로 자르면 달 중간엔 남들과 똑같이 % 로 서고, 정말 원래
+           몫에 못 닿는 것이 확정된 뒤에야 조용한 줄로 갑니다. */
+        const 할인덕 = leaveDays > 0 && 원래.state === "bad";
+
         /* 🏅 출석률 순위가 씁니다 — 표가 이미 센 값 그대로 (다시 안 셈) */
-        rateRows.push({ n, att: attDays, need: r.need, state: r.state, leave: leaveDays > 0 });
+        rateRows.push({
+          n, att: attDays,
+          need: 원래.need,                 // ★ 등수는 할인 전 기준으로
+          state: 원래.state,
+          leave: leaveDays > 0,            // 🌿 이름 옆 표식
+          out: 할인덕                      // 순위에서 빠지는가
+        });
         const 표 = { ok: "✅", maybe: "🟡", bad: "🔴" };
         const 말 = { ok: "달성", maybe: "남은 날로 채울 수 있어요",
                      bad: isThisMonth ? "남은 날을 다 나와도 모자라요" : "미달" };
@@ -693,7 +750,7 @@
       시간대그래프({ ymKey, daysInMonth, base, segsByNick, isThisMonth, todayD });
 
       /* 🏅 출석률 순위 (2026-08-18) — 표가 보는 그 달 기준. ‹ › 를 따라갑니다 */
-      출석률순위(rateRows);
+      출석률순위(rateRows, 앞달);
 
       /* 🏅 개근 명단 굳히기 (2026-08-22) — 방 배경판이 읽어 갑니다 */
       명단굳히기(ymKey, rateRows);
@@ -1306,10 +1363,14 @@
 
   async function 명단굳히기(ymKey, rateRows) {
     try {
-      if (!최근두달().includes(ymKey)) return;      // 옛 달은 지나갑니다
-      /* 🌿 개인사정으로 쉰 사람은 뺍니다 — 기준이 내려가 ✅ 가 떠도
-         "개근" 이라 부르기는 어려우니까요 (2026-08-30) */
-      const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0 && !r.leave)
+      /* 옛 달도, 앞달도 지나갑니다 — 최근두달() 은 지난달·이번달 둘뿐이라
+         앞달(다음 달)은 여기서 자동으로 걸립니다. 아직 오지 않은 달의
+         "개근 명단" 은 말이 안 되니까요. */
+      if (!최근두달().includes(ymKey)) return;
+      /* 🌿 **할인 덕에** ✅ 가 뜬 사람만 뺍니다 (2026-08-30).
+         쉬었더라도 할인 전 기준을 채웠으면 개근이 맞아요 — state 가
+         이미 할인 전 기준으로 매겨져 있어서, out 만 걸러내면 됩니다. */
+      const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0 && !r.out)
                           .map(r => r.n)
                           .sort((a, b) => a.localeCompare(b, "ko"));
       const 옛 = await db.ref(`honors/${ymKey}/list`).once("value");
@@ -1326,22 +1387,38 @@
     } catch (e) { console.warn("[adm honors]", e); }
   }
 
-  function 출석률순위(rateRows) {
+  function 출석률순위(rateRows, 앞달) {
     const box = el("adm-streak");
     if (!box) return;
+
+    /* 앞달은 아직 아무도 안 나온 달입니다 — 전원 0% 🔴 로 줄을 세우면
+       읽는 사람이 놀랍니다. 기준만 알려 주고 순위는 접습니다.
+       ★ 기준(need)은 이미 개인사정만큼 깎여 있어서, 미리 찍어 둔
+         병가가 다음 달 기준을 어떻게 바꾸는지 여기서 확인됩니다. */
+    if (앞달) {
+      const 쉬는이 = rateRows.filter(r => r.leave)   // 앞달은 아직 아무도 안 나와서 out 이 무의미
+                            .map(r => r.n).sort((a, b) => a.localeCompare(b, "ko"));
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">🏅 출석률</span></div>
+        <p class="adm-chart-sub">아직 오지 않은 달이에요 — 순위는 그 달이 시작되면 나타납니다.</p>` +
+        (쉬는이.length
+          ? `<p class="adm-chart-note rest">🌿 미리 적어 둔 개인사정 — ${
+              쉬는이.map(escapeHtml).join(" · ")}</p>`
+          : "");
+      return;
+    }
 
     /* 🌿 개인사정으로 하루라도 쉰 사람은 순위에서 뺍니다 (2026-08-30 — 콩).
        기준(need)이 이미 그만큼 내려가 있어서, 사흘 나오고 100% 로 1등을
        하게 됩니다. 아픈 사람을 1등 자리에 올리는 건 격려가 아니에요.
        대신 아래에 한 줄로 조용히 적습니다 — 없는 사람 취급도 아니게. */
-    const 쉬는이 = rateRows.filter(r => r.leave)
+    const 쉬는이 = rateRows.filter(r => r.out)
                           .map(r => r.n).sort((a, b) => a.localeCompare(b, "ko"));
     const 쉬는줄 = 쉬는이.length
       ? `<p class="adm-chart-note rest">🌿 사정으로 쉬는 중 — ${
-          쉬는이.map(escapeHtml).join(" · ")} <span class="q">(순위에서 빼 두었어요)</span></p>`
+          쉬는이.map(escapeHtml).join(" · ")} <span class="q">(기준이 내려가 있어 순위에서 빼 두었어요)</span></p>`
       : "";
 
-    const rows = rateRows.filter(r => !r.leave).map(r => ({
+    const rows = rateRows.filter(r => !r.out).map(r => ({
       ...r,
       rate: r.need > 0 ? r.att / r.need : null
     }));
@@ -1369,7 +1446,8 @@
          (막대까지 늘리면 1등 막대에 맞춰 다른 모두가 쪼그라들어요) */
       const w = 있음 ? Math.min(100, Math.max(pct > 0 ? 6 : 0, pct)) : 3;
       return `<div class="adm-streak-row${있음 ? "" : " dead"}">
-        ${rk}<span class="nm">${escapeHtml(r.n)}</span>
+        ${rk}<span class="nm">${escapeHtml(r.n)}${
+          r.leave ? `<span class="lv-n" title="🌿 개인사정이 있는데도 할인 전 기준을 채웠어요">🌿</span>` : ""}</span>
         <span class="bw"><i style="width:${w}%"></i></span>
         <span class="ct">${있음 ? `${pct}<small>%</small>` : "—"}</span>
         <span class="ct sub">${있음 ? `${r.att}/${r.need}<small>일</small>` : ""}</span>
@@ -2583,7 +2661,7 @@
     el("adm-pin-btn")?.addEventListener("click", doPin);
     el("adm-pin")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) doPin(); });
     el("adm-att-prev")?.addEventListener("click", () => loadAttendance(_attOffset + 1));
-    el("adm-att-next")?.addEventListener("click", () => loadAttendance(Math.max(0, _attOffset - 1)));
+    el("adm-att-next")?.addEventListener("click", () => loadAttendance(Math.max(-앞달한도, _attOffset - 1)));
     /* 출근부는 매번 다시 그려지므로 개별 [✕] 대신 표가 담긴 상자에 위임합니다 */
     el("adm-att-body")?.addEventListener("click", e => {
       const btn = e.target.closest("[data-del-nick]");

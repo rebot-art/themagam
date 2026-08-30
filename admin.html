@@ -524,11 +524,12 @@
         <h2>📅 출석·휴가 현황</h2>
         <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.
           맨 윗줄은 그날 출석한 인원 수, 이름 옆 ✕ 는 명단에서 지우기예요(방장만).<br>
-          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🌿 개인사정 켜고 끄기(방장만)</p>
+          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🌿 개인사정 켜고 끄기(방장만)<br>
+          <span class="adm-role-why">— <b>›</b> 로 <b>다음 달·다다음 달</b>까지 넘길 수 있어요. 미리 알려 온 사정을 그때 가서 찍지 않아도 됩니다.</span></p>
         <div class="adm-nav">
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
-          <button type="button" id="adm-att-next" title="다음 달">›</button>
+          <button type="button" id="adm-att-next" title="다음 달 (다다음 달까지)">›</button>
           <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
           <button type="button" id="adm-log-open" class="adm-btn ghost adm-nav-side"
                   title="하루치 입장을 시간순으로 봅니다 (3시간에 한 번만 기록)">🕘 입장 기록</button>
@@ -859,7 +860,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608301436"></script>
+  <script src="script_admin.js?v=202608301449"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
