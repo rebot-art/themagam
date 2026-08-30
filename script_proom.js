@@ -233,13 +233,15 @@
                 <b id="proom-fs">${proom글씨()}</b>
                 <button type="button" data-proom-font="1" aria-label="글씨 크게">＋</button>
               </span>
-              <span id="proom-cnt">1명</span>
+              <button type="button" class="pr-cnt" id="proom-cnt" data-proom-cnt="1"
+                      title="참여자 보기">1명</button>
               <button type="button" class="pr-bell" id="proom-bell"
                       data-proom-bell="1" aria-label="알림">🔔</button>
             </div>
             <div class="pr-bar"><i id="proom-bar" style="width:0%"></i></div>
           </div>
         </div>
+        <div class="pr-pop" id="proom-pop" hidden></div>
         <div class="pr-log" id="proom-log"></div>
         <div class="pr-write">
           <textarea id="proom-in" class="pr-in" rows="1" maxlength="${PROOM_LEN}"
@@ -251,6 +253,34 @@
     proom종그리기();
     proom시계();
     proom줄그리기();
+  }
+
+  /* =====================================================================
+     👥 참여자 명단 (2026-08-30 — 콩 "n명을 클릭하면 명단이 자그맣게")
+     ---------------------------------------------------------------------
+     "n명" 을 누르면 열리고, 다시 누르면 닫힙니다. 재료는 입장 줄이 쓰는
+     그 명단(_proom명단 — status 에서 온 것) — **새로 읽는 자료 0.**
+     닉네임 색도 챗과 같은 색(nickColorStyle)을 입습니다.
+     ★ 여기 innerHTML 은 클릭했을 때와 명단이 바뀔 때만 돕니다 —
+       250ms 시계 길이 아니에요.
+     ===================================================================== */
+  function proom명단그리기() {
+    const 팝 = el("proom-pop");
+    if (!팝 || 팝.hidden) return;      // 닫혀 있으면 그릴 일도 없습니다
+    const 나 = proomMe();
+    const 들 = new Set(_proom명단 || []);
+    if (나) 들.add(나);                // 첫 하트비트 전엔 명단에 나도 없어서
+    const 줄 = [...들].sort((a, b) => a.localeCompare(b, "ko"));
+    팝.innerHTML = 줄.map((닉) => `
+      <div class="pr-pop-r${닉 === 나 ? " mine" : ""}">
+        <span class="pr-pop-n" data-name-of="${esc(닉)}"${window.nickColorStyle?.(닉) || ""}>${esc(닉)}</span>${닉 === 나 ? `<small>나</small>` : ""}
+      </div>`).join("");
+  }
+  function proom명단토글() {
+    const 팝 = el("proom-pop");
+    if (!팝) return;
+    팝.hidden = !팝.hidden;
+    proom명단그리기();
   }
 
   /* =====================================================================
@@ -518,6 +548,7 @@
     if (_proom입장줄.length > 40) _proom입장줄 = _proom입장줄.slice(-40);
     _proom명단 = 새;
     if (생김) proom줄그리기();
+    proom명단그리기();               // 👥 명단 팝이 열려 있으면 새 얼굴을 반영
   };
 
   async function proom보내기() {
@@ -550,6 +581,7 @@
       proom소리풀기();
       const 글씨 = e.target.closest("[data-proom-font]");
       if (글씨) { proom글씨바꾸기(Number(글씨.dataset.proomFont)); el("proom-in")?.focus(); return; }
+      if (e.target.closest("[data-proom-cnt]")) { proom명단토글(); return; }
       if (e.target.closest("[data-proom-bell]")) { proom종바꾸기(); el("proom-in")?.focus(); return; }
       if (e.target.closest("[data-proom-send]")) { proom보내기(); return; }
     });
