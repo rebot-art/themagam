@@ -389,11 +389,19 @@
     clearInterval(_proom시계기);
     _proom시계기 = setInterval(proom시계, 250);
     setTimeout(() => el("proom-in")?.focus(), 60);
+    /* ★ 곧바로 알립니다. 안 하면 다음 하트비트(최대 15초)까지 남들 화면에
+       내가 안 보여요 — 들어왔는데 아무 표시가 없으면 고장으로 읽힙니다. */
+    try { window.updateStatus?.(true); } catch (e) {}
   }
   function closeProom() {
     _proom열림 = false;
     proom그만듣기();
+    try { window.updateStatus?.(true); } catch (e) {}
   }
+  /* ⏱️ 내가 방에 있나 — script_realtime.js 의 updateStatus 가 물어봅니다.
+     ★ 이 한 줄 덕에 **새 구독이 하나도 안 생깁니다.** 카드 정보(status)에
+       얹혀 나가고, 그건 이미 모두가 듣고 있으니까요. */
+  window.imInProom = () => _proom열림;
   window.openProom = openProom;
   window.closeProom = closeProom;
 })();

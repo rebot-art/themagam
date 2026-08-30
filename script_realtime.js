@@ -1159,9 +1159,14 @@
             : (pCount > 0
                 ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
                 : "");
+          /* ⏱️ [2026-08-29 — 콩] 뽀모방에 있으면 🍅 **오른쪽**에 딱지.
+             "누가 있는지" 가 보여야 따라 들어가게 됩니다 — 숫자만으로는
+             "누가 있나 보다" 에서 그쳐요. */
+          const proomChip = row.proom
+            ? `<span class="card-proom" title="⏱️ 뽀모방에 있어요">⏱️</span>` : "";
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
-                 ${pomoChip}
+                 ${pomoChip}${proomChip}
                </div>`;
 
           // 배지 줄 — 왼쪽 업적(트로피·왕관), 오른쪽 상태
@@ -1258,6 +1263,20 @@
         _lastCardParts = { nicks: orderedNicks.slice(), parts };
       }
       fixLonelyCard();
+
+      /* ⏱️ [2026-08-29 — 콩] 뽀모방 인원을 알약 배지에 얹습니다.
+         ★ **접속 중인 사람만** 셉니다. status 는 나가도 서버에 남아 있어서
+           (onDisconnect 로 안 지웁니다), 그냥 세면 어제 들어왔던 사람까지
+           잡혀요. 카드를 그릴 때와 **같은 잣대**(isOnline)를 씁니다 —
+           화면공유 청소에서 데인 것과 같은 종류의 함정입니다.
+         ★ 새로 읽는 자료가 0 입니다. 방금 그린 그 data 를 그대로 셉니다. */
+      try {
+        let 뽀모방인원 = 0;
+        Object.keys(data || {}).forEach(n => {
+          if (data[n] && data[n].proom && isOnline(data[n], now)) 뽀모방인원++;
+        });
+        window.dockBadge?.("proom", 뽀모방인원);
+      } catch (e) {}
 
       startHeaderTicker();
       배경판살피기();   // ★ 배치가 바뀌며 밀려났으면 다시 넣습니다
@@ -1449,6 +1468,12 @@
       pomoCount,
       pomoRunning,
       pomoPhase: pomoPhaseNow,
+      /* ⏱️ [2026-08-29] 뽀모방에 들어와 있나 — 카드의 딱지와 알약 배지가 씁니다.
+         ★ **새 구독을 안 만들려고** 여기에 얹었습니다. status 는 이미 모두가
+           듣고 있어서, 칸 하나 더 실어 보내는 값이 사실상 공짜예요.
+           (proomHere 를 따로 구독하게 하면 안 여는 사람에게도 통신이 생깁니다)
+         ★ status 는 "달라진 칸만" 보내므로, 들고 날 때 한 번씩만 오갑니다. */
+      proom: (typeof window.imInProom === "function") ? !!window.imInProom() : false,
       shareOn,
       onPhone,
       /* [2026-08-09] 작업 스티커. 자정 초기화를 그만두면서 날짜 칸

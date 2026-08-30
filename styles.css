@@ -11045,3 +11045,14 @@ html[data-lite] .pr-flash{ animation:none; }
   font-size: 10.5px; color: var(--text-3, #8A93A2);
   background: var(--fill-1); border-radius: 6px; padding: 2px 7px;
 }
+
+/* ⏱️ 뽀모방에 있는 사람 — 카드의 🍅 오른쪽 (콩 2026-08-29).
+   ★ 숫자만으로는 "누가 있나 보다" 에서 그칩니다. 누구인지가 보여야
+     따라 들어가게 돼요. */
+.card-proom{
+  flex: 0 0 auto;
+  font-size: 11px; line-height: 1;
+  padding: 2px 6px; border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent-line, rgba(179,55,43,.28));
+}
