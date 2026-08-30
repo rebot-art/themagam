@@ -88,7 +88,11 @@
        ★ 알약 🍅 Pomodoro 와는 아무 상관 없습니다. 그건 각자 켜고 끄는
          것이고, 이쪽은 시계처럼 저 혼자 돌아요 (script_proom.js).
        ★ 이름에 🍅 를 안 씁니다 — 나란히 두면 둘이 헷갈려요 (콩). */
-    { id: "proom",  label: "⏱️ 뽀모방", stay: true, size: 1.2, move: null, drag: true, resize: true },
+    /* ★ [높이 08-30 — 콩] 1.2 → **0.78** (챗의 65%).
+       "수다가 주 목적이 아니라서" — 시계를 보는 자리라 대화 칸이 길 이유가
+       없습니다. 516px → 335px. 필요하면 위 가장자리를 잡아 늘리면 되고,
+       그 값은 기기에 남아요. ※ 폭은 그대로 챗과 같습니다(352px). */
+    { id: "proom",  label: "⏱️ 뽀모방", stay: true, size: 0.78, move: null, drag: true, resize: true },
     /* 🏢 출판사 품평 — 익명 게시판 (2026-08-12, script_pubreview.js).
        공지처럼 목록형이지만 댓글이 길게 달리는 곳이라 키울 수 있게 했어요. */
     { id: "pub", label: "🏢 출판사 품평", stay: true, size: 1.35, move: null, drag: true, resize: true },

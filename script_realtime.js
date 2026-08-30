@@ -1159,14 +1159,18 @@
             : (pCount > 0
                 ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
                 : "");
-          /* ⏱️ [2026-08-29 — 콩] 뽀모방에 있으면 🍅 **오른쪽**에 딱지.
+          /* ⏱️ [2026-08-29 — 콩] 뽀모방에 있으면 카드에 딱지.
              "누가 있는지" 가 보여야 따라 들어가게 됩니다 — 숫자만으로는
-             "누가 있나 보다" 에서 그쳐요. */
+             "누가 있나 보다" 에서 그쳐요.
+             ★ [자리 바꿈 08-30 — 콩] 🍅 **왼쪽**으로 옮겼습니다.
+               🍅 뒤에 오늘 횟수(🍅 4)가 붙으니, ⏱️ 를 오른쪽에 두면
+               "4 ⏱️" 처럼 숫자와 딱지가 붙어 읽혀요. 딱지 → 숫자 순이라야
+               눈이 안 헷갈립니다. */
           const proomChip = row.proom
             ? `<span class="card-proom" title="⏱️ 뽀모방에 있어요">⏱️</span>` : "";
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
-                 ${pomoChip}${proomChip}
+                 ${proomChip}${pomoChip}
                </div>`;
 
           // 배지 줄 — 왼쪽 업적(트로피·왕관), 오른쪽 상태
