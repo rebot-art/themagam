@@ -237,6 +237,10 @@
      ===================================================================== */
   function sroom듣기() {
     if (_sroomRef || !window.db) return;
+    /* 🧹 자정 방 청소 (콩 2026-08-30) — 어제까지의 대화를 그날 처음 여는
+       사람이 쓸어냅니다. 비밀방 대화는 그날의 것 — 쌓아 두지 않아요.
+       승인 멤버는 $id 쓰기 권한이 있어 규칙 변경 없이 지울 수 있습니다. */
+    window.자정방청소?.("sroom", "sroomSweepDay");
     _sroomRef = window.db.ref("sroom").orderByChild("time").limitToLast(SROOM_MAX);
     _sroomRef.on("value", snap => {
       const raw = snap.val() || {};
@@ -250,6 +254,9 @@
         .filter(Boolean)
         .sort((a, b) => a.time - b.time);
       sroom그리기();
+      /* 🧹 방을 열어둔 채 자정을 넘겼으면, 다음 말이 올 때 쓸립니다
+         (도장 덕에 평소에는 첫 줄에서 곧장 돌아와요) */
+      window.자정방청소?.("sroom", "sroomSweepDay");
     });
   }
   function sroom그만듣기() {

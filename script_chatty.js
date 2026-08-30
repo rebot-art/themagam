@@ -276,6 +276,11 @@
   function _attachChattyListener() {
     _detachChattyListener();
 
+    /* 🧹 자정 방 청소 (콩 2026-08-30) — 화면은 원래 "지금부터"만 보여주지만
+       서버에는 지난 수다가 계속 쌓이고 있었습니다. 어제까지의 것을
+       그날 처음 참여하는 사람이 쓸어냅니다 (규칙 변경 불필요). */
+    window.자정방청소?.("messages2", "chattySweepDay");
+
     const box = _chattyBox();
     if (box) box.innerHTML =
       `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">☕ 수다방에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
@@ -293,6 +298,8 @@
       if (!data || !key) return;
       if (_chattySeenKeys.has(key)) return;
       _chattySeenKeys.add(key);
+      /* 🧹 참여한 채 자정을 넘겼으면 다음 말이 올 때 쓸립니다 (평소엔 무해) */
+      window.자정방청소?.("messages2", "chattySweepDay");
 
       _renderChattyMessage(data, key);
 

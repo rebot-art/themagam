@@ -287,6 +287,9 @@
     const 단계 = st.휴식 ? "휴식" : "뽀모";
     if (_proom옛단계 !== null && _proom옛단계 !== 단계) {
       proom소리(st.휴식);
+      /* 🧹 00:00 도 단계 경계입니다 — 자정을 방 안에서 맞으면 그 자리에서
+         청소됩니다 (도장 덕에 다른 경계에서는 곧장 돌아와요) */
+      window.자정방청소?.("proom", "proomSweepDay");
       proom줄그리기();                       // 새 구분 줄이 끼어들게
       const b = el("proom-big")?.closest(".pr-board");
       if (b) { b.classList.add("pr-flash"); setTimeout(() => b.classList.remove("pr-flash"), 900); }
@@ -418,6 +421,8 @@
      ===================================================================== */
   function proom듣기() {
     if (!window.db) return;
+    /* 🧹 어제까지의 대화는 그날 처음 여는 사람이 쓸어냅니다 (콩 2026-08-30) */
+    window.자정방청소?.("proom", "proomSweepDay");
     if (!_proomRef) {
       _proomRef = window.db.ref("proom").orderByChild("time").limitToLast(PROOM_MAX);
       _proomRef.on("value", (snap) => {
