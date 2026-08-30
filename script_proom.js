@@ -62,6 +62,7 @@
   let _proom시계기 = null;
   let _proom옛단계 = null;         // 뽀모↔휴식이 바뀌는 순간을 알아채려고
   let _proom시차 = 0;              // 서버 시각과 내 시계의 차이(ms)
+  let _proom들어온때 = 0;          // 이 판을 언제 열었나 — 🍅 판정에 씁니다
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
@@ -226,8 +227,58 @@
       proom줄그리기();                       // 새 구분 줄이 끼어들게
       const b = el("proom-big")?.closest(".pr-board");
       if (b) { b.classList.add("pr-flash"); setTimeout(() => b.classList.remove("pr-flash"), 900); }
+      /* 뽀모 → 휴식 으로 넘어갔다 = 한 바퀴를 채웠다 */
+      if (st.휴식) proom토마토(proom단계시작(t) - PROOM_뽀모);
     }
     _proom옛단계 = 단계;
+  }
+
+  /* =====================================================================
+     🍅 뽀모방에서 토마토 쌓기 (2026-08-30 — 콩)
+     ---------------------------------------------------------------------
+     콩: "뽀모는 뽀모잖아?" — 맞습니다. 다만 그냥 붙이면 **판을 25분
+     경계에 잠깐 열었다 닫는 것만으로** 토마토가 붙어요. 그래서 조건을 넷
+     겁니다. 하나라도 어긋나면 안 셉니다.
+
+     ★★★ 판정을 **전부 이 기기 안에서** 합니다 — 서버에 아무것도 안 적어요.
+        이 파일의 제1원칙("시계 쪽 쓰기 0")이 그대로 지켜집니다.
+        쌓는 순간의 쓰기 한 번(pomoSessions)은 알약 뽀모가 원래 하던 그것이고요.
+
+     ★★ 바퀴 시작 시각이 **계산으로 나오는 숫자**라는 점을 씁니다.
+        "이 바퀴는 이미 셌다" 를 그 숫자로 적어 두면 **탭을 열 개 열어도
+        한 번만** 쌓여요. 알약 뽀모에는 이 장치가 없어서 탭 두 개면 두 배로
+        쌓입니다 — 여기가 오히려 튼튼합니다.
+     ===================================================================== */
+  const PROOM_센바퀴키 = "proomCounted";
+
+  function proom센바퀴() {
+    try { return Number(window.AppStore?.getItem(PROOM_센바퀴키)) || 0; } catch (e) { return 0; }
+  }
+  function proom센바퀴적기(뽀모시작) {
+    try { window.AppStore?.setItem(PROOM_센바퀴키, String(뽀모시작)); } catch (e) {}
+  }
+
+  function proom토마토(뽀모시작) {
+    /* ① 바퀴가 **시작되기 전부터** 방에 있었어야 합니다.
+       중간에 들어온 사람은 그 바퀴를 온전히 채운 게 아니니까요.
+       ※ 새로고침하면 들어온 때가 초기화돼 그 한 바퀴를 놓칩니다 —
+         안전한 쪽으로 기울여 둔 것입니다 (콩 확인). */
+    if (!_proom들어온때 || _proom들어온때 > 뽀모시작) return;
+
+    /* ② 이미 센 바퀴면 그만. **탭 여러 개를 막는 자리**입니다 */
+    if (proom센바퀴() === 뽀모시작) return;
+
+    /* ③ 알약 🍅 뽀모가 돌고 있으면 그쪽에 맡깁니다.
+       둘 다 세면 같은 25분에 토마토가 **두 개** 붙어요. */
+    try { if (window.isPomodoroRunning?.()) return; } catch (e) {}
+
+    /* ④ 자리비움이면 안 셉니다.
+       ★ 이 검사는 incrementTodayFocusSessions() 가 **이미 안에서** 합니다
+         (script_ui.js). 여기서 또 하지 않는 이유는, 조건이 둘로 갈리면
+         언젠가 한쪽만 고쳐져 어긋나기 때문이에요. 알약 뽀모와 **같은 문**을
+         지나가게 둡니다. */
+    proom센바퀴적기(뽀모시작);
+    try { window.incrementTodayFocusSessions?.(); } catch (e) {}
   }
 
   /* =====================================================================
@@ -381,6 +432,7 @@
     proom묶기();
     proom시차맞추기();
     _proom열림 = true;
+    _proom들어온때 = proom지금();    // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
     _proom옛단계 = null;             // 열자마자 소리가 나지 않게
     proom그리기();
     proom듣기();
@@ -395,6 +447,7 @@
   }
   function closeProom() {
     _proom열림 = false;
+    _proom들어온때 = 0;              // 나갔으면 다시 들어와야 셉니다
     proom그만듣기();
     try { window.updateStatus?.(true); } catch (e) {}
   }
