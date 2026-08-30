@@ -418,7 +418,10 @@
       const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
       if (!nicks.length) { body.innerHTML = "아직 기록이 없어요."; return; }
 
-      const vacByNick = {};   // { 닉: {날짜:true} }
+      const vacByNick = {};
+      /* 🌿 개인사정(병가) — 방장만 찍습니다. 휴가와 달리 상한이 없고,
+         길게 이어질 수 있어요. users/{닉}/leaves/{날짜} = true */
+      const leaveByNick = {};
       const minsByNick = {};  // { 닉: {날짜: 합계분} }
       /* 🕐 시간대 그래프용 — 흉터를 걸러낸 **원본 구간**({a,b} 목록)도
          함께 남깁니다. 분 합계(minsByNick)로는 "몇 시에 있었는지" 를
@@ -429,6 +432,9 @@
         try {
           vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
         } catch (e) { vacByNick[n] = {}; }
+        try {
+          leaveByNick[n] = (await db.ref(`users/${n}/leaves`).once("value")).val() || {};
+        } catch (e) { leaveByNick[n] = {}; }
         try {
           const segs = (await db.ref(`users/${n}/timeSegs`).orderByKey()
             .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
@@ -500,6 +506,12 @@
         Object.keys(vs).forEach(d => {
           if (vs[d] === true && (!b || d < b)) b = d;
         });
+        /* 🌿 개인사정도 마찬가지 — 쉬는 중인 사람을 "입장 전"으로
+           그리면 표가 통째로 잿빛이 됩니다 */
+        const ls = leaveByNick[n] || {};
+        Object.keys(ls).forEach(d => {
+          if (ls[d] === true && (!b || d < b)) b = d;
+        });
         bornOf[n] = b || null;
       });
       const totalByDay = {};
@@ -547,6 +559,7 @@
       const rateRows = [];   // 🏅 출석률 순위 재료 — 아래 멤버 줄에서 채워집니다
       const rows = nicks.map((n, 순번) => {
         const vacs = vacByNick[n] || {};
+        const leaves = leaveByNick[n] || {};
         const mins = minsByNick[n] || {};
 
         /* 이 사람이 처음 나타난 날 — 출석과 휴가 중 이른 쪽.
@@ -567,7 +580,7 @@
           }
         }
 
-        let attDays = 0, vacDays = 0, cells = "";
+        let attDays = 0, vacDays = 0, leaveDays = 0, cells = "";
         if (beforeN > 0) {
           /* 칸을 하나로 합칩니다 — 흩어진 빈 칸보다 "여기까지는 없었다" 가
              한눈에 읽힙니다. 좁으면 글자는 생략해요. */
@@ -579,10 +592,16 @@
           const rec = attMonth[dk]?.[n];
           const inAt = rec ? (rec.firstAt || rec.at) : null;
           const isVac = vacs[dk] === true;
+          /* 🌿 개인사정이 🏖️ 휴가보다 앞섭니다 — 둘 다 찍힌 날은
+             더 무거운 쪽으로 읽는 게 맞아요 (휴가는 상한이 있고
+             개인사정은 없으니, 겹치면 상한을 안 깎습니다) */
+          const isLeave = leaves[dk] === true;
           if (inAt) attDays++;
-          if (isVac) vacDays++;
+          if (isLeave) leaveDays++;
+          else if (isVac) vacDays++;
           let cls = "cell", txt = "";
-          if (isVac) { cls += " vac"; txt = "🏖️"; }
+          if (isLeave) { cls += " leave"; txt = "🌿"; }
+          else if (isVac) { cls += " vac"; txt = "🏖️"; }
           else if (inAt) {
             txt = hhmm(inAt);
             /* [뺌 2026-08-14] 1시간 미만 붉은 표시(short) — 잔소리 같다는
@@ -598,9 +617,9 @@
                예전대로 출석한 칸에만 답니다.
              ★ 운영진에게는 아예 안 답니다. 보안규칙상 users 쓰기는 방장뿐이라
                눌러 봐야 permission denied 만 봅니다. */
-          const vac = isOwner ? ` data-vac-nick="${escapeHtml(n)}" data-vac-day="${dk}"` : "";
-          if (isOwner) cls += " vac-able";
-          cells += `<td class="${cls}"${dig}${vac}>${txt}</td>`;
+          const lv = isOwner ? ` data-leave-nick="${escapeHtml(n)}" data-leave-day="${dk}"` : "";
+          if (isOwner) cls += " leave-able";
+          cells += `<td class="${cls}"${dig}${lv}>${txt}</td>`;
         }
         /* ── 규칙 칸 ──
            ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
@@ -609,12 +628,16 @@
         if (isThisMonth) {
           for (let d = todayD + 1; d <= daysInMonth; d++) {
             const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
-            if (vacs[dk] !== true) daysLeft++;
+            if (vacs[dk] !== true && leaves[dk] !== true) daysLeft++;
           }
         }
-        const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays, attended: attDays, daysLeft });
+        /* ★ ruleOf 의 식은 손대지 않습니다 — script_mywork.js 와 **글자까지
+           같아야** 하는 약속이 있어서요(다르면 멤버 화면과 관리자 화면이
+           다른 기준을 말합니다). 대신 넣는 값에 개인사정을 얹습니다:
+           쉰 날은 기준에서 빠진다는 점에서 휴가와 셈이 같아요. */
+        const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays + leaveDays, attended: attDays, daysLeft });
         /* 🏅 출석률 순위가 씁니다 — 표가 이미 센 값 그대로 (다시 안 셈) */
-        rateRows.push({ n, att: attDays, need: r.need, state: r.state });
+        rateRows.push({ n, att: attDays, need: r.need, state: r.state, leave: leaveDays > 0 });
         const 표 = { ok: "✅", maybe: "🟡", bad: "🔴" };
         const 말 = { ok: "달성", maybe: "남은 날로 채울 수 있어요",
                      bad: isThisMonth ? "남은 날을 다 나와도 모자라요" : "미달" };
@@ -636,7 +659,9 @@
           `<td class="sum-c vac-c${vacOver ? " over" : ""}" title="${
             vacOver ? `상한 ${vacCap}일을 넘겨 찍힌 휴가예요 (상한이 줄기 전에 찍은 날 — 그대로 둡니다)`
                     : `이 달 상한 ${vacCap}일 · 한 달을 꽉 채우면 ${VAC_DAYS}일`
-          }">${vacDays}/${vacCap}</td>`;
+          }${leaveDays ? ` · 🌿 개인사정 ${leaveDays}일` : ""}">${vacDays}/${vacCap}${
+            leaveDays ? `<span class="lv-n">🌿${leaveDays}</span>` : ""
+          }</td>`;
 
         /* 이름 옆 [✕] — 탈퇴 인원 삭제. 늘 있지만 아주 옅게, 마우스를 올리면 진해집니다. */
         /* [2026-08-15] 이름 칸을 **열 명씩 묶어** 바탕색을 번갈아 줍니다.
@@ -1282,7 +1307,9 @@
   async function 명단굳히기(ymKey, rateRows) {
     try {
       if (!최근두달().includes(ymKey)) return;      // 옛 달은 지나갑니다
-      const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0)
+      /* 🌿 개인사정으로 쉰 사람은 뺍니다 — 기준이 내려가 ✅ 가 떠도
+         "개근" 이라 부르기는 어려우니까요 (2026-08-30) */
+      const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0 && !r.leave)
                           .map(r => r.n)
                           .sort((a, b) => a.localeCompare(b, "ko"));
       const 옛 = await db.ref(`honors/${ymKey}/list`).once("value");
@@ -1303,7 +1330,18 @@
     const box = el("adm-streak");
     if (!box) return;
 
-    const rows = rateRows.map(r => ({
+    /* 🌿 개인사정으로 하루라도 쉰 사람은 순위에서 뺍니다 (2026-08-30 — 콩).
+       기준(need)이 이미 그만큼 내려가 있어서, 사흘 나오고 100% 로 1등을
+       하게 됩니다. 아픈 사람을 1등 자리에 올리는 건 격려가 아니에요.
+       대신 아래에 한 줄로 조용히 적습니다 — 없는 사람 취급도 아니게. */
+    const 쉬는이 = rateRows.filter(r => r.leave)
+                          .map(r => r.n).sort((a, b) => a.localeCompare(b, "ko"));
+    const 쉬는줄 = 쉬는이.length
+      ? `<p class="adm-chart-note rest">🌿 사정으로 쉬는 중 — ${
+          쉬는이.map(escapeHtml).join(" · ")} <span class="q">(순위에서 빼 두었어요)</span></p>`
+      : "";
+
+    const rows = rateRows.filter(r => !r.leave).map(r => ({
       ...r,
       rate: r.need > 0 ? r.att / r.need : null
     }));
@@ -1314,7 +1352,7 @@
 
     if (!rows.length || rows[0].rate === null) {
       box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">🏅 출석률</span></div>
-        <p class="adm-chart-sub">아직 이 달에 셀 것이 없어요.</p>`;
+        <p class="adm-chart-sub">아직 이 달에 셀 것이 없어요.</p>${쉬는줄}`;
       return;
     }
 
@@ -1357,7 +1395,7 @@
           `<div>${칸.map((r, i) => 줄(r, i + c * 몫)).join("")}</div>`).join("")}
       </div>
       <p class="adm-chart-note">막대는 100%에서 꽉 차요 — 기준을 넘긴 분은 숫자로 보세요.
-        ✅ 달성 · 🟡 남은 날로 채울 수 있음 · 🔴 남은 날을 다 나와도 모자람.</p>`;
+        ✅ 달성 · 🟡 남은 날로 채울 수 있음 · 🔴 남은 날을 다 나와도 모자람.</p>${쉬는줄}`;
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제
@@ -1889,59 +1927,59 @@
       _digTimer = setTimeout(() => { openDig(nick, day); }, DBL_MS);
     });
     host.addEventListener("dblclick", async (e) => {
-      const td = e.target.closest("[data-vac-nick]");
+      const td = e.target.closest("[data-leave-nick]");
       if (!td) return;
       clearTimeout(_digTimer);              // 돋보기가 뜨려던 것을 거둡니다
-      await toggleVacAdmin(td.dataset.vacNick, td.dataset.vacDay);
+      await toggleLeaveAdmin(td.dataset.leaveNick, td.dataset.leaveDay);
     });
   }
 
   /* =====================================================================
-     🏖️ 방장이 남의 휴가를 켜고 끄기 (2026-08-28 — 콩)
+     🌿 방장이 남의 **개인사정(병가)** 을 켜고 끄기
+        (2026-08-28 🏖️ 휴가로 시작 → 2026-08-30 개인사정으로 바꿈 — 콩)
      ---------------------------------------------------------------------
-     [왜 필요한가] 휴가는 본인이 🗂️ 나의 작업 달력에서 더블 클릭해 찍는
-     것이 원칙입니다. 그런데 못 찍고 지나간 사람, 경조사처럼 뒤늦게
-     알려진 사정은 방장이 대신 손봐 줄 데가 없었어요.
+     [왜 바꿨나] 휴가(🏖️)는 **본인이** 🗂️ 나의 작업 달력에서 찍는 것이고,
+     한 달 상한이 있습니다. 방장이 대신 찍어 줄 일은 사실 드물었어요.
+     정작 필요한 건 다른 것이었습니다 — 아파서, 상을 당해서, 사정이 생겨서
+     **길게 쉬는** 경우. 이건 휴가 상한 7일 안에 절대 안 들어갑니다.
 
-     ★★ 보안규칙은 이미 열려 있습니다 — users/$nick/.write 에 방장 uid
-        예외가 있어서 규칙을 고칠 필요가 없습니다. 다만 **운영진은 안
-        됩니다**(users 쓰기는 방장 전용). 그래서 ownerOnly 로 먼저 막고,
-        칸에 data-vac-* 자체를 안 답니다.
-     ★ 상한(7일 비례)은 넘겨 찍을 수 있습니다 — 다만 **물어봅니다**.
-       멤버 쪽(script_mywork.js)은 alert 로 막지만, 경조사 같은 예외를
-       판단하는 것이 방장의 일이라서요.
-     ★ 휴가 하나가 바뀌면 기준(need)·남은 날·입장일(born)·상한·출석률
-       순위·개근 명단이 **줄줄이** 달라집니다. 그래서 화면을 손으로
-       고치지 않고 표를 통째로 다시 그립니다 (removeMember 와 같은 방식).
+     그래서 방장의 더블 클릭은 이제 🌿 개인사정을 찍습니다.
+       🏖️ 휴가     본인이 찍음 · 상한 있음 · users/{닉}/vacations
+       🌿 개인사정  방장이 찍음 · 상한 없음 · users/{닉}/leaves
+
+     [출석률은 어떻게 되나 — 콩 결정, 2026-08-30]
+       ① 기준(need)을 깎습니다. 쉰 날은 나올 수 없었던 날이니까요.
+          휴가와 같은 자리에 얹어 넣습니다(ruleOf 식은 안 건드립니다 —
+          script_mywork.js 와 글자까지 같아야 하는 약속).
+       ② 🏅 출석률 **순위에서 뺍니다**. 하루라도 개인사정이 있으면요.
+          기준이 3일까지 내려간 사람이 3일 나와 100%로 1등을 하면,
+          그건 격려가 아니라 조롱에 가깝습니다. 대신 순위 아래에
+          "🌿 사정으로 쉬는 중" 한 줄로 조용히 적습니다.
+       ③ 개근 명단(honors)에서도 뺍니다 — 같은 이유예요.
+
+     ★★ 상한 확인창은 없습니다. 개인사정에는 상한이 없어서요.
+     ★ 운영진은 못 합니다 — users 쓰기는 방장 전용(보안규칙).
+       그래서 ownerOnly 로 막고, 칸에 data-leave-* 자체를 안 답니다.
+     ★ 하루가 바뀌면 기준·남은 날·입장일·순위·명단이 줄줄이 달라집니다.
+       그래서 화면을 손으로 고치지 않고 표를 통째로 다시 그립니다.
      ===================================================================== */
-  async function toggleVacAdmin(nick, dk) {
-    if (!ownerOnly("남의 휴가를 고치는 것")) return;
+  async function toggleLeaveAdmin(nick, dk) {
+    if (!ownerOnly("남의 개인사정을 고치는 것")) return;
     try {
-      const ref = db.ref(`users/${nick}/vacations/${dk}`);
+      const ref = db.ref(`users/${nick}/leaves/${dk}`);
       /* 화면 값이 아니라 **서버 값**을 보고 켤지 끌지 정합니다 —
-         표를 그린 뒤에 본인이 직접 바꿨을 수 있어요. */
+         표를 그린 뒤에 다른 창에서 바뀌었을 수 있어요. */
       const 지금 = (await ref.once("value")).val() === true;
-
-      if (!지금) {
-        const 셈 = _vac셈[nick] || { days: 0, cap: 0 };
-        if (셈.days + 1 > 셈.cap) {
-          if (!confirm(
-            `${nick}님의 이 달 휴가 상한은 ${셈.cap}일인데, ` +
-            `${셈.days + 1}일째가 됩니다.\n\n` +
-            `그래도 ${dk} 을(를) 휴가로 찍을까요?\n` +
-            `※ 출석 기준(need)이 그만큼 내려가고, 휴가 칸이 붉게 보입니다.`)) return;
-        }
-        await ref.set(true);
-      } else {
-        await ref.remove();
-      }
+      if (!지금) await ref.set(true);
+      else await ref.remove();
 
       await loadAttendance(_attOffset);
-      msg("adm-att-msg", 지금 ? `🏖️ ${nick}님의 ${dk} 휴가를 뺐어요.`
-                              : `🏖️ ${nick}님의 ${dk} 을(를) 휴가로 찍었어요.`);
+      msg("adm-att-msg", 지금
+        ? `🌿 ${nick}님의 ${dk} 개인사정을 뺐어요.`
+        : `🌿 ${nick}님의 ${dk} 을(를) 개인사정으로 찍었어요. 이 달 출석률 순위에서는 빠집니다.`);
     } catch (e) {
-      console.warn("[adm toggleVacAdmin]", e);
-      msg("adm-att-msg", "휴가를 못 고쳤어요 — 방장 계정인지, 보안규칙에 관리자 예외가 있는지 확인해 주세요.", true);
+      console.warn("[adm toggleLeaveAdmin]", e);
+      msg("adm-att-msg", "개인사정을 못 고쳤어요 — 방장 계정인지, 보안규칙에 users/{닉}/leaves 가 있는지 확인해 주세요.", true);
     }
   }
 

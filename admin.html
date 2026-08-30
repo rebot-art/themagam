@@ -258,11 +258,11 @@
 
     /* 🔍 출석 칸 돋보기 — 칸을 누르면 그날 구간 내역 */
     .adm-att-table td[data-dig-nick]{ cursor: zoom-in; }
-    /* 🏖️ [2026-08-28] 방장은 더블 클릭으로 휴가를 켜고 끕니다.
+    /* 🌿 [2026-08-30] 방장은 더블 클릭으로 개인사정(병가)을 켜고 끕니다.
        ★ 돋보기가 달린 칸은 zoom-in 커서를 그대로 둡니다 — 단일 클릭의
          뜻(돋보기)이 그 칸의 주된 쓰임이라서요. */
-    .adm-att-table td.vac-able:not([data-dig-nick]){ cursor: cell; }
-    .adm-att-table td.vac-able:hover{ box-shadow: inset 0 0 0 2px #C6A15B; }
+    .adm-att-table td.leave-able:not([data-dig-nick]){ cursor: cell; }
+    .adm-att-table td.leave-able:hover{ box-shadow: inset 0 0 0 2px #6F9A6A; }
     #adm-dig{
       position: fixed; inset: 0; z-index: 90;
       background: rgba(43,38,32,.45);
@@ -419,6 +419,11 @@
     .adm-att-table td.vac-c.over{ color: #A33127; background: #F8D9D6; }
     .adm-att-table td.cell{ font-variant-numeric: tabular-nums; font-size: 11px; color: #4A3F33; }
     .adm-att-table td.cell.vac{ background: #F5E3B8; }
+    /* 🌿 개인사정 — 휴가(모래색)와 헷갈리지 않게 잎색으로 (2026-08-30) */
+    .adm-att-table td.cell.leave{ background: #DCE9D6; }
+    .adm-att-table td.vac-c .lv-n{ margin-left: 3px; color: #4F7A4A; }
+    .adm-chart-note.rest{ color: #4F7A4A; }
+    .adm-chart-note.rest .q{ color: #8A7B68; }
     .adm-att-table td.cell.short{ background: #F3D9D3; }
     /* [2026-08-11] 아직 멤버가 아니던 날 — 빗금으로 "여긴 셀 자리가 아니다".
        색만 칠하면 휴가·1시간 미만 같은 다른 표시와 헷갈립니다. */
@@ -519,7 +524,7 @@
         <h2>📅 출석·휴가 현황</h2>
         <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.
           맨 윗줄은 그날 출석한 인원 수, 이름 옆 ✕ 는 명단에서 지우기예요(방장만).<br>
-          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🏖️ 휴가 켜고 끄기(방장만)</p>
+          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🌿 개인사정 켜고 끄기(방장만)</p>
         <div class="adm-nav">
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
@@ -534,7 +539,8 @@
           <span>✅ 달성</span>
           <span>🟡 아직이지만 남은 날로 채울 수 있음</span>
           <span>🔴 못 채움</span>
-          <span><span class="sw" style="background:#F5E3B8"></span>🏖️ 휴가 — 방장은 칸을 <b>더블 클릭</b>해 켜고 끕니다</span>
+          <span><span class="sw" style="background:#F5E3B8"></span>🏖️ 휴가 — 본인이 🗂️ 나의 작업 달력에서 찍습니다 (상한 있음)</span>
+          <span><span class="sw" style="background:#DCE9D6"></span>🌿 개인사정 — 방장이 칸을 <b>더블 클릭</b>해 찍습니다 (상한 없음 · 출석률 순위에서 빠짐)</span>
           <span><span class="sw" style="background:#F3D9D3"></span>1시간 미만</span>
           <span><span class="sw" style="box-shadow:inset 0 0 0 2px #B3372B; border:none;"></span>오늘</span>
           <span><span class="sw" style="background:repeating-linear-gradient(-45deg,#EFEAE3 0 3px,#E4DED5 3px 6px)"></span>입장 전 (아직 멤버가 아니던 날)</span>
@@ -853,7 +859,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608281211"></script>
+  <script src="script_admin.js?v=202608301436"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
