@@ -11002,7 +11002,7 @@ html[data-lite] .rb-hrow{ animation: none; }
 .pr-empty{ text-align:center; font-size:12.5px; color:var(--text-3, #8A93A2);
            padding:20px 8px; line-height:1.7; }
 .pr-line{ display:flex; align-items:baseline; gap:6px; padding:3px 2px;
-          font-size:13px; line-height:1.6; word-break:break-word; }
+          font-size:var(--pr-fs, 13px); line-height:1.6; word-break:break-word; }
 .pr-line.mine{ flex-direction:row-reverse; text-align:right; }
 .pr-line.mine .pr-who{ color:var(--accent); }
 .pr-who{ flex:0 0 auto; font-size:11.5px; font-weight:var(--fw-bold);
@@ -11015,12 +11015,29 @@ html[data-lite] .rb-hrow{ animation: none; }
 .pr-write{ flex:none; display:flex; gap:5px; align-items:flex-end; }
 .pr-in{
   flex:1; min-width:0; resize:none; max-height:120px;
-  font:inherit; font-size:13px; line-height:1.5; font-family:inherit;
+  font:inherit; font-size:var(--pr-fs, 13px); line-height:1.5; font-family:inherit;
   padding:7px 9px; color:var(--text);
   background:var(--surface); border:1px solid var(--border);
   border-radius:var(--r-md, 10px);
 }
 .pr-in:focus{ outline:none; border-color:var(--accent); }
+
+/* 🔤 글씨 크기 [− n +] — 비밀방(.sr-fs)과 같은 모양·같은 규칙 (콩 2026-08-30).
+   이 판에서만, 이 기기에서만. 서버에 안 보내니 남의 화면은 그대로입니다. */
+.pr-fs{
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px;
+  border: 1px solid var(--border); border-radius: 999px; padding: 0 2px;
+}
+.pr-fs button{
+  width: 16px; height: 16px; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: var(--fw-bold); line-height: 1;
+  color: var(--text-3, #8A93A2); background: transparent; border: none; border-radius: 999px;
+}
+.pr-fs button:hover{ color: var(--accent); background: var(--fill-1); }
+.pr-fs b{ min-width: 14px; text-align: center; font-size: 10px;
+          font-weight: var(--fw-bold); color: var(--text-2, #5A6473);
+          font-variant-numeric: tabular-nums; }
 .pr-send{
   flex:0 0 auto; width:32px; height:32px; cursor:pointer;
   font-size:15px; font-weight:var(--fw-bold); font-family:inherit;

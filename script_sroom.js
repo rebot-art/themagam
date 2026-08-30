@@ -101,9 +101,12 @@
 
   function sroom줄HTML(r) {
     const 내것 = r.user === sroomMe();
+    /* 🎨 닉네임 색 — 챗과 같은 색 (2026-08-30 콩). 뽀모방과 같은 결이에요:
+       프로필의 nickColor + 다크 보정을 nickColorStyle() 이 다 해 주고,
+       data-name-of 덕에 테마 전환 때 refreshChatNickColors() 가 함께 갱신합니다. */
     return `
       <div class="sr-line${내것 ? " mine" : ""}">
-        <span class="sr-who">${esc(r.user)}</span>
+        <span class="sr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</span>
         <span class="sr-msg">${esc(r.msg)}</span>
         <span class="sr-t">${esc(때(r.time))}</span>
       </div>`;

@@ -127,13 +127,50 @@
     b.title = on ? "알림 끄기" : "알림 켜기";
   }
 
+  /* =====================================================================
+     ★★★ [고침 2026-08-30 — 콩 신고 "알림음이 안 들려"]
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     소리 낼 때마다 AudioContext 를 **새로** 만들었습니다. 그런데
+     브라우저의 자동재생 정책은, **사용자 손짓(클릭·키) 밖에서** 만든
+     컨텍스트를 suspended(잠긴 채)로 태어나게 해요. 단계가 바뀌는 순간은
+     시계가 부르는 것이지 손짓이 아니라서 — 늘 잠긴 채 태어났고,
+     resume() 을 안 부르니 **소리 없이 조용히** 버려졌습니다.
+     에러도 안 나요. 그래서 아무도 몰랐던 겁니다.
+
+     [그래서 — 알약 뽀모와 같은 길로]
+     script_ui.js 의 소리 엔진이 **이미 이 문제를 푼 적이 있습니다**:
+       · 컨텍스트를 **하나만** 만들어 계속 씁니다 (닫지 않아요)
+       · 손짓이 있을 때 미리 열어(resume) 둡니다 — 판을 여는 클릭,
+         판 안의 클릭·타이핑이 전부 열쇠가 됩니다
+       · 그래도 잠겨 있으면 소리 직전에 한 번 더 resume() 해 봅니다
+     ===================================================================== */
+  let _proomAC = null;
+
+  function proomAC얻기() {
+    if (_proomAC) return _proomAC;
+    const A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return null;
+    try { _proomAC = new A(); } catch (e) {}
+    return _proomAC;
+  }
+
+  /** 손짓이 있는 틈에 자물쇠를 풀어 둡니다 — 여러 번 불러도 해가 없어요 */
+  function proom소리풀기() {
+    const ac = proomAC얻기();
+    if (!ac) return;
+    if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
+  }
+
   /** 단계가 바뀔 때 짧고 부드럽게 — 놀라지 않게 아주 작습니다 */
   function proom소리(휴식) {
     if (!proom종()) return;
     try {
-      const A = window.AudioContext || window.webkitAudioContext;
-      if (!A) return;
-      const ac = new A();
+      const ac = proomAC얻기();
+      if (!ac) return;
+      /* 마지막 시도 — 손짓 밖이라 대개 안 풀리지만, 밑져야 본전입니다 */
+      if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
+      if (ac.state !== "running") return;
       const 음 = 휴식 ? [523.25, 392.00] : [392.00, 523.25];   // 쉼은 내려가고, 뽀모는 올라가고
       음.forEach((f, i) => {
         const o = ac.createOscillator(), g = ac.createGain();
@@ -145,8 +182,29 @@
         o.connect(g); g.connect(ac.destination);
         o.start(t0); o.stop(t0 + 0.17);
       });
-      setTimeout(() => { try { ac.close(); } catch (e) {} }, 700);
+      /* ★ ac.close() 를 안 합니다 — 닫으면 다음번에 또 잠긴 채 태어나요 */
     } catch (e) {}
+  }
+
+  /* =====================================================================
+     🔤 글씨 크기 — 비밀방(script_sroom.js)과 같은 결. 기기별, 서버 쓰기 0
+     ===================================================================== */
+  const PROOM_FS_KEY = "proomFont";
+  const PROOM_FS_MIN = 11, PROOM_FS_MAX = 20, PROOM_FS_DEF = 13;
+
+  function proom글씨() {
+    const v = Number(window.AppStore?.getItem(PROOM_FS_KEY));
+    return Number.isFinite(v) && v >= PROOM_FS_MIN && v <= PROOM_FS_MAX ? v : PROOM_FS_DEF;
+  }
+  function proom글씨바꾸기(d) {
+    const v = Math.max(PROOM_FS_MIN, Math.min(PROOM_FS_MAX, proom글씨() + d));
+    try { window.AppStore?.setItem(PROOM_FS_KEY, String(v)); } catch (e) {}
+    /* ★★ 다시 그리지 않습니다 — CSS 값 하나만. (비밀방에서 배운 그것:
+       다시 그리면 글칸이 새로 태어나 쓰던 글과 커서가 날아갑니다) */
+    const 판 = el("dock-body-proom")?.querySelector(".pr-board");
+    if (판) 판.style.setProperty("--pr-fs", v + "px");
+    const 숫 = el("proom-fs");
+    if (숫) 숫.textContent = v;
   }
 
   /* =====================================================================
@@ -159,7 +217,7 @@
     if (!box) return;
     _proom틀 = proom틀모양();
     box.innerHTML = `
-      <div class="pr-board">
+      <div class="pr-board" style="--pr-fs:${proom글씨()}px">
         <div class="pr-clock">
           <div class="pr-big" id="proom-big">25:00</div>
           <div class="pr-right">
@@ -167,6 +225,11 @@
               <span class="pr-ph" id="proom-ph">🍅 뽀모</span>
               <span id="proom-next">· :00 에 휴식</span>
               <span class="pr-sp"></span>
+              <span class="pr-fs" title="이 방의 글씨 크기 (이 기기에서만)">
+                <button type="button" data-proom-font="-1" aria-label="글씨 작게">－</button>
+                <b id="proom-fs">${proom글씨()}</b>
+                <button type="button" data-proom-font="1" aria-label="글씨 크게">＋</button>
+              </span>
               <span id="proom-cnt">1명</span>
               <button type="button" class="pr-bell" id="proom-bell"
                       data-proom-bell="1" aria-label="알림">🔔</button>
@@ -295,9 +358,15 @@
     const 내것 = r.user === proomMe();
     const d = new Date(r.time);
     const h = d.getHours(), m = 두자리(d.getMinutes());
+    /* 🎨 닉네임 색 — 챗과 **같은 색**입니다 (2026-08-30 콩: "챗 그 색 그대로!")
+       프로필에서 고른 nickColor 를 nickColorStyle() 로 받아 씁니다.
+       · 안 고른 사람은 빈 문자열 → 테마 기본색 (내 줄은 CSS 가 강조색)
+       · 다크 테마 밝기 보정도 그 함수가 다 해 줍니다
+       · data-name-of 를 달아 두면 테마를 바꿀 때
+         refreshChatNickColors() 가 챗과 **함께** 갱신해 줘요 — 공짜입니다 */
     return `
       <div class="pr-line${내것 ? " mine" : ""}">
-        <span class="pr-who">${esc(r.user)}</span>
+        <span class="pr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</span>
         <span class="pr-msg">${esc(r.msg)}</span>
         <span class="pr-t">${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${m}</span>
       </div>`;
@@ -423,11 +492,16 @@
     _proomBound = true;
 
     host.addEventListener("click", (e) => {
+      /* 🔊 클릭은 전부 소리 자물쇠의 열쇠입니다 — 어디를 눌러도 풀어 둬요 */
+      proom소리풀기();
+      const 글씨 = e.target.closest("[data-proom-font]");
+      if (글씨) { proom글씨바꾸기(Number(글씨.dataset.proomFont)); el("proom-in")?.focus(); return; }
       if (e.target.closest("[data-proom-bell]")) { proom종바꾸기(); el("proom-in")?.focus(); return; }
       if (e.target.closest("[data-proom-send]")) { proom보내기(); return; }
     });
     /* 엔터로 보내기 — ★ 한글 조합 중은 무시합니다 */
     host.addEventListener("keydown", (e) => {
+      proom소리풀기();               // 🔊 타이핑도 열쇠
       if (e.target?.id !== "proom-in") return;
       if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
       e.preventDefault();
@@ -438,6 +512,7 @@
   /** 알약 판이 열릴 때 */
   function openProom() {
     proom묶기();
+    proom소리풀기();                 // 🔊 판을 여는 그 클릭이 첫 열쇠입니다
     proom시차맞추기();
     _proom열림 = true;
     _proom들어온때 = proom지금();    // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
