@@ -63,6 +63,9 @@
   let _proom옛단계 = null;         // 뽀모↔휴식이 바뀌는 순간을 알아채려고
   let _proom시차 = 0;              // 서버 시각과 내 시계의 차이(ms)
   let _proom들어온때 = 0;          // 이 판을 언제 열었나 — 🍅 판정에 씁니다
+  let _proom명단 = null;           // 👋 지금 방에 있는 닉들 (null = 아직 기준 없음)
+  let _proom입장줄 = [];           // 👋 이 기기에서 본 입장 순간들 — 서버엔 안 적습니다
+  let _proom입장때 = {};           // 닉 → 마지막 입장 줄 시각 (연결 출렁임 무시용)
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
@@ -358,6 +361,11 @@
     if (r.구분) {
       return `<div class="pr-sys">${r.휴식 ? "☕ <b>휴식</b> — 5분" : "🍅 <b>뽀모</b> 시작 — 25분"}</div>`;
     }
+    /* 👋 입장 줄 (2026-08-30 — 콩) — 구분 줄과 같은 결: 서버에 안 적고
+       이 기기에서 알아챈 순간을 그 자리에 끼워 넣습니다 */
+    if (r.입장) {
+      return `<div class="pr-sys">👋 <b>${esc(r.user)}</b> 입장</div>`;
+    }
     const 내것 = r.user === proomMe();
     const d = new Date(r.time);
     const h = d.getHours(), m = 두자리(d.getMinutes());
@@ -379,7 +387,9 @@
       ★ **말이 오간 구간의 구분 줄만** 넣습니다. 안 그러면 밤새 조용했을 때
         빈 구분 줄이 수백 개 쌓여요 (밤 열 시간이면 스무 바퀴, 마흔 줄). */
   function proom엮기() {
-    const 줄 = _proomRows.slice();
+    /* 👋 입장 줄도 대화와 시간순으로 섞습니다 — 입장만 있고 말이 없어도
+       구분 줄이 그 구간에 서니, "누가 언제 왔나" 가 박자 위에 얹혀 보여요 */
+    const 줄 = _proomRows.concat(_proom입장줄).sort((a, b) => a.time - b.time);
     if (!줄.length) return 줄;
     const 지금 = proom지금();
     const 나옴 = [];
@@ -471,6 +481,45 @@
     if (c) c.textContent = (_proom인원 || 1) + "명";
   };
 
+  /* =====================================================================
+     👋 입장 줄 (2026-08-30 — 콩 "누군가 창을 열면 입장했다고 표시")
+     ---------------------------------------------------------------------
+     ★ 서버 쓰기 0 — 이 파일의 제1원칙 그대로입니다.
+     "누가 방에 있나" 는 status 에 이미 실려 옵니다 (proom 칸 — 알약
+     배지와 판의 "n명" 이 쓰는 그 재료). script_realtime 이 명단을
+     넘겨주면, **없던 닉이 나타난 순간**을 입장으로 칩니다.
+
+     [일부러 이렇게 둔 것들]
+       · 내가 열기 **전**의 입장은 못 봅니다 — 첫 명단은 "이미 있던
+         사람들" 이라 줄을 안 만들어요. 구분 줄과 달리 입장은 지난
+         것을 계산으로 되살릴 수 없습니다 (서버에 안 적으니까).
+       · 명단은 하트비트를 타므로 몇 초쯤 늦을 수 있습니다. 다만
+         openProom 이 updateStatus(true) 로 곧장 알리니 보통 금방 떠요.
+       · 연결이 출렁이면 같은 사람이 명단에서 잠깐 사라졌다 돌아올 수
+         있습니다 — 5분 안의 재등장은 입장으로 안 칩니다.
+       · 퇴장 줄은 안 만듭니다 (콩이 청한 건 입장뿐 — 나가는 건 조용히).
+     ===================================================================== */
+  const PROOM_재입장무시 = 5 * 60 * 1000;
+
+  window.proomSetHere = function (명단) {
+    if (!_proom열림) { _proom명단 = null; return; }   // 닫혀 있으면 기준도 버립니다
+    const 새 = new Set(Array.isArray(명단) ? 명단 : []);
+    if (_proom명단 === null) { _proom명단 = 새; return; }  // 첫 명단 = 이미 있던 사람들
+    let 생김 = false;
+    const t = proom지금();
+    새.forEach((닉) => {
+      if (_proom명단.has(닉)) return;
+      if (닉 === proomMe()) return;                   // 내 입장은 아래 openProom 에서
+      if (t - (_proom입장때[닉] || 0) < PROOM_재입장무시) return;
+      _proom입장때[닉] = t;
+      _proom입장줄.push({ 입장: true, user: String(닉), time: t });
+      생김 = true;
+    });
+    if (_proom입장줄.length > 40) _proom입장줄 = _proom입장줄.slice(-40);
+    _proom명단 = 새;
+    if (생김) proom줄그리기();
+  };
+
   async function proom보내기() {
     const 칸 = el("proom-in");
     const t = String(칸?.value || "").trim().slice(0, PROOM_LEN);
@@ -521,6 +570,12 @@
     proom시차맞추기();
     _proom열림 = true;
     _proom들어온때 = proom지금();    // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
+    /* 👋 내 입장은 내 손으로 한 줄 — 남들 화면에는 status 를 타고
+       각자의 기기가 그립니다 (proomSetHere 는 내 닉을 건너뜁니다) */
+    if (proomMe()) {
+      _proom입장줄.push({ 입장: true, user: proomMe(), time: proom지금() });
+      _proom입장때[proomMe()] = proom지금();
+    }
     _proom옛단계 = null;             // 열자마자 소리가 나지 않게
     proom그리기();
     proom듣기();
@@ -536,6 +591,8 @@
   function closeProom() {
     _proom열림 = false;
     _proom들어온때 = 0;              // 나갔으면 다시 들어와야 셉니다
+    /* 👋 입장 줄은 이 방문의 것 — 닫으면 비우고, 다시 열면 새로 봅니다 */
+    _proom명단 = null; _proom입장줄 = []; _proom입장때 = {};
     proom그만듣기();
     try { window.updateStatus?.(true); } catch (e) {}
   }
