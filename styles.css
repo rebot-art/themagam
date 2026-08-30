@@ -6312,7 +6312,11 @@ html[data-theme-style="studio"] .user-card{
 .card-wh{
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  /* [2026-08-30 — 콩] space-between 을 걷어냄 — 딱지가 둘(⏱️·🍅)이 되니
+     양끝으로 벌어져 사이가 휑했습니다. 시간은 왼쪽, 딱지들은 오른쪽에
+     **붙여서** — 이 gap 이 두 딱지 사이의 간격입니다. */
+  justify-content: flex-start;
+  gap: 4px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
@@ -6321,6 +6325,7 @@ html[data-theme-style="studio"] .user-card{
   display: flex;
   align-items: baseline;
   gap: 6px;
+  margin-right: auto;   /* 시간은 왼쪽 벽에, 나머지는 다 오른쪽으로 */
 }
 .card-wh .card-wh-t small{
   font-size: var(--fs-2xs);
@@ -11063,13 +11068,22 @@ html[data-lite] .pr-flash{ animation:none; }
   background: var(--fill-1); border-radius: 6px; padding: 2px 7px;
 }
 
-/* ⏱️ 뽀모방에 있는 사람 — 카드의 🍅 오른쪽 (콩 2026-08-29).
+/* ⏱️ 뽀모방에 있는 사람 — 카드의 🍅 왼쪽 (콩 2026-08-29, 자리 08-30).
    ★ 숫자만으로는 "누가 있나 보다" 에서 그칩니다. 누구인지가 보여야
-     따라 들어가게 돼요. */
+     따라 들어가게 돼요.
+   ★ [2026-08-30 — 콩] 차림새를 🍅 알약(.card-pomo-count)과 **똑같이**:
+     같은 크기·같은 padding·테두리 없음. 색만 accent 라 서로 구분됩니다.
+     예전엔 11px 고정 + 테두리가 있어서 나란히 서면 짝짝이였어요. */
 .card-proom{
   flex: 0 0 auto;
-  font-size: 11px; line-height: 1;
-  padding: 2px 6px; border-radius: var(--r-full);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border: 1px solid var(--accent-line, rgba(179,55,43,.28));
+  font-weight: var(--fw-medium);
+  border-radius: var(--r-full);
+  padding: 1px 7px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+/* 카드 시간 줄 안에서는 🍅 과 같은 80% — .card-wh .card-pomo-count(24차)와 짝.
+   한쪽 크기를 바꾸면 반드시 둘 다 바꿀 것. */
+.card-wh .card-proom{
+  font-size: 80%;
+  padding: 1px 6px;
 }
