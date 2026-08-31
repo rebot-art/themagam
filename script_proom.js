@@ -316,6 +316,31 @@
     const cnt = el("proom-cnt");
     if (cnt) cnt.textContent = (_proom인원 || 1) + "명";
 
+    /* ⏱️→📊 알약이 곧 진행 바 (2026-08-30 — 콩)
+       내려둔 참여자에게만: 알약 글자가 「🍅 뽀모방 참여 중 · 16:03」이
+       되고, 알약 배경이 지난 만큼 차오릅니다 (--pr-pct 를 CSS 가 읽음).
+       .joined 는 dock 이 "참여 중 + 내려둠" 일 때만 붙여 줍니다.
+       ★ 여기도 시계 길입니다 — textContent · classList · style 만.
+       ★ 원래 글자는 dataset.orig 에 한 번 담아 두고 거기서 되살립니다 —
+         글자를 두 군데 적으면 언젠가 한쪽만 고쳐져요. */
+    const 알약 = document.getElementById("dock-pill-proom");
+    if (알약) {
+      const 라벨 = 알약.querySelector(".dock-pill-label");
+      if (알약.classList.contains("joined")) {
+        if (라벨 && !라벨.dataset.orig) 라벨.dataset.orig = 라벨.textContent;
+        알약.classList.toggle("rest", st.휴식);
+        알약.style.setProperty("--pr-pct",
+          Math.min(100, st.지난 / st.총 * 100).toFixed(1) + "%");
+        if (라벨) 라벨.textContent =
+          (st.휴식 ? "☕" : "🍅") + " 뽀모방 참여 중 · " + 시분초(st.남은);
+      } else if (알약.style.getPropertyValue("--pr-pct")) {
+        /* 판을 도로 폈다 — 알약을 원래 모습으로 */
+        알약.classList.remove("rest");
+        알약.style.removeProperty("--pr-pct");
+        if (라벨 && 라벨.dataset.orig) 라벨.textContent = 라벨.dataset.orig;
+      }
+    }
+
     /* 단계가 바뀌는 순간 — 소리 한 번, 줄 한 번 */
     const 단계 = st.휴식 ? "휴식" : "뽀모";
     if (_proom옛단계 !== null && _proom옛단계 !== 단계) {
@@ -595,33 +620,67 @@
     });
   }
 
-  /** 알약 판이 열릴 때 */
+  /* =====================================================================
+     ★★ 내리기 ≠ 나가기 (2026-08-30 — 콩 "습관처럼 창을 내리는 멤버가 많아")
+     ---------------------------------------------------------------------
+     다른 판들은 내려도 방이 돌아가니, 다들 뽀모방도 그런 줄 알고
+     내렸다가 영문도 모르고 퇴장당했습니다. 그래서 **그 믿음대로**
+     동작하게 바꿨어요:
+       · 알약으로 내리기  → hideProom()  — 방에 남습니다. 시계·듣기·
+         토마토 판정·알림음 전부 계속 돌아요. 판의 DOM 은 hidden 일 뿐
+         그대로 있어서, 250ms 시계도 멈출 것 없이 그냥 둡니다 (비용은
+         감춰진 글자 몇 개를 고쳐 쓰는 정도 — 잽니다).
+       · ✕ 로 닫기       → closeProom() — 진짜 나가기. 예전 그대로.
+     "판이 열려 있나(_proom열림)" 는 이제 "방에 참여 중인가" 라는 뜻이
+     됐습니다 — 내려도 true 예요. imInProom·입장 줄·🍅 판정이 다 이걸
+     보므로, 내려둔 사람도 방에 있는 것으로 칩니다 (그게 요점입니다).
+     ===================================================================== */
+
+  /** 알약 판이 열릴 때 — 내려뒀다 다시 편 것이면 입장이 아닙니다 */
   function openProom() {
     proom묶기();
     proom소리풀기();                 // 🔊 판을 여는 그 클릭이 첫 열쇠입니다
     proom시차맞추기();
+    const 다시펴기 = _proom열림;     // 내려뒀던 판을 도로 편 것
     _proom열림 = true;
-    _proom들어온때 = proom지금();    // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
-    /* 👋 내 입장은 내 손으로 한 줄 — 남들 화면에는 status 를 타고
-       각자의 기기가 그립니다 (proomSetHere 는 내 닉을 건너뜁니다) */
-    if (proomMe()) {
-      _proom입장줄.push({ 입장: true, user: proomMe(), time: proom지금() });
-      _proom입장때[proomMe()] = proom지금();
+    if (!다시펴기) {
+      _proom들어온때 = proom지금();  // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
+      /* 👋 내 입장은 내 손으로 한 줄 — 남들 화면에는 status 를 타고
+         각자의 기기가 그립니다 (proomSetHere 는 내 닉을 건너뜁니다) */
+      if (proomMe()) {
+        _proom입장줄.push({ 입장: true, user: proomMe(), time: proom지금() });
+        _proom입장때[proomMe()] = proom지금();
+      }
+      _proom옛단계 = null;           // 열자마자 소리가 나지 않게
     }
-    _proom옛단계 = null;             // 열자마자 소리가 나지 않게
     proom그리기();
     proom듣기();
-    /* ★ 시계는 여기서만 돕니다. 판을 닫으면 멈춰요 —
-       안 보는 판 때문에 250ms 마다 일할 이유가 없습니다. */
+    /* ★ 시계는 여기서 돕니다. **나가야** 멈춰요 — 내려둔 동안에도
+       단계 전환(소리·토마토)을 알아채야 하니까요. */
     clearInterval(_proom시계기);
     _proom시계기 = setInterval(proom시계, 250);
     setTimeout(() => el("proom-in")?.focus(), 60);
     /* ★ 곧바로 알립니다. 안 하면 다음 하트비트(최대 15초)까지 남들 화면에
        내가 안 보여요 — 들어왔는데 아무 표시가 없으면 고장으로 읽힙니다. */
-    try { window.updateStatus?.(true); } catch (e) {}
+    if (!다시펴기) { try { window.updateStatus?.(true); } catch (e) {} }
   }
+
+  /** 알약으로 내리기 — 방에는 남습니다. 하던 일을 하나도 안 멈춰요. */
+  function hideProom() {}
+
   function closeProom() {
     _proom열림 = false;
+    /* 📊 알약을 원래 모습으로 — 내려둔 채 방을 나가면(closeAll) 시계가
+       멈춰서, 시계 속 되살리기가 다시는 안 돕니다. 여기서 마무리해요. */
+    {
+      const 알약 = document.getElementById("dock-pill-proom");
+      if (알약) {
+        알약.classList.remove("rest", "joined");
+        알약.style.removeProperty("--pr-pct");
+        const 라벨 = 알약.querySelector(".dock-pill-label");
+        if (라벨 && 라벨.dataset.orig) 라벨.textContent = 라벨.dataset.orig;
+      }
+    }
     _proom들어온때 = 0;              // 나갔으면 다시 들어와야 셉니다
     /* 👋 입장 줄은 이 방문의 것 — 닫으면 비우고, 다시 열면 새로 봅니다 */
     _proom명단 = null; _proom입장줄 = []; _proom입장때 = {};
@@ -633,5 +692,6 @@
        얹혀 나가고, 그건 이미 모두가 듣고 있으니까요. */
   window.imInProom = () => _proom열림;
   window.openProom = openProom;
+  window.hideProom = hideProom;
   window.closeProom = closeProom;
 })();

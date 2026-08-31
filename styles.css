@@ -9603,6 +9603,27 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   border-color: var(--accent);
   color: var(--text);
 }
+/* ⏱️ 내려뒀지만 방에는 있음 (콩 2026-08-30) — **알약이 곧 진행 바.**
+   글자는 「🍅 뽀모방 참여 중 · 16:03」(script_proom.js 의 시계가 씀),
+   배경은 --pr-pct 만큼 왼쪽부터 차오릅니다. 참여자에게만 보여요 —
+   .joined 자체가 "참여 중 + 내려둠" 일 때만 붙습니다. */
+.dock-pill.joined{
+  border-color: var(--accent);
+  color: var(--text);
+  background: linear-gradient(to right,
+    var(--accent-soft) var(--pr-pct, 0%),
+    var(--fill-1)      var(--pr-pct, 0%));
+}
+.dock-pill.joined .dock-pill-label{
+  font-variant-numeric: tabular-nums;   /* 초가 바뀌어도 글자가 안 들썩이게 */
+}
+/* ☕ 휴식 구간은 초록으로 — 판 안 진행 바(.pr-bar i.rest)와 같은 색 */
+.dock-pill.joined.rest{
+  border-color: #5E8C61;
+  background: linear-gradient(to right,
+    rgba(94,140,97,.18) var(--pr-pct, 0%),
+    var(--fill-1)       var(--pr-pct, 0%));
+}
 /* ★★ 배지는 알약 **바깥**(오른쪽 위)에 띄웁니다.
    안쪽에 넣으면 배지가 뜰 때마다 알약이 넓어져서 줄 전체가 밀립니다 —
    새 글이 올 때마다 아래 줄이 들썩이면 눈에 몹시 거슬려요.
