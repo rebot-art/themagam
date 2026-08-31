@@ -92,9 +92,10 @@
        "수다가 주 목적이 아니라서" — 시계를 보는 자리라 대화 칸이 길 이유가
        없습니다. 516px → 335px. 필요하면 위 가장자리를 잡아 늘리면 되고,
        그 값은 기기에 남아요. ※ 폭은 그대로 챗과 같습니다(352px). */
-    /* ★ note (08-30 — 콩): 제목 옆 잔글씨 한 마디. 뽀모방은 판이 곧 방이라
-       ✕ 가 "숨기기" 가 아니라 **나가기**입니다 — 그걸 말로 적어 둡니다. */
-    { id: "proom",  label: "⏱️ 뽀모방", note: "창을 닫으면 나가져요", stay: true, size: 0.78, move: null, drag: true, resize: true },
+    /* ★ note (08-30 — 콩): 제목 옆 잔글씨 한 마디.
+       내리기(알약)와 나가기(✕)가 다른 일이 되면서 문구도 바뀌었습니다 —
+       "내려도 방은 돌아가요 · ✕가 나가기". */
+    { id: "proom",  label: "⏱️ 뽀모방", note: "내려도 방은 돌아가요 · ✕가 나가기", stay: true, size: 0.78, move: null, drag: true, resize: true },
     /* 🏢 출판사 품평 — 익명 게시판 (2026-08-12, script_pubreview.js).
        공지처럼 목록형이지만 댓글이 길게 달리는 곳이라 키울 수 있게 했어요. */
     { id: "pub", label: "🏢 출판사 품평", stay: true, size: 1.35, move: null, drag: true, resize: true },
@@ -637,6 +638,10 @@
          알약만 봐도 알 수 있게요. */
       if (d.tab) el("dock-pill-" + d.id)?.classList.toggle("writing", _tab === d.tab);
     });
+    /* ⏱️ 내려뒀지만 방에는 있는 상태 — 알약에 옅은 참여 표시.
+       판이 닫혀 보여도 "나 아직 방에 있구나" 를 알약이 말해 줍니다. */
+    el("dock-pill-proom")?.classList.toggle(
+      "joined", !!window.imInProom?.() && !_open.has("proom"));
     ["chat", "chatty"].forEach(k => {
       const p = el("dock-panel-" + k);
       if (p) p.classList.toggle("writing", _tab === (k === "chatty" ? "chatty" : "main"));
@@ -743,8 +748,12 @@
     if (NEW_BOARDS.indexOf(id) >= 0) 봤다(id, _newAt[id] || Date.now());
   }
 
-  /** 하나만 닫기 — **판** id 를 받습니다 */
-  function close(id) {
+  /** 하나만 닫기 — **판** id 를 받습니다.
+      ★ 나가기 (2026-08-30 — 콩 "습관처럼 창을 내리는 멤버가 많아"):
+        뽀모방은 **내리기와 나가기가 다른 일**입니다. 알약으로 내리면
+        방엔 남고(시계·토마토·알림음 계속), ✕ 를 눌러야 나가져요.
+        다른 판들은 이 구분이 없습니다 — 나가기 인자를 무시해요. */
+  function close(id, 나가기) {
     const pid = panelOf(id);
     const p = el("dock-panel-" + pid);
     if (p) p.hidden = true;
@@ -755,9 +764,13 @@
     /* ⚙️ 비밀방은 닫으면 듣기를 끊습니다 — 안 끊으면 창을 닫아도 통신이
        이어지고, 무엇보다 명단에서 빠진 뒤에도 잠깐 들립니다 */
     if (pid === "sroom") window.closeSroom?.();
-    /* ⏱️ 뽀모방도 닫으면 멈춥니다 — 안 보는 판 때문에 250ms 마다
-       시계를 돌릴 이유가 없어요 */
-    if (pid === "proom") window.closeProom?.();
+    /* ⏱️ 뽀모방 — 알약으로 내리면 방에 남고, ✕ 라야 나갑니다.
+       (예전엔 어느 쪽이든 나가져서, 습관처럼 창을 내린 멤버가
+        영문도 모르고 퇴장당했어요 — 콩 2026-08-30) */
+    if (pid === "proom") {
+      if (나가기) window.closeProom?.();
+      else window.hideProom?.();
+    }
     if (pid === "chatty" && _tab === "chatty") setTab("main");
     if (pid === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
     syncPills();
@@ -767,9 +780,12 @@
     else dock.removeAttribute("data-open");
   }
 
-  /** 전부 닫기 */
+  /** 전부 닫기 — 방을 나갈 때라, 뽀모방도 진짜 나가기입니다 */
   function closeAll() {
-    [..._open].forEach(close);
+    [..._open].forEach(pid => close(pid, true));
+    /* ★ 뽀모방을 **내려둔** 사람은 _open 에 없어서 위 고리가 못 닿습니다.
+       내려둔 채 참여 중이면 여기서 마저 내보내요. */
+    if (window.imInProom?.()) window.closeProom?.();
     DOCK.forEach(d => {
       const p = el("dock-panel-" + panelOf(d.id));
       if (p) p.hidden = true;
@@ -1074,7 +1090,7 @@
       }
 
       const x = e.target.closest("[data-dock-close]");
-      if (x) { close(x.dataset.dockClose); return; }   // ★ 그 판만 닫습니다
+      if (x) { close(x.dataset.dockClose, true); return; }   // ★ ✕ 는 진짜 나가기
 
       if (!_open.size) return;
       /* 판 안을 누른 것이면 아무것도 닫지 않습니다 */
