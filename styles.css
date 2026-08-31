@@ -9610,19 +9610,25 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-pill.joined{
   border-color: var(--accent);
   color: var(--text);
+  /* [고침 2026-08-30 — 콩 "색이 점점 변하는 거지"] 처음엔 --accent-soft
+     로 채웠는데, 다크 테마에선 알약 바탕(--fill-1)과 거의 같은 어둡기라
+     차오르는 게 **안 보였습니다.** 이제 accent 를 바탕색에 22% 섞어요 —
+     투명에 섞지 않고 **바탕색에** 섞어야 어느 테마에서든 바탕과 한 단계
+     차이가 보장됩니다. 포인트 색 그대로보다 훨씬 연합니다 (콩 요청). */
   background: linear-gradient(to right,
-    var(--accent-soft) var(--pr-pct, 0%),
-    var(--fill-1)      var(--pr-pct, 0%));
+    color-mix(in srgb, var(--accent) 22%, var(--fill-1)) var(--pr-pct, 0%),
+    var(--fill-1)                                        var(--pr-pct, 0%));
 }
 .dock-pill.joined .dock-pill-label{
   font-variant-numeric: tabular-nums;   /* 초가 바뀌어도 글자가 안 들썩이게 */
 }
-/* ☕ 휴식 구간은 초록으로 — 판 안 진행 바(.pr-bar i.rest)와 같은 색 */
+/* ☕ 휴식 구간은 초록으로 — 판 안 진행 바(.pr-bar i.rest)와 같은 색.
+   뽀모와 같은 이치로 바탕색에 섞습니다. */
 .dock-pill.joined.rest{
   border-color: #5E8C61;
   background: linear-gradient(to right,
-    rgba(94,140,97,.18) var(--pr-pct, 0%),
-    var(--fill-1)       var(--pr-pct, 0%));
+    color-mix(in srgb, #5E8C61 26%, var(--fill-1)) var(--pr-pct, 0%),
+    var(--fill-1)                                  var(--pr-pct, 0%));
 }
 /* ★★ 배지는 알약 **바깥**(오른쪽 위)에 띄웁니다.
    안쪽에 넣으면 배지가 뜰 때마다 알약이 넓어져서 줄 전체가 밀립니다 —
