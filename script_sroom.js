@@ -252,7 +252,9 @@
           return { id, user: String(v.user || ""), msg: msg.slice(0, SROOM_LEN), time: Number(v.time) || 0 };
         })
         .filter(Boolean)
-        .sort((a, b) => a.time - b.time);
+        /* ★ 시각이 같으면 push 열쇠로 — 열쇠는 만들어진 차례를 품고 있어서
+           동률에서도 줄이 그릴 때마다 뒤바뀌지 않습니다 */
+        .sort((a, b) => a.time - b.time || String(a.id).localeCompare(String(b.id)));
       sroom그리기();
       /* 🧹 방을 열어둔 채 자정을 넘겼으면, 다음 말이 올 때 쓸립니다
          (도장 덕에 평소에는 첫 줄에서 곧장 돌아와요) */
@@ -271,8 +273,14 @@
     _sroomBusy = true;
     if (칸) { 칸.value = ""; 칸.focus(); }   // ★ 보낸 뒤에도 손이 그대로 있게
     try {
+      /* ★★★ [고침 2026-08-30 — 콩 신고 "간발의 차로 먼저 올린 챗이 밀려"]
+         time 을 Date.now() 로 찍고 있었습니다 — **각자 기기 시계**예요.
+         이 판은 그릴 때마다 time 으로 줄을 세우는데, 기기 시계가 몇 초
+         어긋난 사람의 글은 '과거'에 찍혀서 먼저 온 글 위로 끼어듭니다.
+         → 서버가 받는 순간의 시각(ServerValue.TIMESTAMP)으로 바꿨어요.
+           도장 찍는 자가 하나면 줄이 안 엉킵니다. */
       await window.db.ref("sroom").push().set({
-        user: sroomMe(), msg: t, time: Date.now()
+        user: sroomMe(), msg: t, time: firebase.database.ServerValue.TIMESTAMP
       });
     } catch (e) {
       if (칸) 칸.value = t;               // 못 보냈으면 쓰던 글을 돌려줍니다

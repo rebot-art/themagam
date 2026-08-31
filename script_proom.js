@@ -497,7 +497,9 @@
           const msg = String(v.msg || "");
           if (!msg.trim()) return null;
           return { id, user: String(v.user || ""), msg: msg.slice(0, PROOM_LEN), time: Number(v.time) || 0 };
-        }).filter(Boolean).sort((a, b) => a.time - b.time);
+        }).filter(Boolean)
+          /* 동률이면 push 열쇠로 — 비밀방과 같은 결 */
+          .sort((a, b) => a.time - b.time || String(a.id).localeCompare(String(b.id)));
         proom줄그리기();
       });
     }
@@ -583,7 +585,9 @@
     _proomBusy = true;
     if (칸) { 칸.value = ""; 칸.focus(); }
     try {
-      await window.db.ref("proom").push().set({ user: proomMe(), msg: t, time: Date.now() });
+      /* ★ 서버 시각으로 찍습니다 — 비밀방의 "간발의 차 밀림" 과 같은 이치
+         (2026-08-30 콩 신고 · 자세한 사연은 script_sroom.js 의 보내기) */
+      await window.db.ref("proom").push().set({ user: proomMe(), msg: t, time: firebase.database.ServerValue.TIMESTAMP });
     } catch (e) {
       if (칸) 칸.value = t;
       alert("보내지 못했어요. 연결을 확인해 주세요.");
