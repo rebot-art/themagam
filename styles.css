@@ -9616,8 +9616,10 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
      투명에 섞지 않고 **바탕색에** 섞어야 어느 테마에서든 바탕과 한 단계
      차이가 보장됩니다. 포인트 색 그대로보다 훨씬 연합니다 (콩 요청). */
   background: linear-gradient(to right,
-    color-mix(in srgb, var(--accent) 22%, var(--fill-1)) var(--pr-pct, 0%),
+    color-mix(in srgb, var(--accent) 55%, var(--fill-1)) var(--pr-pct, 0%),
     var(--fill-1)                                        var(--pr-pct, 0%));
+  /* 농도 55% — 콩이 미리보기(알약진행바_미리보기.html)에서 직접 고름:
+     "확실히 눈에 보이게!!!" (처음 22% → 다크에서 안 보여 2단계 올림) */
 }
 .dock-pill.joined .dock-pill-label{
   font-variant-numeric: tabular-nums;   /* 초가 바뀌어도 글자가 안 들썩이게 */
@@ -9627,7 +9629,7 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-pill.joined.rest{
   border-color: #5E8C61;
   background: linear-gradient(to right,
-    color-mix(in srgb, #5E8C61 26%, var(--fill-1)) var(--pr-pct, 0%),
+    color-mix(in srgb, #5E8C61 55%, var(--fill-1)) var(--pr-pct, 0%),
     var(--fill-1)                                  var(--pr-pct, 0%));
 }
 /* ★★ 배지는 알약 **바깥**(오른쪽 위)에 띄웁니다.
