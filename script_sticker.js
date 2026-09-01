@@ -430,16 +430,25 @@
     document.removeEventListener("keydown", onKey, true);
   }
   function onDoc(e) {
-    if (_pop && !_pop.contains(e.target) && !e.target.closest("#sticker-btn")) close();
+    if (_pop && !_pop.contains(e.target) && !e.target.closest("#" + _곳.btnId)) close();
   }
   function onKey(e) { if (e.key === "Escape") close(); }
 
+  /* =====================================================================
+     어느 글칸에 놓을 것인가 (2026-08-30 — ⚙️ 비밀방도 스티커를 쓰면서)
+     ---------------------------------------------------------------------
+     예전에는 #message 하나만 알고 있었습니다. 비밀방은 제 글칸(#sroom-in)
+     과 제 보내기를 쓰므로, **어디에 쓸지**를 받아 둡니다.
+     ★ 기본값은 그대로 챗이에요 — 부르는 쪽을 안 고쳐도 예전처럼 돕니다.
+     ===================================================================== */
+  let _곳 = { btnId: "sticker-btn", inputId: "message", send: () => window.send?.() };
+
   function pick(id) {
-    const el = document.getElementById("message");
+    const el = document.getElementById(_곳.inputId);
     if (!el) return;
     el.value = `[[스티커:${id}]]`;
     close();
-    window.send?.();
+    try { _곳.send?.(); } catch (e) {}
     el.focus();
     countForAchv(id);
   }
@@ -465,9 +474,12 @@
     } catch (e) {}
   }
 
-  window.toggleStickerPicker = function () {
+  window.toggleStickerPicker = function (곳) {
     if (_pop) { close(); return; }
-    const btn = document.getElementById("sticker-btn");
+    /* 어디서 부른 것인지 — 안 주면 챗입니다 (예전 그대로) */
+    _곳 = Object.assign({ btnId: "sticker-btn", inputId: "message",
+                          send: () => window.send?.() }, 곳 || {});
+    const btn = document.getElementById(_곳.btnId);
     if (!btn) return;
     ensureFilter();
 

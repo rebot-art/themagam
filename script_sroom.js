@@ -126,11 +126,64 @@
     return `<div class="sr-wait">준비중입니다.</div>`;
   }
 
-  function sroom줄HTML(r) {
+  /* =====================================================================
+     💬 말풍선 (2026-08-30 — 콩 "카톡처럼 보이게, 스티커도")
+     ---------------------------------------------------------------------
+     ★★★ 챗의 렌더러(renderChatMessage)를 **안 빌립니다.** 그쪽 말풍선에는
+        반응 단추가 박혀 있고, 그 단추는 공개된 `reactions` 노드를 씁니다.
+        빌려 쓰는 순간 비밀방 반응이 방 밖에서 보여요 — 방금 sreactions 로
+        따로 잠가 둔 뜻이 통째로 무너집니다. 그래서 겉모습만 같게 짓고
+        속은 이 방 것으로 둡니다.
+     ★ 스티커·프사·닉색은 **함수만 빌립니다** — 그건 그리는 일만 하고
+       서버를 안 건드려서 새는 것이 없어요.
+       · window.stickerHtml    `[[스티커:id]]` → 그림
+       · window.chatAvatarHtml 프사
+       · window.nickColorStyle 각자 고른 닉네임 색
+     ===================================================================== */
+
+  /** 이모지 한 글자인가 — 그러면 말풍선 없이 크게 놓습니다 */
+  function 이모지하나(t) {
+    if (!t || t.trim() !== t) return false;
+    try {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const 조각 = [...new Intl.Segmenter("ko", { granularity: "grapheme" }).segment(t)];
+        if (조각.length !== 1) return false;
+        return /\p{Emoji}/u.test(조각[0].segment) && !/^[0-9#*]$/.test(조각[0].segment);
+      }
+    } catch (e) {}
+    return /^(\p{Emoji_Presentation}|\p{Extended_Pictographic})(‍(\p{Emoji_Presentation}|\p{Extended_Pictographic})|️|⃣)*$/u.test(t);
+  }
+
+  /** @내이름 이 불렸나 — 챗과 같은 뜻입니다 */
+  function 나를불렀나(t) {
+    const 나 = sroomMe();
+    if (!나 || !t) return false;
+    try { return window.msgContainsMyMention?.(t) === true; } catch (e) {}
+    return String(t).includes("@" + 나);
+  }
+
+  const 날키 = (t) => {
+    const d = new Date(Number(t) || Date.now());
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  };
+
+  /** 한 줄 — 앞줄(전)을 보고 묶을지 정합니다 */
+  function sroom줄HTML(r, 전) {
     const 내것 = r.user === sroomMe();
-    /* 🎨 닉네임 색 — 챗과 같은 색 (2026-08-30 콩). 뽀모방과 같은 결이에요:
-       프로필의 nickColor + 다크 보정을 nickColorStyle() 이 다 해 주고,
-       data-name-of 덕에 테마 전환 때 refreshChatNickColors() 가 함께 갱신합니다. */
+
+    /* 📅 날짜가 바뀌면 가로줄 하나 — 카톡의 그 줄입니다 */
+    let 날줄 = "";
+    if (!전 || 날키(전.time) !== 날키(r.time)) {
+      const d = new Date(Number(r.time) || Date.now());
+      날줄 = `<div class="sr-date"><span></span>
+        <b>${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일</b><span></span></div>`;
+    }
+
+    /* 같은 사람이 5분 안에 잇달아 말하면 이름·프사를 생략하고 붙입니다.
+       ★ 날짜가 바뀌었으면 묶지 않습니다 — 줄 아래위로 갈라져야 하니까요. */
+    const 묶음 = !날줄 && 전 && 전.user === r.user &&
+                 Math.abs(Number(r.time) - Number(전.time)) < 5 * 60 * 1000;
+
     /* ↩ 답글 인용 — 원문이 자정 청소로 지워져도 이건 남습니다 */
     const 인용 = r.replyTo ? `
       <div class="sr-quote" data-sroom-goto="${esc(r.replyTo.key || "")}" title="원문으로">
@@ -138,19 +191,37 @@
         <span>${esc(r.replyTo.msg || "")}</span>
       </div>` : "";
 
-    return `
-      <div class="sr-row${내것 ? " mine" : ""}" data-sroom-key="${esc(r.id)}">
-        ${인용}
-        <div class="sr-line">
-          <span class="sr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</span>
-          <span class="sr-msg">${esc(r.msg)}</span>
-          <span class="sr-t">${esc(때(r.time))}</span>
-          <span class="sr-tools">
-            <button type="button" data-sroom-react="1" aria-label="반응" title="반응 남기기">☺</button>
-            <button type="button" data-sroom-reply="1" aria-label="답글" title="답글">↩</button>
-          </span>
+    /* 🖼 스티커 · 😀 큰 이모지 — 둘 다 말풍선 옷을 벗깁니다 */
+    const 스티커 = window.stickerHtml?.(r.msg) || "";
+    const 큰이모지 = !스티커 && 이모지하나(r.msg);
+    const 불렸나 = !내것 && 나를불렀나(r.msg);
+    const 풍선칸 = "sr-bubble" + (스티커 ? " sticker" : 큰이모지 ? " emoji" : "")
+                 + (불렸나 ? " mention" : "");
+    const 속 = 스티커 || esc(r.msg);
+
+    /* 프사 — 남의 말에만, 묶이지 않은 첫 줄에만 (카톡과 같은 결) */
+    const 프사 = (!내것 && !묶음)
+      ? (window.chatAvatarHtml?.(r.user, "") || `<div class="sr-ava-x">✍️</div>`)
+      : `<div class="sr-ava-gap"></div>`;
+
+    return `${날줄}
+      <div class="sr-row${내것 ? " mine" : ""}${묶음 ? " grouped" : ""}"
+           data-sroom-key="${esc(r.id)}">
+        ${내것 ? "" : 프사}
+        <div class="sr-body">
+          ${(내것 || 묶음) ? "" :
+            `<div class="sr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</div>`}
+          ${인용}
+          <div class="sr-line">
+            <div class="${풍선칸}">${속}</div>
+            <div class="sr-t">${esc(때(r.time))}</div>
+            <span class="sr-tools">
+              <button type="button" data-sroom-react="1" aria-label="반응" title="반응 남기기">☺</button>
+              <button type="button" data-sroom-reply="1" aria-label="답글" title="답글">↩</button>
+            </span>
+          </div>
+          ${sroom반응줄HTML(r.id)}
         </div>
-        ${sroom반응줄HTML(r.id)}
       </div>`;
   }
 
@@ -261,6 +332,10 @@
         ${sroom명단HTML()}
         <div class="sr-log"></div>
         <div class="sr-write">
+          <!-- 🖼 스티커 — 챗과 같은 것을 씁니다. 고르기 판이 "어느 글칸에
+               놓을지" 를 받도록 고쳤어요 (script_sticker.js) -->
+          <button type="button" class="sr-stk" id="sroom-sticker-btn"
+                  data-sroom-sticker="1" aria-label="스티커" title="스티커">🙂</button>
           <textarea id="sroom-in" class="sr-in" rows="1" maxlength="${SROOM_LEN}"
                     placeholder="여기에 적어요"></textarea>
           <button type="button" class="sr-send" data-sroom-send="1"
@@ -278,7 +353,7 @@
        중이었으면 그 자리를 지켜요 — 남의 글에 끌려다니지 않게. */
     const 바닥 = 목록칸.scrollHeight - 목록칸.scrollTop - 목록칸.clientHeight < 60;
     const 전 = 목록칸.scrollTop;
-    목록칸.innerHTML = _sroomRows.map(sroom줄HTML).join("")
+    목록칸.innerHTML = _sroomRows.map((r, i) => sroom줄HTML(r, _sroomRows[i - 1])).join("")
       || `<p class="sr-empty">아직 아무 말도 없어요.</p>`;
     목록칸.scrollTop = 바닥 ? 목록칸.scrollHeight : 전;
   }
@@ -521,6 +596,12 @@
       const 글씨 = e.target.closest("[data-sroom-font]");
       if (글씨) { sroom글씨바꾸기(Number(글씨.dataset.sroomFont)); el("sroom-in")?.focus(); return; }
       if (e.target.closest("[data-sroom-send]")) { sroom보내기(); return; }
+      /* 🖼 스티커 — 이 방의 글칸과 이 방의 보내기로 (챗과 같은 판을 씁니다) */
+      if (e.target.closest("[data-sroom-sticker]")) {
+        window.toggleStickerPicker?.({ btnId: "sroom-sticker-btn",
+                                       inputId: "sroom-in", send: sroom보내기 });
+        return;
+      }
       if (e.target.closest("[data-sroom-add]"))  { sroom넣기();  return; }
       const 뺄 = e.target.closest("[data-sroom-out]");
       if (뺄) { sroom빼기(뺄.dataset.sroomOut); return; }

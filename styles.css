@@ -6505,15 +6505,66 @@ html[data-theme-style="studio"] .user-card{
 /* ★ [2026-08-30] 줄이 **한 겹 더** 생겼습니다 — 인용·반응이 붙으면서
    .sr-row (묶음) > .sr-quote + .sr-line + .sr-reacts 가 됐어요.
    그래서 mine 표는 .sr-line 이 아니라 **.sr-row** 에 답니다. */
-.sr-row{ position: relative; padding: 1px 0; }
-.sr-line{ display: flex; align-items: baseline; gap: 6px; padding: 3px 2px;
-          font-size: var(--sr-fs, 13px); line-height: 1.6; word-break: break-word; }
-.sr-row.mine .sr-line{ flex-direction: row-reverse; text-align: right; }
-.sr-row.mine .sr-who{ color: var(--accent); }
-.sr-who{ flex: 0 0 auto; font-size: 11.5px; font-weight: var(--fw-bold);
-         color: var(--text-2, #5A6473); }
-.sr-msg{ flex: 1 1 auto; min-width: 0; color: var(--text); white-space: pre-wrap; }
-.sr-t{ flex: 0 0 auto; font-size: 10px; color: var(--text-3, #8A93A2); }
+/* ═══════════════════════════════════════════════════════════
+   💬 말풍선 (2026-08-30 — 콩 "카톡처럼 보이게")
+   -----------------------------------------------------------
+   얼개:  .sr-row [.mine] [.grouped]
+            └ 프사(남의 말·묶이지 않은 첫 줄에만)
+            └ .sr-body
+                 ├ .sr-who   이름 (남의 말·첫 줄에만)
+                 ├ .sr-quote 답글 인용
+                 ├ .sr-line  [말풍선] [시각] [☺↩]
+                 └ .sr-reacts 붙은 반응
+   ★ 챗의 말풍선을 **베끼지 않고** 이 방 것으로 짓습니다 — 그쪽 풍선에는
+     공개 노드를 쓰는 반응 단추가 박혀 있어서요 (script_sroom.js 주석 참고).
+   ═══════════════════════════════════════════════════════════ */
+.sr-row{ position: relative; display: flex; align-items: flex-start; gap: 6px;
+         padding: 3px 2px 1px; }
+.sr-row.grouped{ padding-top: 0; }               /* 묶인 줄은 바짝 붙여서 */
+.sr-row.mine{ flex-direction: row-reverse; }
+.sr-body{ display: flex; flex-direction: column; min-width: 0; max-width: 78%; }
+.sr-row.mine .sr-body{ align-items: flex-end; }
+
+/* 프사 — 남의 말 첫 줄에만. 묶인 줄에는 같은 폭의 빈칸을 둬서 줄이 안 밀립니다 */
+.sr-row > .chat-avatar, .sr-row > .profile-emoji,
+.sr-ava-x, .sr-ava-gap{ flex: 0 0 26px; width: 26px; height: 26px; }
+.sr-ava-x{ display: flex; align-items: center; justify-content: center;
+           border-radius: 999px; background: var(--fill-1); font-size: 13px; }
+.sr-ava-gap{ height: 1px; }
+
+.sr-who{ font-size: 11.5px; font-weight: var(--fw-bold);
+         color: var(--text-2, #5A6473); margin: 0 2px 2px; }
+
+.sr-line{ display: flex; align-items: flex-end; gap: 5px; min-width: 0; }
+.sr-row.mine .sr-line{ flex-direction: row-reverse; }
+
+/* 말풍선 자체 */
+.sr-bubble{
+  min-width: 0; padding: 6px 10px; border-radius: 12px;
+  font-size: var(--sr-fs, 13px); line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+  background: var(--fill-1); color: var(--text);
+  border: 1px solid var(--border);
+}
+.sr-row.mine .sr-bubble{
+  background: var(--accent-soft); border-color: var(--accent-line, var(--border));
+}
+/* 🖼 스티커 · 😀 큰 이모지 — 옷을 벗고 그림만 놓습니다 */
+.sr-bubble.sticker, .sr-bubble.emoji{
+  background: transparent !important; border: none !important; padding: 2px 4px;
+}
+.sr-bubble.emoji{ font-size: 34px; line-height: 1.1; }
+/* @나를 부른 말 — 붉은 테두리로 눈에 걸리게 */
+.sr-bubble.mention{ border-color: var(--accent); background: var(--accent-softer, var(--fill-2)); }
+
+.sr-t{ flex: 0 0 auto; font-size: 10px; color: var(--text-3, #8A93A2);
+       padding-bottom: 2px; }
+
+/* 📅 날짜 가로줄 */
+.sr-date{ display: flex; align-items: center; gap: 8px; padding: 10px 4px 6px; }
+.sr-date span{ flex: 1 1 auto; height: 1px; background: var(--border); }
+.sr-date b{ flex: 0 0 auto; font-size: 10.5px; font-weight: var(--fw-medium);
+            color: var(--text-3, #8A93A2); }
 
 /* ☺ ↩ 손잡이 — 줄에 손을 얹어야 보입니다 (늘 보이면 판이 시끄러워요) */
 .sr-tools{ flex: 0 0 auto; display: inline-flex; gap: 1px; opacity: 0;
@@ -6531,7 +6582,7 @@ html[data-theme-style="studio"] .user-card{
 
 /* ↩ 인용 — 답글이 가리키는 원문 */
 .sr-quote{
-  max-width: 86%; margin: 2px 0 0; padding: 3px 8px; cursor: pointer;
+  max-width: 100%; margin: 0 0 2px; padding: 3px 8px; cursor: pointer;
   border-left: 2px solid var(--accent-line, rgba(179,55,43,.28));
   background: var(--fill-1); border-radius: 0 8px 8px 0;
   font-size: calc(var(--sr-fs, 13px) - 2px); line-height: 1.5;
@@ -6539,7 +6590,7 @@ html[data-theme-style="studio"] .user-card{
 }
 .sr-quote b{ color: var(--text-2, #5A6473); }
 .sr-quote span{ color: var(--text-3, #8A93A2); margin-left: 5px; }
-.sr-row.mine .sr-quote{ margin-left: auto; border-left: none;
+.sr-row.mine .sr-quote{ border-left: none;
   border-right: 2px solid var(--accent-line, rgba(179,55,43,.28));
   border-radius: 8px 0 0 8px; text-align: right; }
 /* 원문으로 데려갔을 때 한 번 반짝 */
@@ -6599,6 +6650,15 @@ html[data-theme-style="studio"] .user-card{
   border-radius: var(--r-md, 10px);
 }
 .sr-in:focus{ outline: none; border-color: var(--accent); }
+.sr-stk{
+  flex: 0 0 auto; width: 30px; height: 30px; cursor: pointer;
+  font-size: 15px; font-family: inherit; line-height: 1;
+  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text-2, #5A6473);
+}
+.sr-stk:hover{ background: var(--fill-1); border-color: var(--accent); }
+.sr-stk:active{ transform: scale(.94); }
+
 .sr-send{
   flex: 0 0 auto; width: 32px; height: 32px; cursor: pointer;
   font-size: 15px; font-weight: var(--fw-bold); font-family: inherit;
