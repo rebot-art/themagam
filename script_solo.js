@@ -610,12 +610,11 @@
        것은, 혼자 방은 이 뒤에 알약 몇 개를 걷어내므로 그때 판이 다시
        그려질 수 있어서예요 — 두 번 불러도 탈이 없게 만들어 뒀습니다. */
     window.mountPanelZoomCtl?.();
-    ["dock-pill-chatty", "dock-pill-pub", "alive-btn",
-     "chatty-tab", "chat-tab-chatty"].forEach(id => {
+    ["dock-pill-pub", "alive-btn"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
-    document.querySelectorAll("[data-dock='chatty'],[data-dock='pub']")
+    document.querySelectorAll("[data-dock='pub']")
       .forEach(el => el.remove());
     /* 대숲의 30일 시듦은 끕니다 — 혼자 붙인 쪽지는 안 사라지는 게 낫습니다 */
     window.FOREST_NO_WITHER = true;

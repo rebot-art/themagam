@@ -43,7 +43,7 @@
    [누가 볼 수 있나 — 2026-08-08 부터 달라졌습니다]
    예전에는 users 노드가 .read: true 라 마음먹으면 남이 들여다볼 수
    있었습니다. 지금은 **본인과 방장만** 읽도록 규칙으로 막았어요.
-   카드에 필요한 profile · pomoSessions · chattyParticipation 세 가지만
+   카드에 필요한 profile · pomoSessions · chattyParticipation(문 닫은 방의 옛 기록) 세 가지만
    따로 열어 두었습니다. 그래서 팝업 아래 문구도 고쳤습니다.
 
    ※ 방장은 관리자 페이지에서 모아 볼 수 있습니다. 서버를 가진 사람이

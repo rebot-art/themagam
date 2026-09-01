@@ -275,7 +275,6 @@
         n.classList.remove("hidden");
       };
       켜기("chat-tab-badge-main", "3");
-      켜기("chat-tab-badge-chatty", "12");
       켜기("notice-dot");
     } catch (e) {}
   }

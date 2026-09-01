@@ -1941,16 +1941,8 @@
       msg("adm-chat-msg", "삭제하지 못했어요.", true);
     }
   }
-  async function clearChatty() {
-    if (!ownerOnly("수다방 통째 삭제")) return;
-    if (!confirm("정말 Chatty(수다방)를 모두 삭제할까요? (되돌릴 수 없어요!)")) return;
-    try {
-      await db.ref("messages2").remove();
-      msg("adm-chat-msg", "☕ Chatty를 모두 삭제했어요.");
-    } catch (e) {
-      msg("adm-chat-msg", "삭제하지 못했어요.", true);
-    }
-  }
+  /* [2026-08-30 — 콩] ☕ 수다방을 접으면서 clearChatty() 도 함께 걷었습니다.
+     messages2 노드는 접기 전에 이 단추로 비웠고, 보안규칙에서도 뺐어요. */
 
   // ------------------------------------------------- ③-3.6 🕘 출입 기록
   /* 하루치 입·퇴장을 일어난 순서대로 펼쳐 봅니다.
@@ -2727,7 +2719,6 @@
     el("adm-uid-copy")?.addEventListener("click", copyMyUid);
     el("adm-hist-apply")?.addEventListener("click", applyHistory);
     el("adm-chat-clear")?.addEventListener("click", clearChat);
-    el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-diligent-run")?.addEventListener("click", runDiligent);

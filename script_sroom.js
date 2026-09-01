@@ -59,6 +59,33 @@
   let _sroomAllow = {};            // uid → 닉 (방장만 읽힙니다)
   let _sroom틀 = "";               // 지금 지어 둔 틀의 모양 (아래 그리기 참고)
 
+  /* =====================================================================
+     😊 반응 · ↩ 답글 (2026-08-30 — 콩. 수다방을 접으면서 옮겨 왔습니다)
+     ---------------------------------------------------------------------
+     ★★★ 반응을 **`reactions` 에 안 넣습니다.** 챗이 쓰는 그 노드는
+        읽기가 **누구에게나 열려** 있어요. 거기 넣으면 "어느 비밀방 글에
+        반응이 몇 개 붙었나" 가 방 밖에서도 보입니다. 글자는 안 새도
+        **오갔다는 사실**이 새는 것이고, 이 방은 그걸 감추려고 만든
+        자리예요 (붉은 점을 일부러 안 다는 것과 같은 이유 — 위 주석).
+        → `sreactions` 를 따로 파고 **sroom 과 똑같이** 잠급니다.
+
+     ★ 답글은 글에 `replyTo` 칸을 하나 얹습니다. 원문이 지워져도(자정
+       청소) 인용은 남아요 — 그 편이 대화가 안 끊깁니다.
+     ===================================================================== */
+  const SROOM_반응 = [
+    { id: "heart", emoji: "❤️", label: "하트" },
+    { id: "up",    emoji: "👍", label: "따봉" },
+    { id: "laugh", emoji: "😂", label: "웃김" },
+    { id: "wow",   emoji: "😮", label: "놀람" },
+    { id: "sad",   emoji: "🥹", label: "뭉클" },
+    { id: "fire",  emoji: "🔥", label: "불타오르네" }
+  ];
+  const SROOM_반응맵 = Object.fromEntries(SROOM_반응.map(r => [r.id, r]));
+
+  let _srReactRef = null;
+  let _srReact = {};               // { 글키: { 반응id: { 닉: true } } }
+  let _sr답할것 = null;            // { key, user, msg } — 지금 답글 다는 대상
+
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
 
@@ -104,12 +131,44 @@
     /* 🎨 닉네임 색 — 챗과 같은 색 (2026-08-30 콩). 뽀모방과 같은 결이에요:
        프로필의 nickColor + 다크 보정을 nickColorStyle() 이 다 해 주고,
        data-name-of 덕에 테마 전환 때 refreshChatNickColors() 가 함께 갱신합니다. */
+    /* ↩ 답글 인용 — 원문이 자정 청소로 지워져도 이건 남습니다 */
+    const 인용 = r.replyTo ? `
+      <div class="sr-quote" data-sroom-goto="${esc(r.replyTo.key || "")}" title="원문으로">
+        <b>↪ ${esc(r.replyTo.user || "")}</b>
+        <span>${esc(r.replyTo.msg || "")}</span>
+      </div>` : "";
+
     return `
-      <div class="sr-line${내것 ? " mine" : ""}">
-        <span class="sr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</span>
-        <span class="sr-msg">${esc(r.msg)}</span>
-        <span class="sr-t">${esc(때(r.time))}</span>
+      <div class="sr-row${내것 ? " mine" : ""}" data-sroom-key="${esc(r.id)}">
+        ${인용}
+        <div class="sr-line">
+          <span class="sr-who" data-name-of="${esc(r.user)}"${window.nickColorStyle?.(r.user) || ""}>${esc(r.user)}</span>
+          <span class="sr-msg">${esc(r.msg)}</span>
+          <span class="sr-t">${esc(때(r.time))}</span>
+          <span class="sr-tools">
+            <button type="button" data-sroom-react="1" aria-label="반응" title="반응 남기기">☺</button>
+            <button type="button" data-sroom-reply="1" aria-label="답글" title="답글">↩</button>
+          </span>
+        </div>
+        ${sroom반응줄HTML(r.id)}
       </div>`;
+  }
+
+  /** 그 글에 붙은 반응 알약들 — 아무도 안 눌렀으면 줄 자체가 없습니다 */
+  function sroom반응줄HTML(키) {
+    const 것 = _srReact[키];
+    if (!것) return "";
+    const 나 = sroomMe();
+    const 알약 = SROOM_반응.map(({ id, emoji }) => {
+      const 누구 = 것[id];
+      const n = 누구 ? Object.keys(누구).length : 0;
+      if (!n) return "";
+      const 내가 = !!(나 && 누구[나]);
+      return `<button type="button" class="sr-react${내가 ? " on" : ""}"
+                      data-sroom-toggle="${id}" title="${esc(Object.keys(누구).join(", "))}"
+              >${emoji} ${n}</button>`;
+    }).join("");
+    return 알약 ? `<div class="sr-reacts">${알약}</div>` : "";
   }
 
   /* ★ [고침 2026-08-29 — 콩] 명단을 **가로로** 늘어놓습니다.
@@ -241,6 +300,7 @@
        사람이 쓸어냅니다. 비밀방 대화는 그날의 것 — 쌓아 두지 않아요.
        승인 멤버는 $id 쓰기 권한이 있어 규칙 변경 없이 지울 수 있습니다. */
     window.자정방청소?.("sroom", "sroomSweepDay");
+    sroom반응듣기();
     _sroomRef = window.db.ref("sroom").orderByChild("time").limitToLast(SROOM_MAX);
     _sroomRef.on("value", snap => {
       const raw = snap.val() || {};
@@ -249,7 +309,12 @@
           const v = raw[id] || {};
           const msg = String(v.msg || "");
           if (!msg.trim()) return null;
-          return { id, user: String(v.user || ""), msg: msg.slice(0, SROOM_LEN), time: Number(v.time) || 0 };
+          const 답 = v.replyTo && typeof v.replyTo === "object"
+            ? { key: String(v.replyTo.key || ""), user: String(v.replyTo.user || ""),
+                msg: String(v.replyTo.msg || "") }
+            : null;
+          return { id, user: String(v.user || ""), msg: msg.slice(0, SROOM_LEN),
+                   time: Number(v.time) || 0, replyTo: 답 };
         })
         .filter(Boolean)
         /* ★ 시각이 같으면 push 열쇠로 — 열쇠는 만들어진 차례를 품고 있어서
@@ -261,9 +326,111 @@
       window.자정방청소?.("sroom", "sroomSweepDay");
     });
   }
+  /* 😊 반응 듣기 — 판을 열 때만. 글 단위로 와서 그 줄만 다시 그립니다 */
+  function sroom반응듣기() {
+    if (_srReactRef || !window.db) return;
+    _srReactRef = window.db.ref("sreactions");
+    const 얹기 = (snap) => { _srReact[snap.key] = snap.val() || {}; sroom반응줄갱신(snap.key); };
+    _srReactRef.on("child_added", 얹기);
+    _srReactRef.on("child_changed", 얹기);
+    _srReactRef.on("child_removed", (snap) => {
+      delete _srReact[snap.key]; sroom반응줄갱신(snap.key);
+    });
+  }
+  function sroom반응그만듣기() {
+    try { _srReactRef?.off(); } catch (e) {}
+    _srReactRef = null; _srReact = {};
+  }
+
+  /** 그 글의 반응 줄만 갈아 끼웁니다 — 판 전체를 다시 그리지 않아요
+      (다시 그리면 쓰던 글과 커서가 날아갑니다 — 이 방의 제1원칙) */
+  function sroom반응줄갱신(키) {
+    const 줄 = el("dock-body-sroom")?.querySelector(`.sr-row[data-sroom-key="${CSS.escape(키)}"]`);
+    if (!줄) return;
+    const 있던 = 줄.querySelector(".sr-reacts");
+    const 새 = sroom반응줄HTML(키);
+    if (!새) { 있던?.remove(); return; }
+    if (있던) 있던.outerHTML = 새;
+    else 줄.insertAdjacentHTML("beforeend", 새);
+  }
+
+  /** 반응 켜고 끄기 — 누른 그 자리에서 먼저 그리고, 서버는 뒤따라옵니다 */
+  async function sroom반응토글(키, id) {
+    const 나 = sroomMe();
+    if (!나 || !키 || !SROOM_반응맵[id] || !window.db || !_sroomOk) return;
+    const 내가있나 = !!(_srReact[키]?.[id]?.[나]);
+    _srReact[키] = _srReact[키] || {};
+    _srReact[키][id] = _srReact[키][id] || {};
+    if (내가있나) delete _srReact[키][id][나];
+    else _srReact[키][id][나] = true;
+    sroom반응줄갱신(키);
+    try {
+      const ref = window.db.ref(`sreactions/${키}/${id}/${나}`);
+      await (내가있나 ? ref.remove() : ref.set(true));
+    } catch (e) { /* 실패하면 서버 값이 곧 되돌려 줍니다 */ }
+  }
+
+  /* 😊 반응 고르기 — 여섯 개짜리 작은 판 */
+  function sroom반응판닫기() {
+    el("dock-body-sroom")?.querySelectorAll(".sr-pick").forEach(p => p.remove());
+  }
+  function sroom반응판열기(단추) {
+    const 줄 = 단추.closest(".sr-row");
+    const 키 = 줄?.dataset.sroomKey;
+    if (!키) return;
+    const 이미 = 줄.querySelector(".sr-pick");
+    sroom반응판닫기();
+    if (이미) return;                       // 같은 걸 또 누르면 닫기
+    줄.insertAdjacentHTML("beforeend",
+      `<div class="sr-pick">${SROOM_반응.map(({ id, emoji, label }) =>
+        `<button type="button" data-sroom-toggle="${id}" title="${label}">${emoji}</button>`).join("")}</div>`);
+  }
+
   function sroom그만듣기() {
     try { _sroomRef?.off(); } catch (e) {}
     _sroomRef = null;
+    sroom반응그만듣기();
+    _sr답할것 = null;
+  }
+
+  /* =====================================================================
+     ↩ 답글 — 글칸 위에 "누구에게 답하는 중" 띠를 띄웁니다
+     ★ 띠는 **틀을 다시 짓지 않고** 그 자리에서 넣고 뺍니다. 틀을 다시
+       지으면 글칸이 새로 태어나 쓰던 글이 날아가요 (이 방의 제1원칙).
+     ===================================================================== */
+  function sroom답글띠() {
+    const 판 = el("dock-body-sroom")?.querySelector(".sr-board");
+    if (!판) return;
+    let 띠 = 판.querySelector(".sr-replybar");
+    if (!_sr답할것) { 띠?.remove(); return; }
+    const 속 = `<span class="sr-replybar-l">↪ <b>${esc(_sr답할것.user)}</b> 님에게 답글</span>
+                <span class="sr-replybar-t">${esc(_sr답할것.msg.slice(0, 60))}</span>
+                <button type="button" data-sroom-replyx="1" aria-label="답글 그만">✕</button>`;
+    if (띠) { 띠.innerHTML = 속; return; }
+    const 쓰는칸 = 판.querySelector(".sr-write");
+    쓰는칸?.insertAdjacentHTML("beforebegin", `<div class="sr-replybar">${속}</div>`);
+  }
+  function sroom답글켜기(단추) {
+    const 줄 = 단추.closest(".sr-row");
+    const 키 = 줄?.dataset.sroomKey;
+    const r = _sroomRows.find(x => x.id === 키);
+    if (!r) return;
+    _sr답할것 = { key: r.id, user: r.user, msg: r.msg };
+    sroom답글띠();
+    el("sroom-in")?.focus();
+  }
+  function sroom답글끄기() {
+    _sr답할것 = null;
+    sroom답글띠();
+  }
+
+  /** 인용을 누르면 원문으로 — 없으면(자정에 쓸렸으면) 조용히 알려 줍니다 */
+  function sroom원문으로(키) {
+    const 줄 = el("dock-body-sroom")?.querySelector(`.sr-row[data-sroom-key="${CSS.escape(키)}"]`);
+    if (!줄) return;
+    줄.scrollIntoView({ block: "center", behavior: "smooth" });
+    줄.classList.add("sr-blink");
+    setTimeout(() => 줄.classList.remove("sr-blink"), 1200);
   }
 
   async function sroom보내기() {
@@ -279,9 +446,20 @@
          어긋난 사람의 글은 '과거'에 찍혀서 먼저 온 글 위로 끼어듭니다.
          → 서버가 받는 순간의 시각(ServerValue.TIMESTAMP)으로 바꿨어요.
            도장 찍는 자가 하나면 줄이 안 엉킵니다. */
-      await window.db.ref("sroom").push().set({
+      const 글 = {
         user: sroomMe(), msg: t, time: firebase.database.ServerValue.TIMESTAMP
-      });
+      };
+      /* ↩ 답글이면 인용을 함께 싣습니다 — 원문이 지워져도 남게
+         (자정 청소가 도는 방이라 '원문 찾아가기' 만으론 끊깁니다) */
+      if (_sr답할것) {
+        글.replyTo = {
+          key: String(_sr답할것.key || ""),
+          user: String(_sr답할것.user || "").slice(0, 40),
+          msg: String(_sr답할것.msg || "").slice(0, 120)
+        };
+      }
+      await window.db.ref("sroom").push().set(글);
+      sroom답글끄기();
     } catch (e) {
       if (칸) 칸.value = t;               // 못 보냈으면 쓰던 글을 돌려줍니다
       alert("보내지 못했어요. 연결을 확인해 주세요.");
@@ -352,6 +530,25 @@
         sroom그리기();
         return;
       }
+
+      /* 😊 반응 · ↩ 답글 (2026-08-30) */
+      const 켜기 = e.target.closest("[data-sroom-toggle]");
+      if (켜기) {
+        const 키 = 켜기.closest(".sr-row")?.dataset.sroomKey;
+        sroom반응판닫기();
+        if (키) sroom반응토글(키, 켜기.dataset.sroomToggle);
+        return;
+      }
+      const 반응 = e.target.closest("[data-sroom-react]");
+      if (반응) { sroom반응판열기(반응); return; }
+      const 답 = e.target.closest("[data-sroom-reply]");
+      if (답) { sroom답글켜기(답); return; }
+      if (e.target.closest("[data-sroom-replyx]")) { sroom답글끄기(); el("sroom-in")?.focus(); return; }
+      const 가기 = e.target.closest("[data-sroom-goto]");
+      if (가기) { sroom원문으로(가기.dataset.sroomGoto); return; }
+
+      /* 반응 고르기 판 바깥을 누르면 닫습니다 */
+      sroom반응판닫기();
     });
 
     /* 엔터로 보내기 — ★ 한글 조합 중은 무시합니다 (이 방에서 여러 번 데인 자리) */

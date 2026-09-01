@@ -83,7 +83,6 @@
        펴 두고 펜 하나로 번갈아 쓰는 셈이에요. 글칸이 없는 쪽에는
        "여기에 쓰기" 줄이 남아서, 누르면 펜이 그리로 옵니다.
        ===================================================================== */
-    { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, drag: true, tab: "chatty", resize: true },
     /* [2026-08-29] ⏱️ 뽀모방 — **수다방 오른쪽**에 (콩 지정 08-30) — 뽀모가 **늘 돌고 있는** 방. 누구나 들어옵니다.
        ★ 알약 🍅 Pomodoro 와는 아무 상관 없습니다. 그건 각자 켜고 끄는
          것이고, 이쪽은 시계처럼 저 혼자 돌아요 (script_proom.js).
@@ -156,9 +155,6 @@
   const _PANEL = {};
   DOCK.forEach(d => { _PANEL[d.id] = d.panel || d.id; });
   const panelOf = (id) => _PANEL[id] || id;
-
-  /** 지금 챗 판이 어느 탭인지 ("main" | "chatty") */
-  let _tab = "main";
 
   /* =====================================================================
      판이 뜨는 자리 (2026-08-12)
@@ -421,17 +417,7 @@
     const achvBody = el("dock-body-achv");
     if (achvBody && window.achvPanelHtml) achvBody.innerHTML = window.achvPanelHtml();
 
-    /* ☕ 수다방 — 접속자 줄과 대화 상자를 제 판으로 떼어 옵니다.
-       (원래는 .chat-sidebar 안에서 챗과 자리를 바꿔 가며 살았어요) */
-    const chattyBody = el("dock-body-chatty");
-    if (chattyBody) {
-      ["chatty-online-bar", "chat-box2"].forEach(id => {
-        const n = el(id);
-        if (n) chattyBody.appendChild(n);
-      });
-    }
-
-    /* ✍️ 글칸이 앉을 자리 — 두 판에 하나씩. 글칸은 이 둘 사이를 오갑니다. */
+    /* ✍️ 글칸이 앉을 자리 — 이제 챗 하나뿐입니다 (수다방을 접었어요) */
     const 자리 = (host, id, hint) => {
       if (!host) return;
       const s = document.createElement("div");
@@ -442,8 +428,7 @@
     };
     자리(document.querySelector("#dock-body-chat .chat-sidebar") || el("dock-body-chat"),
          "dock-write-chat", "✍️ 여기에 쓰기");
-    자리(chattyBody, "dock-write-chatty", "✍️ 수다방에 쓰기");
-    moveInput("main");
+    펜앉히기();
 
     /* 📌 오늘 할 일 — 방 전체 진척을 알약 자리에 **글자로** 놓습니다.
        원래 줄(.room-foot)에는 전체기록·업적 알약도 함께 들어 있었는데,
@@ -475,105 +460,38 @@
   }
 
   /* =====================================================================
-     ✍️ 펜 하나, 공책 둘 — 글칸 옮기기
+     ✍️ 펜은 챗에 붙박입니다 (2026-08-30 — 콩. 수다방을 접으면서)
      ---------------------------------------------------------------------
-     #message · 보내기 · 답장 미리보기는 챗과 수다방이 **함께 씁니다.**
-     그래서 물건 자체를 방금 누른 판으로 옮겨 놓습니다. 비어 있는 쪽에는
-     "여기에 쓰기" 줄이 남고, 그 줄을 누르면 펜이 그리로 옵니다.
+     예전에는 **창은 둘, 펜은 하나** 였습니다 — #message·보내기·답장
+     미리보기를 챗과 수다방이 함께 쓰느라, 판을 누를 때마다 그 물건들을
+     통째로 옮겨 다녔어요(moveInput).
 
-     ★ 스티커 판은 안 옮겨도 됩니다 — 누른 단추 자리를 재서 body 에
-       띄우는 방식이라 글칸이 어디 있든 그 옆에 붙어요.
+     ★★★ 그 이사가 **2026-08-13 한글 자소 분리 사고의 자리**였습니다.
+        요소를 appendChild 로 옮기면 DOM 에서 뽑았다 다시 꽂는 것이라,
+        ① 초점이 조용히 떨어지고 ② 조합(ㅂ+ㅔ→베) 중이면 IME 가 깨져
+        자모가 낱개로 흩어졌습니다("베ㄹㅔ니ㅁㅣ" 의 정체).
+        조합이 끝날 때까지 미루고 커서를 되살리는 장치로 막아 뒀지만,
+        **위험 자체는 그대로** 남아 있었어요.
+
+     이제 방이 하나라 옮길 일이 없습니다 — 펜은 챗 판에 그냥 있습니다.
+     장치도, 위험도 함께 사라졌습니다. **고치는 것보다 없애는 쪽이
+     낫다**는 이 방의 방침이 또 한 번 통한 자리예요.
      ===================================================================== */
-  /* 글칸과 함께 다니는 것들.
-     [고침 2026-08-13] mention-dropdown 추가 — 빠져 있어서 수다방에서
-     @ 를 치면 드롭다운이 **닫혀 있는 챗 판 안에서** 열렸습니다.
-     열리긴 열려요. 보이지 않는 곳에서. 그래서 "무반응"으로 보였습니다. */
   const 펜 = ["reply-preview-bar", "mention-dropdown"];
 
-  /* ★★ [고침 2026-08-13] 글칸 이사가 한글을 깨뜨리고 있었습니다.
-
-     [무엇이 잘못됐었나]
-     요소를 appendChild 로 옮기면 DOM 에서 **뽑았다가 다시 꽂는** 것이라,
-     그 순간 두 가지가 부서집니다.
-       ① 초점 — 초점이 있던 채로 옮기면 브라우저가 조용히 떨어뜨립니다.
-          겉보기엔 커서가 있는 것 같은데 실제로는 아무 데도 아니어서
-          "그냥 안 쳐져요" 가 됩니다.
-       ② 한글 조합 — 조합(ㅂ+ㅔ→베) 중에 옮기면 조합이 끊기고,
-          크롬에서는 그 뒤로 IME 상태가 끼어 자모가 낱개로 풀려
-          나오기도 합니다 ("베ㄹㅔ니ㅁㅣ" 의 정체로 의심).
-
-     [고침]
-     · 조합 중이면 **조합이 끝날 때까지 이사를 미룹니다.**
-     · 초점이 글칸에 있었다면 이사 직후 **초점과 커서를 되살립니다.** */
-  let _composing = false;
-  document.addEventListener("compositionstart", (e) => {
-    if (e.target?.id === "message") _composing = true;
-  }, true);
-  document.addEventListener("compositionend", (e) => {
-    if (e.target?.id === "message") _composing = false;
-  }, true);
-
-  function moveInput(tab) {
-    const 이쪽 = tab === "chatty" ? "chatty" : "chat";
-    const host = el("dock-write-" + 이쪽);
+  /** 글칸 식구를 챗 판의 제자리에 한 번 앉힙니다 */
+  function 펜앉히기() {
+    const host = el("dock-write-chat");
     if (!host) return;
-
-    /* 한글 조합 중이면 끝나고 나서 옮깁니다 — 지금 옮기면 글자가 깨져요 */
-    if (_composing) {
-      document.addEventListener("compositionend",
-        () => moveInput(tab), { once: true });
-      return;
-    }
-
-    const ta = el("message");
-    const 초점있던 = ta && document.activeElement === ta;
-    const s = 초점있던 ? ta.selectionStart : 0;
-    const e2 = 초점있던 ? ta.selectionEnd : 0;
-
     펜.forEach(id => { const n = el(id); if (n) host.appendChild(n); });
     const ia = document.querySelector(".input-area");
     if (ia) host.appendChild(ia);
-
-    /* 이사하느라 떨어진 초점을 제자리에 — 커서 위치까지 */
-    if (초점있던) {
-      try {
-        ta.focus({ preventScroll: true });
-        ta.setSelectionRange(s, e2);
-      } catch (err) {}
-    }
-    /* 빈 자리 표시 — :empty 를 못 쓰는 이유는 답장 미리보기가 늘 붙어
-       다녀서입니다 (감춰져 있어도 자식은 자식이라 :empty 가 아니에요) */
-    ["chat", "chatty"].forEach(k => {
-      const h = el("dock-write-" + k);
-      if (!h) return;
-      if (k === 이쪽) delete h.dataset.empty;
-      else h.dataset.empty = "1";
-    });
+    delete host.dataset.empty;
   }
 
-  /* =====================================================================
-     "그 방이 지금 보이나?" — script_chatty.js 가 물어봅니다
-     ---------------------------------------------------------------------
-     안 읽음을 세는 조건이 원래 "저쪽 탭이 켜져 있나" 였습니다. 칸이
-     하나뿐이던 시절엔 그게 곧 "안 보인다" 였지만, 지금은 판이 따로
-     떠서 **글칸이 어디 있든 판만 열려 있으면 보입니다.**
-
-     ★ 세는 일은 저쪽이 그대로 맡습니다 — 여기서 또 세면 두 벌이 되어
-       언젠가 어긋나요. 이 창구는 "보이나?" 한 마디만 답합니다.
-     ===================================================================== */
-  window.dockSeeing = (room) => _open.has(room === "chatty" ? "chatty" : "chat");
-
-  /** 지금 글을 쓰는 방을 정합니다 (탭 전환 + 글칸 이사) */
-  function setTab(tab) {
-    const t = tab === "chatty" ? "chatty" : "main";
-    if (_tab === t) return;
-    _tab = t;
-    window.switchChatTab?.(t);
-    moveInput(t);
-    syncPills();
-    syncBadges();
-  }
-  window.dockSetTab = setTab;
+  /* "그 방이 지금 보이나?" — 안 읽음을 셀 때 씁니다.
+     [2026-08-30] 수다방이 사라져 물어볼 방이 챗 하나뿐입니다. */
+  window.dockSeeing = () => _open.has("chat");
 
   /* =====================================================================
      판 높이 늘이기 — 챗과 수다방만 (2026-08-12)
@@ -634,18 +552,11 @@
       if (d.inline || d.modal) return;
       el("dock-pill-" + d.id)?.setAttribute(
         "aria-expanded", _open.has(panelOf(d.id)) ? "true" : "false");
-      /* 지금 펜이 놓인 방에는 옅은 표시를 둡니다 — 어디로 보내지는지
-         알약만 봐도 알 수 있게요. */
-      if (d.tab) el("dock-pill-" + d.id)?.classList.toggle("writing", _tab === d.tab);
     });
     /* ⏱️ 내려뒀지만 방에는 있는 상태 — 알약에 옅은 참여 표시.
        판이 닫혀 보여도 "나 아직 방에 있구나" 를 알약이 말해 줍니다. */
     el("dock-pill-proom")?.classList.toggle(
       "joined", !!window.imInProom?.() && !_open.has("proom"));
-    ["chat", "chatty"].forEach(k => {
-      const p = el("dock-panel-" + k);
-      if (p) p.classList.toggle("writing", _tab === (k === "chatty" ? "chatty" : "main"));
-    });
   }
 
   /* =====================================================================
@@ -662,24 +573,14 @@
 
     const pid = panelOf(id);
 
-    /* 같은 알약을 다시 누르면 닫힙니다.
-       ★ 다만 챗·수다방은 **펜이 저쪽에 있으면 먼저 펜을 데려옵니다.**
-         한 번 눌러서 아무 일도 안 일어나거나, 보려던 판이 닫혀 버리면
-         둘 다 당황스러우니까요. 한 번 더 누르면 그때 닫힙니다. */
-    if (_open.has(pid)) {
-      if (d.tab && _tab !== d.tab) { setTab(d.tab); raise(pid); return; }
-      close(pid);
-      return;
-    }
+    /* 같은 알약을 다시 누르면 닫힙니다 */
+    if (_open.has(pid)) { close(pid); return; }
 
     const p = el("dock-panel-" + pid);
     if (!p) return;
 
     /* 좁은 화면이면 먼저 열려 있던 판을 접습니다 */
     if (isNarrow()) [..._open].forEach(o => { if (o !== pid) close(o); });
-
-    /* 방금 연 방으로 펜을 옮깁니다 */
-    if (d.tab) setTab(d.tab);
 
     p.hidden = false;
     _open.add(pid);
@@ -701,11 +602,8 @@
       const t = el("dock-panel-achv")?.querySelector(".dock-title");
       if (t) t.innerHTML = "🏅 업적" + (n ? ` <span class="dock-count">${n}</span>` : "");
     }
-    /* 판을 열면 그 방은 읽은 것으로 — 쌓여 있던 숫자를 털어 냅니다.
-       ★ 알약의 배지만 지우면 안 됩니다. 숫자는 script_chatty.js 가
-         들고 있어서, 판을 닫는 순간 옛 숫자가 도로 올라와요. */
-    if (pid === "chat")   { window.markChatRead?.("main");   window.scrollChatToBottom?.(true); }
-    if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
+    /* 판을 열면 그 방은 읽은 것으로 — 쌓여 있던 숫자를 털어 냅니다 */
+    if (pid === "chat") { window.markChatRead?.("main"); window.scrollChatToBottom?.(true); }
     if (pid === "pub")    window.openPubReview?.();
     if (pid === "help")   window.openHelp?.();
     if (pid === "qna")    window.openQna?.();
@@ -759,8 +657,6 @@
     if (p) p.hidden = true;
     setTimeout(syncBadges, 0);      // 닫으면 다시 쌓이기 시작합니다
     _open.delete(pid);
-    /* ✍️ 펜이 놓여 있던 판을 닫으면 펜은 다른 방으로 옮겨 둡니다 —
-       안 그러면 글칸이 감춰진 판에 갇혀 아무 데도 못 씁니다. */
     /* ⚙️ 비밀방은 닫으면 듣기를 끊습니다 — 안 끊으면 창을 닫아도 통신이
        이어지고, 무엇보다 명단에서 빠진 뒤에도 잠깐 들립니다 */
     if (pid === "sroom") window.closeSroom?.();
@@ -771,8 +667,6 @@
       if (나가기) window.closeProom?.();
       else window.hideProom?.();
     }
-    if (pid === "chatty" && _tab === "chatty") setTab("main");
-    if (pid === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
     syncPills();
     const dock = document.getElementById("dock");
     if (!dock) return;
@@ -892,13 +786,12 @@
   /* =====================================================================
      안 읽음 표시를 원래 있던 것에서 그대로 가져옵니다
      ---------------------------------------------------------------------
-     채팅·수다방은 script_chatty.js 가, 공지는 script_notice.js 가 이미
-     세고 있습니다. 여기서 다시 세면 **두 벌이 되어 언젠가 어긋나요.**
+     채팅은 script_chat.js 가, 공지는 script_notice.js 가 이미 세고
+     있습니다. 여기서 다시 세면 **두 벌이 되어 언젠가 어긋나요.**
      그쪽이 만들어 둔 표시를 지켜보다가 그대로 옮겨 적습니다.
 
-       #chat-tab-badge-main    → 💬 Chat
-       #chat-tab-badge-chatty  → ☕ 수다방
-       #notice-dot             → 📢 공지
+       #chat-tab-badge-main → 💬 Chat
+       #notice-dot          → 📢 공지
 
      ★ 판이 **열려 있는 동안**에는 표시를 지웁니다. 보고 있는데 숫자가
        쌓이면 이상하니까요.
@@ -910,16 +803,14 @@
       if (n.classList.contains("hidden")) return 0;
       return parseInt(String(n.textContent).replace(/\D/g, ""), 10) || 0;
     };
-    /* ★ 판이 떠 있으면 대화가 보이는 것이니 곧 읽은 것입니다.
-         펜이 저쪽에 있어도 눈은 여기 있으니까요. */
-    badge("chat",   _open.has("chat")   ? 0 : 읽기("chat-tab-badge-main"));
-    badge("chatty", _open.has("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
+    /* ★ 판이 떠 있으면 대화가 보이는 것이니 곧 읽은 것입니다 */
+    badge("chat", _open.has("chat") ? 0 : 읽기("chat-tab-badge-main"));
     /* [2026-08-21] 공지 빨간 점은 이제 머리말이 직접 켭니다
        (script_notice.js 의 paintDot 이 #notice-dot-head 를 함께 칠해요). */
   }
 
   function watchBadges() {
-    ["chat-tab-badge-main", "chat-tab-badge-chatty"].forEach(id => {
+    ["chat-tab-badge-main"].forEach(id => {
       const n = el(id);
       if (!n) return;
       try {
@@ -1100,16 +991,6 @@
          각자 제 규칙을 지킵니다. */
       closeGlances();
     });
-
-    /* ✍️ 누른 판이 곧 쓰는 방 — 판 안을 누르면 글칸이 그리로 옵니다.
-       ★ ✕ 위에서는 안 됩니다 (닫으려는 것이니까요)
-       ★ 지금 글칸을 만지는 중이면 옮기지 않습니다 — 제자리 클릭이라 */
-    document.addEventListener("pointerdown", (e) => {
-      if (e.target.closest?.("[data-dock-close], [data-dock-grip]")) return;
-      const p = e.target.closest?.("#dock-panel-chat, #dock-panel-chatty");
-      if (!p) return;
-      setTab(p.id === "dock-panel-chatty" ? "chatty" : "main");
-    }, true);
 
     /* =====================================================================
        ★★★ [사고 2026-08-22 — 콩] 판이 **오른쪽으로만** 새던 이유

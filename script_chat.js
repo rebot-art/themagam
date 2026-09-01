@@ -822,9 +822,7 @@
        이 함수를 감싸는 곳이 네 군데(ui·reactions·profile)나 되어서
        순서가 조금만 틀어져도 조용히 안 불렸습니다.
        세는 일은 원본에서 직접 하는 편이 확실합니다. */
-    /* [2026-08-04] Chatty 메시지는 세지 않음 — script_chatty.js 가 렌더를
-       빌려 쓰는 동안 깃발을 올립니다 (💬 배지는 메인 Chat 전용) */
-    if (!isMe && !window._chattySuppressCount) { try { window.noteNarrowChatUnread?.(); } catch (e) {} }
+    if (!isMe) { try { window.noteNarrowChatUnread?.(); } catch (e) {} }
   }
 
   // =====================================================
@@ -841,11 +839,11 @@
     _renderReplyPreview();
   }
 
-  /* [2026-08-05] 메시지 키로 말풍선 찾기 — 메인/Chatty 두 상자 모두에서.
-     push 키는 방마다 고유하므로 먼저 찾히는 쪽이 정답입니다. */
+  /* 메시지 키로 말풍선 찾기. [2026-08-30] 상자가 하나로 줄었습니다
+     (수다방을 접으면서 chat-box2 가 사라졌어요). */
   function _findChatItemByKey(key) {
     if (!key) return null;
-    for (const id of ["chat-box", "chat-box2"]) {
+    for (const id of ["chat-box"]) {
       const el = document.getElementById(id)
         ?.querySelector(`.chat-item[data-key="${CSS.escape(key)}"]`);
       if (el) return el;
@@ -904,9 +902,7 @@
   }
 
   function bindReplyInteractions() {
-    /* [2026-08-05] Chatty(chat-box2)에서도 같은 3연속 클릭 답장을 지원
-*/
-    ["chat-box", "chat-box2"].forEach(id => {
+    ["chat-box"].forEach(id => {
       const box = document.getElementById(id);
       if (!box || box.dataset.replyBound === "true") return;
       box.dataset.replyBound = "true";
@@ -1138,40 +1134,26 @@
     }
   }
 
-  /* [2026-08-05] Chatty 탭에서도 명령어·답장을 그대로 쓰기 위해
-     전송 대상 ref를 활성 탭에 따라 갈라주는 헬퍼.
-     window.isChattyActive 는 script_chatty.js 가 나중에 export 하므로
-     호출 시점에 window 에서 찾습니다 (없으면 늘 메인). */
-  function _chattyActive() { return window.isChattyActive?.() === true; }
-  /* [뺌 2026-08-07] 세 번째 방(비밀방 · messages3)은 없앴습니다.
-     쓰는 사람이 없는 채로 코드만 남아 있었고, 이름이 부딪혀 파일 하나를
-     통째로 죽이는 사고까지 냈어요. 되살릴 일이 생기면 git 기록에 있습니다. */
-  function _activeMsgRef() {
-    return db.ref(_chattyActive() ? "messages2" : "messages");
-  }
-  function _scrollActiveChat() {
-    if (_chattyActive()) window.scrollChattyToBottom?.();
-    else scrollChatToBottom(true);
-  }
-  /* 수다방 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라
-     어느 노드를 게시해야 하는지 콕 집어줍니다 */
-  function _chattySendFail(e) {
-    const node = _chattyActive() ? "messages2" : null;
-    if (!node) return;
-    const c = String(e && (e.code || e.message) || "");
-    showCommandToast(/permission/i.test(c)
-      ? `전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(${node})을 게시했는지 확인해 주세요`
-      : "전송하지 못했어요. 연결을 확인해 주세요");
-  }
+  /* =====================================================================
+     [2026-08-30 — 콩] ☕ 수다방을 접었습니다. **챗은 다시 방 하나.**
+     ---------------------------------------------------------------------
+     여기 있던 _chattyActive() · _activeMsgRef() · _chattySendFail() 은
+     "지금 어느 탭이냐"를 물어 보내는 곳을 가르던 갈림길이었습니다.
+     탭이 하나뿐이니 갈림길도 사라졌어요 — messages 로 곧장 갑니다.
+
+     ★★ 이 정리로 **펜 이사(moveInput)가 함께 없어졌습니다.**
+        2026-08-13 한글 자소 분리 사고가 난 바로 그 자리예요 — 글칸
+        하나를 두 방이 나눠 쓰느라 조합 중에 옮기다 IME 가 깨졌습니다.
+        방이 하나면 옮길 일이 없습니다. 위험 지대가 통째로 사라진 것.
+     ★ 되살릴 일이 생기면 git 기록에 있습니다 (수다방 · messages2).
+       [뺌 2026-08-07] 세 번째 방(messages3)도 같은 이유로 없앴습니다.
+     ===================================================================== */
+  function _activeMsgRef() { return db.ref("messages"); }
+  function _scrollActiveChat() { scrollChatToBottom(true); }
 
   /* 🏅 수다왕 — 실제로 보낸 줄만 셉니다. 빈 줄이나 막힌 전송은 아래
      흐름에서 걸러지므로, 세는 자리는 **보내기가 끝난 뒤**여야 합니다. */
   async function send() {
-    // ✅ [2026-08-04] Chatty 탭이 활성이면 script_chatty.js 가 먼저 문지기 역할.
-    //    true 를 돌려주면(미참여·빈 입력 등) 여기서 멈추고,
-    //    false 면 chatty 모드로 이어서 처리합니다 (_activeMsgRef 가 messages2 로 갈라줌).
-    if (window.chattySend?.()) return;
-
     const el = document.getElementById("message");
     if (!el || !myNick) return;
     const m = el.value.trim();
@@ -1209,7 +1191,7 @@
             msg: fortuneMsg,
             time: Date.now()
           });
-        } catch(e) { console.error("운세 전송 실패", e); _chattySendFail(e); }
+        } catch(e) { console.error("운세 전송 실패", e); }
         el.value = ""; el.style.height = "42px";
         return;
       }
@@ -1224,7 +1206,7 @@
             type: "fx", cmd, sysMsg, extraText,
             user: myNick, emoji: myEmoji, time: Date.now()
           });
-        } catch(e) { console.error("외치기 전송 실패", e); _chattySendFail(e); }
+        } catch(e) { console.error("외치기 전송 실패", e); }
         el.value = ""; el.style.height = "42px";
         // ✅ 카드가 채팅에 추가됐으므로 스크롤 (활성 탭 기준)
         _scrollActiveChat();
@@ -1239,7 +1221,7 @@
           type: "fx", cmd, sysMsg,
           user: myNick, emoji: myEmoji, time: Date.now()
         });
-      } catch(e) { console.error("fx 전송 실패", e); _chattySendFail(e); }
+      } catch(e) { console.error("fx 전송 실패", e); }
       el.value = ""; el.style.height = "42px";
       return;
     }
@@ -1266,10 +1248,10 @@
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();
-      if (!_chattyActive()) checkAndTrimChat();   // 트림은 메인 전용
+      checkAndTrimChat();
     } catch(e) {
       console.error("전송 실패", e);
-      _chattySendFail(e);
+     
     }
   }
 
