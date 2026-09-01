@@ -72,15 +72,27 @@
   .bar .sp{ flex:1; min-width:0; }
   .who{ font-size:11.5px; color:var(--dim); }
 
-  /* 탭 — 크롬 탭처럼 판에 이어 붙습니다 (콩 2026-08-30) */
-  .tabs{ display:flex; gap:4px; padding:0 6px; }
+  /* 탭 (콩 2026-08-30 · 2차 뒤집음)
+     ─────────────────────────────────────────────────────────
+     처음엔 크롬 흉내로 **연 탭을 판과 같은 흰색**으로 뒀습니다. 그런데
+     콩이 보기엔 거꾸로였어요 — 흰 탭이 오히려 "비어 있다 = 닫혔다" 로
+     읽히고, 짙은 탭이 "열렸다" 로 보였습니다. 눈이 먼저 읽는 것은
+     '판과 이어졌나' 가 아니라 **'어느 쪽이 진하냐'** 였던 것.
+     → 연 탭은 짙게(종이색 + 붉은 밑줄), 안 연 탭은 옅게 물러납니다. */
+  .tabs{ display:flex; gap:4px; padding:0 6px; flex-wrap:wrap; }
   .tab{ font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
-        padding:8px 16px 9px; border:1px solid var(--line); border-bottom:none;
-        border-radius:10px 10px 0 0; background:var(--fill); color:var(--dim);
-        position:relative; top:1px; }
-  .tab:hover{ color:var(--sub); }
-  .tab.on{ background:var(--panel); color:var(--deep); border-color:var(--line);
-           box-shadow:0 -1px 0 var(--red) inset; }
+        padding:8px 16px 9px; border:1px solid var(--line);
+        border-radius:10px 10px 0 0; position:relative; top:1px;
+        /* 안 연 탭 — 물러나 있습니다 */
+        background:var(--panel); color:var(--dim); opacity:.75; }
+  .tab:hover{ color:var(--sub); opacity:1; }
+  .tab.on{
+    /* 연 탭 — 짙게, 그리고 아래 판과 한 몸으로 */
+    background:var(--fill); color:var(--deep); opacity:1;
+    border-color:var(--line); border-bottom-color:var(--fill);
+    box-shadow:0 3px 0 -1px var(--red) inset;
+  }
+  .tab:focus-visible{ outline:2px solid var(--red); outline-offset:1px; }
 
   .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:0 12px 12px 12px;
            background:var(--panel); }
