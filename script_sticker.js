@@ -522,20 +522,33 @@
      send() 를 고치지 않고 **감싸서** 처리합니다. 보내기 직전에 입력칸의
      `/토닥` 을 `[[스티커:pat]]` 로 바꿔 두면, 그 뒤는 원래 흐름 그대로예요.
      (수다방으로 보낼지 채팅으로 보낼지도 원래 코드가 판단합니다)
-     ===================================================================== */
+
+     ★ [2026-09-01 — 콩 신고 "비밀방에서 스티커 명령어가 안 먹혀"]
+     판정 로직(STICKERS.find + countForAchv)을 여기 안에서만 썼더니, 글칸이
+     따로인 비밀방(#sroom-in · sroom보내기())은 이 감싸기를 아예 못 거쳤어요
+     — window.send 를 감싸 봐야 sroom보내기는 그 함수를 안 부르니까요.
+     판단 부분만 `window.stickerCmdText`로 떼어내 script_sroom.js 도
+     똑같이 가져다 씁니다. (운세·외치기는 챗 SLASH_COMMANDS 소관이라
+     그대로 안 됨 — 콩 확인: "그건 안 돼도 돼".) */
+  window.stickerCmdText = function (raw) {
+    const m = String(raw || "").trim();
+    /* cmdRe 가 있으면 그것도 봅니다 — /ㅋ 부터 /ㅋㅋㅋㅋ 까지 받으려고요.
+       웃을 때 ㅋ 을 몇 번 치는지는 사람마다 그때그때 다릅니다. */
+    const hit = STICKERS.find(s => m === "/" + s.cmd || (s.cmdRe && s.cmdRe.test(m)));
+    if (!hit) return null;
+    /* 판을 안 열고 슬래시로 친 것도 같은 값으로 셉니다 */
+    countForAchv(hit.id);
+    return `[[스티커:${hit.id}]]`;
+  };
+
   function installSendHook() {
     const orig = window.send;
     if (typeof orig !== "function" || orig.__stickerHooked) return false;
     const wrapped = function () {
       try {
         const el = document.getElementById("message");
-        const m = String(el?.value || "").trim();
-        /* cmdRe 가 있으면 그것도 봅니다 — /ㅋ 부터 /ㅋㅋㅋㅋ 까지 받으려고요.
-           웃을 때 ㅋ 을 몇 번 치는지는 사람마다 그때그때 다릅니다. */
-        const hit = STICKERS.find(s => m === "/" + s.cmd || (s.cmdRe && s.cmdRe.test(m)));
-        if (hit) el.value = `[[스티커:${hit.id}]]`;
-        /* 판을 안 열고 슬래시로 친 것도 같은 값으로 셉니다 */
-        if (hit) countForAchv(hit.id);
+        const conv = window.stickerCmdText(el?.value);
+        if (conv) el.value = conv;
       } catch (e) {}
       return orig.apply(this, arguments);
     };

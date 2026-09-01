@@ -510,8 +510,14 @@
 
   async function sroom보내기() {
     const 칸 = el("sroom-in");
-    const t = String(칸?.value || "").trim().slice(0, SROOM_LEN);
-    if (!t || _sroomBusy || !window.db || !_sroomOk) return;
+    const raw = String(칸?.value || "").trim().slice(0, SROOM_LEN);
+    if (!raw || _sroomBusy || !window.db || !_sroomOk) return;
+    /* 🖍 /토닥 처럼 슬래시로 친 것도 스티커 그림으로 나가게 (2026-09-01 —
+       콩 신고 "스티커 명령어가 안 먹혀"). 판정은 script_sticker.js 것을
+       그대로 빌립니다 — 챗과 같은 규칙이어야 어느 방에서 쳐도 결과가
+       같습니다. 판(🙂)에서 골라 이미 [[스티커:id]] 로 들어온 경우엔
+       걸리는 게 없어 raw 그대로 나갑니다. */
+    const t = window.stickerCmdText?.(raw) || raw;
     _sroomBusy = true;
     if (칸) { 칸.value = ""; 칸.focus(); }   // ★ 보낸 뒤에도 손이 그대로 있게
     try {
@@ -536,7 +542,7 @@
       await window.db.ref("sroom").push().set(글);
       sroom답글끄기();
     } catch (e) {
-      if (칸) 칸.value = t;               // 못 보냈으면 쓰던 글을 돌려줍니다
+      if (칸) 칸.value = raw;             // 못 보냈으면 쓰던 글을 그대로 돌려줍니다 (변환 전 글로)
       alert("보내지 못했어요. 연결을 확인해 주세요.");
     } finally {
       _sroomBusy = false;

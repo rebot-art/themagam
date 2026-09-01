@@ -7,6 +7,29 @@
   let autoScrollEnabled = true;
   let unreadCount = 0;
 
+  /* ★ 아래 알약 배지 (2026-09-01 — 콩 신고 "배지가 사라졌어")
+     수다방을 걷어내며 script_chatty.js 가 통째로 사라졌는데, 사실
+     #chat-tab-badge-main 을 채우던 것도 그 파일이었습니다. 그때
+     지운 건 "수다방 탭" 뿐이었는데 "챗 배지를 켜는 손"까지 같이
+     없어져서, 이후로 저 배지엔 아무도 글씨를 안 썼어요.
+     dockSeeing() (script_dock.js — 챗 판이 지금 열려 있나) 은 그대로
+     살아 있었지만, 아무도 물어보지 않고 있었습니다.
+     여기서 다시 잇습니다: 세는 것도, 켜는 것도, 지우는 것도 이 파일. */
+  function renderChatTabBadge() {
+    const b = document.getElementById("chat-tab-badge-main");
+    if (!b) return;
+    const n = Math.max(0, unreadCount);
+    b.textContent = n > 99 ? "99+" : String(n);
+    b.classList.toggle("hidden", n === 0);
+  }
+
+  /** 챗 판을 열면 script_dock.js 가 이걸 부릅니다 ("main" 하나뿐이라
+      인자는 사실 안 봐도 되지만, 나중에 판이 늘어날 걸 대비해 받아 둡니다) */
+  window.markChatRead = function () {
+    unreadCount = 0;
+    renderChatTabBadge();
+  };
+
   function scrollChatToBottom(force = false) {
     const box = document.getElementById("chat-box");
     if (!box) return;
@@ -27,6 +50,7 @@
       autoScrollEnabled = near;
       if (near) {
         unreadCount = 0;
+        renderChatTabBadge();
         document.getElementById("new-msg-float")?.classList.add("hidden");
       }
     });
@@ -823,6 +847,14 @@
        순서가 조금만 틀어져도 조용히 안 불렸습니다.
        세는 일은 원본에서 직접 하는 편이 확실합니다. */
     if (!isMe) { try { window.noteNarrowChatUnread?.(); } catch (e) {} }
+
+    /* ★ 아래 알약 배지도 같은 자리에서 켭니다 (2026-09-01).
+       챗 판이 열려 보고 있는 중이면(dockSeeing) 안 켭니다 — 보고
+       있는데 숫자가 쌓이면 이상하니까요. */
+    if (!isMe && !window.dockSeeing?.()) {
+      unreadCount += 1;
+      renderChatTabBadge();
+    }
   }
 
   // =====================================================
