@@ -6313,15 +6313,20 @@ html[data-theme-style="studio"] .user-card{
 .card-wh{
   display: flex;
   align-items: baseline;
-  /* [2026-09-01 — 콩 신고 "작업 시간이 두 줄로 됐어, 카드가 길어졌어"]
-     margin-right:auto (아래 .card-wh-t) 가 시간과 딱지 사이를 화면 폭
-     끝까지 벌리고 있었는데, 딱지가 둘(⏱️·🍅)로 늘고 나니 그 벌린 만큼을
-     시간 쪽이 눌려서 메꿨습니다 — "10h 12m" 이 공백에서 줄바꿈되며
-     카드 한 줄이 통째로 늘어난 원인. 콩 요청대로 **다 붙입니다**
-     ("알약판 자체가 있으니 완전히 달라붙어 보이진 않을 거야"). gap 도
-     4 → 3px 로 살짝 줄여 여윳돈을 보탰습니다. */
+  /* [고침 2026-09-01 2차 — 콩 "저건 원래 왼쪽·오른쪽 정렬이라 중간이
+     비어야 해"] 방금 전엔 margin-right:auto 를 걷어내고 다 붙였는데,
+     그건 **원래 의도(0830 — 시간 왼쪽·딱지 오른쪽)를 잘못 되짚은
+     것**이었습니다. margin-right:auto 는 되살립니다(아래 .card-wh-t).
+     정작 두 줄이 되던 진짜 원인은 자리가 빠듯할 때 "10h 12m" 사이
+     공백에서 그 칸 자체가 눌려 줄바꿈된 것이었고, 그건 .card-wh-t 의
+     white-space: nowrap + flex-shrink: 0 (아래) 가 막습니다 — 가운데
+     여백은 그대로 두면서 줄바꿈만 막는 게 진짜 처방이었습니다. */
   justify-content: flex-start;
-  gap: 3px;
+  /* ★★ 딱지끼리(⏱️·🍅)는 1px 로 거의 붙이고, 시간↔딱지 사이 큰 여백은
+     margin-right:auto 하나가 만듭니다 — 그래서 여기 gap 은 0.
+     (gap 을 쓰면 시간-딱지 사이와 딱지-딱지 사이가 똑같이 벌어져 버려서,
+     딱지 쪽만 따로 좁힐 방법이 없었습니다.) */
+  gap: 0;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
@@ -6330,11 +6335,11 @@ html[data-theme-style="studio"] .user-card{
   display: flex;
   align-items: baseline;
   gap: 6px;
-  /* margin-right: auto 를 걷어냈습니다 (2026-09-01) — 위 이유 참고.
-     ★★ white-space: nowrap + flex-shrink: 0 — 그래도 자리가 빠듯한
-     카드에서는 이 칸이 눌려 "10h 12m" 사이 공백에서 줄바꿈되던 게
-     오늘 사고의 실제 원인이었습니다. 못 눌리게 막아서, 정 안 되면
-     한 줄인 채로 카드 밖을 살짝 넘치게 둘지언정 두 줄로는 안 갑니다. */
+  margin-right: auto;   /* 시간은 왼쪽 벽에, 딱지들은 오른쪽으로 (0830 원래 뜻대로) */
+  /* ★★ white-space: nowrap + flex-shrink: 0 — 자리가 빠듯한 카드에서
+     이 칸이 눌려 "10h 12m" 사이 공백에서 줄바꿈되던 게 진짜 원인이라,
+     못 눌리게 막습니다. 정 안 되면 한 줄인 채로 카드 밖을 살짝
+     넘치게 둘지언정 두 줄로는 안 갑니다. */
   flex: 0 0 auto;
   white-space: nowrap;
 }
@@ -6355,10 +6360,14 @@ html[data-theme-style="studio"] .user-card{
 /* [2026-08-03·24차] 카드 작업 시간 옆 🍅 — 80% 크기로 */
 /* [고침 2026-09-01] padding 6px → 5px — 시간 줄이 한 줄에 다 들어가게
    자리를 조금 더 보탰습니다. ⏱️ 딱지(아래 .card-wh .card-proom)와
-   짝이어야 하므로 그쪽도 같이 5px 로 맞췄습니다. */
+   짝이어야 하므로 그쪽도 같이 5px 로 맞췄습니다.
+   [고침 2026-09-01 2차 — 콩 "딱지 사이 여백 1px 로"] margin-left: 1px —
+   ⏱️ 뽀모방 딱지 바로 뒤에 붙을 때(둘 다 뜬 카드)만 뜻이 있는 값이고,
+   ⏱️ 가 없으면 위 .card-wh-t 의 margin-right:auto 여백에 묻힙니다. */
 .card-wh .card-pomo-count{
   font-size: 80%;
   padding: 1px 5px;
+  margin-left: 1px;
 }
 
 /* [2026-08-06] 지금 뽀모를 돌리는 중 — 숨쉬듯 아주 느리게 깜빡입니다.
@@ -6539,11 +6548,14 @@ html[data-theme-style="studio"] .user-card{
 .sr-row.grouped{ padding-top: 0; }               /* 묶인 줄은 바짝 붙여서 */
 .sr-row.mine{ flex-direction: row-reverse; }
 /* ★ [고침 2026-09-01 — 콩 "챗처럼, 창이 반절로 뚝 잘린 느낌이야"]
-   78% → 88%. 챗의 말풍선 줄(.chat-item)은 92%까지 먹는데, 여긴 프사
-   + 이름줄까지 다 .sr-body 안쪽이라 78%로는 유독 좁아 보였습니다.
-   한쪽 여백은 남기되(카톡처럼), 챗과 나란히 놓아도 옹색하지 않을
-   만큼만 더 먹입니다. */
-.sr-body{ display: flex; flex-direction: column; min-width: 0; max-width: 88%; }
+   78% → 88%.
+   [고침 2026-09-01 2차 — 콩 "그래도 겹침 간격이 커 보여, 지금의 120%로"]
+   88% × 1.2 = 105.6%. 100% 를 넘기면 사실상 상한이 없는 것과 같습니다
+   — .sr-body 는 .sr-row(줄 전체 폭) 안의 flex 자식이라, 프사·틈을 뺀
+   나머지를 넘어 커질 도리가 없거든요(그 이상은 물리적으로 자리가
+   없음). 그래서 이 값은 "카톡처럼 한쪽에 여백을 남긴다"는 상한을
+   사실상 걷어내고 화면이 허락하는 만큼 다 쓰게 둔다는 뜻입니다. */
+.sr-body{ display: flex; flex-direction: column; min-width: 0; max-width: 105.6%; }
 .sr-row.mine .sr-body{ align-items: flex-end; }
 
 /* 프사 — 남의 말 첫 줄에만. 묶인 줄에는 같은 폭의 빈칸을 둬서 줄이 안 밀립니다 */
