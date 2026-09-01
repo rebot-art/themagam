@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>더마감 — 주간 글자수</title>
+<title>더마감 — 주간 리포트</title>
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
@@ -117,14 +117,28 @@
   tfoot tr.cnt-row td{ border-top:1px dashed var(--line);
                        font-size:11.5px; font-weight:600; color:var(--sub); }
   .empty{ text-align:center; color:var(--dim); font-size:13px; padding:40px 10px; line-height:1.8; }
+
+  /* 📊 그래프 넷 — 넓으면 2×2, 좁으면 한 줄씩 (콩 2026-08-30) */
+  .chs{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:2px;
+        padding:10px; }
+  @media (max-width:760px){ .chs{ grid-template-columns:1fr; } }
+  .ch{ padding:10px 12px 6px; border-radius:10px; }
+  .ch + .ch{ border-left:1px dashed rgba(150,120,80,.22); }
+  @media (max-width:760px){ .ch + .ch{ border-left:none; border-top:1px dashed rgba(150,120,80,.22); } }
+  .ch-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
+  .ch-h b{ font-size:12.5px; color:var(--ink); }
+  .ch-h span{ margin-left:auto; font-size:11px; color:var(--dim);
+              font-variant-numeric:tabular-nums; }
+  .ch svg{ width:100%; height:auto; display:block; }
+  .ch-none{ font-size:12px; color:var(--dim); text-align:center; padding:44px 0; }
   .foot{ text-align:center; font-size:11px; color:var(--dim); margin-top:18px; line-height:1.9; }
   .foot b{ color:var(--sub); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>✍️ 주간 글자수</h1>
-  <p class="en">THE MAGAM · LETTERS OF THE WEEK</p>
+  <h1>📋 주간 리포트</h1>
+  <p class="en">THE MAGAM · WEEKLY REPORT</p>
 
   <!-- ── 문 ── -->
   <div class="gate" id="gate">
@@ -140,9 +154,10 @@
   <div id="board">
     <!-- 크롬 탭처럼 (콩 2026-08-30) — 같은 주를 보며 갈아탑니다 -->
     <div class="tabs" role="tablist">
-      <button type="button" class="tab on" data-tab="wc" role="tab">✍️ 글자수</button>
-      <button type="button" class="tab" data-tab="att" role="tab">📅 출석</button>
+      <button type="button" class="tab on" data-tab="att" role="tab">📅 출석</button>
       <button type="button" class="tab" data-tab="wt" role="tab">⏱️ 작업 시간</button>
+      <button type="button" class="tab" data-tab="wc" role="tab">✍️ 글자수</button>
+      <button type="button" class="tab" data-tab="ch" role="tab">📊 그래프</button>
     </div>
     <div class="bar">
       <button id="prev" type="button">‹ 지난주</button>
@@ -166,6 +181,11 @@
       방 안과 <b>같은 셈법</b>이에요 — 🔥WRITE는 전액, 💻JOB·📓multiT는 70%로 칩니다.<br>
       🔥 는 그날의 1등 · 합계 열의 🔥 는 이 주의 1등 · 가나다순<br>
       <b>2026년 8월 30일부터</b> 쌓이기 시작해요 — 그 전 기록은 안 보입니다.
+    </p>
+    <p class="foot" id="foot-ch" style="display:none">
+      이 주 이레만 잘라 그린 그래프예요 · 옅은 세로 띠는 주말<br>
+      🕐 시간대는 <b>그 시각에 가장 많았던 사람 수</b>를 이레 평균으로 낸 것 —
+      막대에 손을 얹으면 숫자가 보입니다.
     </p>
   </div>
 </div>
@@ -213,7 +233,8 @@
   let _wordlog = null;                       // 한 번만 읽어 두고 주간만 갈아 끼웁니다
   let _att = null;                           // 출석 — 같은 방식
   let _wt = null;                            // 작업 시간 (worktime, 분)
-  let _탭 = "wc";                            // wc(글자수) · att(출석) · wt(작업 시간)
+  let _pulse = null;                         // roomStat — 시간대별 최다 동접
+  let _탭 = "att";                           // att(출석) · wt(작업 시간) · wc(글자수) · ch(그래프)
 
   function 말(t, bad) {
     const m = el("msg");
@@ -249,14 +270,16 @@
   /* ── 자료 — 한 번만 통째로 (읽기만 합니다).
      ★ 주간을 넘겨도 다시 안 읽습니다 — 손에 든 자료로만 그려요. ── */
   async function 읽기() {
-    const [w, a, t] = await Promise.all([
+    const [w, a, t, p] = await Promise.all([
       firebase.database().ref("wordlog").once("value"),
       firebase.database().ref("attendance").once("value"),
-      firebase.database().ref("worktime").once("value")
+      firebase.database().ref("worktime").once("value"),
+      firebase.database().ref("roomStat").once("value")
     ]);
     _wordlog = w.val() || {};
     _att = a.val() || {};
     _wt = t.val() || {};
+    _pulse = p.val() || {};
   }
 
   /* ── 표 ─────────────────────────────────────────────── */
@@ -290,11 +313,12 @@
   function 그리기() {
     document.querySelectorAll(".tab").forEach((b) =>
       b.classList.toggle("on", b.dataset.tab === _탭));
-    ["wc", "att", "wt"].forEach((k) => {
+    ["wc", "att", "wt", "ch"].forEach((k) => {
       el("foot-" + k).style.display = _탭 === k ? "block" : "none";
     });
     if (_탭 === "att") return 출석그리기();
     if (_탭 === "wt")  return 작업시간그리기();
+    if (_탭 === "ch")  return 그래프탭();
     글자수그리기();
   }
 
@@ -513,6 +537,122 @@
         <tbody>${몸}</tbody>
         <tfoot><tr>${바닥}</tr><tr class="cnt-row">${인원}</tr></tfoot>
       </table>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     📊 그래프 탭 (2026-08-30 — 콩)
+     관리자 페이지의 그 그래프 넷을 **이 주만** 잘라 한 판에 폅니다.
+       ① 📅 나온 사람   ② ⏱️ 작업 시간   ③ ✍️ 글자수   ④ 🕐 시간대
+     ★ ④ 는 관리자 것과 재료가 다릅니다. 거기서 쓰는 원본 구간(timeSegs)은
+       본인·방장만 읽는 자리라, 여기서는 방이 함께 쌓는 roomStat
+       (그 시각 **가장 많았던 사람 수**)을 씁니다. 뜻은 같아요 —
+       "언제 사람이 몰리나".
+     ★ SVG 를 손으로 그립니다 — 바깥 그림 도구를 안 씁니다.
+     ═══════════════════════════════════════════════════════ */
+  const 잉크 = { 선:"#B3372B", 옅은:"#DCCFBC", 눈금:"#EFE6D8", 글:"#A0917E",
+                 띠:"#F5F1E7", 보조:"#B9A88F" };
+
+  /** 일곱 날 꺾은선 하나 — 값이 없는 날은 0 으로 그립니다 */
+  function 꺾은선(제목, 날들, 값들, 꼬리, 색) {
+    const W = 520, H = 168, L = 42, R = 16, T = 18, B = 26;
+    const 폭 = W - L - R, 높 = H - T - B;
+    const 최대 = Math.max(1, ...날들.map(({ key }) => 값들[key] || 0));
+    const X = (i) => L + (i / 6) * 폭;
+    const Y = (v) => T + 높 - (v / 최대) * 높;
+
+    let 띠 = "", 점 = [], 동그라미 = "", 날짜 = "";
+    날들.forEach(({ key, d }, i) => {
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) {
+        띠 += `<rect x="${(X(i) - 폭 / 12).toFixed(1)}" y="${T}" width="${(폭 / 6).toFixed(1)}"
+                     height="${높}" fill="${잉크.띠}"/>`;
+      }
+      const v = 값들[key] || 0;
+      점.push(`${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
+      if (v > 0) 동그라미 += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3" fill="${색}"/>`;
+      날짜 += `<text x="${X(i).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10.5"
+                     fill="${key === 오늘키 ? 잉크.선 : 잉크.글}">${요일[i]}</text>`;
+    });
+    let 눈금 = "";
+    [0, 최대].forEach((v) => {
+      눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}"
+                     stroke="${v === 0 ? 잉크.옅은 : 잉크.눈금}" stroke-width="1"/>`
+            + `<text x="${L - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10"
+                     fill="${잉크.글}">${꼬리(v)}</text>`;
+    });
+    const 주합 = 날들.reduce((n, { key }) => n + (값들[key] || 0), 0);
+
+    return `
+      <div class="ch">
+        <div class="ch-h"><b>${제목}</b><span>이 주 ${꼬리(주합)}</span></div>
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${제목} 주간 꺾은선">
+          ${띠}${눈금}
+          <polyline fill="none" stroke="${색}" stroke-width="2" stroke-linejoin="round"
+                    stroke-linecap="round" points="${점.join(" ")}"/>
+          ${동그라미}${날짜}
+        </svg>
+      </div>`;
+  }
+
+  /** 🕐 시간대 — 24칸 막대. 이 주 이레의 **평균** 최다 동접 */
+  function 시간대막대(날들) {
+    const 합 = new Array(24).fill(0);
+    let 날수 = 0;
+    날들.forEach(({ key }) => {
+      const 하루 = _pulse[key];
+      if (!하루) return;
+      날수++;
+      for (let h = 0; h < 24; h++) 합[h] += Number(하루[두자리(h)] || 0);
+    });
+    if (!날수) {
+      return `<div class="ch"><div class="ch-h"><b>🕐 시간대</b></div>
+              <p class="ch-none">이 주에는 기록이 없어요.</p></div>`;
+    }
+    const 값 = 합.map((v) => v / 날수);
+    const 최대 = Math.max(1, ...값);
+    const W = 520, H = 168, L = 30, R = 12, T = 18, B = 26;
+    const 폭 = W - L - R, 높 = H - T - B;
+    const 칸 = 폭 / 24;
+
+    let 막대 = "", 눈 = "";
+    값.forEach((v, h) => {
+      const hh = (v / 최대) * 높;
+      const 짙게 = v >= 최대 * 0.75;
+      막대 += `<rect x="${(L + h * 칸 + 1).toFixed(1)}" y="${(T + 높 - hh).toFixed(1)}"
+                     width="${(칸 - 2).toFixed(1)}" height="${hh.toFixed(1)}" rx="2"
+                     fill="${짙게 ? 잉크.선 : "rgba(179,55,43,.32)"}"><title>${h}시 · 평균 ${v.toFixed(1)}명</title></rect>`;
+      if (h % 3 === 0) 눈 += `<text x="${(L + h * 칸 + 칸 / 2).toFixed(1)}" y="${H - 10}"
+                                    text-anchor="middle" font-size="10" fill="${잉크.글}">${h}</text>`;
+    });
+    const 으뜸 = 값.indexOf(Math.max(...값));
+    return `
+      <div class="ch">
+        <div class="ch-h"><b>🕐 시간대</b><span>가장 붐빈 때 ${으뜸}시</span></div>
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="시간대별 접속 막대">
+          <line x1="${L}" y1="${T + 높}" x2="${W - R}" y2="${T + 높}" stroke="${잉크.옅은}"/>
+          ${막대}${눈}
+        </svg>
+      </div>`;
+  }
+
+  function 그래프탭() {
+    const 날들 = 주간틀();
+    const 사람수 = {}, 시간 = {}, 글자 = {};
+    날들.forEach(({ key }) => {
+      사람수[key] = Object.keys(_att[key] || {}).length;
+      const w = _wt[key] || {};
+      시간[key] = Object.keys(w).reduce((n, 닉) => n + (Number(w[닉]) || 0), 0);
+      const g = _wordlog[key] || {};
+      글자[key] = Object.keys(g).reduce((n, 닉) => n + (Number(g[닉] && g[닉].total) || 0), 0);
+    });
+
+    el("scroll").innerHTML = `
+      <div class="chs">
+        ${꺾은선("📅 나온 사람", 날들, 사람수, (v) => Math.round(v) + "명", 잉크.선)}
+        ${꺾은선("⏱️ 작업 시간", 날들, 시간, (v) => 분글(v), 잉크.보조)}
+        ${꺾은선("✍️ 글자수", 날들, 글자, (v) => fmt(Math.round(v)), 잉크.선)}
+        ${시간대막대(날들)}
+      </div>`;
   }
 
   function 옮기기(주) {
