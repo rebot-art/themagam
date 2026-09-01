@@ -118,13 +118,12 @@
                        font-size:11.5px; font-weight:600; color:var(--sub); }
   .empty{ text-align:center; color:var(--dim); font-size:13px; padding:40px 10px; line-height:1.8; }
 
-  /* 📊 그래프 넷 — 넓으면 2×2, 좁으면 한 줄씩 (콩 2026-08-30) */
-  .chs{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:2px;
-        padding:10px; }
-  @media (max-width:760px){ .chs{ grid-template-columns:1fr; } }
-  .ch{ padding:10px 12px 6px; border-radius:10px; }
-  .ch + .ch{ border-left:1px dashed rgba(150,120,80,.22); }
-  @media (max-width:760px){ .ch + .ch{ border-left:none; border-top:1px dashed rgba(150,120,80,.22); } }
+  /* 📊 그래프 넷 — **한 줄에 하나씩, 넉 줄** (콩 2026-08-30 2차).
+     2×2 로 두었더니 그래프가 작아 눈금이 답답했어요. 폭을 다 쓰면
+     이레의 오르내림이 훨씬 잘 읽힙니다. */
+  .chs{ display:grid; grid-template-columns:1fr; gap:2px; padding:10px; }
+  .ch{ padding:12px 14px 8px; border-radius:10px; }
+  .ch + .ch{ border-top:1px dashed rgba(150,120,80,.22); }
   .ch-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
   .ch-h b{ font-size:12.5px; color:var(--ink); }
   .ch-h span{ margin-left:auto; font-size:11px; color:var(--dim);
@@ -256,7 +255,6 @@
       el("gate").style.display = "none";
       el("board").style.display = "block";
       el("who").textContent = nick + " 님으로 보는 중";
-      await 읽기();
       그리기();
     } catch (e) {
       const c = e && e.code;
@@ -267,19 +265,36 @@
     }
   }
 
-  /* ── 자료 — 한 번만 통째로 (읽기만 합니다).
-     ★ 주간을 넘겨도 다시 안 읽습니다 — 손에 든 자료로만 그려요. ── */
-  async function 읽기() {
+  /* ── 자료 (읽기만 합니다) ──────────────────────────────
+     ★★★ [2026-08-30 — 콩 "다운로드 늘어나는 거 아냐?"]
+     처음에는 wordlog·attendance·worktime·roomStat 을 **통째로** 받았습니다.
+     그러면 한 번 열 때마다 방의 **모든 날**이 내려와요 — 지금이야 몇백 KB
+     지만 날이 갈수록 커지고, 오픈카톡에 링크가 도니 여는 횟수도 많아집니다.
+     하루 이백 번 열리면 그것만으로 하트비트에 맞먹어요.
+
+     → **보는 주의 이레만** 받습니다 (orderByKey 로 날짜 범위를 끊어서).
+       한 주 = 네 노드 합쳐 대략 15~20KB. 몇 년이 쌓여도 그대로예요.
+     → 한 번 받은 주는 **손에 들고 있습니다**(_캐시). 탭을 갈아타거나
+       왔던 주로 되돌아가면 통신이 0 입니다.
+     ────────────────────────────────────────────────── */
+  const _캐시 = {};            // "노드|첫날" → 그 주의 값
+
+  async function 범위(노드, 첫날, 끝날) {
+    const 열쇠 = 노드 + "|" + 첫날;
+    if (_캐시[열쇠]) return _캐시[열쇠];
+    const snap = await firebase.database().ref(노드)
+      .orderByKey().startAt(첫날).endAt(끝날).once("value");
+    return (_캐시[열쇠] = snap.val() || {});
+  }
+
+  /** 지금 보는 주의 이레만 받아 옵니다 */
+  async function 주간읽기(날들) {
+    const 첫 = 날들[0].key, 끝 = 날들[6].key;
     const [w, a, t, p] = await Promise.all([
-      firebase.database().ref("wordlog").once("value"),
-      firebase.database().ref("attendance").once("value"),
-      firebase.database().ref("worktime").once("value"),
-      firebase.database().ref("roomStat").once("value")
+      범위("wordlog", 첫, 끝), 범위("attendance", 첫, 끝),
+      범위("worktime", 첫, 끝), 범위("roomStat", 첫, 끝)
     ]);
-    _wordlog = w.val() || {};
-    _att = a.val() || {};
-    _wt = t.val() || {};
-    _pulse = p.val() || {};
+    _wordlog = w; _att = a; _wt = t; _pulse = p;
   }
 
   /* ── 표 ─────────────────────────────────────────────── */
@@ -310,20 +325,28 @@
     return h + `<th class="sum">${끝칸}</th>`;
   }
 
-  function 그리기() {
+  /** 주를 정하고 자료를 챙긴 뒤 지금 탭을 그립니다.
+      ★ 자료가 손에 없으면 여기서 기다립니다 (한 번 받은 주는 곧장 그려요) */
+  async function 그리기() {
     document.querySelectorAll(".tab").forEach((b) =>
       b.classList.toggle("on", b.dataset.tab === _탭));
     ["wc", "att", "wt", "ch"].forEach((k) => {
       el("foot-" + k).style.display = _탭 === k ? "block" : "none";
     });
-    if (_탭 === "att") return 출석그리기();
-    if (_탭 === "wt")  return 작업시간그리기();
-    if (_탭 === "ch")  return 그래프탭();
-    글자수그리기();
+    const 날들 = 주간틀();
+    try {
+      await 주간읽기(날들);
+    } catch (e) {
+      el("scroll").innerHTML = `<p class="empty">기록을 가져오지 못했어요.<br>잠시 뒤 새로고침해 주세요.</p>`;
+      return;
+    }
+    if (_탭 === "att") return 출석그리기(날들);
+    if (_탭 === "wt")  return 작업시간그리기(날들);
+    if (_탭 === "ch")  return 그래프탭(날들);
+    글자수그리기(날들);
   }
 
-  function 글자수그리기() {
-    const 날들 = 주간틀();
+  function 글자수그리기(날들) {
 
     /* 사람 모으기 — 이 주에 한 글자라도 쓴 사람만 (가나다순) */
     const 값 = {};                            // 닉 → { 날키: 수 }
@@ -407,8 +430,7 @@
      ★ 휴가(🏖️)는 users/{닉}/vacations 에 있는데, 그 자리는 본인·방장만
        읽을 수 있어 여기서는 안 보입니다. 순수한 출석 표시만 해요.
      ────────────────────────────────────────────────── */
-  function 출석그리기() {
-    const 날들 = 주간틀();
+  function 출석그리기(날들) {
 
     const 값 = {};                             // 닉 → { 날키: 첫 입장 ms }
     날들.forEach(({ key }) => {
@@ -471,8 +493,7 @@
     return m < 60 ? m + "m" : Math.floor(m / 60) + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
   }
 
-  function 작업시간그리기() {
-    const 날들 = 주간틀();
+  function 작업시간그리기(날들) {
 
     const 값 = {};
     날들.forEach(({ key }) => {
@@ -554,7 +575,11 @@
 
   /** 일곱 날 꺾은선 하나 — 값이 없는 날은 0 으로 그립니다 */
   function 꺾은선(제목, 날들, 값들, 꼬리, 색) {
-    const W = 520, H = 168, L = 42, R = 16, T = 18, B = 26;
+    /* ★ 한 줄에 하나씩 놓으면서 **납작하게** 잡았습니다 (콩 2026-08-30).
+       520×168 그대로 폭을 다 쓰면 세로가 300px 을 넘어, 넷을 쌓으면
+       한 화면에 안 들어와요. 6:1 이면 이레 오르내림이 잘 보이면서
+       넷이 한 화면에 담깁니다. */
+    const W = 900, H = 150, L = 52, R = 18, T = 16, B = 24;
     const 폭 = W - L - R, 높 = H - T - B;
     const 최대 = Math.max(1, ...날들.map(({ key }) => 값들[key] || 0));
     const X = (i) => L + (i / 6) * 폭;
@@ -610,7 +635,7 @@
     }
     const 값 = 합.map((v) => v / 날수);
     const 최대 = Math.max(1, ...값);
-    const W = 520, H = 168, L = 30, R = 12, T = 18, B = 26;
+    const W = 900, H = 150, L = 40, R = 18, T = 16, B = 24;   /* 꺾은선과 같은 비율 */
     const 폭 = W - L - R, 높 = H - T - B;
     const 칸 = 폭 / 24;
 
@@ -635,8 +660,7 @@
       </div>`;
   }
 
-  function 그래프탭() {
-    const 날들 = 주간틀();
+  function 그래프탭(날들) {
     const 사람수 = {}, 시간 = {}, 글자 = {};
     날들.forEach(({ key }) => {
       사람수[key] = Object.keys(_att[key] || {}).length;
