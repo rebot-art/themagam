@@ -1967,9 +1967,12 @@ body.room-bg-on{
    상자 색은 각자 프로필에서 고를 수 있습니다(--cfoot). */
 .card-foot{
   margin-top: var(--sp-2);
-  padding: 7px 9px 8px;
+  /* [고침 2026-09-01 — 콩 "토마토 오른쪽·시간 왼쪽 공간도 줄여서라도
+     한 줄에"] 좌우 9px → 7px. 이름·목표 줄에도 함께 적용되지만 2px는
+     눈에 안 띄고, 시간 줄(.card-wh)이 한 줄에 들어갈 여유를 벌어줍니다. */
+  padding: 7px 7px 8px;
   /* 왼쪽 위 안테나 자리 */
-  padding-left: 9px;
+  padding-left: 7px;
   min-width: 0;
   border-radius: var(--r-md);
   /* [변경] 색을 고르는 대신 반투명으로 둡니다.
@@ -6310,11 +6313,15 @@ html[data-theme-style="studio"] .user-card{
 .card-wh{
   display: flex;
   align-items: baseline;
-  /* [2026-08-30 — 콩] space-between 을 걷어냄 — 딱지가 둘(⏱️·🍅)이 되니
-     양끝으로 벌어져 사이가 휑했습니다. 시간은 왼쪽, 딱지들은 오른쪽에
-     **붙여서** — 이 gap 이 두 딱지 사이의 간격입니다. */
+  /* [2026-09-01 — 콩 신고 "작업 시간이 두 줄로 됐어, 카드가 길어졌어"]
+     margin-right:auto (아래 .card-wh-t) 가 시간과 딱지 사이를 화면 폭
+     끝까지 벌리고 있었는데, 딱지가 둘(⏱️·🍅)로 늘고 나니 그 벌린 만큼을
+     시간 쪽이 눌려서 메꿨습니다 — "10h 12m" 이 공백에서 줄바꿈되며
+     카드 한 줄이 통째로 늘어난 원인. 콩 요청대로 **다 붙입니다**
+     ("알약판 자체가 있으니 완전히 달라붙어 보이진 않을 거야"). gap 도
+     4 → 3px 로 살짝 줄여 여윳돈을 보탰습니다. */
   justify-content: flex-start;
-  gap: 4px;
+  gap: 3px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
@@ -6323,7 +6330,13 @@ html[data-theme-style="studio"] .user-card{
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-right: auto;   /* 시간은 왼쪽 벽에, 나머지는 다 오른쪽으로 */
+  /* margin-right: auto 를 걷어냈습니다 (2026-09-01) — 위 이유 참고.
+     ★★ white-space: nowrap + flex-shrink: 0 — 그래도 자리가 빠듯한
+     카드에서는 이 칸이 눌려 "10h 12m" 사이 공백에서 줄바꿈되던 게
+     오늘 사고의 실제 원인이었습니다. 못 눌리게 막아서, 정 안 되면
+     한 줄인 채로 카드 밖을 살짝 넘치게 둘지언정 두 줄로는 안 갑니다. */
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .card-wh .card-wh-t small{
   font-size: var(--fs-2xs);
@@ -6340,9 +6353,12 @@ html[data-theme-style="studio"] .user-card{
 }
 
 /* [2026-08-03·24차] 카드 작업 시간 옆 🍅 — 80% 크기로 */
+/* [고침 2026-09-01] padding 6px → 5px — 시간 줄이 한 줄에 다 들어가게
+   자리를 조금 더 보탰습니다. ⏱️ 딱지(아래 .card-wh .card-proom)와
+   짝이어야 하므로 그쪽도 같이 5px 로 맞췄습니다. */
 .card-wh .card-pomo-count{
   font-size: 80%;
-  padding: 1px 6px;
+  padding: 1px 5px;
 }
 
 /* [2026-08-06] 지금 뽀모를 돌리는 중 — 숨쉬듯 아주 느리게 깜빡입니다.
@@ -11182,8 +11198,8 @@ html[data-lite] .pr-flash{ animation:none; }
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 /* 카드 시간 줄 안에서는 🍅 과 같은 80% — .card-wh .card-pomo-count(24차)와 짝.
-   한쪽 크기를 바꾸면 반드시 둘 다 바꿀 것. */
+   한쪽 크기를 바꾸면 반드시 둘 다 바꿀 것. (2026-09-01: 6px→5px 도 같이) */
 .card-wh .card-proom{
   font-size: 80%;
-  padding: 1px 6px;
+  padding: 1px 5px;
 }
