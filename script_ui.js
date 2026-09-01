@@ -570,6 +570,18 @@
       };
     }
 
+    /* ↔️ 카드가 차는 쪽 (2026-08-30 — 콩) — 이 기기에만.
+       ★ 카드를 다시 그리지 않습니다. html 의 표만 갈아 끼우면 CSS 가
+         그 자리에서 옮겨 줘요 (다시 그리면 커서·스크롤이 튑니다). */
+    const calign = document.getElementById("set-card-align");
+    if (calign) {
+      calign.value = 카드정렬쪽();
+      calign.onchange = () => {
+        try { AppStore.setItem("cardAlign", calign.value); } catch (e) {}
+        카드정렬쪽적용();
+      };
+    }
+
     const joinChk = document.getElementById("set-join-noti");
     if (joinChk) {
       joinChk.checked = _joinNoti;
@@ -1648,6 +1660,35 @@
 
   window.bindAdminEasterEgg = bindAdminEasterEgg;
   window.refreshAdminUiVisibility = refreshAdminUiVisibility;
+
+  /* =====================================================================
+     ↔️ 카드가 차는 쪽 (2026-08-30 — 콩)
+     ---------------------------------------------------------------------
+     카드 마당은 줄마다 가운데로 모입니다. 마지막 줄 두어 장이 한가운데
+     뜨는 게 좋다는 사람도, 왼쪽에 가지런한 게 낫다는 사람도 있어서
+     각자 고르게 했습니다.
+     ★ **차례(정렬)와 다른 것** — 저건 "누가 앞에 오나", 이건 "줄이 어느
+       쪽에 붙나". 설정에서도 이름을 갈라 뒀습니다.
+     ★ html 에 표만 답니다. 카드를 다시 그리지 않아요 — 다시 그리면
+       스크롤과 커서가 튑니다. 배치가 바뀌며 옮겨다니는 카드 마당 대신
+       **html** 에 다는 것도 같은 이유예요 (0821 배경판 사고).
+     ★ 기기별 저장이라 남의 화면은 그대로입니다.
+     ===================================================================== */
+  function 카드정렬쪽() {
+    let v = "";
+    try { v = AppStore.getItem("cardAlign") || ""; } catch (e) {}
+    return (v === "left" || v === "right") ? v : "center";
+  }
+  function 카드정렬쪽적용() {
+    const v = 카드정렬쪽();
+    const h = document.documentElement;
+    if (v === "center") h.removeAttribute("data-cardalign");
+    else h.setAttribute("data-cardalign", v);
+  }
+  window.카드정렬쪽 = 카드정렬쪽;
+  window.applyCardAlign = 카드정렬쪽적용;
+  /* 들어오자마자 한 번 — 설정 창을 안 열어도 지난번에 고른 쪽이 살아 있게 */
+  try { 카드정렬쪽적용(); } catch (e) {}
 
   // =====================================================
   // exports

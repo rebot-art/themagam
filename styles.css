@@ -10005,6 +10005,12 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   justify-content: center;
   align-content: flex-start;
 }
+/* ↔️ 카드가 차는 쪽 — 각자 고릅니다 (콩 2026-08-30).
+   기본(가운데)은 위에 이미 있으니, 고른 사람에게만 덮어씁니다.
+   ★ html 에 표를 답니다 — 카드 마당은 배치가 바뀌며 옮겨다니는데
+     (0821 배경판 사고), html 은 어디에도 안 밀려나요. */
+html[data-cardalign="left"]  .dock-mode .user-cards-grid{ justify-content: flex-start; }
+html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-end; }
 .dock-mode .user-cards-grid > *{
   flex: 0 0 var(--card-w);
   max-width: var(--card-w);
