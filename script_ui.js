@@ -1684,7 +1684,85 @@
     const h = document.documentElement;
     if (v === "center") h.removeAttribute("data-cardalign");
     else h.setAttribute("data-cardalign", v);
+    카드묶음가운데();
   }
+
+  /* =====================================================================
+     ★★ 묶음은 가운데, 줄은 고른 쪽부터 (2026-08-30 — 콩 신고)
+     ---------------------------------------------------------------------
+     [무슨 일이 있었나]
+     콩: "오른쪽부터 차기를 골랐더니 전체가 오른쪽으로 치우쳐."
+     맞습니다. 카드 마당이 **화면 폭을 다 쓰고** 있어서, 오른쪽 정렬이
+     곧 "화면 오른쪽 끝에 붙기" 였어요. 마지막 줄만 옮기려던 건데
+     묶음째 벽에 붙어 버린 것입니다.
+
+     [고침 — 묶음의 폭을 '들어가는 칸 수' 만큼으로 깎고 가운데]
+     한 줄에 카드가 몇 장 들어가는지 재서, 그 몇 장에 **딱 맞는 폭**으로
+     마당을 줄이고 가운데 둡니다. 그러면
+       · 꽉 찬 줄은 그 폭을 정확히 채우니 묶음이 가운데 놓이고
+       · 마지막 줄만 고른 쪽(왼쪽·오른쪽)으로 붙습니다
+     가운데 정렬은 원래 그 모습이라 손대지 않습니다.
+
+     ★★ 재는 자를 섞지 않습니다 — clientWidth·offsetWidth·getComputedStyle
+        은 모두 **확대 전(요소)** 값이라 서로 맞습니다. 여기에
+        getBoundingClientRect(화면 값)을 섞으면 배율에서만 어긋나요
+        (이 방에서 네 번 데인 자리 — 0815).
+     ★ 먼저 폭을 풀고(auto) 다시 재야 합니다. 안 그러면 지난번에 깎아 둔
+       폭을 기준으로 또 깎아서 갈수록 좁아집니다.
+     ===================================================================== */
+  function 카드묶음가운데() {
+    const 마당 = document.querySelector(".user-cards-grid");
+    if (!마당) return;
+    const v = 카드정렬쪽();
+
+    /* 가운데면 원래대로 — 손댈 것이 없습니다 */
+    if (v === "center") { 마당.style.maxWidth = ""; 마당.style.marginInline = ""; return; }
+
+    마당.style.maxWidth = "";                 // ★ 재기 전에 풀어 둡니다
+    const 카드 = 마당.querySelector(".user-card");
+    if (!카드) { 마당.style.marginInline = ""; return; }
+
+    const cs = getComputedStyle(마당);
+    const 안쪽 = 마당.clientWidth
+      - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    const 틈 = parseFloat(cs.columnGap) || 0;
+    const 폭 = 카드.offsetWidth;
+    if (!(안쪽 > 0) || !(폭 > 0)) { 마당.style.marginInline = ""; return; }
+
+    const 칸수 = Math.max(1, Math.floor((안쪽 + 틈) / (폭 + 틈)));
+    const 묶음 = 칸수 * (폭 + 틈) - 틈;
+    마당.style.maxWidth = Math.ceil(묶음
+      + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)) + "px";
+    마당.style.marginInline = "auto";
+  }
+
+  /* 카드가 늘거나 창이 바뀌면 다시 잽니다.
+     ★ 지켜보기(Observer)를 쓰는 까닭 — 카드를 그리는 곳이 여럿이라
+       (입장·상태 바뀜·정렬 바꿈…) 그때마다 불러 달라고 하면 언젠가
+       한 곳을 빠뜨립니다. 마당만 지켜보면 전부 잡혀요. */
+  let _묶음타이머 = null;
+  function 묶음다시재기() {
+    clearTimeout(_묶음타이머);
+    _묶음타이머 = setTimeout(카드묶음가운데, 60);   // 잇달아 불려도 한 번만
+  }
+  function 묶음지켜보기() {
+    const 마당 = document.querySelector(".user-cards-grid");
+    if (!마당 || 마당._묶음봄) return;
+    마당._묶음봄 = true;
+    try {
+      new MutationObserver(묶음다시재기).observe(마당, { childList: true });
+      new ResizeObserver(묶음다시재기).observe(마당);
+    } catch (e) {
+      window.addEventListener("resize", 묶음다시재기);   // 옛 브라우저
+    }
+    카드묶음가운데();
+  }
+  window.addEventListener("resize", 묶음다시재기);
+  /* 마당은 배치가 짜인 뒤에 생깁니다 — 나타날 때까지 몇 번 두드려 봅니다 */
+  (function 기다리기(n) {
+    if (document.querySelector(".user-cards-grid")) return 묶음지켜보기();
+    if (n > 0) setTimeout(() => 기다리기(n - 1), 400);
+  })(15);
   window.카드정렬쪽 = 카드정렬쪽;
   window.applyCardAlign = 카드정렬쪽적용;
   /* 들어오자마자 한 번 — 설정 창을 안 열어도 지난번에 고른 쪽이 살아 있게 */
