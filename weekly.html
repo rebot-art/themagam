@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<!-- TheMagam © 링가링 · 📋 주간 리포트 weekly.html (2026-08-30, 콩)
+     ─────────────────────────────────────────────────────────
+     출석부와 같은 결의 "날짜 × 사람" 표 넷입니다 — 📅 출석 · ⏱️ 작업 시간 ·
+     ✍️ 글자수 · 📊 그래프. 모두가 보는 자리라 관리자 페이지(admin.html)와
+     따로 둡니다.
+     ※ 처음 이름은 letters.html(글자수만 있던 시절)이었습니다. 셋이 더
+       붙으면서 weekly.html 로 갈았어요 — 옛 이름은 아무 데도 안 남습니다.
+
+     ★ 로그인해야 볼 수 있습니다 (콩 지정). 방 식구인지 확인하는 문 하나예요.
+       보안규칙의 wordlog 는 읽기가 열려 있지만, 그건 방 안에서 쓰라고
+       열어 둔 것이고 — 이 페이지는 **닉+비번**을 받아야 표를 그립니다.
+     ★ 읽기만 합니다. 여기서는 서버에 한 글자도 안 씁니다.
+     ★ 담기는 것은 **숫자뿐**입니다. 할 일 내용·작품 이름·접속 구간은
+       서버에서 본인·방장만 읽게 잠겨 있어 애초에 오지 않습니다.
+     ───────────────────────────────────────────────────────── -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>더마감 — 주간 리포트</title>
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --paper:#FAF6EC; --ink:#2B2620; --sub:#6B5F52; --dim:#8A7B68;
+    --red:#B3372B; --deep:#4A140D; --line:rgba(150,120,80,.35);
+    --panel:#FFFDF6; --fill:#F0EADD;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; padding:26px 14px 60px; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(90deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px),
+      repeating-linear-gradient(0deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px);
+  }
+  .wrap{ max-width:1000px; margin:0 auto; }
+  h1{ font-family:"Noto Serif KR",serif; text-align:center; letter-spacing:2px;
+      font-size:24px; margin:0 0 3px; }
+  .en{ text-align:center; font-size:11px; color:var(--red); letter-spacing:4px; margin:0 0 20px; }
+
+  /* ── 문 (로그인) ── */
+  .gate{ max-width:400px; margin:0 auto; background:rgba(255,253,246,.97);
+         border:1.5px solid var(--red); border-radius:14px; padding:24px 22px 20px;
+         box-shadow:0 4px 18px rgba(90,70,40,.12); }
+  .gate p{ font-size:12.5px; color:var(--sub); line-height:1.7; margin:0 0 16px; }
+  .gate input{ width:100%; background:transparent; border:none;
+    border-bottom:1px solid rgba(150,120,80,.5); padding:9px 4px;
+    font:inherit; font-size:15px; color:var(--ink); margin-bottom:12px; }
+  .gate input:focus{ outline:none; border-bottom-color:var(--red); }
+  .gate button{ width:100%; background:var(--deep); color:#FFFDF6; border:none;
+    border-radius:8px; padding:12px; font:inherit; font-size:14.5px; font-weight:600;
+    cursor:pointer; margin-top:4px; }
+  .gate button:hover{ background:#5C1A11; }
+  .gate button:disabled{ opacity:.55; cursor:default; }
+  .msg{ font-size:12.5px; margin:12px 0 0; min-height:1.4em; line-height:1.6; color:var(--sub); }
+  .msg.bad{ color:var(--red); font-weight:700; }
+
+  /* ── 표 ── */
+  #board{ display:none; }
+  .bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+        background:var(--fill); border:1px solid var(--line); border-radius:10px;
+        padding:9px 12px; font-size:12.5px; color:var(--sub); margin-bottom:14px; }
+  .bar b{ color:var(--ink); font-size:13.5px; }
+  .bar button{ font:inherit; font-weight:700; cursor:pointer; padding:4px 12px;
+    border:1px solid var(--line); background:transparent; color:var(--deep); border-radius:999px; }
+  .bar button:hover{ background:rgba(163,88,70,.09); }
+  .bar button:disabled{ opacity:.35; cursor:default; }
+  .bar .sp{ flex:1; min-width:0; }
+  .who{ font-size:11.5px; color:var(--dim); }
+
+  /* 탭 (콩 2026-08-30 · 2차 뒤집음)
+     ─────────────────────────────────────────────────────────
+     처음엔 크롬 흉내로 **연 탭을 판과 같은 흰색**으로 뒀습니다. 그런데
+     콩이 보기엔 거꾸로였어요 — 흰 탭이 오히려 "비어 있다 = 닫혔다" 로
+     읽히고, 짙은 탭이 "열렸다" 로 보였습니다. 눈이 먼저 읽는 것은
+     '판과 이어졌나' 가 아니라 **'어느 쪽이 진하냐'** 였던 것.
+     → 연 탭은 짙게(종이색 + 붉은 밑줄), 안 연 탭은 옅게 물러납니다. */
+  .tabs{ display:flex; gap:4px; padding:0 6px; flex-wrap:wrap; }
+  .tab{ font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+        padding:8px 16px 9px; border:1px solid var(--line);
+        border-radius:10px 10px 0 0; position:relative; top:1px;
+        /* 안 연 탭 — 물러나 있습니다 */
+        background:var(--panel); color:var(--dim); opacity:.75; }
+  .tab:hover{ color:var(--sub); opacity:1; }
+  .tab.on{
+    /* 연 탭 — 짙게, 그리고 아래 판과 한 몸으로 */
+    background:var(--fill); color:var(--deep); opacity:1;
+    border-color:var(--line); border-bottom-color:var(--fill);
+    box-shadow:0 3px 0 -1px var(--red) inset;
+  }
+  .tab:focus-visible{ outline:2px solid var(--red); outline-offset:1px; }
+
+  .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:0 12px 12px 12px;
+           background:var(--panel); }
+  table{ border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td{ padding:7px 9px; text-align:center; white-space:nowrap;
+          border-bottom:1px solid rgba(150,120,80,.16); }
+  thead th{ position:sticky; top:0; background:var(--fill); font-weight:700;
+            color:var(--sub); font-size:11.5px; z-index:2; }
+  thead th.today{ color:var(--red); }
+  /* 이름 칸은 왼쪽에 고정 — 가로로 밀어도 누구 줄인지 보이게 */
+  th.name, td.name{ position:sticky; left:0; text-align:left; background:var(--panel);
+                    font-weight:700; z-index:1; min-width:96px; }
+  thead th.name{ background:var(--fill); z-index:3; }
+  td.n{ font-variant-numeric:tabular-nums; color:var(--ink); }
+  td.z{ color:rgba(138,123,104,.5); }         /* 안 쓴 날 · 안 나온 날 */
+  td.o{ color:var(--red); font-size:14px; }   /* 📅 나온 날 */
+  tr.me td.name{ color:var(--red); }
+  tr:hover td{ background:rgba(163,88,70,.045); }
+  tr:hover td.name{ background:rgba(240,234,221,.9); }
+
+  /* 그날 제일 많이 쓴 사람 — 칸에 색 (콩 요청) */
+  td.top{ background:rgba(179,55,43,.14); font-weight:700; color:var(--deep);
+          border-radius:6px; }
+  td.top::after{ content:" 🔥"; font-size:10px; }
+
+  /* 합계 */
+  td.sum, th.sum{ background:rgba(163,88,70,.07); font-weight:700; color:var(--deep); }
+  /* 합계 열의 1등도 같은 옷 — .top 이 뒤에 와서 배경을 덮습니다 */
+  td.sum.top{ background:rgba(179,55,43,.14); }
+  tfoot td{ background:var(--fill); font-weight:700; color:var(--deep);
+            border-top:1.5px solid var(--line); border-bottom:none; }
+  tfoot td.name{ background:var(--fill); }
+  /* 👥 쓴 사람 수 줄 — 합계보다 한 걸음 물러난 잔글씨로 (콩 2026-08-30) */
+  tfoot tr.cnt-row td{ border-top:1px dashed var(--line);
+                       font-size:11.5px; font-weight:600; color:var(--sub); }
+  .empty{ text-align:center; color:var(--dim); font-size:13px; padding:40px 10px; line-height:1.8; }
+
+  /* 📊 그래프 넷 — **한 줄에 하나씩, 넉 줄** (콩 2026-08-30 2차).
+     2×2 로 두었더니 그래프가 작아 눈금이 답답했어요. 폭을 다 쓰면
+     이레의 오르내림이 훨씬 잘 읽힙니다. */
+  .chs{ display:grid; grid-template-columns:1fr; gap:2px; padding:10px; }
+  .ch{ padding:12px 14px 8px; border-radius:10px; }
+  .ch + .ch{ border-top:1px dashed rgba(150,120,80,.22); }
+  .ch-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
+  .ch-h b{ font-size:12.5px; color:var(--ink); }
+  .ch-h span{ margin-left:auto; font-size:11px; color:var(--dim);
+              font-variant-numeric:tabular-nums; }
+  .ch svg{ width:100%; height:auto; display:block; }
+  .ch-none{ font-size:12px; color:var(--dim); text-align:center; padding:44px 0; }
+  .foot{ text-align:center; font-size:11px; color:var(--dim); margin-top:18px; line-height:1.9; }
+  .foot b{ color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 주간 리포트</h1>
+  <p class="en">THE MAGAM · WEEKLY REPORT</p>
+
+  <!-- ── 문 ── -->
+  <div class="gate" id="gate">
+    <p>방 식구인지 확인만 할게요. <b>더마감에서 쓰는 닉네임과 비밀번호</b>를
+       적어 주세요 — 여기서는 아무것도 저장하지 않고, 표만 보여 줍니다.</p>
+    <input id="nick" type="text" placeholder="닉네임" autocomplete="username">
+    <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <button id="btn" type="button">표 보기</button>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <!-- ── 표 ── -->
+  <div id="board">
+    <!-- 크롬 탭처럼 (콩 2026-08-30) — 같은 주를 보며 갈아탑니다 -->
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab on" data-tab="att" role="tab">📅 출석</button>
+      <button type="button" class="tab" data-tab="wt" role="tab">⏱️ 작업 시간</button>
+      <button type="button" class="tab" data-tab="wc" role="tab">✍️ 글자수</button>
+      <button type="button" class="tab" data-tab="ch" role="tab">📊 그래프</button>
+    </div>
+    <div class="bar">
+      <button id="prev" type="button">‹ 지난주</button>
+      <b id="range">—</b>
+      <button id="next" type="button">다음주 ›</button>
+      <button id="thisw" type="button">이번 주</button>
+      <span class="sp"></span>
+      <span class="who" id="who"></span>
+    </div>
+    <div class="scroll" id="scroll"></div>
+    <p class="foot" id="foot-wc">
+      숫자는 <b>그날 늘어난 글자수</b>예요 — Work Log 칸은 회차의 누적이라,
+      5,200을 6,000으로 고치면 그날치는 800으로 잡힙니다.<br>
+      🔥 는 그날의 1등 · 합계 열의 🔥 는 이 주의 1등 · 빈칸은 기록이 없는 날 · 가나다순
+    </p>
+    <p class="foot" id="foot-att" style="display:none">
+      ● 은 <b>그날 방에 나온 날</b>이에요 — 칸에 손을 얹으면 첫 입장 시각이 보입니다.<br>
+      휴가(🏖️)는 본인·방장만 볼 수 있는 자리라 여기엔 안 나와요 · 가나다순
+    </p>
+    <p class="foot" id="foot-wt" style="display:none">
+      방 안과 <b>같은 셈법</b>이에요 — 🔥WRITE는 전액, 💻JOB·📓multiT는 70%로 칩니다.<br>
+      🔥 는 그날의 1등 · 합계 열의 🔥 는 이 주의 1등 · 가나다순<br>
+      <b>2026년 8월 30일부터</b> 쌓이기 시작해요 — 그 전 기록은 안 보입니다.
+    </p>
+    <p class="foot" id="foot-ch" style="display:none">
+      이 주 이레만 잘라 그린 그래프예요 · 옅은 세로 띠는 주말<br>
+      🕐 시간대는 <b>그 시각에 가장 많았던 사람 수</b>를 이레 평균으로 낸 것 —
+      막대에 손을 얹으면 숫자가 보입니다.
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const CFG = {
+    apiKey: "AIzaSyBrFRdC034hq3kYrY7CncNAMgPBH6-Br-4",
+    authDomain: "themagam-ec0e4.firebaseapp.com",
+    databaseURL: "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "themagam-ec0e4",
+    storageBucket: "themagam-ec0e4.firebasestorage.app",
+    messagingSenderId: "166061592687",
+    appId: "1:166061592687:web:c8ae9f9a36ded674a3bd9a"
+  };
+  firebase.initializeApp(CFG);
+
+  /* 본편(script_core.js)과 **같은 셈법**이라야 같은 계정에 닿습니다 */
+  function nickToEmail(nick) {
+    let hex = "";
+    for (const b of new TextEncoder().encode(nick)) hex += b.toString(16).padStart(2, "0");
+    return "n" + hex + "@themagam.local";
+  }
+
+  const el = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const fmt = (n) => Number(n || 0).toLocaleString("ko-KR");
+  const 두자리 = (n) => String(n).padStart(2, "0");
+  const 날키 = (d) => d.getFullYear() + "-" + 두자리(d.getMonth() + 1) + "-" + 두자리(d.getDate());
+  const 오늘키 = 날키(new Date());
+
+  /* 월요일 시작 — 그 주의 월요일로 맞춥니다 */
+  function 그주월요일(d) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const w = (x.getDay() + 6) % 7;          // 월=0 … 일=6
+    x.setDate(x.getDate() - w);
+    return x;
+  }
+
+  let _월요일 = 그주월요일(new Date());
+  let _나 = "";
+  let _wordlog = null;                       // 한 번만 읽어 두고 주간만 갈아 끼웁니다
+  let _att = null;                           // 출석 — 같은 방식
+  let _wt = null;                            // 작업 시간 (worktime, 분)
+  let _pulse = null;                         // roomStat — 시간대별 최다 동접
+  let _탭 = "att";                           // att(출석) · wt(작업 시간) · wc(글자수) · ch(그래프)
+
+  function 말(t, bad) {
+    const m = el("msg");
+    m.textContent = t || "";
+    m.className = "msg" + (bad ? " bad" : "");
+  }
+
+  /* ── 문 ─────────────────────────────────────────────── */
+  async function 들어가기() {
+    const nick = (el("nick").value || "").trim();
+    const pw = el("pw").value || "";
+    if (!nick) return 말("닉네임을 적어 주세요.", true);
+    if (!pw) return 말("비밀번호를 적어 주세요.", true);
+    el("btn").disabled = true;
+    말("확인 중…");
+    try {
+      await firebase.auth().signInWithEmailAndPassword(nickToEmail(nick), pw);
+      _나 = nick;
+      el("gate").style.display = "none";
+      el("board").style.display = "block";
+      el("who").textContent = nick + " 님으로 보는 중";
+      그리기();
+    } catch (e) {
+      const c = e && e.code;
+      말(c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/user-not-found"
+        ? "닉네임이나 비밀번호가 맞지 않아요."
+        : "들어가지 못했어요. 잠시 뒤 다시 해 주세요.", true);
+      el("btn").disabled = false;
+    }
+  }
+
+  /* ── 자료 (읽기만 합니다) ──────────────────────────────
+     ★★★ [2026-08-30 — 콩 "다운로드 늘어나는 거 아냐?"]
+     처음에는 wordlog·attendance·worktime·roomStat 을 **통째로** 받았습니다.
+     그러면 한 번 열 때마다 방의 **모든 날**이 내려와요 — 지금이야 몇백 KB
+     지만 날이 갈수록 커지고, 오픈카톡에 링크가 도니 여는 횟수도 많아집니다.
+     하루 이백 번 열리면 그것만으로 하트비트에 맞먹어요.
+
+     → **보는 주의 이레만** 받습니다 (orderByKey 로 날짜 범위를 끊어서).
+       한 주 = 네 노드 합쳐 대략 15~20KB. 몇 년이 쌓여도 그대로예요.
+     → 한 번 받은 주는 **손에 들고 있습니다**(_캐시). 탭을 갈아타거나
+       왔던 주로 되돌아가면 통신이 0 입니다.
+     ────────────────────────────────────────────────── */
+  const _캐시 = {};            // "노드|첫날" → 그 주의 값
+
+  async function 범위(노드, 첫날, 끝날) {
+    const 열쇠 = 노드 + "|" + 첫날;
+    if (_캐시[열쇠]) return _캐시[열쇠];
+    const snap = await firebase.database().ref(노드)
+      .orderByKey().startAt(첫날).endAt(끝날).once("value");
+    return (_캐시[열쇠] = snap.val() || {});
+  }
+
+  /** 지금 보는 주의 이레만 받아 옵니다 */
+  async function 주간읽기(날들) {
+    const 첫 = 날들[0].key, 끝 = 날들[6].key;
+    const [w, a, t, p] = await Promise.all([
+      범위("wordlog", 첫, 끝), 범위("attendance", 첫, 끝),
+      범위("worktime", 첫, 끝), 범위("roomStat", 첫, 끝)
+    ]);
+    _wordlog = w; _att = a; _wt = t; _pulse = p;
+  }
+
+  /* ── 표 ─────────────────────────────────────────────── */
+  /** 이 주의 일곱 날 + 머리말 갱신 — 두 탭이 함께 씁니다 */
+  function 주간틀() {
+    const 날들 = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(_월요일.getFullYear(), _월요일.getMonth(), _월요일.getDate() + i);
+      날들.push({ key: 날키(d), d });
+    }
+    const 끝 = 날들[6].d;
+    el("range").textContent =
+      (_월요일.getMonth() + 1) + "월 " + _월요일.getDate() + "일 – " +
+      (끝.getMonth() + 1) + "월 " + 끝.getDate() + "일";
+    /* 다음 주로는 오늘이 든 주까지만 */
+    el("next").disabled = 그주월요일(new Date()) <= _월요일;
+    return 날들;
+  }
+
+  const 요일 = ["월", "화", "수", "목", "금", "토", "일"];
+  /** 날짜 머리줄 — 두 탭이 같은 모양을 씁니다 */
+  function 머리줄(날들, 끝칸) {
+    let h = `<th class="name">이름</th>`;
+    날들.forEach(({ key, d }, i) => {
+      h += `<th class="${key === 오늘키 ? "today" : ""}">${d.getDate()}<br>
+            <span style="font-weight:400">${요일[i]}</span></th>`;
+    });
+    return h + `<th class="sum">${끝칸}</th>`;
+  }
+
+  /** 주를 정하고 자료를 챙긴 뒤 지금 탭을 그립니다.
+      ★ 자료가 손에 없으면 여기서 기다립니다 (한 번 받은 주는 곧장 그려요) */
+  async function 그리기() {
+    document.querySelectorAll(".tab").forEach((b) =>
+      b.classList.toggle("on", b.dataset.tab === _탭));
+    ["wc", "att", "wt", "ch"].forEach((k) => {
+      el("foot-" + k).style.display = _탭 === k ? "block" : "none";
+    });
+    const 날들 = 주간틀();
+    try {
+      await 주간읽기(날들);
+    } catch (e) {
+      el("scroll").innerHTML = `<p class="empty">기록을 가져오지 못했어요.<br>잠시 뒤 새로고침해 주세요.</p>`;
+      return;
+    }
+    if (_탭 === "att") return 출석그리기(날들);
+    if (_탭 === "wt")  return 작업시간그리기(날들);
+    if (_탭 === "ch")  return 그래프탭(날들);
+    글자수그리기(날들);
+  }
+
+  function 글자수그리기(날들) {
+
+    /* 사람 모으기 — 이 주에 한 글자라도 쓴 사람만 (가나다순) */
+    const 값 = {};                            // 닉 → { 날키: 수 }
+    날들.forEach(({ key }) => {
+      const 하루 = _wordlog[key] || {};
+      Object.keys(하루).forEach((닉) => {
+        const n = Number(하루[닉] && 하루[닉].total) || 0;
+        if (n <= 0) return;
+        (값[닉] || (값[닉] = {}))[key] = n;
+      });
+    });
+    const 사람 = Object.keys(값).sort((a, b) => a.localeCompare(b, "ko"));
+
+    if (!사람.length) {
+      el("scroll").innerHTML =
+        `<p class="empty">이 주에는 아직 기록이 없어요.<br>‹ 지난주 로 넘겨 보세요.</p>`;
+      return;
+    }
+
+    /* 그날 제일 많이 쓴 사람 — 칸에 색을 입힐 자리 */
+    const 으뜸 = {};
+    날들.forEach(({ key }) => {
+      let 최대 = 0;
+      사람.forEach((닉) => { 최대 = Math.max(최대, 값[닉][key] || 0); });
+      if (최대 > 0) 으뜸[key] = 최대;
+    });
+
+    const 머리 = 머리줄(날들, "합계");
+
+    /* 사람마다 이 주 합계를 먼저 셈해 둡니다 — 합계 1등을 알아야
+       그 칸에도 🔥 를 붙일 수 있어서요 (콩 2026-08-30) */
+    const 줄합 = {};
+    사람.forEach((닉) => {
+      줄합[닉] = 날들.reduce((n, { key }) => n + (값[닉][key] || 0), 0);
+    });
+    const 주으뜸 = Math.max(...사람.map((닉) => 줄합[닉]));
+
+    let 몸 = "";
+    const 날합 = {};
+    let 통합 = 0;
+    사람.forEach((닉) => {
+      let 칸 = `<td class="name">${esc(닉)}</td>`;
+      날들.forEach(({ key }) => {
+        const n = 값[닉][key] || 0;
+        날합[key] = (날합[key] || 0) + n;
+        칸 += n > 0
+          ? `<td class="n${으뜸[key] === n ? " top" : ""}">${fmt(n)}</td>`
+          : `<td class="z">·</td>`;
+      });
+      통합 += 줄합[닉];
+      /* 이 주에 제일 많이 쓴 사람의 합계 칸에도 같은 표시 */
+      const 왕 = 주으뜸 > 0 && 줄합[닉] === 주으뜸 ? " top" : "";
+      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum${왕}">${fmt(줄합[닉])}</td></tr>`;
+    });
+
+    let 바닥 = `<td class="name">방 전체</td>`;
+    날들.forEach(({ key }) => { 바닥 += `<td class="n">${날합[key] ? fmt(날합[key]) : "·"}</td>`; });
+    바닥 += `<td class="n">${fmt(통합)}</td>`;
+
+    /* 👥 그날 쓴 사람 수 (2026-08-30 — 콩 "인원수만 표시되면 한눈에")
+       ★ 맨 오른쪽은 일곱 날을 더한 값이 아니라 **이 주에 쓴 사람 수**입니다.
+         날마다 더하면 사흘 쓴 사람이 셋으로 세어져요 — 그건 인원이 아닙니다. */
+    let 인원 = `<td class="name">쓴 사람</td>`;
+    날들.forEach(({ key }) => {
+      const n = 사람.filter((닉) => (값[닉][key] || 0) > 0).length;
+      인원 += `<td class="n cnt">${n ? n + "명" : "·"}</td>`;
+    });
+    인원 += `<td class="n cnt">${사람.length}명</td>`;
+
+    el("scroll").innerHTML = `
+      <table>
+        <thead><tr>${머리}</tr></thead>
+        <tbody>${몸}</tbody>
+        <tfoot><tr>${바닥}</tr><tr class="cnt-row">${인원}</tr></tfoot>
+      </table>`;
+  }
+
+  /* ── 📅 출석 탭 (2026-08-30 — 콩) ─────────────────────
+     attendance/{날}/{닉} = { firstAt, at, leftAt? } — 그날 기록이 있으면
+     나온 것입니다. 관리자 출석부와 **같은 잣대**예요.
+     ★ 휴가(🏖️)는 users/{닉}/vacations 에 있는데, 그 자리는 본인·방장만
+       읽을 수 있어 여기서는 안 보입니다. 순수한 출석 표시만 해요.
+     ────────────────────────────────────────────────── */
+  function 출석그리기(날들) {
+
+    const 값 = {};                             // 닉 → { 날키: 첫 입장 ms }
+    날들.forEach(({ key }) => {
+      const 하루 = _att[key] || {};
+      Object.keys(하루).forEach((닉) => {
+        const r = 하루[닉] || {};
+        const t = Number(r.firstAt || r.at) || 0;
+        if (!t) return;
+        (값[닉] || (값[닉] = {}))[key] = t;
+      });
+    });
+    const 사람 = Object.keys(값).sort((a, b) => a.localeCompare(b, "ko"));
+
+    if (!사람.length) {
+      el("scroll").innerHTML =
+        `<p class="empty">이 주에는 출석 기록이 없어요.<br>‹ 지난주 로 넘겨 보세요.</p>`;
+      return;
+    }
+
+    const 머리 = 머리줄(날들, "나온 날");
+    let 몸 = "";
+    const 날합 = {};
+    사람.forEach((닉) => {
+      let 줄수 = 0;
+      let 칸 = `<td class="name">${esc(닉)}</td>`;
+      날들.forEach(({ key }) => {
+        const t = 값[닉][key] || 0;
+        if (t) {
+          줄수++;
+          날합[key] = (날합[key] || 0) + 1;
+          const d = new Date(t);
+          칸 += `<td class="o" title="${두자리(d.getHours())}:${두자리(d.getMinutes())} 첫 입장">●</td>`;
+        } else {
+          칸 += `<td class="z">·</td>`;
+        }
+      });
+      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum">${줄수}일</td></tr>`;
+    });
+
+    let 바닥 = `<td class="name">나온 사람</td>`;
+    날들.forEach(({ key }) => { 바닥 += `<td class="n">${날합[key] ? 날합[key] + "명" : "·"}</td>`; });
+    바닥 += `<td class="n">${사람.length}명</td>`;
+
+    el("scroll").innerHTML = `
+      <table>
+        <thead><tr>${머리}</tr></thead>
+        <tbody>${몸}</tbody>
+        <tfoot><tr>${바닥}</tr></tfoot>
+      </table>`;
+  }
+
+  /* ── ⏱️ 작업 시간 탭 (2026-08-30 — 콩) ────────────────
+     worktime/{날}/{닉} = 그날 작업 분(分). script_timelog.js 가 구간을
+     저장할 때마다 함께 얹어 둡니다 — 원본(timeSegs)은 본인·방장만 보는
+     자리라, **합산된 숫자만** 이리로 나와요.
+     ★ 셈법은 방 안과 같습니다: WRITE 전액 + JOB·multiT 70%.
+     ────────────────────────────────────────────────── */
+  function 분글(분) {
+    const m = Math.max(0, Math.round(Number(분) || 0));
+    return m < 60 ? m + "m" : Math.floor(m / 60) + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
+  }
+
+  function 작업시간그리기(날들) {
+
+    const 값 = {};
+    날들.forEach(({ key }) => {
+      const 하루 = _wt[key] || {};
+      Object.keys(하루).forEach((닉) => {
+        const n = Number(하루[닉]) || 0;
+        if (n <= 0) return;
+        (값[닉] || (값[닉] = {}))[key] = n;
+      });
+    });
+    const 사람 = Object.keys(값).sort((a, b) => a.localeCompare(b, "ko"));
+
+    if (!사람.length) {
+      el("scroll").innerHTML =
+        `<p class="empty">이 주에는 작업 시간 기록이 없어요.<br>
+         이 표는 <b>새로 쌓이는 기록</b>만 보여줘서, 올린 날부터 채워집니다.</p>`;
+      return;
+    }
+
+    const 으뜸 = {};
+    날들.forEach(({ key }) => {
+      let 최대 = 0;
+      사람.forEach((닉) => { 최대 = Math.max(최대, 값[닉][key] || 0); });
+      if (최대 > 0) 으뜸[key] = 최대;
+    });
+    const 줄합 = {};
+    사람.forEach((닉) => { 줄합[닉] = 날들.reduce((n, { key }) => n + (값[닉][key] || 0), 0); });
+    const 주으뜸 = Math.max(...사람.map((닉) => 줄합[닉]));
+
+    const 머리 = 머리줄(날들, "합계");
+    let 몸 = "";
+    const 날합 = {};
+    let 통합 = 0;
+    사람.forEach((닉) => {
+      let 칸 = `<td class="name">${esc(닉)}</td>`;
+      날들.forEach(({ key }) => {
+        const n = 값[닉][key] || 0;
+        날합[key] = (날합[key] || 0) + n;
+        칸 += n > 0
+          ? `<td class="n${으뜸[key] === n ? " top" : ""}">${분글(n)}</td>`
+          : `<td class="z">·</td>`;
+      });
+      통합 += 줄합[닉];
+      const 왕 = 주으뜸 > 0 && 줄합[닉] === 주으뜸 ? " top" : "";
+      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum${왕}">${분글(줄합[닉])}</td></tr>`;
+    });
+
+    let 바닥 = `<td class="name">방 전체</td>`;
+    날들.forEach(({ key }) => { 바닥 += `<td class="n">${날합[key] ? 분글(날합[key]) : "·"}</td>`; });
+    바닥 += `<td class="n">${분글(통합)}</td>`;
+
+    let 인원 = `<td class="name">일한 사람</td>`;
+    날들.forEach(({ key }) => {
+      const n = 사람.filter((닉) => (값[닉][key] || 0) > 0).length;
+      인원 += `<td class="n cnt">${n ? n + "명" : "·"}</td>`;
+    });
+    인원 += `<td class="n cnt">${사람.length}명</td>`;
+
+    el("scroll").innerHTML = `
+      <table>
+        <thead><tr>${머리}</tr></thead>
+        <tbody>${몸}</tbody>
+        <tfoot><tr>${바닥}</tr><tr class="cnt-row">${인원}</tr></tfoot>
+      </table>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     📊 그래프 탭 (2026-08-30 — 콩)
+     관리자 페이지의 그 그래프 넷을 **이 주만** 잘라 한 판에 폅니다.
+       ① 📅 나온 사람   ② ⏱️ 작업 시간   ③ ✍️ 글자수   ④ 🕐 시간대
+     ★ ④ 는 관리자 것과 재료가 다릅니다. 거기서 쓰는 원본 구간(timeSegs)은
+       본인·방장만 읽는 자리라, 여기서는 방이 함께 쌓는 roomStat
+       (그 시각 **가장 많았던 사람 수**)을 씁니다. 뜻은 같아요 —
+       "언제 사람이 몰리나".
+     ★ SVG 를 손으로 그립니다 — 바깥 그림 도구를 안 씁니다.
+     ═══════════════════════════════════════════════════════ */
+  const 잉크 = { 선:"#B3372B", 옅은:"#DCCFBC", 눈금:"#EFE6D8", 글:"#A0917E",
+                 띠:"#F5F1E7", 보조:"#B9A88F" };
+
+  /** 일곱 날 꺾은선 하나 — 값이 없는 날은 0 으로 그립니다 */
+  function 꺾은선(제목, 날들, 값들, 꼬리, 색) {
+    /* ★ 한 줄에 하나씩 놓으면서 **납작하게** 잡았습니다 (콩 2026-08-30).
+       520×168 그대로 폭을 다 쓰면 세로가 300px 을 넘어, 넷을 쌓으면
+       한 화면에 안 들어와요. 6:1 이면 이레 오르내림이 잘 보이면서
+       넷이 한 화면에 담깁니다. */
+    const W = 900, H = 150, L = 52, R = 18, T = 16, B = 24;
+    const 폭 = W - L - R, 높 = H - T - B;
+    const 최대 = Math.max(1, ...날들.map(({ key }) => 값들[key] || 0));
+    const X = (i) => L + (i / 6) * 폭;
+    const Y = (v) => T + 높 - (v / 최대) * 높;
+
+    let 띠 = "", 점 = [], 동그라미 = "", 날짜 = "";
+    날들.forEach(({ key, d }, i) => {
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) {
+        띠 += `<rect x="${(X(i) - 폭 / 12).toFixed(1)}" y="${T}" width="${(폭 / 6).toFixed(1)}"
+                     height="${높}" fill="${잉크.띠}"/>`;
+      }
+      const v = 값들[key] || 0;
+      점.push(`${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
+      if (v > 0) 동그라미 += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3" fill="${색}"/>`;
+      날짜 += `<text x="${X(i).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10.5"
+                     fill="${key === 오늘키 ? 잉크.선 : 잉크.글}">${요일[i]}</text>`;
+    });
+    let 눈금 = "";
+    [0, 최대].forEach((v) => {
+      눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}"
+                     stroke="${v === 0 ? 잉크.옅은 : 잉크.눈금}" stroke-width="1"/>`
+            + `<text x="${L - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10"
+                     fill="${잉크.글}">${꼬리(v)}</text>`;
+    });
+    const 주합 = 날들.reduce((n, { key }) => n + (값들[key] || 0), 0);
+
+    return `
+      <div class="ch">
+        <div class="ch-h"><b>${제목}</b><span>이 주 ${꼬리(주합)}</span></div>
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${제목} 주간 꺾은선">
+          ${띠}${눈금}
+          <polyline fill="none" stroke="${색}" stroke-width="2" stroke-linejoin="round"
+                    stroke-linecap="round" points="${점.join(" ")}"/>
+          ${동그라미}${날짜}
+        </svg>
+      </div>`;
+  }
+
+  /** 🕐 시간대 — 24칸 막대. 이 주 이레의 **평균** 최다 동접 */
+  function 시간대막대(날들) {
+    const 합 = new Array(24).fill(0);
+    let 날수 = 0;
+    날들.forEach(({ key }) => {
+      const 하루 = _pulse[key];
+      if (!하루) return;
+      날수++;
+      for (let h = 0; h < 24; h++) 합[h] += Number(하루[두자리(h)] || 0);
+    });
+    if (!날수) {
+      return `<div class="ch"><div class="ch-h"><b>🕐 시간대</b></div>
+              <p class="ch-none">이 주에는 기록이 없어요.</p></div>`;
+    }
+    const 값 = 합.map((v) => v / 날수);
+    const 최대 = Math.max(1, ...값);
+    const W = 900, H = 150, L = 40, R = 18, T = 16, B = 24;   /* 꺾은선과 같은 비율 */
+    const 폭 = W - L - R, 높 = H - T - B;
+    const 칸 = 폭 / 24;
+
+    let 막대 = "", 눈 = "";
+    값.forEach((v, h) => {
+      const hh = (v / 최대) * 높;
+      const 짙게 = v >= 최대 * 0.75;
+      막대 += `<rect x="${(L + h * 칸 + 1).toFixed(1)}" y="${(T + 높 - hh).toFixed(1)}"
+                     width="${(칸 - 2).toFixed(1)}" height="${hh.toFixed(1)}" rx="2"
+                     fill="${짙게 ? 잉크.선 : "rgba(179,55,43,.32)"}"><title>${h}시 · 평균 ${v.toFixed(1)}명</title></rect>`;
+      if (h % 3 === 0) 눈 += `<text x="${(L + h * 칸 + 칸 / 2).toFixed(1)}" y="${H - 10}"
+                                    text-anchor="middle" font-size="10" fill="${잉크.글}">${h}</text>`;
+    });
+    const 으뜸 = 값.indexOf(Math.max(...값));
+    return `
+      <div class="ch">
+        <div class="ch-h"><b>🕐 시간대</b><span>가장 붐빈 때 ${으뜸}시</span></div>
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="시간대별 접속 막대">
+          <line x1="${L}" y1="${T + 높}" x2="${W - R}" y2="${T + 높}" stroke="${잉크.옅은}"/>
+          ${막대}${눈}
+        </svg>
+      </div>`;
+  }
+
+  function 그래프탭(날들) {
+    const 사람수 = {}, 시간 = {}, 글자 = {};
+    날들.forEach(({ key }) => {
+      사람수[key] = Object.keys(_att[key] || {}).length;
+      const w = _wt[key] || {};
+      시간[key] = Object.keys(w).reduce((n, 닉) => n + (Number(w[닉]) || 0), 0);
+      const g = _wordlog[key] || {};
+      글자[key] = Object.keys(g).reduce((n, 닉) => n + (Number(g[닉] && g[닉].total) || 0), 0);
+    });
+
+    el("scroll").innerHTML = `
+      <div class="chs">
+        ${꺾은선("📅 나온 사람", 날들, 사람수, (v) => Math.round(v) + "명", 잉크.선)}
+        ${꺾은선("⏱️ 작업 시간", 날들, 시간, (v) => 분글(v), 잉크.보조)}
+        ${꺾은선("✍️ 글자수", 날들, 글자, (v) => fmt(Math.round(v)), 잉크.선)}
+        ${시간대막대(날들)}
+      </div>`;
+  }
+
+  function 옮기기(주) {
+    _월요일 = new Date(_월요일.getFullYear(), _월요일.getMonth(), _월요일.getDate() + 주 * 7);
+    그리기();
+  }
+
+  el("btn").addEventListener("click", 들어가기);
+  ["nick", "pw"].forEach((id) => el(id).addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); 들어가기(); }
+  }));
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.addEventListener("click", () => { _탭 = b.dataset.tab; 그리기(); }));
+  el("prev").addEventListener("click", () => 옮기기(-1));
+  el("next").addEventListener("click", () => 옮기기(1));
+  el("thisw").addEventListener("click", () => { _월요일 = 그주월요일(new Date()); 그리기(); });
+})();
+</script>
+</body>
+</html>
