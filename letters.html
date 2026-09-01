@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!-- TheMagam © 링가링 · ✍️ 주간 글자수 표 (2026-08-30, 콩)
+     ─────────────────────────────────────────────────────────
+     출석부와 같은 결의 "날짜 × 사람" 표입니다. 다만 이건 **모두가 보는**
+     자리라 관리자 페이지(admin.html)와 따로 둡니다.
+
+     ★ 로그인해야 볼 수 있습니다 (콩 지정). 방 식구인지 확인하는 문 하나예요.
+       보안규칙의 wordlog 는 읽기가 열려 있지만, 그건 방 안에서 쓰라고
+       열어 둔 것이고 — 이 페이지는 **닉+비번**을 받아야 표를 그립니다.
+     ★ 읽기만 합니다. 여기서는 서버에 한 글자도 안 씁니다.
+     ★ 담기는 것은 **글자수뿐**입니다. 할 일 내용·작품 이름은 서버에서
+       본인·방장만 읽게 잠겨 있어 애초에 오지 않습니다.
+     ───────────────────────────────────────────────────────── -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>더마감 — 주간 글자수</title>
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --paper:#FAF6EC; --ink:#2B2620; --sub:#6B5F52; --dim:#8A7B68;
+    --red:#B3372B; --deep:#4A140D; --line:rgba(150,120,80,.35);
+    --panel:#FFFDF6; --fill:#F0EADD;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; padding:26px 14px 60px; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(90deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px),
+      repeating-linear-gradient(0deg,transparent 0 23px,rgba(163,88,70,.14) 23px 24px);
+  }
+  .wrap{ max-width:1000px; margin:0 auto; }
+  h1{ font-family:"Noto Serif KR",serif; text-align:center; letter-spacing:2px;
+      font-size:24px; margin:0 0 3px; }
+  .en{ text-align:center; font-size:11px; color:var(--red); letter-spacing:4px; margin:0 0 20px; }
+
+  /* ── 문 (로그인) ── */
+  .gate{ max-width:400px; margin:0 auto; background:rgba(255,253,246,.97);
+         border:1.5px solid var(--red); border-radius:14px; padding:24px 22px 20px;
+         box-shadow:0 4px 18px rgba(90,70,40,.12); }
+  .gate p{ font-size:12.5px; color:var(--sub); line-height:1.7; margin:0 0 16px; }
+  .gate input{ width:100%; background:transparent; border:none;
+    border-bottom:1px solid rgba(150,120,80,.5); padding:9px 4px;
+    font:inherit; font-size:15px; color:var(--ink); margin-bottom:12px; }
+  .gate input:focus{ outline:none; border-bottom-color:var(--red); }
+  .gate button{ width:100%; background:var(--deep); color:#FFFDF6; border:none;
+    border-radius:8px; padding:12px; font:inherit; font-size:14.5px; font-weight:600;
+    cursor:pointer; margin-top:4px; }
+  .gate button:hover{ background:#5C1A11; }
+  .gate button:disabled{ opacity:.55; cursor:default; }
+  .msg{ font-size:12.5px; margin:12px 0 0; min-height:1.4em; line-height:1.6; color:var(--sub); }
+  .msg.bad{ color:var(--red); font-weight:700; }
+
+  /* ── 표 ── */
+  #board{ display:none; }
+  .bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+        background:var(--fill); border:1px solid var(--line); border-radius:10px;
+        padding:9px 12px; font-size:12.5px; color:var(--sub); margin-bottom:14px; }
+  .bar b{ color:var(--ink); font-size:13.5px; }
+  .bar button{ font:inherit; font-weight:700; cursor:pointer; padding:4px 12px;
+    border:1px solid var(--line); background:transparent; color:var(--deep); border-radius:999px; }
+  .bar button:hover{ background:rgba(163,88,70,.09); }
+  .bar button:disabled{ opacity:.35; cursor:default; }
+  .bar .sp{ flex:1; min-width:0; }
+  .who{ font-size:11.5px; color:var(--dim); }
+
+  .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:12px;
+           background:var(--panel); }
+  table{ border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td{ padding:7px 9px; text-align:center; white-space:nowrap;
+          border-bottom:1px solid rgba(150,120,80,.16); }
+  thead th{ position:sticky; top:0; background:var(--fill); font-weight:700;
+            color:var(--sub); font-size:11.5px; z-index:2; }
+  thead th.today{ color:var(--red); }
+  /* 이름 칸은 왼쪽에 고정 — 가로로 밀어도 누구 줄인지 보이게 */
+  th.name, td.name{ position:sticky; left:0; text-align:left; background:var(--panel);
+                    font-weight:700; z-index:1; min-width:96px; }
+  thead th.name{ background:var(--fill); z-index:3; }
+  td.n{ font-variant-numeric:tabular-nums; color:var(--ink); }
+  td.z{ color:rgba(138,123,104,.5); }         /* 안 쓴 날 */
+  tr.me td.name{ color:var(--red); }
+  tr:hover td{ background:rgba(163,88,70,.045); }
+  tr:hover td.name{ background:rgba(240,234,221,.9); }
+
+  /* 그날 제일 많이 쓴 사람 — 칸에 색 (콩 요청) */
+  td.top{ background:rgba(179,55,43,.14); font-weight:700; color:var(--deep);
+          border-radius:6px; }
+  td.top::after{ content:" 🔥"; font-size:10px; }
+
+  /* 합계 */
+  td.sum, th.sum{ background:rgba(163,88,70,.07); font-weight:700; color:var(--deep); }
+  /* 합계 열의 1등도 같은 옷 — .top 이 뒤에 와서 배경을 덮습니다 */
+  td.sum.top{ background:rgba(179,55,43,.14); }
+  tfoot td{ background:var(--fill); font-weight:700; color:var(--deep);
+            border-top:1.5px solid var(--line); border-bottom:none; }
+  tfoot td.name{ background:var(--fill); }
+  /* 👥 쓴 사람 수 줄 — 합계보다 한 걸음 물러난 잔글씨로 (콩 2026-08-30) */
+  tfoot tr.cnt-row td{ border-top:1px dashed var(--line);
+                       font-size:11.5px; font-weight:600; color:var(--sub); }
+  .empty{ text-align:center; color:var(--dim); font-size:13px; padding:40px 10px; line-height:1.8; }
+  .foot{ text-align:center; font-size:11px; color:var(--dim); margin-top:18px; line-height:1.9; }
+  .foot b{ color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✍️ 주간 글자수</h1>
+  <p class="en">THE MAGAM · LETTERS OF THE WEEK</p>
+
+  <!-- ── 문 ── -->
+  <div class="gate" id="gate">
+    <p>방 식구인지 확인만 할게요. <b>더마감에서 쓰는 닉네임과 비밀번호</b>를
+       적어 주세요 — 여기서는 아무것도 저장하지 않고, 표만 보여 줍니다.</p>
+    <input id="nick" type="text" placeholder="닉네임" autocomplete="username">
+    <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <button id="btn" type="button">표 보기</button>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <!-- ── 표 ── -->
+  <div id="board">
+    <div class="bar">
+      <button id="prev" type="button">‹ 지난주</button>
+      <b id="range">—</b>
+      <button id="next" type="button">다음주 ›</button>
+      <button id="thisw" type="button">이번 주</button>
+      <span class="sp"></span>
+      <span class="who" id="who"></span>
+    </div>
+    <div class="scroll" id="scroll"></div>
+    <p class="foot">
+      숫자는 <b>그날 늘어난 글자수</b>예요 — Work Log 칸은 회차의 누적이라,
+      5,200을 6,000으로 고치면 그날치는 800으로 잡힙니다.<br>
+      🔥 는 그날의 1등 · 합계 열의 🔥 는 이 주의 1등 · 빈칸은 기록이 없는 날 · 가나다순
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const CFG = {
+    apiKey: "AIzaSyBrFRdC034hq3kYrY7CncNAMgPBH6-Br-4",
+    authDomain: "themagam-ec0e4.firebaseapp.com",
+    databaseURL: "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "themagam-ec0e4",
+    storageBucket: "themagam-ec0e4.firebasestorage.app",
+    messagingSenderId: "166061592687",
+    appId: "1:166061592687:web:c8ae9f9a36ded674a3bd9a"
+  };
+  firebase.initializeApp(CFG);
+
+  /* 본편(script_core.js)과 **같은 셈법**이라야 같은 계정에 닿습니다 */
+  function nickToEmail(nick) {
+    let hex = "";
+    for (const b of new TextEncoder().encode(nick)) hex += b.toString(16).padStart(2, "0");
+    return "n" + hex + "@themagam.local";
+  }
+
+  const el = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const fmt = (n) => Number(n || 0).toLocaleString("ko-KR");
+  const 두자리 = (n) => String(n).padStart(2, "0");
+  const 날키 = (d) => d.getFullYear() + "-" + 두자리(d.getMonth() + 1) + "-" + 두자리(d.getDate());
+  const 오늘키 = 날키(new Date());
+
+  /* 월요일 시작 — 그 주의 월요일로 맞춥니다 */
+  function 그주월요일(d) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const w = (x.getDay() + 6) % 7;          // 월=0 … 일=6
+    x.setDate(x.getDate() - w);
+    return x;
+  }
+
+  let _월요일 = 그주월요일(new Date());
+  let _나 = "";
+  let _wordlog = null;                       // 한 번만 읽어 두고 주간만 갈아 끼웁니다
+
+  function 말(t, bad) {
+    const m = el("msg");
+    m.textContent = t || "";
+    m.className = "msg" + (bad ? " bad" : "");
+  }
+
+  /* ── 문 ─────────────────────────────────────────────── */
+  async function 들어가기() {
+    const nick = (el("nick").value || "").trim();
+    const pw = el("pw").value || "";
+    if (!nick) return 말("닉네임을 적어 주세요.", true);
+    if (!pw) return 말("비밀번호를 적어 주세요.", true);
+    el("btn").disabled = true;
+    말("확인 중…");
+    try {
+      await firebase.auth().signInWithEmailAndPassword(nickToEmail(nick), pw);
+      _나 = nick;
+      el("gate").style.display = "none";
+      el("board").style.display = "block";
+      el("who").textContent = nick + " 님으로 보는 중";
+      await 읽기();
+      그리기();
+    } catch (e) {
+      const c = e && e.code;
+      말(c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/user-not-found"
+        ? "닉네임이나 비밀번호가 맞지 않아요."
+        : "들어가지 못했어요. 잠시 뒤 다시 해 주세요.", true);
+      el("btn").disabled = false;
+    }
+  }
+
+  /* ── 자료 — wordlog 한 번만 통째로 (읽기만 합니다) ── */
+  async function 읽기() {
+    const snap = await firebase.database().ref("wordlog").once("value");
+    _wordlog = snap.val() || {};
+  }
+
+  /* ── 표 ─────────────────────────────────────────────── */
+  function 그리기() {
+    /* 이 주의 일곱 날 */
+    const 날들 = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(_월요일.getFullYear(), _월요일.getMonth(), _월요일.getDate() + i);
+      날들.push({ key: 날키(d), d });
+    }
+    const 끝 = 날들[6].d;
+    el("range").textContent =
+      (_월요일.getMonth() + 1) + "월 " + _월요일.getDate() + "일 – " +
+      (끝.getMonth() + 1) + "월 " + 끝.getDate() + "일";
+    /* 다음 주로는 오늘이 든 주까지만 */
+    el("next").disabled = 그주월요일(new Date()) <= _월요일;
+
+    /* 사람 모으기 — 이 주에 한 글자라도 쓴 사람만 (가나다순) */
+    const 값 = {};                            // 닉 → { 날키: 수 }
+    날들.forEach(({ key }) => {
+      const 하루 = _wordlog[key] || {};
+      Object.keys(하루).forEach((닉) => {
+        const n = Number(하루[닉] && 하루[닉].total) || 0;
+        if (n <= 0) return;
+        (값[닉] || (값[닉] = {}))[key] = n;
+      });
+    });
+    const 사람 = Object.keys(값).sort((a, b) => a.localeCompare(b, "ko"));
+
+    if (!사람.length) {
+      el("scroll").innerHTML =
+        `<p class="empty">이 주에는 아직 기록이 없어요.<br>‹ 지난주 로 넘겨 보세요.</p>`;
+      return;
+    }
+
+    /* 그날 제일 많이 쓴 사람 — 칸에 색을 입힐 자리 */
+    const 으뜸 = {};
+    날들.forEach(({ key }) => {
+      let 최대 = 0;
+      사람.forEach((닉) => { 최대 = Math.max(최대, 값[닉][key] || 0); });
+      if (최대 > 0) 으뜸[key] = 최대;
+    });
+
+    const 요일 = ["월", "화", "수", "목", "금", "토", "일"];
+    let 머리 = `<th class="name">이름</th>`;
+    날들.forEach(({ key, d }, i) => {
+      머리 += `<th class="${key === 오늘키 ? "today" : ""}">${d.getDate()}<br>
+               <span style="font-weight:400">${요일[i]}</span></th>`;
+    });
+    머리 += `<th class="sum">합계</th>`;
+
+    /* 사람마다 이 주 합계를 먼저 셈해 둡니다 — 합계 1등을 알아야
+       그 칸에도 🔥 를 붙일 수 있어서요 (콩 2026-08-30) */
+    const 줄합 = {};
+    사람.forEach((닉) => {
+      줄합[닉] = 날들.reduce((n, { key }) => n + (값[닉][key] || 0), 0);
+    });
+    const 주으뜸 = Math.max(...사람.map((닉) => 줄합[닉]));
+
+    let 몸 = "";
+    const 날합 = {};
+    let 통합 = 0;
+    사람.forEach((닉) => {
+      let 칸 = `<td class="name">${esc(닉)}</td>`;
+      날들.forEach(({ key }) => {
+        const n = 값[닉][key] || 0;
+        날합[key] = (날합[key] || 0) + n;
+        칸 += n > 0
+          ? `<td class="n${으뜸[key] === n ? " top" : ""}">${fmt(n)}</td>`
+          : `<td class="z">·</td>`;
+      });
+      통합 += 줄합[닉];
+      /* 이 주에 제일 많이 쓴 사람의 합계 칸에도 같은 표시 */
+      const 왕 = 주으뜸 > 0 && 줄합[닉] === 주으뜸 ? " top" : "";
+      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum${왕}">${fmt(줄합[닉])}</td></tr>`;
+    });
+
+    let 바닥 = `<td class="name">방 전체</td>`;
+    날들.forEach(({ key }) => { 바닥 += `<td class="n">${날합[key] ? fmt(날합[key]) : "·"}</td>`; });
+    바닥 += `<td class="n">${fmt(통합)}</td>`;
+
+    /* 👥 그날 쓴 사람 수 (2026-08-30 — 콩 "인원수만 표시되면 한눈에")
+       ★ 맨 오른쪽은 일곱 날을 더한 값이 아니라 **이 주에 쓴 사람 수**입니다.
+         날마다 더하면 사흘 쓴 사람이 셋으로 세어져요 — 그건 인원이 아닙니다. */
+    let 인원 = `<td class="name">쓴 사람</td>`;
+    날들.forEach(({ key }) => {
+      const n = 사람.filter((닉) => (값[닉][key] || 0) > 0).length;
+      인원 += `<td class="n cnt">${n ? n + "명" : "·"}</td>`;
+    });
+    인원 += `<td class="n cnt">${사람.length}명</td>`;
+
+    el("scroll").innerHTML = `
+      <table>
+        <thead><tr>${머리}</tr></thead>
+        <tbody>${몸}</tbody>
+        <tfoot><tr>${바닥}</tr><tr class="cnt-row">${인원}</tr></tfoot>
+      </table>`;
+  }
+
+  function 옮기기(주) {
+    _월요일 = new Date(_월요일.getFullYear(), _월요일.getMonth(), _월요일.getDate() + 주 * 7);
+    그리기();
+  }
+
+  el("btn").addEventListener("click", 들어가기);
+  ["nick", "pw"].forEach((id) => el(id).addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); 들어가기(); }
+  }));
+  el("prev").addEventListener("click", () => 옮기기(-1));
+  el("next").addEventListener("click", () => 옮기기(1));
+  el("thisw").addEventListener("click", () => { _월요일 = 그주월요일(new Date()); 그리기(); });
+})();
+</script>
+</body>
+</html>
