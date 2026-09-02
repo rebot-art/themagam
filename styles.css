@@ -11185,6 +11185,16 @@ html[data-lite] .rb-hrow{ animation: none; }
    뜻이 없는 값이라는 걸 흐릿하게 보여줍니다. */
 #proom-vol:disabled{ opacity:.35; cursor:default; }
 
+/* ▶ 시험 — 소리가 정각 경계에만 나서 평소엔 들을 일이 없는 걸
+   보완합니다(2026-09-02 콩 "들어보질 못했네"). 🔔 와 같은 결로
+   작고 수수하게 — 늘 쓰는 단추가 아니라 도드라지면 안 됩니다. */
+.pr-vol-test{
+  flex:none; border:none; background:transparent; cursor:pointer;
+  padding:0; font-size:9px; line-height:1; opacity:.6; color:var(--muted);
+  font-family:inherit;
+}
+.pr-vol-test:hover{ opacity:1; color:var(--accent); }
+
 /* 단계가 바뀔 때 한 번 반짝 — 소리를 꺼 둔 사람도 알아채라고 */
 .pr-flash{ animation: prFlash .9s ease; }
 @keyframes prFlash{ 0%{ background: var(--accent-softer, rgba(179,55,43,.10)); } 100%{ background: transparent; } }

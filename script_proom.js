@@ -138,10 +138,14 @@
      🔊 알림음 볼륨 — ♪ BGM 볼륨 줄(script_music.js)과 같은 결.
      기기별(AppStore), 서버 쓰기 0. 🔔 켜짐/꺼짐과는 **다른 축**입니다 —
      🔔 는 "울릴지 말지", 이 값은 "울릴 때 얼마나 크게" 입니다.
-     ★ 100 이 예전부터 나던 그 크기입니다(0.06 게인) — 기본값을 100 으로
-       둬서, 슬라이더를 안 건드린 사람은 예전과 똑같이 들립니다. 더 크게는
-       못 올립니다 — "아주 작게" 는 놀라지 않으라고 일부러 잡아 둔
-       상한이라, 그 위는 이 슬라이더로 열어주지 않습니다.
+     ★ [2026-09-02 5~6차 — 콩 "3배"→"5배로"→"10배로"→"음도 두 번
+       울리게, 그리고 20배로" 네 번에 걸쳐 올림] 100 은 이제 게인
+       1.2(예전 0.06 의 20배)입니다. ★ 1.0 을 넘는 값이라 소리 파형이
+       천장에 눌려(clip) 순수한 "삐-" 소리보다 다소 거칠게(찌글거리며)
+       들릴 수 있습니다 — 다만 "더 크게, 더 잘 들리게"가 콩의 목적이라
+       오히려 존재감엔 도움이 될 수 있어 일단 그대로 둠. 기본값은
+       여전히 100. 슬라이더가 있으니 "너무 크면 내리면 그만"이라는 게
+       콩 판단. 상한을 더 낮게 죽여 두던 예전 방침은 걷어냈습니다.
      ===================================================================== */
   const PROOM_VOL_KEY = "proomVol";
   const PROOM_VOL_DEF = 100;
@@ -196,10 +200,15 @@
     if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
   }
 
-  /** 단계가 바뀔 때 짧고 부드럽게 — 기본은 놀라지 않게 아주 작고,
-      볼륨 줄(proom볼륨)로 그보다 더 작게(0 까지)는 낮출 수 있습니다. */
-  function proom소리(휴식) {
-    if (!proom종()) return;
+  /* ★ [2026-09-02 4차 — 콩 "내가 들어보질 못했네??? 소리는 어느 정도로
+     커져???"] 소리가 나는 순간이 **정각 경계(:00·:25·:30·:55)뿐**이라,
+     판을 열어 봐도 그 순간이 아니면 평생 한 번도 못 들을 수 있습니다.
+     거기다 "아주 작게"로 일부러 죽여 둔 소리라 더 그렇고요.
+     그래서 소리 내는 몸통(proom소리내기)과 "정말 울려도 되나" 판단
+     (proom소리 — 🔔 켜짐 확인)을 갈랐습니다. 아래 ▶ 시험 단추는
+     판단을 건너뛰고 몸통만 직접 불러 — 🔔 가 꺼져 있어도, 지금 볼륨
+     그대로 미리 들어볼 수 있습니다. */
+  function proom소리내기(휴식) {
     /* 0 이면 뮤트와 같은 뜻 — exponentialRamp 는 0 을 목표로 못 잡으므로
        여기서 아예 걸러 냅니다 (0 을 넣으면 조용히 에러가 납니다). */
     const 비율 = proom볼륨() / 100;
@@ -210,19 +219,38 @@
       /* 마지막 시도 — 손짓 밖이라 대개 안 풀리지만, 밑져야 본전입니다 */
       if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
       if (ac.state !== "running") return;
-      const 음 = 휴식 ? [523.25, 392.00] : [392.00, 523.25];   // 쉼은 내려가고, 뽀모는 올라가고
+      /* ★ [2026-09-02 6차 — 콩 "음 자체를 두 번 울리게, 띠딘띠딘 처럼"]
+         두 음 쌍(음)을 통째로 한 번 더 이어 붙여 같은 리듬이 두 번
+         반복되게 합니다. 간격(0.16초)은 그대로라 쌍 안·쌍 사이가
+         똑같이 들려 "띠딘띠딘"처럼 이어집니다. */
+      const 쌍 = 휴식 ? [523.25, 392.00] : [392.00, 523.25];   // 쉼은 내려가고, 뽀모는 올라가고
+      const 음 = [...쌍, ...쌍];
       음.forEach((f, i) => {
         const o = ac.createOscillator(), g = ac.createGain();
         o.type = "sine"; o.frequency.value = f;
         const t0 = ac.currentTime + i * 0.16;
         g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(0.06 * 비율, t0 + 0.02);   // ★ 기본은 아주 작게, 볼륨 줄이 그 안에서 조절
+        g.gain.exponentialRampToValueAtTime(1.2 * 비율, t0 + 0.02);   // ★ 0902 6차: 0.06 → 1.2 (20배, 콩 요청) — 볼륨 줄이 그 안에서 조절
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
         o.connect(g); g.connect(ac.destination);
         o.start(t0); o.stop(t0 + 0.17);
       });
       /* ★ ac.close() 를 안 합니다 — 닫으면 다음번에 또 잠긴 채 태어나요 */
     } catch (e) {}
+  }
+
+  /** 단계가 바뀔 때 짧고 부드럽게 — 🔔 가 꺼져 있으면 안 웁니다 */
+  function proom소리(휴식) {
+    if (!proom종()) return;
+    proom소리내기(휴식);
+  }
+
+  /** ▶ 시험 — 🔔 켜짐 여부와 관계없이 지금 볼륨 그대로 한 번 들려줍니다.
+      뽀모 시작(올라가는 두 음)으로 고정 — 어느 쪽이든 소리 자체는
+      같으니 하나만으로 충분합니다. */
+  function proom소리시험() {
+    proom소리풀기();
+    proom소리내기(false);
   }
 
   /* =====================================================================
@@ -278,10 +306,13 @@
               <div class="pr-bar"><i id="proom-bar" style="width:0%"></i></div>
             </div>
           </div>
-          <!-- 도구 세트 — 오른쪽 정렬. 알림음(🔔+볼륨) → 글씨크기 → 인원 순.
+          <!-- 도구 세트 — 오른쪽 정렬. 알림음(🔔+볼륨+▶시험) → 글씨크기 → 인원 순.
                🔔 볼륨 줄은 ♪ BGM 볼륨(script_music.js)과 같은 결로,
                심플하게 슬라이더 하나만. 켜짐/꺼짐은 그대로 🔔 단추가
-               맡고, 이 슬라이더는 "울릴 때 얼마나 크게" 만 정합니다. -->
+               맡고, 이 슬라이더는 "울릴 때 얼마나 크게" 만 정합니다.
+               ▶ 는 소리가 정각 경계(:00·:25·:30·:55)에만 나서 평소엔
+               들을 일이 없는 걸 보완합니다 — 눌러서 바로 확인 (콩
+               2026-09-02 "내가 들어보질 못했네"). -->
           <div class="pr-tools">
             <span class="pr-vol">
               <button type="button" class="pr-bell" id="proom-bell"
@@ -289,6 +320,9 @@
               <input type="range" id="proom-vol" min="0" max="100" step="1"
                      value="${proom볼륨()}" data-proom-vol="1"
                      style="--pr-vol:${proom볼륨()}%" aria-label="알림음 볼륨">
+              <button type="button" class="pr-vol-test" id="proom-vol-test"
+                      data-proom-vol-test="1" aria-label="소리 미리 듣기"
+                      title="지금 볼륨으로 미리 듣기">▶</button>
             </span>
             <span class="pr-fs" title="이 방의 글씨 크기 (이 기기에서만)">
               <button type="button" data-proom-font="-1" aria-label="글씨 작게">－</button>
@@ -679,6 +713,8 @@
       if (글씨) { proom글씨바꾸기(Number(글씨.dataset.proomFont)); el("proom-in")?.focus(); return; }
       if (e.target.closest("[data-proom-cnt]")) { proom명단토글(); return; }
       if (e.target.closest("[data-proom-bell]")) { proom종바꾸기(); el("proom-in")?.focus(); return; }
+      /* ▶ 시험 — 🔔 꺼짐과 무관하게, 지금 볼륨 그대로 한 번 들려줍니다 */
+      if (e.target.closest("[data-proom-vol-test]")) { proom소리시험(); return; }
       if (e.target.closest("[data-proom-send]")) { proom보내기(); return; }
     });
     /* 엔터로 보내기 — ★ 한글 조합 중은 무시합니다 */
