@@ -128,6 +128,37 @@
     b.textContent = on ? "🔔" : "🔕";
     b.classList.toggle("off", !on);
     b.title = on ? "알림 끄기" : "알림 켜기";
+    /* ★ 꺼져 있으면 볼륨 줄도 같이 흐려·잠급니다 — 켜기 전엔 만져도
+       뜻이 없는 값이라, 만질 수 있어 보이면 혼란만 줍니다. */
+    const v = el("proom-vol");
+    if (v) v.disabled = !on;
+  }
+
+  /* =====================================================================
+     🔊 알림음 볼륨 — ♪ BGM 볼륨 줄(script_music.js)과 같은 결.
+     기기별(AppStore), 서버 쓰기 0. 🔔 켜짐/꺼짐과는 **다른 축**입니다 —
+     🔔 는 "울릴지 말지", 이 값은 "울릴 때 얼마나 크게" 입니다.
+     ★ 100 이 예전부터 나던 그 크기입니다(0.06 게인) — 기본값을 100 으로
+       둬서, 슬라이더를 안 건드린 사람은 예전과 똑같이 들립니다. 더 크게는
+       못 올립니다 — "아주 작게" 는 놀라지 않으라고 일부러 잡아 둔
+       상한이라, 그 위는 이 슬라이더로 열어주지 않습니다.
+     ===================================================================== */
+  const PROOM_VOL_KEY = "proomVol";
+  const PROOM_VOL_DEF = 100;
+
+  function proom볼륨() {
+    const v = Number(window.AppStore?.getItem(PROOM_VOL_KEY));
+    return Number.isFinite(v) && v >= 0 && v <= 100 ? v : PROOM_VOL_DEF;
+  }
+  /* --pr-vol 은 먹선이 채워진 만큼을 그리는 값입니다 (CSS 가 읽어요) */
+  function proom볼륨칠하기(v) {
+    const s = el("proom-vol");
+    if (s) s.style.setProperty("--pr-vol", v + "%");
+  }
+  function proom볼륨바꾸기(v) {
+    const nv = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+    try { window.AppStore?.setItem(PROOM_VOL_KEY, String(nv)); } catch (e) {}
+    proom볼륨칠하기(nv);
   }
 
   /* =====================================================================
@@ -165,9 +196,14 @@
     if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
   }
 
-  /** 단계가 바뀔 때 짧고 부드럽게 — 놀라지 않게 아주 작습니다 */
+  /** 단계가 바뀔 때 짧고 부드럽게 — 기본은 놀라지 않게 아주 작고,
+      볼륨 줄(proom볼륨)로 그보다 더 작게(0 까지)는 낮출 수 있습니다. */
   function proom소리(휴식) {
     if (!proom종()) return;
+    /* 0 이면 뮤트와 같은 뜻 — exponentialRamp 는 0 을 목표로 못 잡으므로
+       여기서 아예 걸러 냅니다 (0 을 넣으면 조용히 에러가 납니다). */
+    const 비율 = proom볼륨() / 100;
+    if (비율 <= 0) return;
     try {
       const ac = proomAC얻기();
       if (!ac) return;
@@ -180,7 +216,7 @@
         o.type = "sine"; o.frequency.value = f;
         const t0 = ac.currentTime + i * 0.16;
         g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.02);   // ★ 아주 작게
+        g.gain.exponentialRampToValueAtTime(0.06 * 비율, t0 + 0.02);   // ★ 기본은 아주 작게, 볼륨 줄이 그 안에서 조절
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
         o.connect(g); g.connect(ac.destination);
         o.start(t0); o.stop(t0 + 0.17);
@@ -221,24 +257,46 @@
     _proom틀 = proom틀모양();
     box.innerHTML = `
       <div class="pr-board" style="--pr-fs:${proom글씨()}px">
-        <div class="pr-clock">
-          <div class="pr-big" id="proom-big">25:00</div>
-          <div class="pr-right">
-            <div class="pr-lab">
-              <span class="pr-ph" id="proom-ph">🍅 뽀모</span>
-              <span id="proom-next">· :00 에 휴식</span>
-              <span class="pr-sp"></span>
-              <span class="pr-fs" title="이 방의 글씨 크기 (이 기기에서만)">
-                <button type="button" data-proom-font="-1" aria-label="글씨 작게">－</button>
-                <b id="proom-fs">${proom글씨()}</b>
-                <button type="button" data-proom-font="1" aria-label="글씨 크게">＋</button>
-              </span>
-              <button type="button" class="pr-cnt" id="proom-cnt" data-proom-cnt="1"
-                      title="참여자 보기">1명</button>
+        <!-- ★★ [고침 2026-09-02 2차 — 콩 "타이머 밑단과 진행 바 밑단을
+             같은 선상에, 그게 한 세트. 도구 줄은 그 아래에 확실히 붙는
+             또 다른 세트"] .pr-tools 를 .pr-clock 안(.pr-right 셋째 줄)에
+             넣었더니, 밑선 맞춤(align-items:flex-end)이 타이머를 진행 바가
+             아니라 **도구 줄** 밑에 맞춰 버렸습니다 — 세트가 셋으로
+             쪼개진 것처럼 보인 원인. .pr-head 로 두 세트를 확실히
+             갈랐습니다: [.pr-clock = 타이머+진행바 한 세트] 아래
+             [.pr-tools = 도구 세트, 오른쪽 정렬]. -->
+        <div class="pr-head">
+          <div class="pr-clock">
+            <div class="pr-big" id="proom-big">25:00</div>
+            <div class="pr-right">
+              <!-- [휴식 중 · 시각에 뽀모] — 진행 바 위, 가운데 정렬
+                   (콩 2026-09-02 2차) -->
+              <div class="pr-lab">
+                <span class="pr-ph" id="proom-ph">🍅 뽀모 중</span>
+                <span id="proom-next">· 00:00 에 휴식</span>
+              </div>
+              <div class="pr-bar"><i id="proom-bar" style="width:0%"></i></div>
+            </div>
+          </div>
+          <!-- 도구 세트 — 오른쪽 정렬. 알림음(🔔+볼륨) → 글씨크기 → 인원 순.
+               🔔 볼륨 줄은 ♪ BGM 볼륨(script_music.js)과 같은 결로,
+               심플하게 슬라이더 하나만. 켜짐/꺼짐은 그대로 🔔 단추가
+               맡고, 이 슬라이더는 "울릴 때 얼마나 크게" 만 정합니다. -->
+          <div class="pr-tools">
+            <span class="pr-vol">
               <button type="button" class="pr-bell" id="proom-bell"
                       data-proom-bell="1" aria-label="알림">🔔</button>
-            </div>
-            <div class="pr-bar"><i id="proom-bar" style="width:0%"></i></div>
+              <input type="range" id="proom-vol" min="0" max="100" step="1"
+                     value="${proom볼륨()}" data-proom-vol="1"
+                     style="--pr-vol:${proom볼륨()}%" aria-label="알림음 볼륨">
+            </span>
+            <span class="pr-fs" title="이 방의 글씨 크기 (이 기기에서만)">
+              <button type="button" data-proom-font="-1" aria-label="글씨 작게">－</button>
+              <b id="proom-fs">${proom글씨()}</b>
+              <button type="button" data-proom-font="1" aria-label="글씨 크게">＋</button>
+            </span>
+            <button type="button" class="pr-cnt" id="proom-cnt" data-proom-cnt="1"
+                    title="참여자 보기">1명</button>
           </div>
         </div>
         <div class="pr-pop" id="proom-pop" hidden></div>
@@ -300,13 +358,22 @@
 
     const ph = el("proom-ph");
     if (ph) {
-      ph.textContent = st.휴식 ? "☕ 휴식" : "🍅 뽀모";
+      /* [2026-09-02 — 콩 "뽀모 중"] "지금 이게 뭐 하는 시간인가" 를
+         한 단어(뽀모/휴식)가 아니라 "~ 중"으로 — 지나가는 상태임이
+         더 또렷하게 읽힙니다. */
+      ph.textContent = st.휴식 ? "☕ 휴식 중" : "🍅 뽀모 중";
       ph.classList.toggle("rest", st.휴식);
     }
     const nx = el("proom-next");
     if (nx) {
+      /* [고침 2026-09-02 — 콩 "멘트에 시각을 좀 더 명확하게"] 분만 적던
+         "· :25 에 휴식"은 지금이 몇 시인지 모르면 다음 :25이 5분 뒤인지
+         55분 뒤인지 헷갈립니다. 시:분을 다 적어 못 박습니다. (경계가
+         언제나 :00·:25·:30·:55에 떨어지는 건 여전하지만, 그 계산을
+         읽는 사람이 안 하게 합니다.) */
       const 다음 = new Date(t + st.남은);
-      nx.textContent = "· :" + 두자리(다음.getMinutes()) + " 에 " + (st.휴식 ? "뽀모" : "휴식");
+      nx.textContent = "· " + 두자리(다음.getHours()) + ":" + 두자리(다음.getMinutes())
+        + " 에 " + (st.휴식 ? "뽀모" : "휴식");
     }
     const bar = el("proom-bar");
     if (bar) {
@@ -621,6 +688,13 @@
       if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
       e.preventDefault();
       proom보내기();
+    });
+    /* 🔊 알림음 볼륨 줄 — 끄는 김에 자물쇠도 풀어 둡니다(슬라이더를
+       만지는 것도 손짓이니까요) */
+    host.addEventListener("input", (e) => {
+      if (e.target?.id !== "proom-vol") return;
+      proom소리풀기();
+      proom볼륨바꾸기(e.target.value);
     });
   }
 

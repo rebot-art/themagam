@@ -11080,9 +11080,12 @@ html[data-lite] .rb-hrow{ animation: none; }
 }
 .pr-cnt:hover{ color:var(--accent); }
 
-/* 👥 참여자 명단 팝 — 시계 오른쪽 아래에 자그맣게 */
+/* 👥 참여자 명단 팝 — 도구 줄(n명) 바로 아래에 자그맣게.
+   ★ top 값은 눈대중입니다 — 도구 줄이 진행 바 아래로 내려가며(2026-09-02)
+   판 위쪽 뭉치가 한 줄 더 늘어서 52 → 74로 올렸습니다. 레이아웃이
+   또 바뀌면 이 값도 다시 맞춰야 해요(미리보기로 눈으로 확인). */
 .pr-pop{
-  position:absolute; top:52px; right:11px; z-index:5;
+  position:absolute; top:74px; right:11px; z-index:5;
   min-width:96px; max-width:60%; max-height:46%; overflow-y:auto;
   background:var(--surface); border:1px solid var(--border);
   border-radius:var(--r-md, 10px); padding:6px 10px;
@@ -11102,6 +11105,17 @@ html[data-lite] .rb-hrow{ animation: none; }
    밑이 줄 밑보다 **위에 떠** 보입니다.
    → 숫자를 그 여백만큼 아래로 내려 글자 밑과 줄 밑을 한 선에 둡니다.
    ※ 값(0.19em)은 미리보기에서 슬라이더로 눈으로 맞춘 것입니다. */
+/* ★★★ [고침 2026-09-02 2차 — 콩 "타이머 밑단과 진행 바 밑단이 한 세트,
+   도구 줄은 그 아래에 확실히 붙는 또 다른 세트"] .pr-tools 를 처음엔
+   .pr-clock 안(.pr-right 셋째 줄)에 넣었더니, 바로 아래 밑선 맞춤
+   규칙(align-items:flex-end)이 타이머를 도구 줄 밑에 맞춰 버렸습니다 —
+   세트가 [타이머+단계줄+진행바+도구줄] 하나로 뭉쳐 보인 원인.
+   .pr-head 로 두 세트를 갈랐습니다:
+     .pr-head (column)
+       .pr-clock = 타이머 + [단계·다음시각 / 진행 바] — 밑선 맞춤은
+                   **이 안에서만**, 그래서 타이머 밑단 = 진행 바 밑단.
+       .pr-tools = 도구 세트 — .pr-clock 과는 남남, 그 아래 새 줄. */
+.pr-head{ flex:none; display:flex; flex-direction:column; gap:4px; }
 .pr-clock{ flex:none; display:flex; align-items:flex-end; gap:12px; }
 .pr-big{
   flex:none; font-size:35px; font-weight:var(--fw-bold); letter-spacing:-1px;
@@ -11110,20 +11124,66 @@ html[data-lite] .rb-hrow{ animation: none; }
 }
 .pr-big.rest{ color:#5E8C61; }
 .pr-right{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
-.pr-lab{ display:flex; align-items:center; gap:5px; font-size:11px;
-         color:var(--text-3, #8A93A2); white-space:nowrap; }
+/* [단계·다음시각] — 진행 바 위, **가운데 정렬** (콩 2026-09-02 2차).
+   [고침 2026-09-02] 예전엔 이 줄 하나에 단계·다음시각·글씨크기·인원·
+   알림이 다 있었습니다(.pr-sp 로 오른쪽에 밀어붙여서). 도구들을 아래
+   .pr-tools 로 옮기며 이 줄엔 "지금 뭐 하는 시간인가"만 남았고, 그래서
+   밀어붙일 것도 없어져 .pr-sp 는 걷어냈습니다. */
+.pr-lab{ display:flex; align-items:center; justify-content:center; gap:5px;
+         font-size:11px; color:var(--text-3, #8A93A2); white-space:nowrap; }
 .pr-ph{ font-weight:var(--fw-bold); color:var(--accent); }
 .pr-ph.rest{ color:#5E8C61; }
-.pr-sp{ flex:1; }
-.pr-bell{ flex:none; border:none; background:transparent; cursor:pointer;
-          padding:0 0 0 3px; font-size:12px; line-height:1; opacity:.85;
-          font-family:inherit; }
-.pr-bell:hover{ opacity:1; }
-.pr-bell.off{ opacity:.38; filter:grayscale(1); }
 .pr-bar{ height:7px; border-radius:999px; background:var(--fill-1); overflow:hidden; }
 .pr-bar i{ display:block; height:100%; border-radius:999px; background:var(--accent);
            transition:width .9s linear; }
 .pr-bar i.rest{ background:#5E8C61; }
+
+/* ═══════════════════════════════════════════════════════════
+   🔊 도구 줄 — 타이머 세트 **아래**, 오른쪽 정렬 (2026-09-02 — 콩)
+   알림음(🔔+볼륨) · 글씨크기(.pr-fs, 기존) · 인원(.pr-cnt, 기존) 순.
+   .pr-head 의 직속 자식이라 타이머와 한 줄이 아니라 판 폭 전체를 쓰는
+   **새 줄**입니다 — 그 안에서 오른쪽으로 몰려 있을 뿐.
+   ═══════════════════════════════════════════════════════════ */
+.pr-tools{
+  flex:none; display:flex; align-items:center; justify-content:flex-end; gap:10px;
+}
+.pr-vol{ flex:none; display:flex; align-items:center; gap:4px; }
+.pr-bell{ flex:none; border:none; background:transparent; cursor:pointer;
+          padding:0; font-size:12px; line-height:1; opacity:.85;
+          font-family:inherit; }
+.pr-bell:hover{ opacity:1; }
+.pr-bell.off{ opacity:.38; filter:grayscale(1); }
+/* 볼륨 — ♪ BGM 슬라이더(#music-vol)와 같은 결(가는 선 + 포인트색 점),
+   자리가 좁은 판이라 폭만 줄였습니다. 채워진 만큼은 --pr-vol 을
+   script_proom.js 가 넣어줍니다. */
+#proom-vol{
+  -webkit-appearance: none; appearance: none;
+  flex:none; width: 46px; height: 16px; background: transparent; cursor: pointer;
+}
+#proom-vol::-webkit-slider-runnable-track{
+  height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg,
+    var(--accent) var(--pr-vol, 100%), rgba(120,100,80,.25) var(--pr-vol, 100%));
+}
+/* [고침 2026-09-02 3차 — 콩 "슬라이더를 더 납작하게, 진행 바(.pr-bar
+   7px)의 절반 정도로"] 점이 10px 이라 선은 가늘어도(2px) 도드라져
+   보였습니다. 6px 로 줄이고, 16px 히트박스 한가운데 오도록
+   margin-top 도 다시 셈: -(6-2)/2 = -2px. */
+#proom-vol::-webkit-slider-thumb{
+  -webkit-appearance: none; appearance: none;
+  margin-top: -2px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); border: 1.5px solid rgba(255,255,255,.92);
+  box-shadow: 0 1px 2px rgba(40,30,20,.3);
+}
+#proom-vol::-moz-range-track{ height:2px; border-radius:1px; background: rgba(120,100,80,.25); }
+#proom-vol::-moz-range-progress{ height:2px; border-radius:1px; background: var(--accent); }
+#proom-vol::-moz-range-thumb{
+  width:6px; height:6px; border-radius:50%; background:var(--accent);
+  border:1.5px solid rgba(255,255,255,.92); box-shadow:0 1px 2px rgba(40,30,20,.3);
+}
+/* 🔔 가 꺼져 있으면 script_proom.js 가 disabled 를 켭니다 — 만져도
+   뜻이 없는 값이라는 걸 흐릿하게 보여줍니다. */
+#proom-vol:disabled{ opacity:.35; cursor:default; }
 
 /* 단계가 바뀔 때 한 번 반짝 — 소리를 꺼 둔 사람도 알아채라고 */
 .pr-flash{ animation: prFlash .9s ease; }
