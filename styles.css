@@ -11408,4 +11408,7 @@ html[data-lite] .pr-flash{ animation:none; }
 /* [작업시간 / 뽀모방·토마토 / 상태표] 를 **한 덩어리**로 — 칸 안에서도
    세로 가운데로 모아, 이 덩어리의 중심선이 프사 중심선(.card-body 의
    align-items:center)과 같은 높이에 오게 합니다. */
-.card-wide .card-side{ justify-content: center; }
+.card-wide .card-side{ justify-content: center; gap: 10px; }   /* 줄 사이 5 → 10px (콩 "2배쯤") */
+/* 시간 ↔ 뽀모방·토마토 칩은 한 상자(.card-wh) 안에서 접힌 두 줄이라
+   위 gap 이 안 닿습니다 — 접힌 줄 사이(row-gap)도 같은 10px 로 */
+.card-wide .card-side > .card-wh{ row-gap: 10px; }
