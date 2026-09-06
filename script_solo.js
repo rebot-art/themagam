@@ -400,17 +400,58 @@
   };
 
   /* =====================================================================
-     🃏 카드 모양 실험 — 본방으로 졸업 (2026-09-07)
+     📖 가로형 카드 — 다음 리뉴얼 미리보기 (이 방에서만, 2026-09-07 저녁)
      ---------------------------------------------------------------------
-     2026-09-06 이 방에서 "정사각형이면 어떤 느낌일지"로 시작해 1~7차
-     (눕히기 시도 → 진짜 원인 찾기 → 접고 120% 넓히기 → 상태표|프사
-     나란히·닉네임 박스 전폭)까지 다듬은 가로형 카드가 본방 설정 › 테마
-     탭으로 옮겨 갔습니다. 여기 있던 켬/끔 손(soloGetSquare 등)과
-     프꾸 창의 체크박스는 걷어냈고, 이 방에서도 같은 설정(카드 모양)을
-     그대로 씁니다 — db 가 기기 저장소로 갈아끼워져 있어 따로 손댈 게
-     없습니다. 알맹이: script_ui.js applyCardShape · script_data.js
-     prefs/cardShape · styles.css body.card-wide.
+     2026-09-06 "정사각형이면 어떤 느낌일지"로 시작해 1~7차까지 다듬고
+     잠깐 본방 설정 › 테마 탭까지 갔던 가로형은, 같은 날 운영진 의견
+     ("초반에 선택권이 너무 많고 작업 외 관심이 분산된다")으로 본방에서
+     **통째로 걷어냈습니다.** 콩이 원래 보고 싶던 캡처1 구조는 여기서만
+     스위치로 미리 봅니다:
+         ┌────────────┬─────────┐
+         │  작업 시간  │         │
+         │ 뽀모방/토마토│ 프로필  │
+         │   상태표    │  사진   │
+         ├────────────┴─────────┤
+         │       닉네임 박스       │
+         └────────────────────────┘
+     [어떻게] 켬/끔은 이 기기(localStorage soloCardWide). 알맹이는 본방
+     파일에 그대로 숨어 있는 script_ui.js applyCardShape(카드 마당에
+     .card-wide) + styles.css `.card-wide …` 규칙. 이 방에서만 더 하는
+     일은 하나 — ⏱ 작업시간 줄(.card-wh)을 이름 상자에서 꺼내 쌓기 칸
+     (.card-side) 맨 위로 옮기는 것(아래 재배치). CSS 만으로는 다른
+     부모로 못 건너가서 DOM 을 옮깁니다. applyCardShape 가 매번
+     window.soloCardWideArrange 를 불러 주고, 본방에는 이 함수가 없어
+     아무 일도 안 일어납니다.
+     ★ 5차(09-06)에서 찾은 함정 — 책 표지형이 .card-avatar-wrap·
+       .card-side 에 깔아 둔 max-width:118px·align-self:center·width:100%
+       는 styles.css .card-wide 규칙이 이미 되돌려 둡니다.
      ===================================================================== */
+  const WIDE_KEY = "soloCardWide";
+  function 가로켬() {
+    try { return _store()?.getItem(WIDE_KEY) === "1"; } catch (e) { return false; }
+  }
+  function 가로재배치(넣기) {
+    document.querySelectorAll("#user-cards > .user-card:not(.share-card)").forEach(card => {
+      const wh = card.querySelector(".card-wh");
+      if (!wh) return;
+      if (넣기) {
+        const side = card.querySelector(".card-side");
+        if (side && wh.parentElement !== side) side.insertBefore(wh, side.firstChild);
+      } else {
+        const foot = card.querySelector(".card-foot");
+        if (foot && wh.parentElement !== foot) foot.appendChild(wh);
+      }
+    });
+  }
+  function 가로적용() { window.applyCardShape?.(가로켬() ? "wide" : "tall"); }
+  function 가로바꾸기(on) {
+    try { _store()?.setItem(WIDE_KEY, on ? "1" : "0"); } catch (e) {}
+    가로적용();
+  }
+  window.soloGetWide = 가로켬;
+  window.soloSetWide = 가로바꾸기;
+  window.soloCardWideArrange = 가로재배치;
+  window.addEventListener("load", () => setTimeout(가로적용, 900));   // 카드가 처음 그려진 뒤
   /** 오늘 나올 자리 번호들 — 0번(내 카드)은 늘 맨 앞 */
   function 뽑힌자리() {
     const n = 카드수(), m = 보일수();

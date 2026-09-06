@@ -48,42 +48,12 @@
   window.loadThemeForNick = loadThemeForNick;
   window.saveThemeForNick = saveThemeForNick;
 
-  /* =====================================================================
-     🃏 카드 모양 — 세로형(tall, 원래 책 표지) / 가로형(wide)
-     [2026-09-07 — 콩] 🧘 혼자 방에서 7차까지 다듬은 가로형을 본방으로.
-     테마와 똑같은 결입니다: 서버(users/{닉}/prefs/cardShape)를 먼저 보고,
-     없으면 이 기기 값. 남이 뭘 골랐든 **내 화면에서만** 바뀝니다 —
-     카드 HTML·서버 데이터는 안 건드리고 body 클래스 하나로 CSS만 갈아
-     끼우니까요(그리는 쪽은 script_ui.js 의 applyCardShape).
-     ★ 통신량: 글자 하나(수십 바이트), 쓰기는 고를 때 한 번. 읽기는
-       입장 때 한 번 — 소수점 아래로도 안 잡힙니다.
-     ★ 혼자 방은 db 가 기기 저장소로 갈아끼워져 있어 같은 코드가 그대로
-       기기에 남습니다(따로 처리 없음).
-     ===================================================================== */
-  function _cardShapeLocalKey() {
-    return myNick ? `cardShape_${myNick}` : "cardShape";
-  }
-  async function loadCardShapeForNick() {
-    let shape = "";
-    if (myNick) {
-      try {
-        const snap = await db.ref(`users/${myNick}/prefs/cardShape`).once("value");
-        shape = String(snap.val() || "");
-      } catch (e) {}
-    }
-    if (!shape) shape = AppStore.getItem(_cardShapeLocalKey()) || "";
-    if (shape) AppStore.setItem(_cardShapeLocalKey(), shape);
-    window.applyCardShape?.(shape || "tall");
-  }
-  async function saveCardShapeForNick(shape) {
-    const v = shape === "wide" ? "wide" : "tall";
-    AppStore.setItem(_cardShapeLocalKey(), v);
-    if (myNick) {
-      try { await db.ref(`users/${myNick}/prefs/cardShape`).set(v); } catch (e) {}
-    }
-  }
-  window.loadCardShapeForNick = loadCardShapeForNick;
-  window.saveCardShapeForNick = saveCardShapeForNick;
+  /* [2026-09-07 저녁 — 걷어냄] 여기 잠깐 있던 카드 모양(세로/가로)
+     저장·읽기(users/{닉}/prefs/cardShape)는 같은 날 운영진 의견("초반에
+     선택권이 너무 많고 작업 외 관심이 분산된다")으로 본방에서 통째로
+     걷어냈습니다. 가로형은 🧘 혼자 방 스위치로만 미리 봅니다(script_solo.js).
+     다음 리뉴얼에 되살릴 때 참고: 테마와 같은 길(loadThemeForNick 옆)에
+     load/save 한 쌍 + loadPersonalData 에서 한 줄 부르면 끝이었습니다. */
 
   /* [뺌 2026-08-09] 화면에 안 보이던 할 일 칸(#todo-block) 을 걷어내면서,
      그 DOM 만 그리던 함수 여덟도 함께 없앴습니다.
@@ -642,8 +612,6 @@
 
     // ✅ 테마도 닉 귀속으로 즉시 적용(가능하면 Firebase 우선)
     try { await loadThemeForNick(); } catch (e) {}
-    /* 🃏 카드 모양도 테마 옆에서 같은 길로 (2026-09-07) */
-    try { await loadCardShapeForNick(); } catch (e) {}
 
     db.ref("users/" + myNick).once("value", async (snap) => {
       const data = snap.val();

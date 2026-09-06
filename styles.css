@@ -11357,3 +11357,36 @@ html[data-lite] .pr-flash{ animation:none; }
      폭을 혼자 차지하므로 auto (내용만큼만) */
 .card-wide .card-avatar-wrap{ align-self: flex-end; }
 .card-wide .card-side{ width: auto; }
+
+/* ★★ [2026-09-07 저녁 — 본방에서 걷어냄, 🧘 혼자 방 미리보기만]
+   운영진 의견("초반에 선택권이 너무 많고 작업 외 관심이 분산된다")으로
+   설정 라디오·계정 저장은 뺐습니다. 위·아래 `.card-wide …` 규칙은
+   **다음 리뉴얼용으로 숨겨 둔 것** — 본방에서는 이 클래스가 절대 안
+   붙습니다(script_ui.js applyCardShape 를 부르는 곳이 script_solo.js 뿐).
+   ---------------------------------------------------------------------
+   캡처1 구조(콩이 처음부터 보고 싶던 모양) — 혼자 방 스위치를 켜면:
+       ┌────────────┬─────────┐
+       │  작업 시간  │         │
+       │ 뽀모방/토마토│ 프로필  │
+       │   상태표    │  사진   │
+       ├────────────┴─────────┤
+       │       닉네임 박스       │
+       └────────────────────────┘
+   ⏱ 작업시간 줄(.card-wh)은 script_solo.js 가 .card-side 맨 위로 옮겨
+   줍니다(DOM). 여기서는 그 줄을 [작업시간] / [뽀모방·토마토] 두 줄로
+   가르고(.card-wh-t 에 flex-basis:100% — 뒤따르는 칩은 자동으로 다음
+   줄), 이름 상자 아래에 있을 때 몫이던 점선 구분선을 지웁니다. 세 줄
+   모두 가운데 정렬. 프사는 .card-body{align-items:flex-end} 로 쌓기
+   칸과 아래면을 맞춥니다(7차 그대로). */
+.card-wide .card-side > .card-wh{
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.card-wide .card-side > .card-wh > .card-wh-t{
+  flex: 1 0 100%;           /* 한 줄을 통째로 → 칩들은 다음 줄로 */
+  justify-content: center;
+  margin-right: 0;
+}

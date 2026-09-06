@@ -1142,8 +1142,18 @@ function soloProfileBlockHtml(tgt) {
           ${m >= n ? "만들어 둔 자리가 전부 나옵니다." : `${n}자리 중 ${m}명이 그때그때 뽑혀요.`}
         </span>
       </div>
-      <!-- [2026-09-07] 여기 있던 "🔲 카드를 정사각형으로 (실험)" 스위치는
-           본방 설정 › 테마 › 카드 모양으로 졸업했습니다 (script_ui.js). -->
+      <!-- 📖 가로형 카드 미리보기 (2026-09-07 저녁) — 본방에서는 운영진
+           의견으로 걷어냈고, 다음 리뉴얼까지 이 방에서만 캡처1 구조를
+           미리 봅니다 (script_solo.js 가로적용). -->
+      <label class="set-row" style="gap:8px; align-items:center; cursor:pointer;">
+        <input type="checkbox" id="solo-wide"${window.soloGetWide?.() ? " checked" : ""}>
+        <span>📖 카드 가로형 미리보기 (다음 리뉴얼용)</span>
+      </label>
+      <p class="hint" style="margin:2px 0 0;">
+        왼쪽에 [작업시간 / 뽀모방·토마토 / 상태표]를 쌓고 오른쪽에 프사,
+        아래 닉네임 박스는 카드 너비만큼. <b>이 방에서만</b> 보이고
+        진짜 방은 세로형 그대로예요.
+      </p>
       <div class="set-row">
         <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
         <input type="text" id="solo-card-nick" maxlength="12"
@@ -1431,8 +1441,10 @@ function renderProfilePanel() {
       </p>
       <!-- 🃏/📖 모양 탭 (2026-09-07 — 콩) — 자리는 모양별로 따로 기억합니다.
            세로형 = stickerPos, 가로형 = stickerPosWide. 기본 탭은 내가 지금
-           보는 모양. 안 만진 모양은 기본 모서리 자리로 보여요. -->
-      <div class="set-row" id="prof-stk-shape" style="gap:14px; align-items:center; margin:0 0 6px;">
+           보는 모양. 안 만진 모양은 기본 모서리 자리로 보여요.
+           ★ 같은 날 저녁, 가로형이 본방에서 빠지면서 이 탭은 🧘 혼자 방에서만
+             보입니다(hidden). 본방은 늘 세로형이라 탭이 뜻이 없어요. -->
+      <div class="set-row" id="prof-stk-shape" style="gap:14px; align-items:center; margin:0 0 6px;"${window.SOLO ? "" : " hidden"}>
         <label style="display:flex; gap:5px; align-items:center; cursor:pointer;">
           <input type="radio" name="prof-stk-shape" value="tall"><span>🃏 세로형</span>
         </label>
@@ -1442,7 +1454,7 @@ function renderProfilePanel() {
         <button type="button" class="ghost-btn compact" id="prof-stk-copy" title="다른 모양에서 옮긴 자리를 이 모양으로 가져와요">↔ 자리 가져오기</button>
       </div>
       <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (내 카드 그대로)"></div>
-      <p class="hint" id="prof-stk-shape-hint" style="margin:6px 0 0;"></p>
+      <p class="hint" id="prof-stk-shape-hint" style="margin:6px 0 0;"${window.SOLO ? "" : " hidden"}></p>
       <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
         <span class="slot-name" style="flex:0 0 44px;">기울기</span>
         <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
@@ -1524,6 +1536,10 @@ function bindSoloProfileBlock() {
 
   const shuf = document.getElementById("solo-reshuffle");
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
+
+  /* 📖 가로형 미리보기 (2026-09-07 저녁, 혼자 방 전용) */
+  const wd = document.getElementById("solo-wide");
+  if (wd) wd.onchange = () => { window.soloSetWide?.(wd.checked); };
 
   /* 🖥️ 가짜 화면 사진 */
   /* 🖥️ 뭉갬 슬라이더 — 미리보기를 진짜 방에서 보일 모습으로 (2026-08-21) */
