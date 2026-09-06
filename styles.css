@@ -11309,6 +11309,7 @@ html[data-lite] .pr-flash{ animation:none; }
      안 닿습니다. 지금 화면 배치(dock-mode, 2026-08-12)를 그립니다.
    토글: 설정 › 🧘 혼자 방 › "카드를 정사각형으로"(soloSetSquare,
    이름은 남아 있지만 지금은 "가로만 넓히기" 동작입니다).
+   ★ 7차부터는 그 위에 한 걸음씩 얹습니다 — 아래 7차 주석 참고.
    ===================================================================== */
 body.solo-square{
   --solo-sq-w: calc(var(--card-w) * 1.2);   /* ★ 6차 — 잴 것 없이 고정 비율 하나 */
@@ -11317,11 +11318,23 @@ body.solo-square{
   flex: 0 0 var(--solo-sq-w, var(--card-w));
   max-width: var(--solo-sq-w, var(--card-w));
 }
-body.solo-square .card-body,
-body.solo-square .card-foot{
-  /* ★ 6차 — 안쪽은 원래 폭(패딩 8px×2 뺀 값)에 못박아, 카드가
-     넓어져도 프사·글자는 그대로고 늘어난 가로만 좌우 여백이 됩니다. */
-  max-width: calc(var(--card-w) - 2 * var(--sp-2));
-  margin-left: auto;
-  margin-right: auto;
+/* ★ 7차 (콩 "자, 여기서!! 하나씩 자리를 정해 보자" — 넓힌 카드 위에서
+   ① 상태표 | 프사 를 나란히, 각각의 아래면을 같은 선에 ② 닉네임 박스는
+   카드 너비에 맞춰 늘리기)
+   6차의 "안쪽 못박기"는 걷어냅니다 — .card-foot(닉네임 박스)이 카드
+   전폭을 써야 하고, .card-body 도 가로 배치가 되면 폭이 더 필요합니다.
+   프사 자체는 책 표지형 규칙(width 62% · max-width 118px)이 그대로
+   상한이라 커지지 않습니다. */
+body.solo-square .card-body{
+  flex-direction: row-reverse;   /* DOM(프사 → 상태표) 그대로, 화면만 상태표 | 프사 */
+  align-items: flex-end;         /* 둘의 아래면을 같은 선에 */
+  justify-content: center;
+  gap: 10px;
 }
+/* ★ 5차 때 찾아 둔 "책 표지형 잔여 규칙" 둘 — 세로 쌓기에선 멀쩡하지만
+   가로로 눕히는 순간 겹침을 만듭니다. 여기서 미리 되돌립니다.
+   · .card-avatar-wrap{align-self:center} → 아래면 맞춤을 깨므로 flex-end
+   · .card-side{width:100%} → row 에서 flex-basis 로 둔갑해 옆 칸 전체
+     폭을 혼자 차지하므로 auto (내용만큼만) */
+body.solo-square .card-avatar-wrap{ align-self: flex-end; }
+body.solo-square .card-side{ width: auto; }
