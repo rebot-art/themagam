@@ -11400,3 +11400,12 @@ html[data-lite] .pr-flash{ animation:none; }
   justify-content: center;
   margin-right: 0;
 }
+/* ★ [2026-09-07 새벽 — 콩] ⏱ 아이콘은 빼고 시간 글자는 더 크게.
+   가로형에선 시간이 쌓기 칸의 머리글이라, 작은 아이콘이 오히려 눈을
+   흩뜨립니다. 세로형(.card-foot 안)은 그대로예요. */
+.card-wide .card-side > .card-wh > .card-wh-t small{ display: none; }
+.card-wide .card-side > .card-wh > .card-wh-t b{ font-size: calc(var(--fs-lg) + 6px); }
+/* [작업시간 / 뽀모방·토마토 / 상태표] 를 **한 덩어리**로 — 칸 안에서도
+   세로 가운데로 모아, 이 덩어리의 중심선이 프사 중심선(.card-body 의
+   align-items:center)과 같은 높이에 오게 합니다. */
+.card-wide .card-side{ justify-content: center; }
