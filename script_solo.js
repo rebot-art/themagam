@@ -401,39 +401,69 @@
 
   /* =====================================================================
      🔲 정사각형 카드 실험 (2026-09-06 — 콩 "정사각형이면 어떤 느낌일지
-     궁금해") — 🧘 혼자 방 전용, 진짜 방은 절대 안 건드립니다.
+     궁금해" → 후속 "닉네임 박스도 카드 너비에 맞춰 늘리고, 작업시간은
+     상태표 위에 프사 옆으로, 프사는 원래 사이즈로") — 🧘 혼자 방 전용,
+     진짜 방은 절대 안 건드립니다.
      ---------------------------------------------------------------------
-     [무엇을 하나] 카드 안쪽(프사·이름·목표·⏱ 시간)은 지금 214px 설계
-     그대로 두고(styles.css 의 .card-body/.card-foot 이 그 폭에 못박혀
-     있습니다), 바깥 테두리만 **지금 세로 길이만큼** 넓혀 정사각형에
-     가깝게 만듭니다. 늘어난 가로는 전부 좌우 여백이 됩니다.
+     [무엇을 하나]
+       · 프사·상태표(.card-body)는 지금 214px 설계 그대로 못박아 둡니다
+         (styles.css) — 안 커지고 안 작아집니다.
+       · ⏱ 작업시간 줄(.card-wh)을 이름·목표 상자(.card-foot)에서 꺼내
+         .card-side(상태표가 있던 칸)의 맨 위로 옮깁니다 — 아래 카드재배치()
+         가 하는 일. "작업시간 위 · 상태표 아래, 그 옆에 프사"가 됩니다.
+       · 이름·목표 상자(.card-foot)는 못박지 않고 **카드 폭을 그대로
+         따라가게** 둡니다 — 늘어난 가로만큼 이름·목표가 넓어집니다.
+       · 바깥 테두리(.user-card)는 지금 세로 길이만큼 넓힙니다.
 
-     [왜 한 번만 재도 되나] 안쪽이 이미 폭과 무관하게 고정돼 있어서,
-     바깥을 넓혀도 프사·글자가 다시 커지며 세로가 또 늘어나는
-     되먹임(피드백 루프)이 없습니다. 그래서 --solo-sq-w 를 한 번
-     재서 박아 두면 끝 — 렌더할 때마다 다시 재는 건 카드 구성(인원·
-     목표 길이)이 바뀔 수 있어서일 뿐, 여러 번 굴려야 맞는 값이라서가
-     아닙니다.
+     [왜 두 번 재나] 프사·상태표 쪽은 폭과 무관하게 고정돼 있어 되먹임이
+     없지만, 이름·목표 상자는 이제 폭을 따라가므로 카드가 넓어지면
+     목표 글자가 덜 접혀(줄바꿈이 줄어) **세로가 오히려 살짝 줄 수도**
+     있습니다. 그래서 한 번 재서 넓힌 뒤, 그 넓힌 폭에서 다시 한 번 재
+     어긋나면 맞춥니다. 두 번이면 충분합니다 — 목표 글자 줄 수가 또
+     바뀔 만큼 크게 흔들리지는 않아서요.
      ===================================================================== */
   const SQ_KEY = "soloSquare";
   function 정사각켬() {
     try { return _store()?.getItem(SQ_KEY) === "1"; } catch (e) { return false; }
   }
-  /** 지금 켜져 있으면, 지금 그려진 카드들의 실제 높이를 재서 그 값을
-      가로에 그대로 박습니다. 꺼져 있으면 클래스만 떼고 끝냅니다. */
+  /** ⏱ 작업시간 줄을 옮깁니다 — 켤 때는 .card-side 맨 위로, 끌 때는
+      원래 자리(.card-foot 맨 끝)로 되돌립니다. CSS 만으로는 서로 다른
+      부모(카드-body 쪽 ↔ 카드-foot 쪽)로 못 건너가서 직접 옮깁니다. */
+  function 카드재배치(넣기) {
+    document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)").forEach(card => {
+      const wh = card.querySelector(".card-wh");
+      if (!wh) return;
+      if (넣기) {
+        const side = card.querySelector(".card-side");
+        if (side && wh.parentElement !== side) side.insertBefore(wh, side.firstChild);
+      } else {
+        const foot = card.querySelector(".card-foot");
+        if (foot && wh.parentElement !== foot) foot.appendChild(wh);
+      }
+    });
+  }
+  /** 지금 켜져 있으면, 작업시간을 옮긴 뒤 카드 높이를 재서 그 값을
+      가로에 박습니다(두 번). 꺼져 있으면 작업시간을 되돌리고 끝냅니다. */
   function 정사각적용() {
     const on = 정사각켬();
     document.body.classList.toggle("solo-square", on);
+    카드재배치(on);
     if (!on) return;
-    const 카드들 = document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)");
-    if (!카드들.length) return;
+    const 카드들 = () => document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)");
     /* 가장 큰 키를 씁니다 — 카드마다 목표 글자 길이가 달라 높이가
        제각각인데, 정사각형은 하나의 값을 공유해야 하니(같은 격자
        칸이라) 제일 큰 값을 써야 어떤 카드도 안 잘립니다. */
-    let 최대 = 0;
-    카드들.forEach(c => { 최대 = Math.max(최대, c.getBoundingClientRect().height); });
-    if (최대 > 0) {
-      document.documentElement.style.setProperty("--solo-sq-w", Math.round(최대) + "px");
+    const 재기 = () => {
+      let 최대 = 0;
+      카드들().forEach(c => { 최대 = Math.max(최대, c.getBoundingClientRect().height); });
+      return 최대;
+    };
+    const 일차 = 재기();
+    if (일차 <= 0) return;
+    document.documentElement.style.setProperty("--solo-sq-w", Math.round(일차) + "px");
+    const 이차 = 재기();
+    if (이차 > 0 && Math.round(이차) !== Math.round(일차)) {
+      document.documentElement.style.setProperty("--solo-sq-w", Math.round(이차) + "px");
     }
   }
   /** 설정 체크박스가 부릅니다 */
