@@ -501,6 +501,41 @@
     });
   }
 
+  /* =====================================================================
+     🃏 카드 모양 — 세로형 / 가로형 (2026-09-07, 콩)
+     ---------------------------------------------------------------------
+     🧘 혼자 방에서 1~7차에 걸쳐 다듬은 "가로형"(카드 폭 120%, 상태표 |
+     프사 나란히·아래면 맞춤, 닉네임 박스 전폭)을 본방 설정 › 테마 탭에
+     넣습니다. 클래스 이름은 solo-square → **card-wide** 로 바꿨습니다
+     (혼자 방 냄새를 뺐어요). CSS 는 styles.css 의 body.card-wide 뭉치.
+     저장·읽기는 script_data.js(prefs/cardShape) — 테마와 같은 길.
+     ★ 좁은 화면 안전장치: 833px(NARROW_W) 이하에서는 가로형을 골라
+       뒀어도 세로형으로 그립니다 — 폰에서 120% 카드는 답답해요. 창을
+       넓히면 다시 가로형으로 돌아옵니다(아래 resize).
+     ★ renderUserCards 끝에서도 매번 부릅니다 — 카드를 새로 그려도
+       클래스는 body 에 있어 사실 그대로지만, 좁아졌다 넓어진 사이에
+       한 번 더 맞춰 두면 안전합니다(진짜 방·혼자 방 공용).
+     ===================================================================== */
+  let currentCardShape = "tall";
+  function applyCardShape(shape) {
+    if (shape === "wide" || shape === "tall") currentCardShape = shape;
+    const narrow = window.innerWidth <= (window.NARROW_W || 833);
+    document.body.classList.toggle("card-wide", currentCardShape === "wide" && !narrow);
+    document.querySelectorAll("input[name='set-card-shape']").forEach(r => {
+      r.checked = (r.value === currentCardShape);
+    });
+  }
+  window.applyCardShape = applyCardShape;
+  window.getCardShape = () => currentCardShape;
+  window.addEventListener("resize", () => applyCardShape());
+  document.addEventListener("change", (e) => {
+    const r = e.target;
+    if (!(r instanceof HTMLInputElement) || r.name !== "set-card-shape" || !r.checked) return;
+    applyCardShape(r.value);
+    /* 저장은 script_data.js 가 맡습니다 (이 파일보다 나중에 읽혀요) */
+    window.saveCardShapeForNick?.(r.value);
+  });
+
   /* [뺌 2026-08-09] saveThemeForNick · loadThemeForNick 는 여기서 걷어냈습니다.
 
      같은 이름의 함수가 script_data.js 에도 있었습니다. 두 파일 모두 모듈이

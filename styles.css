@@ -8444,11 +8444,17 @@ html[data-theme-style="studio"] .user-card{
    이 상자는 자리만 잡아주는 액자입니다 — 카드 생김새는 복제본 몫. */
 .stk-card{
   position: relative;
-  width: 214px;                /* 실제 카드 폭 (--card-w) */
+  width: var(--card-w, 214px); /* 실제 카드 폭 (--card-w) */
   margin: 4px auto 0;
   overflow: visible;
   touch-action: none;          /* 폰에서 끌 때 화면이 같이 안 밀리게 */
 }
+/* ★ [2026-09-07 — 콩 "스티커 배치도 가로형/세로형 설정대로 정확히"]
+   복제본은 body.card-wide 의 안쪽 배치(상태표|프사)는 저절로 따라오지만,
+   **폭**은 dock-mode 카드 칸 규칙(.user-cards-grid > *)이라 여기엔 안
+   닿았습니다 — 그래서 가로형인데 액자는 214px 그대로였고, 스티커
+   좌표(%)가 진짜 카드와 어긋났어요. 액자도 같은 폭으로. */
+body.card-wide .stk-card{ width: var(--solo-sq-w, var(--card-w)); }
 /* 실제 카드의 스티커 CSS 를 그대로 쓰되, 편집기 안에서만 잡을 수 있게 */
 .stk-card .card-deco{
   pointer-events: auto;
@@ -11305,16 +11311,21 @@ html[data-lite] .pr-flash{ animation:none; }
    ★ 1~5차 기록(구조·범인 찾기 과정)은 메모리에 그대로 남아 있으니,
      나중에 옆으로 눕히는 배치를 다시 시도하고 싶으면 그 기록에서
      되살릴 수 있습니다.
-   ★ 진짜 방은 body 에 .solo-square 가 절대 안 붙으므로 손끝 하나
-     안 닿습니다. 지금 화면 배치(dock-mode, 2026-08-12)를 그립니다.
-   토글: 설정 › 🧘 혼자 방 › "카드를 정사각형으로"(soloSetSquare,
-   이름은 남아 있지만 지금은 "가로만 넓히기" 동작입니다).
    ★ 7차부터는 그 위에 한 걸음씩 얹습니다 — 아래 7차 주석 참고.
+
+   ★★ [2026-09-07 — 본방으로 졸업] 클래스 이름 solo-square → **card-wide**.
+     이제 설정 › 테마 › 카드 모양(📖 세로형 / 🃏 가로형)에서 고르고,
+     users/{닉}/prefs/cardShape 에 계정별로 저장됩니다(테마와 같은 길,
+     script_data.js). 붙였다 떼는 손은 script_ui.js applyCardShape —
+     833px 이하 좁은 화면에서는 골라 뒀어도 세로형으로 그립니다.
+     남이 뭘 골랐든 **내 화면에서만** 바뀝니다(카드 HTML·서버 데이터
+     불변, body 클래스 하나로 CSS만 갈아 끼움). 지금 화면 배치
+     (dock-mode, 2026-08-12)를 그립니다.
    ===================================================================== */
-body.solo-square{
+body.card-wide{
   --solo-sq-w: calc(var(--card-w) * 1.2);   /* ★ 6차 — 잴 것 없이 고정 비율 하나 */
 }
-.dock-mode.solo-square .user-cards-grid > *:not(.card-row-break){
+.dock-mode.card-wide .user-cards-grid > *:not(.card-row-break){
   flex: 0 0 var(--solo-sq-w, var(--card-w));
   max-width: var(--solo-sq-w, var(--card-w));
 }
@@ -11325,7 +11336,7 @@ body.solo-square{
    전폭을 써야 하고, .card-body 도 가로 배치가 되면 폭이 더 필요합니다.
    프사 자체는 책 표지형 규칙(width 62% · max-width 118px)이 그대로
    상한이라 커지지 않습니다. */
-body.solo-square .card-body{
+body.card-wide .card-body{
   flex-direction: row-reverse;   /* DOM(프사 → 상태표) 그대로, 화면만 상태표 | 프사 */
   align-items: flex-end;         /* 둘의 아래면을 같은 선에 */
   justify-content: center;
@@ -11336,5 +11347,5 @@ body.solo-square .card-body{
    · .card-avatar-wrap{align-self:center} → 아래면 맞춤을 깨므로 flex-end
    · .card-side{width:100%} → row 에서 flex-basis 로 둔갑해 옆 칸 전체
      폭을 혼자 차지하므로 auto (내용만큼만) */
-body.solo-square .card-avatar-wrap{ align-self: flex-end; }
-body.solo-square .card-side{ width: auto; }
+body.card-wide .card-avatar-wrap{ align-self: flex-end; }
+body.card-wide .card-side{ width: auto; }

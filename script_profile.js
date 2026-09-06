@@ -1142,22 +1142,8 @@ function soloProfileBlockHtml(tgt) {
           ${m >= n ? "만들어 둔 자리가 전부 나옵니다." : `${n}자리 중 ${m}명이 그때그때 뽑혀요.`}
         </span>
       </div>
-      <!-- [2026-09-06 — 콩 "정사각형이면 어떤 느낌일지 궁금해" → "닉네임
-           박스도 늘리고, 작업시간은 상태표 위로" → 3차 그림으로
-           [작업시간/뽀모방·토마토/상태표] 왼쪽 쌓기 + 프사 오른쪽 지정,
-           "크기는 네가 판단해서 조화롭게"] 이 방에서만 확인하는
-           실험용 스위치. -->
-      <label class="set-row" style="gap:8px; align-items:center; cursor:pointer;">
-        <input type="checkbox" id="solo-square"${window.soloGetSquare?.() ? " checked" : ""}>
-        <span>🔲 카드를 정사각형으로 (실험)</span>
-      </label>
-      <p class="hint" style="margin:2px 0 0;">
-        왼쪽에 [작업시간 / 뽀모방·토마토 / 상태표]를 쌓고, 오른쪽에 프사를
-        나란히 둬요. 프사 크기는 그 쌓은 높이에 맞춰 자라고, 카드 전체도
-        여유 있게 조금 더 키워서 겹치거나 삐져나오지 않게 했습니다.
-        이름·목표 상자는 늘어난 카드 폭을 그대로 따라가 넓어져요.
-        <b>이 방에서만</b> 보이고 진짜 방은 그대로예요.
-      </p>
+      <!-- [2026-09-07] 여기 있던 "🔲 카드를 정사각형으로 (실험)" 스위치는
+           본방 설정 › 테마 › 카드 모양으로 졸업했습니다 (script_ui.js). -->
       <div class="set-row">
         <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
         <input type="text" id="solo-card-nick" maxlength="12"
@@ -1525,10 +1511,6 @@ function bindSoloProfileBlock() {
 
   const shuf = document.getElementById("solo-reshuffle");
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
-
-  /* 🔲 정사각형 카드 실험 (2026-09-06) — 켜고 끄면 지금 카드로 바로 잽니다 */
-  const sq = document.getElementById("solo-square");
-  if (sq) sq.onchange = () => { window.soloSetSquare?.(sq.checked); };
 
   /* 🖥️ 가짜 화면 사진 */
   /* 🖥️ 뭉갬 슬라이더 — 미리보기를 진짜 방에서 보일 모습으로 (2026-08-21) */
