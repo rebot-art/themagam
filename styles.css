@@ -11346,7 +11346,7 @@ html[data-lite] .pr-flash{ animation:none; }
    상한이라 커지지 않습니다. */
 .card-wide .card-body{
   flex-direction: row-reverse;   /* DOM(프사 → 상태표) 그대로, 화면만 상태표 | 프사 */
-  align-items: flex-end;         /* 둘의 아래면을 같은 선에 */
+  align-items: center;           /* 쌓기 칸과 프사의 중심선을 같게 (7차의 flex-end 에서 바꿈) */
   justify-content: center;
   gap: 10px;
 }
@@ -11355,8 +11355,18 @@ html[data-lite] .pr-flash{ animation:none; }
    · .card-avatar-wrap{align-self:center} → 아래면 맞춤을 깨므로 flex-end
    · .card-side{width:100%} → row 에서 flex-basis 로 둔갑해 옆 칸 전체
      폭을 혼자 차지하므로 auto (내용만큼만) */
-.card-wide .card-avatar-wrap{ align-self: flex-end; }
-.card-wide .card-side{ width: auto; }
+/* ★ [2026-09-07 새벽 — 콩 캡처 "프사가 카드 밖으로 밀려난 카드가 있어,
+   전부 같은 자리에" + "쌓기 칸과 프사의 중심선을 같게"]
+   ① 밀려난 이유: 프사 칸이 width:62%(책 표지형) 그대로라 쌓기 칸이
+      넓은 카드(🔥WRITE🔥·💻multiT 처럼 긴 알약)에서는 둘의 합이 카드
+      안쪽 폭을 넘어 프사가 오른쪽 벽 밖으로 나갔습니다. 프사는 118px
+      로 못박고(책 표지형 상한과 같은 값이라 크기는 그대로), **쌓기 칸이
+      남은 폭에 맞춰 줄어들게**(flex:1 1 auto + min-width:0) 뒤집습니다.
+      그러면 프사는 어느 카드든 같은 자리(오른쪽 끝)에 섭니다.
+   ② 중심선: 아래면 맞춤(flex-end) → 가운데 맞춤(center). 세 줄 쌓기의
+      한가운데와 프사의 한가운데가 같은 높이. */
+.card-wide .card-avatar-wrap{ flex: 0 0 118px; width: 118px; align-self: center; }
+.card-wide .card-side{ flex: 1 1 auto; width: auto; min-width: 0; }
 
 /* ★★ [2026-09-07 저녁 — 본방에서 걷어냄, 🧘 혼자 방 미리보기만]
    운영진 의견("초반에 선택권이 너무 많고 작업 외 관심이 분산된다")으로
