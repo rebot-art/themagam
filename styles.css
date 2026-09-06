@@ -11377,38 +11377,46 @@ html[data-lite] .pr-flash{ animation:none; }
    캡처1 구조(콩이 처음부터 보고 싶던 모양) — 혼자 방 스위치를 켜면:
        ┌────────────┬─────────┐
        │  작업 시간  │         │
-       │ 뽀모방/토마토│ 프로필  │
-       │   상태표    │  사진   │
+       │   상태표    │ 프로필  │
+       │ 뽀모방/토마토│  사진   │
        ├────────────┴─────────┤
        │       닉네임 박스       │
        └────────────────────────┘
-   ⏱ 작업시간 줄(.card-wh)은 script_solo.js 가 .card-side 맨 위로 옮겨
-   줍니다(DOM). 여기서는 그 줄을 [작업시간] / [뽀모방·토마토] 두 줄로
-   가르고(.card-wh-t 에 flex-basis:100% — 뒤따르는 칩은 자동으로 다음
-   줄), 이름 상자 아래에 있을 때 몫이던 점선 구분선을 지웁니다. 세 줄
-   모두 가운데 정렬. 프사는 .card-body{align-items:flex-end} 로 쌓기
-   칸과 아래면을 맞춥니다(7차 그대로). */
+   (처음 그림은 상태표가 맨 아래였는데, 09-07 새벽 콩이 "상태표가 중심"
+   으로 순서를 바꿨습니다.) 줄 세우기는 script_solo.js 가로재배치() 가
+   DOM 을 옮겨서 하고, 여기 규칙은 그 뒤의 생김새입니다. */
+/* ★ [2026-09-07 새벽 — 콩 "작업시간 / 상태표 / 뽀모방·토마토 순, 상태표가
+   중심"] script_solo.js 가로재배치() 가 시간 글자(.card-wh-t)를 칩 상자
+   (.card-wh)에서 꺼내 쌓기 칸 맨 위에, 칩 상자는 맨 아래에 세웁니다.
+   그래서 시간 글자는 이제 .card-wh 의 자식이 아니라 — 원래 `.card-wh
+   .card-wh-t …` 규칙(크기·색·margin-right:auto)이 안 닿아 여기서 다시
+   적습니다. ⏱ 아이콘은 뺍니다(가로형에선 머리글이라 눈만 흩뜨림).
+   색은 --ink-wh(프로필 편집의 작업시간 글자색) — 원래 .card-foot 에만
+   걸린 변수라 가로재배치() 가 값을 같이 들고 옵니다. */
+.card-wide .card-side > .card-wh-t{
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.card-wide .card-side > .card-wh-t small{ display: none; }
+.card-wide .card-side > .card-wh-t b{
+  font-size: calc(var(--fs-lg) + 8px);      /* 콩 "약간 더 커도 돼" (+6 → +8) */
+  font-weight: var(--fw-bold);
+  color: var(--ink-wh, var(--accent));
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
+  line-height: 1.1;
+}
+/* 칩 상자(뽀모방·토마토) — 이름 상자 아래에 있을 때 몫이던 점선 구분선은
+   지우고 가운데로 */
 .card-wide .card-side > .card-wh{
-  flex-wrap: wrap;
   justify-content: center;
   margin-top: 0;
   padding-top: 0;
   border-top: none;
 }
-.card-wide .card-side > .card-wh > .card-wh-t{
-  flex: 1 0 100%;           /* 한 줄을 통째로 → 칩들은 다음 줄로 */
-  justify-content: center;
-  margin-right: 0;
-}
-/* ★ [2026-09-07 새벽 — 콩] ⏱ 아이콘은 빼고 시간 글자는 더 크게.
-   가로형에선 시간이 쌓기 칸의 머리글이라, 작은 아이콘이 오히려 눈을
-   흩뜨립니다. 세로형(.card-foot 안)은 그대로예요. */
-.card-wide .card-side > .card-wh > .card-wh-t small{ display: none; }
-.card-wide .card-side > .card-wh > .card-wh-t b{ font-size: calc(var(--fs-lg) + 6px); }
-/* [작업시간 / 뽀모방·토마토 / 상태표] 를 **한 덩어리**로 — 칸 안에서도
+/* [작업시간 / 상태표 / 뽀모방·토마토] 를 **한 덩어리**로 — 칸 안에서도
    세로 가운데로 모아, 이 덩어리의 중심선이 프사 중심선(.card-body 의
-   align-items:center)과 같은 높이에 오게 합니다. */
-.card-wide .card-side{ justify-content: center; gap: 10px; }   /* 줄 사이 5 → 10px (콩 "2배쯤") */
-/* 시간 ↔ 뽀모방·토마토 칩은 한 상자(.card-wh) 안에서 접힌 두 줄이라
-   위 gap 이 안 닿습니다 — 접힌 줄 사이(row-gap)도 같은 10px 로 */
-.card-wide .card-side > .card-wh{ row-gap: 10px; }
+   align-items:center)과 같은 높이에. 줄 사이는 10px(콩 "2배쯤"). */
+.card-wide .card-side{ justify-content: center; gap: 10px; }

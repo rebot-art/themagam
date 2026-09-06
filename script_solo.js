@@ -430,16 +430,33 @@
   function 가로켬() {
     try { return _store()?.getItem(WIDE_KEY) === "1"; } catch (e) { return false; }
   }
+  /* ★ [2026-09-07 새벽 — 콩 "순서를 작업시간 / 상태표 / 뽀모방·토마토 로,
+       상태표가 중심"] 시간 글자(.card-wh-t)와 칩 상자(.card-wh)를 갈라
+     쌓기 칸에 [시간, 상태표, 칩] 순으로 세웁니다. 끌 때는 시간을 칩 상자
+     맨 앞으로 되돌리고 상자를 이름 상자 끝으로.
+     ★ 작업시간 글자색(--ink-wh)은 이름 상자(.card-foot)의 style 에만
+       걸려 있어서, 꺼내 오면 색이 풀립니다(콩: "프로필 편집에서 색 변경이
+       안 먹어" — 혼자 방 탓이 아니라 이 이사 탓). 이사할 때 값을 같이
+       들고 옵니다. */
   function 가로재배치(넣기) {
     document.querySelectorAll("#user-cards > .user-card:not(.share-card)").forEach(card => {
       const wh = card.querySelector(".card-wh");
       if (!wh) return;
+      const wht = card.querySelector(".card-wh-t");
+      const side = card.querySelector(".card-side");
+      const foot = card.querySelector(".card-foot");
+      const state = side?.querySelector(".card-state-row");
       if (넣기) {
-        const side = card.querySelector(".card-side");
-        if (side && wh.parentElement !== side) side.insertBefore(wh, side.firstChild);
+        if (!side) return;
+        if (wht && wht.parentElement !== side) side.insertBefore(wht, side.firstChild);
+        if (wh.parentElement !== side) side.appendChild(wh);          // 칩은 맨 뒤
+        if (state && state.nextElementSibling !== wh) side.insertBefore(state, wh);
+        const ink = foot?.style.getPropertyValue("--ink-wh");
+        if (wht) wht.style.setProperty("--ink-wh", ink || "");
       } else {
-        const foot = card.querySelector(".card-foot");
+        if (wht && wht.parentElement !== wh) wh.insertBefore(wht, wh.firstChild);
         if (foot && wh.parentElement !== foot) foot.appendChild(wh);
+        if (wht) wht.style.removeProperty("--ink-wh");
       }
     });
   }
