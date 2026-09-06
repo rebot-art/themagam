@@ -11348,7 +11348,7 @@ html[data-lite] .pr-flash{ animation:none; }
   flex-direction: row-reverse;   /* DOM(프사 → 상태표) 그대로, 화면만 상태표 | 프사 */
   align-items: center;           /* 쌓기 칸과 프사의 중심선을 같게 (7차의 flex-end 에서 바꿈) */
   justify-content: center;
-  gap: 10px;
+  gap: 6px;                      /* 상태표 박스 ↔ 프사: 10 → 6px (콩 "현재의 60%") */
 }
 /* ★ 5차 때 찾아 둔 "책 표지형 잔여 규칙" 둘 — 세로 쌓기에선 멀쩡하지만
    가로로 눕히는 순간 겹침을 만듭니다. 여기서 미리 되돌립니다.
@@ -11419,4 +11419,17 @@ html[data-lite] .pr-flash{ animation:none; }
 /* [작업시간 / 상태표 / 뽀모방·토마토] 를 **한 덩어리**로 — 칸 안에서도
    세로 가운데로 모아, 이 덩어리의 중심선이 프사 중심선(.card-body 의
    align-items:center)과 같은 높이에. 줄 사이는 10px(콩 "2배쯤"). */
-.card-wide .card-side{ justify-content: center; gap: 10px; }
+.card-wide .card-side{
+  justify-content: center;
+  gap: 10px;
+  /* ★ [콩] "상태표 박스"(작업시간/상태표/뽀모·토마토 덩어리)에도 이름
+     상자처럼 배경을 — 다만 절반 연하게. 이름 상자 안에 있을 땐 작업시간이
+     그 배경 덕에 잘 읽혔는데 꺼내 오니 맨바닥이라서요. 이름 상자
+     (.card-foot)와 같은 재료(--foot-veil, 흐림, 둥근 모서리)를 쓰되
+     불투명도만 50% — 테마가 바뀌면 같이 따라갑니다. */
+  padding: 7px 7px 8px;
+  border-radius: var(--r-md);
+  background-color: color-mix(in srgb, var(--foot-veil) 50%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
