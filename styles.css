@@ -11357,10 +11357,31 @@ body.solo-square .card-body{
 body.solo-square .card-avatar-wrap{
   flex: 0 0 var(--solo-avatar-sq, 130px);
   width: var(--solo-avatar-sq, 130px);   /* JS 가 쌓기 칸의 키를 재서 박습니다 */
+  /* ★ 5차 — 진짜 범인을 찾았습니다. "책 표지형(2형)" 카드가 원래
+     .card-avatar-wrap 에 깔아 둔 max-width:118px · align-self:center
+     (아래 4780줄대, 세로 쌓기에서는 "사진을 가운데 두고 너무 커지지
+     않게"라는 뜻으로 멀쩡한 값)를 여태 안 건드리고 있었습니다.
+     row-reverse 로 눕히면 이 두 값이 그대로 살아남아 — 새로 잰 프사
+     폭(--solo-avatar-sq)을 118px 로 도로 눌러 버리고, 자리도 옆 쌓기
+     칸 키의 한가운데로 당겨서 — 4차까지 프사 크기를 아무리 바꿔도
+     "탈주"가 똑같이 보였던 이유입니다(그 계산 자체는 안 쓰이고
+     있었으니까요). 명시적으로 되돌립니다. */
+  max-width: none;
+  align-self: flex-start;
 }
 /* .card-avatar 자체는 그대로 둡니다 — 원래(폭 100% → aspect-ratio →
    높이) 방향이 이미 검증돼 있어, 위에서 avatar-wrap 의 폭만 바꿔도
    충분합니다. */
+body.solo-square .card-side{
+  /* ★ 5차 — 위와 같은 뿌리. "책 표지형" 이 .card-side 에 깔아 둔
+     width:100% (아래 4790줄) 는 세로 쌓기(column)에서는 "칸 폭
+     그대로"라는 뜻이라 멀쩡했지만, row-reverse 로 눕히는 순간
+     flex-basis:auto 가 이 width 값을 그대로 물려받는 규칙 때문에
+     .card-side 가 "옆 칸(.card-body) 전체 폭의 100%"를 요구해
+     버렸습니다 — 프사와 자리를 나눠 갖지 못하고 그 위에 겹친 진짜
+     이유였습니다. auto 로 되돌려 내용만큼만 차지하게 합니다. */
+  width: auto;
+}
 body.solo-square .card-side > .card-wh{
   flex-wrap: wrap;
   margin-top: 0;

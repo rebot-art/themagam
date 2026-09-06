@@ -404,8 +404,24 @@
      궁금해" → "닉네임 박스도 늘리고, 작업시간은 상태표 위로" → 3차
      "그림처럼: [작업시간/뽀모방·토마토/상태표] 를 왼쪽에 쌓고 프사는
      오른쪽, 크기는 네가 판단해서 조화롭게" → 4차 "카드 밖으로
-     탈주하네 ㅋㅋ, 카드 사이즈 좀 커져도 되니까 정리해줘") — 🧘 혼자
-     방 전용, 진짜 방은 절대 안 건드립니다.
+     탈주하네 ㅋㅋ, 카드 사이즈 좀 커져도 되니까 정리해줘" → 5차
+     "여전히 탈주 사태야 ㅎㅎ, 급한 거 아니니까 차근차근 해보자.
+     구조는 그림처럼 그대로, 프로필 카드는 기존 세로형 카드의 높이
+     까지는 커져도 돼") — 🧘 혼자 방 전용, 진짜 방은 절대 안 건드립니다.
+
+     ★ 5차 — 4차까지 못 찾던 진짜 원인 (styles.css 쪽에서 고쳤습니다)
+     .card-avatar-wrap · .card-side 는 원래 "책 표지형(세로 쌓기)"
+     카드 몫으로 max-width:118px · align-self:center · width:100% 를
+     이미 갖고 있었습니다. 세로 쌓기에서는 멀쩡한 값인데, 이 실험이
+     .card-body 를 row-reverse 로 눕히면서도 저 셋을 안 건드리고
+     있었던 게 문제였습니다 — 프사 폭을 JS 로 아무리 다시 재서 박아도
+     max-width:118px 가 도로 눌러 버리고, .card-side 는 width:100%가
+     row 배치에서 flex-basis 로 둔갑해 옆 칸(.card-body) 전체 폭을
+     혼자 요구해 버렸습니다. 그러니 4차에서 프사 크기 계산 방식을
+     통째로 바꿔도(3차: aspect-ratio 역방향 → 4차: JS 로 폭 못박기)
+     화면은 똑같이 겹쳤던 거예요 — 애초에 그 계산값이 안 먹히고
+     있었으니까요. styles.css 에 3줄(max-width:none, align-self:
+     flex-start, .card-side width:auto)을 더해 되돌렸습니다.
      ---------------------------------------------------------------------
      [무엇을 하나]
        · ⏱ 작업시간 줄(.card-wh)을 이름·목표 상자(.card-foot)에서 꺼내
@@ -442,6 +458,32 @@
   const SQ_PAD = 12;   // ★ 4차 여유분 — "카드 사이즈 좀 커져도 되니까"
   function 정사각켬() {
     try { return _store()?.getItem(SQ_KEY) === "1"; } catch (e) { return false; }
+  }
+
+  /** ★ 5차 — "프로필 카드는 기존 세로형 프로필 카드의 높이까지는
+      커져도 돼"(콩)의 상한값을 잽니다.
+      [왜 복제본으로 재나] 지금 화면은 이미 정사각형(row-reverse)으로
+      누워 있을 수 있어서, 실제 카드를 그대로 재면 "원래 세로형" 높이가
+      아니라 지금 모습의 높이가 나옵니다. 그래서 카드 하나를 복제해
+      .card-wh 를 원래 자리(.card-foot 끝)로 되돌리고, body 의
+      solo-square 클래스를 잠깐 뺀 채(=책 표지형 규칙이 도로 적용된
+      채) 화면 밖에서 잰 뒤 즉시 원상복구합니다 — 화면에는 전혀
+      드러나지 않는, 재는 동안만의 일입니다. */
+  function 세로높이재기() {
+    const 카드 = document.querySelector(".user-cards-grid > .user-card:not(.share-card)");
+    if (!카드) return 0;
+    const 복제 = 카드.cloneNode(true);
+    const wh = 복제.querySelector(".card-wh");
+    const foot = 복제.querySelector(".card-foot");
+    if (wh && foot && wh.parentElement !== foot) foot.appendChild(wh);
+    복제.style.cssText = "position:absolute; visibility:hidden; pointer-events:none; left:-99999px; top:0;";
+    document.body.appendChild(복제);
+    const 뺐다 = document.body.classList.contains("solo-square");
+    if (뺐다) document.body.classList.remove("solo-square");
+    const h = 복제.getBoundingClientRect().height;
+    if (뺐다) document.body.classList.add("solo-square");
+    복제.remove();
+    return h;
   }
   /** ⏱ 작업시간 줄을 옮깁니다 — 켤 때는 .card-side 맨 위로, 끌 때는
       원래 자리(.card-foot 맨 끝)로 되돌립니다. CSS 만으로는 서로 다른
@@ -500,9 +542,22 @@
     if (일차 <= 0) return;
     document.documentElement.style.setProperty("--solo-sq-w", Math.round(일차) + "px");
     const 이차 = 재기();
-    if (이차 > 0 && Math.round(이차) !== Math.round(일차)) {
-      document.documentElement.style.setProperty("--solo-sq-w", Math.round(이차) + "px");
+    let 최종 = (이차 > 0 && Math.round(이차) !== Math.round(일차)) ? 이차 : 일차;
+
+    /* ③ 상한 — "기존 세로형 프로필 카드의 높이까지는 커져도 돼"(콩,
+       5차). 그보다 커지려 하면 그 값으로 눌러 앉히고, 프사도 같은
+       비율로 줄여 안쪽 내용이 눌린 상자 밖으로 넘치지 않게 합니다. */
+    const 세로한계 = 세로높이재기();
+    if (세로한계 > 0 && 최종 > 세로한계) {
+      const 비율 = 세로한계 / 최종;
+      const 지금아바타 = parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue("--solo-avatar-sq")) || 0;
+      if (지금아바타 > 0) {
+        document.documentElement.style.setProperty("--solo-avatar-sq", Math.round(지금아바타 * 비율) + "px");
+      }
+      최종 = 세로한계;
     }
+    document.documentElement.style.setProperty("--solo-sq-w", Math.round(최종) + "px");
   }
   /** 설정 체크박스가 부릅니다 */
   function 정사각바꾸기(on) {
