@@ -1142,6 +1142,18 @@ function soloProfileBlockHtml(tgt) {
           ${m >= n ? "만들어 둔 자리가 전부 나옵니다." : `${n}자리 중 ${m}명이 그때그때 뽑혀요.`}
         </span>
       </div>
+      <!-- [2026-09-06 — 콩 "정사각형이면 어떤 느낌일지 궁금해"] 이 방에서만
+           확인하는 실험용 스위치. 안쪽(프사·이름·목표)은 그대로, 가로만
+           지금 세로 길이만큼 넓힙니다. -->
+      <label class="set-row" style="gap:8px; align-items:center; cursor:pointer;">
+        <input type="checkbox" id="solo-square"${window.soloGetSquare?.() ? " checked" : ""}>
+        <span>🔲 카드를 정사각형으로 (실험)</span>
+      </label>
+      <p class="hint" style="margin:2px 0 0;">
+        세로 길이는 지금 그대로 두고 가로만 넓혀요. 안쪽(프사·이름·목표·⏱ 시간)은
+        하나도 안 바뀌고, 늘어난 자리는 좌우 여백이 됩니다. <b>이 방에서만</b> 보이고
+        진짜 방은 그대로예요.
+      </p>
       <div class="set-row">
         <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
         <input type="text" id="solo-card-nick" maxlength="12"
@@ -1509,6 +1521,10 @@ function bindSoloProfileBlock() {
 
   const shuf = document.getElementById("solo-reshuffle");
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
+
+  /* 🔲 정사각형 카드 실험 (2026-09-06) — 켜고 끄면 지금 카드로 바로 잽니다 */
+  const sq = document.getElementById("solo-square");
+  if (sq) sq.onchange = () => { window.soloSetSquare?.(sq.checked); };
 
   /* 🖥️ 가짜 화면 사진 */
   /* 🖥️ 뭉갬 슬라이더 — 미리보기를 진짜 방에서 보일 모습으로 (2026-08-21) */

@@ -399,6 +399,52 @@
     window.renderUserCards?.(window._statusCache);
   };
 
+  /* =====================================================================
+     🔲 정사각형 카드 실험 (2026-09-06 — 콩 "정사각형이면 어떤 느낌일지
+     궁금해") — 🧘 혼자 방 전용, 진짜 방은 절대 안 건드립니다.
+     ---------------------------------------------------------------------
+     [무엇을 하나] 카드 안쪽(프사·이름·목표·⏱ 시간)은 지금 214px 설계
+     그대로 두고(styles.css 의 .card-body/.card-foot 이 그 폭에 못박혀
+     있습니다), 바깥 테두리만 **지금 세로 길이만큼** 넓혀 정사각형에
+     가깝게 만듭니다. 늘어난 가로는 전부 좌우 여백이 됩니다.
+
+     [왜 한 번만 재도 되나] 안쪽이 이미 폭과 무관하게 고정돼 있어서,
+     바깥을 넓혀도 프사·글자가 다시 커지며 세로가 또 늘어나는
+     되먹임(피드백 루프)이 없습니다. 그래서 --solo-sq-w 를 한 번
+     재서 박아 두면 끝 — 렌더할 때마다 다시 재는 건 카드 구성(인원·
+     목표 길이)이 바뀔 수 있어서일 뿐, 여러 번 굴려야 맞는 값이라서가
+     아닙니다.
+     ===================================================================== */
+  const SQ_KEY = "soloSquare";
+  function 정사각켬() {
+    try { return _store()?.getItem(SQ_KEY) === "1"; } catch (e) { return false; }
+  }
+  /** 지금 켜져 있으면, 지금 그려진 카드들의 실제 높이를 재서 그 값을
+      가로에 그대로 박습니다. 꺼져 있으면 클래스만 떼고 끝냅니다. */
+  function 정사각적용() {
+    const on = 정사각켬();
+    document.body.classList.toggle("solo-square", on);
+    if (!on) return;
+    const 카드들 = document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)");
+    if (!카드들.length) return;
+    /* 가장 큰 키를 씁니다 — 카드마다 목표 글자 길이가 달라 높이가
+       제각각인데, 정사각형은 하나의 값을 공유해야 하니(같은 격자
+       칸이라) 제일 큰 값을 써야 어떤 카드도 안 잘립니다. */
+    let 최대 = 0;
+    카드들.forEach(c => { 최대 = Math.max(최대, c.getBoundingClientRect().height); });
+    if (최대 > 0) {
+      document.documentElement.style.setProperty("--solo-sq-w", Math.round(최대) + "px");
+    }
+  }
+  /** 설정 체크박스가 부릅니다 */
+  function 정사각바꾸기(on) {
+    try { _store()?.setItem(SQ_KEY, on ? "1" : "0"); } catch (e) {}
+    정사각적용();
+  }
+  window.soloGetSquare = 정사각켬;
+  window.soloSetSquare = 정사각바꾸기;
+  window.soloSquareApply = 정사각적용;   // renderUserCards 끝에서 매번 다시 잽니다
+
   /** 오늘 나올 자리 번호들 — 0번(내 카드)은 늘 맨 앞 */
   function 뽑힌자리() {
     const n = 카드수(), m = 보일수();

@@ -11285,3 +11285,29 @@ html[data-lite] .pr-flash{ animation:none; }
   font-size: 80%;
   padding: 1px 5px;
 }
+
+/* =====================================================================
+   [2026-09-06 — 콩 "정사각형이면 어떤 느낌일지 궁금해"] 🧘 혼자 방
+   전용 실험. 카드 안쪽(프사·이름·목표·⏱ 시간)은 지금 214px 설계
+   그대로 두고 — .card-body/.card-foot 를 그 폭(패딩까지 뺀 정확한
+   지금 값)에 못박아 둡니다 — 바깥 테두리(.user-card)만 지금의
+   세로 길이만큼 넓힙니다. 늘어난 가로는 전부 좌우 여백이 됩니다.
+
+   ★ 실제 폭 값(--solo-sq-w)은 script_solo.js 가 잽니다. 안쪽이
+     이미 폭과 무관하게 고정돼 있어서(위 calc), 한 번만 재면 되고
+     넓힌다고 안쪽이 다시 자라 되먹임(피드백 루프)이 생기지 않습니다.
+   ★ 진짜 방은 body 에 .solo-square 가 절대 안 붙으므로 손끝 하나
+     안 닿습니다. 지금 화면 배치(dock-mode, 2026-08-12)를 그립니다 —
+     되돌린 index-classic.html(격자 grid)은 이 실험 대상이 아닙니다.
+   토글: 설정 › 🧘 혼자 방 › "카드를 정사각형으로"(soloSetSquare).
+   ===================================================================== */
+.dock-mode.solo-square .user-cards-grid > *:not(.card-row-break){
+  flex: 0 0 var(--solo-sq-w, var(--card-w));
+  max-width: var(--solo-sq-w, var(--card-w));
+}
+body.solo-square .card-body,
+body.solo-square .card-foot{
+  max-width: calc(var(--card-w) - 2 * var(--sp-2));
+  margin-left: auto;
+  margin-right: auto;
+}
