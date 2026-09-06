@@ -1105,7 +1105,12 @@
           const stk  = window.sanitizeStickers?.(prof.stickers) || {};
           const stkC = window.sanitizeStickerColors?.(prof.stickerColors) || {};
           const stkS = prof.stickerShape;   // 모양은 사람당 하나 (알약/테이프)
-          const stkP = window.sanitizeStickerPos?.(prof.stickerPos) || {};
+          /* ★ [2026-09-07 — 콩] 자리는 **보는 사람의 카드 모양** 기준으로 —
+             세로형은 stickerPos, 가로형은 stickerPosWide. 카드 폭·높이가
+             달라 같은 %가 딴 자리라서요. 가로형 자리가 없으면 기본 모서리
+             슬롯(닻)으로 — 밀린 채 떠 있지 않습니다. */
+          const stkP = window.sanitizeStickerPos?.(
+            window.cardWideNow?.() ? prof.stickerPosWide : prof.stickerPos) || {};
           const decoA = window.decoStickerHtml?.("a", stk.a, stkC.a, stkS, stkP.a) || "";
           const decoB = window.decoStickerHtml?.("b", stk.b, stkC.b, stkS, stkP.b) || "";
           const decoC = window.decoStickerHtml?.("c", stk.c, stkC.c, stkS, stkP.c) || "";

@@ -517,16 +517,27 @@
        한 번 더 맞춰 두면 안전합니다(진짜 방·혼자 방 공용).
      ===================================================================== */
   let currentCardShape = "tall";
+  let cardWideNow = false;     // 좁은 화면 안전장치까지 거친 "지금 실제로 가로형인가"
   function applyCardShape(shape) {
     if (shape === "wide" || shape === "tall") currentCardShape = shape;
     const narrow = window.innerWidth <= (window.NARROW_W || 833);
-    document.body.classList.toggle("card-wide", currentCardShape === "wide" && !narrow);
+    const wide = currentCardShape === "wide" && !narrow;
+    /* ★ 클래스는 body 가 아니라 **카드 마당**에 — 스티커 배치 편집기가
+       세로형/가로형 탭으로 딴 모양을 미리 볼 수 있어야 해서요
+       (편집기 액자는 script_profile.js 가 따로 붙입니다). */
+    document.getElementById("user-cards")?.classList.toggle("card-wide", wide);
     document.querySelectorAll("input[name='set-card-shape']").forEach(r => {
       r.checked = (r.value === currentCardShape);
     });
+    /* 실제 모양이 바뀌면 카드를 다시 그립니다 — 스티커 자리가 모양별
+       (stickerPos / stickerPosWide)이라 HTML 자체가 달라지거든요. */
+    const changed = wide !== cardWideNow;
+    cardWideNow = wide;
+    if (changed) window.rerenderUserCards?.();
   }
   window.applyCardShape = applyCardShape;
   window.getCardShape = () => currentCardShape;
+  window.cardWideNow = () => cardWideNow;
   window.addEventListener("resize", () => applyCardShape());
   document.addEventListener("change", (e) => {
     const r = e.target;

@@ -1429,7 +1429,20 @@ function renderProfilePanel() {
         아래 슬라이더로 <b>기울기</b>를 돌려요. 여기서 놓은 그대로
         모두의 화면에 붙습니다. 오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.
       </p>
+      <!-- 🃏/📖 모양 탭 (2026-09-07 — 콩) — 자리는 모양별로 따로 기억합니다.
+           세로형 = stickerPos, 가로형 = stickerPosWide. 기본 탭은 내가 지금
+           보는 모양. 안 만진 모양은 기본 모서리 자리로 보여요. -->
+      <div class="set-row" id="prof-stk-shape" style="gap:14px; align-items:center; margin:0 0 6px;">
+        <label style="display:flex; gap:5px; align-items:center; cursor:pointer;">
+          <input type="radio" name="prof-stk-shape" value="tall"><span>🃏 세로형</span>
+        </label>
+        <label style="display:flex; gap:5px; align-items:center; cursor:pointer;">
+          <input type="radio" name="prof-stk-shape" value="wide"><span>📖 가로형</span>
+        </label>
+        <button type="button" class="ghost-btn compact" id="prof-stk-copy" title="다른 모양에서 옮긴 자리를 이 모양으로 가져와요">↔ 자리 가져오기</button>
+      </div>
       <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (내 카드 그대로)"></div>
+      <p class="hint" id="prof-stk-shape-hint" style="margin:6px 0 0;"></p>
       <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
         <span class="slot-name" style="flex:0 0 44px;">기울기</span>
         <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
@@ -1840,13 +1853,22 @@ function bindProfilePanel() {
   let _stkSel = "";
   const _stkCard = document.getElementById("prof-stk-card");
 
-  function _stkState() {
+  /* ★ [2026-09-07 — 콩] 편집 중인 카드 모양. 자리는 모양별로 따로 —
+       세로형(tall) → stickerPos, 가로형(wide) → stickerPosWide.
+     카드 폭(120%)·높이가 달라 같은 %가 딴 자리라서, 하나로 두면 한쪽에서
+     프사 모서리에 맞춘 스티커가 다른 쪽에선 빈 여백에 떠 버립니다.
+     기본 탭은 "내가 지금 보는 모양"(좁은 화면 안전장치까지 거친 값). */
+  let _stkShape = window.cardWideNow?.() ? "wide" : "tall";
+  const _stkPosKey = (shape) => (shape === "wide" ? "stickerPosWide" : "stickerPos");
+
+  function _stkState(shape) {
     const p = profileTargetData();
+    const sh = shape || _stkShape;
     return {
       stickers: sanitizeStickers(p.stickers),
       colors: sanitizeStickerColors(p.stickerColors),
       shape: sanitizeStickerShape(p.stickerShape),
-      pos: sanitizeStickerPos(p.stickerPos)
+      pos: sanitizeStickerPos(p[_stkPosKey(sh)])
     };
   }
 
@@ -1861,7 +1883,8 @@ function bindProfilePanel() {
         };
         if (Number(s.dataset.w) >= 24) pos[s.dataset.stk].w = Number(s.dataset.w);
       });
-      saveMyProfile({ stickerPos: pos });
+      /* 지금 탭의 모양 자리에만 저장 — 다른 모양은 손끝 하나 안 닿습니다 */
+      saveMyProfile({ [_stkPosKey(_stkShape)]: pos });
       window.rerenderUserCards?.();
     }, 250);
   }
@@ -1931,20 +1954,49 @@ function bindProfilePanel() {
     clone.removeAttribute("data-card-nick");   // 진짜 카드 셈(fixLonelyCard 등)에 안 잡히게
     clone.style.width = "100%";
     clone.style.maxWidth = "none";
+    /* ★ 탭의 모양대로 액자에 .card-wide 를 붙였다 뗍니다 — 안쪽 배치와
+       폭(120%)이 함께 따라옵니다(styles.css .card-wide …). 진짜 카드가
+       무슨 모양이든 여기서는 탭이 정합니다. */
+    _stkCard.classList.toggle("card-wide", _stkShape === "wide");
     _stkCard.appendChild(clone);
 
-    /* 복제된 스티커들에 손잡이 달기 — 자리는 클래스(deco-a…e)에서 읽습니다 */
+    /* 스티커는 복제본 것을 버리고 **탭 모양의 자리**로 새로 붙입니다 —
+       복제된 카드는 "내가 보는 모양"의 자리로 그려져 있어, 딴 모양 탭을
+       열면 어긋나거든요. 진짜 카드와 같은 규칙: 기본 자리인 B·E 만 프사
+       칸 안(프사를 따라다님), 나머지는 카드에 직접. */
     const st = _stkState();
-    clone.querySelectorAll(".card-deco").forEach(el => {
-      const m = el.className.match(/deco-([abcde])(?:\s|$)/);
-      if (!m) return;
-      const k = m[1];
-      el.dataset.stk = k;
+    clone.querySelectorAll(".card-deco").forEach(el => el.remove());
+    const wrap = clone.querySelector(".card-avatar-wrap") || clone;
+    ["a", "b", "c", "d", "e"].forEach(k => {
+      const html = decoStickerHtml(k, st.stickers[k], st.colors[k], st.shape, st.pos[k]);
+      if (!html) return;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      const el = tmp.firstElementChild;
+      if (!el) return;
       const p = st.pos[k];
+      el.dataset.stk = k;
       el.dataset.custom = p ? "1" : "0";
       el.dataset.r = p ? p.r : 0;
       if (p) { el.dataset.x = p.x; el.dataset.y = p.y; if (p.w) el.dataset.w = p.w; }
+      ((k === "b" || k === "e") && !p ? wrap : clone).appendChild(el);
     });
+
+    /* 탭·안내 */
+    document.querySelectorAll("input[name='prof-stk-shape']").forEach(r => { r.checked = r.value === _stkShape; });
+    const other = _stkShape === "wide" ? "tall" : "wide";
+    const otherHas = Object.keys(_stkState(other).pos).length > 0;
+    const hint = document.getElementById("prof-stk-shape-hint");
+    if (hint) {
+      const 이름 = _stkShape === "wide" ? "📖 가로형" : "🃏 세로형";
+      const 다른 = other === "wide" ? "📖 가로형" : "🃏 세로형";
+      hint.textContent = Object.keys(st.pos).length
+        ? `${이름} 자리를 고치는 중이에요. ${다른}은 따로 기억돼서 여기서 옮겨도 안 바뀌어요.`
+        : `${이름}은 아직 기본 자리예요. ${otherHas ? `[↔ 자리 가져오기]로 ${다른} 자리를 얼추 옮겨 온 뒤 살짝 다듬어도 돼요.` : "스티커를 끌면 이 모양의 자리로 기억돼요."}`;
+    }
+    const copyBtn = document.getElementById("prof-stk-copy");
+    if (copyBtn) copyBtn.disabled = !otherHas;
+
     _stkSelect(_stkSel && _stkCard.querySelector(`[data-stk="${_stkSel}"]`) ? _stkSel : "");
   }
   window._renderStkEditor = renderStkEditor;   // 스티커 선택이 바뀌면 다시 그리게
@@ -2016,6 +2068,25 @@ function bindProfilePanel() {
       s.dataset.custom = "0";             // 좌표를 지우면 CSS 기본 자리로 돌아갑니다
       _stkSaveDebounced();
       setTimeout(renderStkEditor, 300);   // 저장 뒤 기본 자리로 다시 그림
+    });
+    /* 🃏/📖 모양 탭 — 저장은 안 건드리고 보는 모양만 바꿉니다 */
+    document.querySelectorAll("input[name='prof-stk-shape']").forEach(r => {
+      r.addEventListener("change", () => {
+        if (!r.checked) return;
+        _stkShape = r.value === "wide" ? "wide" : "tall";
+        renderStkEditor();
+      });
+    });
+    /* ↔ 자리 가져오기 — 다른 모양에서 옮겨 둔 %좌표를 이 모양에 복사합니다.
+       폭·높이가 달라 딱 맞진 않고 **얼추** 비슷한 자리 — 그 뒤 손으로
+       다듬으라고 안내합니다. 원래 있던 이 모양의 자리는 덮어씁니다. */
+    document.getElementById("prof-stk-copy")?.addEventListener("click", () => {
+      const other = _stkShape === "wide" ? "tall" : "wide";
+      const src = _stkState(other).pos;
+      if (!Object.keys(src).length) return;
+      saveMyProfile({ [_stkPosKey(_stkShape)]: src });
+      window.rerenderUserCards?.();
+      setTimeout(renderStkEditor, 300);
     });
   }
   renderStkEditor();
