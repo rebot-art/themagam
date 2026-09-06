@@ -401,163 +401,33 @@
 
   /* =====================================================================
      🔲 정사각형 카드 실험 (2026-09-06 — 콩 "정사각형이면 어떤 느낌일지
-     궁금해" → "닉네임 박스도 늘리고, 작업시간은 상태표 위로" → 3차
-     "그림처럼: [작업시간/뽀모방·토마토/상태표] 를 왼쪽에 쌓고 프사는
-     오른쪽, 크기는 네가 판단해서 조화롭게" → 4차 "카드 밖으로
-     탈주하네 ㅋㅋ, 카드 사이즈 좀 커져도 되니까 정리해줘" → 5차
-     "여전히 탈주 사태야 ㅎㅎ, 급한 거 아니니까 차근차근 해보자.
-     구조는 그림처럼 그대로, 프로필 카드는 기존 세로형 카드의 높이
-     까지는 커져도 돼") — 🧘 혼자 방 전용, 진짜 방은 절대 안 건드립니다.
+     궁금해" → 2차 "닉네임 박스도 늘리고, 작업시간은 상태표 위로" →
+     3차 "그림처럼: 왼쪽에 쌓고 프사는 오른쪽" → 4차 "카드 밖으로
+     탈주하네, 사이즈 커져도 되니까 정리" → 5차 "여전히 탈주 사태,
+     차근차근 해보자" → **6차 — 콩이 화면을 직접 보고 "이렇게 보여
+     ㅎㅎㅎ, 일단 이걸 좀 접고, 기존 프로필 카드의 가로 폭만 120%
+     정도로 넓히면 어떨지"**로 방향을 완전히 바꿈) — 🧘 혼자 방 전용,
+     진짜 방은 절대 안 건드립니다.
 
-     ★ 5차 — 4차까지 못 찾던 진짜 원인 (styles.css 쪽에서 고쳤습니다)
-     .card-avatar-wrap · .card-side 는 원래 "책 표지형(세로 쌓기)"
-     카드 몫으로 max-width:118px · align-self:center · width:100% 를
-     이미 갖고 있었습니다. 세로 쌓기에서는 멀쩡한 값인데, 이 실험이
-     .card-body 를 row-reverse 로 눕히면서도 저 셋을 안 건드리고
-     있었던 게 문제였습니다 — 프사 폭을 JS 로 아무리 다시 재서 박아도
-     max-width:118px 가 도로 눌러 버리고, .card-side 는 width:100%가
-     row 배치에서 flex-basis 로 둔갑해 옆 칸(.card-body) 전체 폭을
-     혼자 요구해 버렸습니다. 그러니 4차에서 프사 크기 계산 방식을
-     통째로 바꿔도(3차: aspect-ratio 역방향 → 4차: JS 로 폭 못박기)
-     화면은 똑같이 겹쳤던 거예요 — 애초에 그 계산값이 안 먹히고
-     있었으니까요. styles.css 에 3줄(max-width:none, align-self:
-     flex-start, .card-side width:auto)을 더해 되돌렸습니다.
-     ---------------------------------------------------------------------
-     [무엇을 하나]
-       · ⏱ 작업시간 줄(.card-wh)을 이름·목표 상자(.card-foot)에서 꺼내
-         .card-side(쌓기 칸)의 맨 위로 옮깁니다 — 아래 카드재배치() 가
-         하는 일(CSS 만으로는 다른 부모로 못 건너갑니다).
-       · .card-body 는 화면에서만 뒤집혀(row-reverse) 쌓기 칸이 왼쪽,
-         프사가 오른쪽 — 이건 styles.css 만으로 됩니다(DOM 순서는 안
-         건드립니다).
-       · 프사 폭은 **쌓기 칸의 실제 키를 재서** 직접 박습니다
-         (--solo-avatar-sq). 원래(3차)는 CSS 의 aspect-ratio 방향을
-         뒤집어(높이→폭) 못박기 없이 풀려 했는데, **화면에서 프사·
-         작업시간·상태표가 서로 겹치며 카드 밖으로 삐져나왔습니다**
-         (콩 캡처, 4차) — flex 의 가로 크기는 세로 스트레치보다 먼저
-         정해지는 구조라, 그 순서를 거스르는 계산은 못 미더웠습니다.
-         그래서 검증된 방향(폭 → aspect-ratio → 높이)으로 되돌리고,
-         그 폭 자체를 JS 로 못박는 쪽으로 바꿨습니다.
-       · 이름·목표 상자(.card-foot)는 못박지 않고 카드 폭을 그대로
-         따라갑니다 — 늘어난 가로만큼 넓어집니다.
-
-     [왜 두 번 재나] .card-body 는 width:fit-content 라 내용(프사+
-     쌓기 칸)만큼만 차지하는데, 이름·목표 상자는 폭을 따라가서 카드가
-     넓어지면 목표 글자가 덜 접혀(줄바꿈이 줄어) 세로가 살짝 바뀔 수
-     있습니다. 그래서 한 번 재서 넓힌 뒤, 그 폭에서 다시 한 번 재
-     어긋나면 맞춥니다.
-
-     [왜 폭도 같이 재나 + 왜 여유를 더하나] .card-body 가 내용만큼
-     자라므로, 세로 길이만 보고 정사각형 한 변을 정하면 위 칸(프사+
-     쌓기)이 그보다 넓어 삐져나올 수 있습니다. 높이와 .card-body 실제
-     너비 중 더 큰 쪽을 쓰고, 거기에 여유(12px)까지 더합니다 — 콩이
-     "카드 사이즈 좀 커져도 되니까"라고 했으니, 꽉 끼어 잘리는 것보다
-     살짝 넉넉한 쪽이 안전합니다.
+     ★ 6차 — 1~5차는 프사·쌓기 칸을 옆으로 눕히는(row-reverse) 구조를
+     시도했고, 5차에서 겹침의 진짜 원인(책 표지형 카드가 원래 갖고
+     있던 max-width:118px·align-self:center·width:100% 를 안
+     건드리고 있던 것)까지 찾아 고쳤지만, 콩이 화면으로 직접 보니
+     여전히 마음에 드는 모습이 아니었습니다. 그래서 **구조를 완전히
+     그대로 두고 카드 바깥 폭만 120%로 넓히는** 훨씬 단순한 방식으로
+     바꿨습니다 — 잴 것도, 옮길 것도, 되먹임 걱정도 없습니다(전부
+     styles.css 의 calc() 비율 하나로 끝). 1~5차의 row-reverse·JS
+     실측 코드는 여기서 걷어냈습니다(styles.css 쪽 6차 주석 및 이
+     대화의 메모리 기록에 과정이 남아 있어, 나중에 되살릴 수 있음).
      ===================================================================== */
   const SQ_KEY = "soloSquare";
-  const SQ_PAD = 12;   // ★ 4차 여유분 — "카드 사이즈 좀 커져도 되니까"
   function 정사각켬() {
     try { return _store()?.getItem(SQ_KEY) === "1"; } catch (e) { return false; }
   }
-
-  /** ★ 5차 — "프로필 카드는 기존 세로형 프로필 카드의 높이까지는
-      커져도 돼"(콩)의 상한값을 잽니다.
-      [왜 복제본으로 재나] 지금 화면은 이미 정사각형(row-reverse)으로
-      누워 있을 수 있어서, 실제 카드를 그대로 재면 "원래 세로형" 높이가
-      아니라 지금 모습의 높이가 나옵니다. 그래서 카드 하나를 복제해
-      .card-wh 를 원래 자리(.card-foot 끝)로 되돌리고, body 의
-      solo-square 클래스를 잠깐 뺀 채(=책 표지형 규칙이 도로 적용된
-      채) 화면 밖에서 잰 뒤 즉시 원상복구합니다 — 화면에는 전혀
-      드러나지 않는, 재는 동안만의 일입니다. */
-  function 세로높이재기() {
-    const 카드 = document.querySelector(".user-cards-grid > .user-card:not(.share-card)");
-    if (!카드) return 0;
-    const 복제 = 카드.cloneNode(true);
-    const wh = 복제.querySelector(".card-wh");
-    const foot = 복제.querySelector(".card-foot");
-    if (wh && foot && wh.parentElement !== foot) foot.appendChild(wh);
-    복제.style.cssText = "position:absolute; visibility:hidden; pointer-events:none; left:-99999px; top:0;";
-    document.body.appendChild(복제);
-    const 뺐다 = document.body.classList.contains("solo-square");
-    if (뺐다) document.body.classList.remove("solo-square");
-    const h = 복제.getBoundingClientRect().height;
-    if (뺐다) document.body.classList.add("solo-square");
-    복제.remove();
-    return h;
-  }
-  /** ⏱ 작업시간 줄을 옮깁니다 — 켤 때는 .card-side 맨 위로, 끌 때는
-      원래 자리(.card-foot 맨 끝)로 되돌립니다. CSS 만으로는 서로 다른
-      부모(카드-body 쪽 ↔ 카드-foot 쪽)로 못 건너가서 직접 옮깁니다. */
-  function 카드재배치(넣기) {
-    document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)").forEach(card => {
-      const wh = card.querySelector(".card-wh");
-      if (!wh) return;
-      if (넣기) {
-        const side = card.querySelector(".card-side");
-        if (side && wh.parentElement !== side) side.insertBefore(wh, side.firstChild);
-      } else {
-        const foot = card.querySelector(".card-foot");
-        if (foot && wh.parentElement !== foot) foot.appendChild(wh);
-      }
-    });
-  }
-  /** 지금 켜져 있으면, 작업시간을 옮긴 뒤 ① 쌓기 칸 키만큼 프사 폭을
-      박고 ② (카드 높이, .card-body 실제 너비) 중 더 큰 값 + 여유를
-      정사각형 한 변으로 박습니다(두 번). 꺼져 있으면 작업시간을
-      되돌리고 끝냅니다. */
+  /** ★ 6차 — body 에 .solo-square 클래스만 붙였다 뗍니다. 나머지는
+      전부 styles.css 의 calc(--card-w * 1.2) 한 줄이 합니다. */
   function 정사각적용() {
-    const on = 정사각켬();
-    document.body.classList.toggle("solo-square", on);
-    카드재배치(on);
-    if (!on) return;
-    const 카드들 = () => document.querySelectorAll(".user-cards-grid > .user-card:not(.share-card)");
-
-    /* ① 프사 폭 — 쌓기 칸(.card-side, 작업시간+칩+상태표 세 줄)의
-       실제 키를 재서 그대로 박습니다. .card-side 의 키는 프사 폭과
-       무관(같은 줄의 옆 칸일 뿐)이라 되먹임 걱정 없이 한 번이면
-       됩니다. */
-    let 프사한변 = 0;
-    카드들().forEach(c => {
-      const side = c.querySelector(".card-side");
-      if (side) 프사한변 = Math.max(프사한변, side.getBoundingClientRect().height);
-    });
-    if (프사한변 > 0) {
-      document.documentElement.style.setProperty("--solo-avatar-sq", Math.round(프사한변 + SQ_PAD) + "px");
-    }
-
-    /* ② 정사각형 한 변 — 가장 큰 값을 씁니다. 카드마다 목표 글자
-       길이가 달라 높이가 제각각인데, 정사각형은 하나의 값을 공유해야
-       하니(같은 격자 칸이라) 제일 큰 값을 써야 어떤 카드도 안 잘리거나
-       안 삐져나옵니다. */
-    const 재기 = () => {
-      let 최대 = 0;
-      카드들().forEach(c => {
-        최대 = Math.max(최대, c.getBoundingClientRect().height);
-        const 몸통 = c.querySelector(".card-body");
-        if (몸통) 최대 = Math.max(최대, 몸통.getBoundingClientRect().width);
-      });
-      return 최대 > 0 ? 최대 + SQ_PAD : 0;
-    };
-    const 일차 = 재기();
-    if (일차 <= 0) return;
-    document.documentElement.style.setProperty("--solo-sq-w", Math.round(일차) + "px");
-    const 이차 = 재기();
-    let 최종 = (이차 > 0 && Math.round(이차) !== Math.round(일차)) ? 이차 : 일차;
-
-    /* ③ 상한 — "기존 세로형 프로필 카드의 높이까지는 커져도 돼"(콩,
-       5차). 그보다 커지려 하면 그 값으로 눌러 앉히고, 프사도 같은
-       비율로 줄여 안쪽 내용이 눌린 상자 밖으로 넘치지 않게 합니다. */
-    const 세로한계 = 세로높이재기();
-    if (세로한계 > 0 && 최종 > 세로한계) {
-      const 비율 = 세로한계 / 최종;
-      const 지금아바타 = parseFloat(getComputedStyle(document.documentElement)
-        .getPropertyValue("--solo-avatar-sq")) || 0;
-      if (지금아바타 > 0) {
-        document.documentElement.style.setProperty("--solo-avatar-sq", Math.round(지금아바타 * 비율) + "px");
-      }
-      최종 = 세로한계;
-    }
-    document.documentElement.style.setProperty("--solo-sq-w", Math.round(최종) + "px");
+    document.body.classList.toggle("solo-square", 정사각켬());
   }
   /** 설정 체크박스가 부릅니다 */
   function 정사각바꾸기(on) {
@@ -566,7 +436,7 @@
   }
   window.soloGetSquare = 정사각켬;
   window.soloSetSquare = 정사각바꾸기;
-  window.soloSquareApply = 정사각적용;   // renderUserCards 끝에서 매번 다시 잽니다
+  window.soloSquareApply = 정사각적용;   // renderUserCards 끝에서 매번 다시 켬·끔을 맞춥니다
 
   /** 오늘 나올 자리 번호들 — 0번(내 카드)은 늘 맨 앞 */
   function 뽑힌자리() {
