@@ -445,17 +445,22 @@
       const wht = card.querySelector(".card-wh-t");
       const side = card.querySelector(".card-side");
       const foot = card.querySelector(".card-foot");
-      const state = side?.querySelector(".card-state-row");
+      const state = card.querySelector(".card-state-row");
+      /* ★ [09-07 새벽 3차 그림 — 콩] 상태표는 쌓기 칸에서 **꺼내** 프사
+         아래 카드 전폭 한 줄로(.card-body 와 .card-foot 사이). 쌓기 칸에는
+         [작업시간 / 뽀모·토마토]만 남아 프사와 중심선을 맞춥니다.
+         상태 바꾸기 클릭은 알약 자체의 data-pick-status 라 어디 있든 됩니다. */
       if (넣기) {
         if (!side) return;
         if (wht && wht.parentElement !== side) side.insertBefore(wht, side.firstChild);
         if (wh.parentElement !== side) side.appendChild(wh);          // 칩은 맨 뒤
-        if (state && state.nextElementSibling !== wh) side.insertBefore(state, wh);
+        if (state && foot && state.nextElementSibling !== foot) card.insertBefore(state, foot);
         const ink = foot?.style.getPropertyValue("--ink-wh");
         if (wht) wht.style.setProperty("--ink-wh", ink || "");
       } else {
         if (wht && wht.parentElement !== wh) wh.insertBefore(wht, wh.firstChild);
         if (foot && wh.parentElement !== foot) foot.appendChild(wh);
+        if (state && side && state.parentElement !== side) side.appendChild(state);
         if (wht) wht.style.removeProperty("--ink-wh");
       }
     });

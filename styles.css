@@ -11376,14 +11376,15 @@ html[data-lite] .pr-flash{ animation:none; }
    ---------------------------------------------------------------------
    캡처1 구조(콩이 처음부터 보고 싶던 모양) — 혼자 방 스위치를 켜면:
        ┌────────────┬─────────┐
-       │  작업 시간  │         │
-       │   상태표    │ 프로필  │
+       │  작업 시간  │ 프로필  │
        │ 뽀모방/토마토│  사진   │
        ├────────────┴─────────┤
+       │        상태표          │
+       ├──────────────────────┤
        │       닉네임 박스       │
        └────────────────────────┘
-   (처음 그림은 상태표가 맨 아래였는데, 09-07 새벽 콩이 "상태표가 중심"
-   으로 순서를 바꿨습니다.) 줄 세우기는 script_solo.js 가로재배치() 가
+   (처음 그림은 세 줄 쌓기였고, 09-07 새벽 "상태표가 중심"으로 순서를
+   바꿨다가, 3차 그림에서 상태표를 프사 아래 전폭 한 줄로 꺼냈습니다.) 줄 세우기는 script_solo.js 가로재배치() 가
    DOM 을 옮겨서 하고, 여기 규칙은 그 뒤의 생김새입니다. */
 /* ★ [2026-09-07 새벽 — 콩 "작업시간 / 상태표 / 뽀모방·토마토 순, 상태표가
    중심"] script_solo.js 가로재배치() 가 시간 글자(.card-wh-t)를 칩 상자
@@ -11401,12 +11402,21 @@ html[data-lite] .pr-flash{ animation:none; }
 }
 .card-wide .card-side > .card-wh-t small{ display: none; }
 .card-wide .card-side > .card-wh-t b{
-  font-size: calc(var(--fs-lg) + 8px);      /* 콩 "약간 더 커도 돼" (+6 → +8) */
+  font-size: calc((var(--fs-lg) + 8px) * .9);   /* +8 이 좋았는데 3차 그림에서 "그 90%" (콩) */
   font-weight: var(--fw-bold);
   color: var(--ink-wh, var(--accent));
   font-variant-numeric: tabular-nums;
   letter-spacing: .3px;
+  word-spacing: -.15em;                    /* "1h 11m" 의 띄어쓰기를 절반쯤으로 (콩) */
   line-height: 1.1;
+}
+/* ★ [09-07 새벽 3차 그림 — 콩] 상태표는 쌓기 칸 밖, 프사 아래 카드 전폭
+   한 줄(script_solo.js 가로재배치 가 .card-body 와 .card-foot 사이로
+   옮깁니다). 가운데 정렬, 위아래 살짝 띄움. 카드가 그만큼 높아져
+   거의 정사각형이 됩니다(콩 예상대로). */
+.card-wide .user-card > .card-state-row{
+  justify-items: center;
+  margin-top: 8px;
 }
 /* 칩 상자(뽀모방·토마토) — 이름 상자 아래에 있을 때 몫이던 점선 구분선은
    지우고 가운데로 */
