@@ -11483,9 +11483,22 @@ html[data-lite] .pr-flash{ animation:none; }
      그 배경 덕에 잘 읽혔는데 꺼내 오니 맨바닥이라서요. 이름 상자
      (.card-foot)와 같은 재료(--foot-veil, 흐림, 둥근 모서리)를 쓰되
      불투명도만 50% — 테마가 바뀌면 같이 따라갑니다. */
-  padding: 7px 7px 8px;
+  /* ★ [콩 2026-09-07] 배경은 더 짙게, 영역은 최소로 — 상자가 내용에 딱
+     붙게 좌우 여백을 줄이고(7 → 4px), 폭도 내용만큼만(width:fit-content)
+     차지하게 합니다. 그러면 프사와의 사이가 벌어지지 않고 "덩어리" 로
+     보여요. 배경 40 → 62%. */
+  padding: 5px 4px 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
   border-radius: var(--r-md);
-  background-color: color-mix(in srgb, var(--foot-veil) 40%, transparent);   /* 50 → 40% (콩 "현재의 80%") */
+  background-color: color-mix(in srgb, var(--foot-veil) 62%, transparent);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
+/* 🍅 숫자는 **테마 고정색** (콩: "단순한 숫자니까") — 프로필에서 고른
+   목표 글자색을 안 따라갑니다. 카드 배경을 어떤 색으로 골라도 늘 읽혀요.
+   (원래 이름 상자 안에 있을 땐 목표 색을 따랐는데, 상태표 박스로 옮겨
+    오면서 그 규칙이 안 닿아 테마 기본색으로 떨어져 있었습니다 — 이제
+    그 기본색을 **일부러** 쓰는 것으로 못 박습니다.) */
+.card-wide .card-side > .card-wh > .card-pomo-count{ color: var(--card-pomo); }
