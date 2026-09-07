@@ -2012,19 +2012,27 @@ body.room-bg-on{
 }
 
 /* -------- 이름 · 목표 -------- */
-/* 🎖️ 닉네임 앞 배지 (2026-09-07 — 콩 "업적 대신 배지"). honors/{지난 달}/badges
-   에서 script_realtime.js 배지HTML() 이 붙입니다. 최대 7개 — 글자보다
-   살짝 작게, 촘촘히. 긴 닉과 7개가 겹치면 닉이 … 로 잘리는 대신
-   배지가 우선입니다(배지가 곧 이달의 얼굴이라). */
+/* 🎖️ 배지 (2026-09-07 — 콩 "업적 대신 배지"). honors/{지난 달}/badges 에서
+   script_realtime.js 배지HTML() 이 붙입니다. 최대 7개.
+   ★ 자리(같은 날 저녁, 콩): 이름 줄 안이 아니라 **이름 상자(.card-foot) 위
+     테두리에 걸쳐서** — 반은 상자 밖, 반은 안. 스티커처럼 얹힌 느낌이고,
+     이름 줄은 온전히 닉 몫이라 긴 닉이 덜 잘립니다. 목표 줄(🎯)은 안
+     가립니다(이름 줄보다 아래). 왼쪽에 붙입니다 — 가운데는 위 상태표
+     알약과 부딪혀요. */
 .card-badges{
+  position: absolute;
+  left: 8px;
+  top: 0;
+  transform: translateY(-50%);
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  margin-right: 5px;
-  font-size: .82em;
+  font-size: 12px;
   line-height: 1;
-  vertical-align: -1px;
-  flex: 0 0 auto;
+  padding: 1px 3px;
+  border-radius: 999px;
+  pointer-events: none;      /* 아래칸 클릭(목표·투두)을 가로막지 않게 */
 }
 .card-badge{ display: inline-block; }
 .card-name{
