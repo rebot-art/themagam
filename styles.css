@@ -2030,13 +2030,16 @@ body.room-bg-on{
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  font-size: 14.4px;         /* 12 → 14.4 (콩 "120%") — 아래로 커지는 건 괜찮음, 목표 줄만 안 가리면 */
+  font-size: 16px;           /* 12 → 14.4 → 16 (콩) — 아래로 커지는 건 괜찮음, 목표 줄만 안 가리면 */
   line-height: 1;
   padding: 1px 3px;
   border-radius: 999px;
   pointer-events: none;      /* 아래칸 클릭(목표·투두)을 가로막지 않게 */
 }
 .card-badge{ display: inline-block; }
+/* 배지가 있는 상자만 아래 여백을 넉넉히 — 목표 줄 ↔ 배지 줄 간격 8 → 20px
+   (콩 "2.5배"). 배지 없는 카드는 그대로. */
+.card-foot:has(.card-badges){ padding-bottom: 20px; }
 .card-name{
   font-size: calc(var(--fs-lg) - 0.5px);
   font-weight: var(--fw-bold);
