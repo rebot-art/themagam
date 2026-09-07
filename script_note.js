@@ -228,32 +228,42 @@
      자리도 흔들리지 않고요.
 
      내 카드에만 붙습니다 — 남의 안 읽은 쪽지 수는 알 이유가 없으니까요. */
+  /* ★ [2026-09-07 — 콩] 자리를 이름 줄에서 **프사 왼쪽 위 모서리**로.
+     배지(🎖️ 최대 7개)가 이름 앞에 붙으면서 긴 닉에서는 이름 줄이 왼쪽부터
+     잘려 쪽지 알림이 제일 먼저 가려졌어요. 프사 모서리는 누구 카드든
+     비어 있고, 새 쪽지가 있을 때만 리본이 톡 튀어나옵니다(평소엔 없음 —
+     "별다른 거 없이 요 아이콘만, 배경 없이"). 개수는 title 로만.
+     ★ 왼쪽 위인 이유: 오른쪽 위는 스티커 A 의 기본 자리(카드 오른쪽
+       위)와 겹칩니다. 안테나(접속 점)는 그대로 이름 상자 왼쪽 구석. */
+  const NOTE_RIBBON = `<svg viewBox="0 0 24 26" width="26" height="28" aria-hidden="true" fill="none"
+      stroke="#22a043" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M5 2h14v11l-7 5-7-5z"/>
+      <path d="M5 2l7 7 7-7"/>
+      <path d="M12 18l-6.5 6.5-3-3L9 15"/>
+      <path d="M12 18l6.5 6.5 3-3L15 15"/>
+    </svg>`;
   function renderNoteBadge() {
     if (!myNick) return;
-    /* [고침 2026-08-09] 이름 줄 **안쪽 왼편**에 둡니다.
+    const card = document.querySelector(`.user-card[data-card-nick="${CSS.escape(myNick)}"]`);
+    if (!card) return;
+    const wrap = card.querySelector(".card-avatar-wrap");
+    if (!wrap) return;
+    /* 옛 자리(이름 줄)에 남은 것이 있으면 치웁니다 — 카드가 새로 그려지면
+       어차피 없어지지만, 그 사이에도 둘이 함께 보이지 않게 */
+    card.querySelectorAll(".card-name .card-note").forEach(x => x.remove());
 
-       예전에는 카드 오른쪽 끝에 띄워 두었는데, 이름이 오른쪽 정렬이라
-       긴 닉네임과 부딪혔습니다. 이름 줄은 이미 flex 라 그 안에 넣으면
-       [쪽지] [닉네임] 순서로 나란히 서고, 이름 길이에 따라 자리도
-       알아서 밀립니다. */
-    const nameEl = document.querySelector(
-      `.user-card[data-card-nick="${CSS.escape(myNick)}"] .card-name`);
-    if (!nameEl) return;
-
-    let b = nameEl.querySelector(".card-note");
+    const n = unreadCount();
+    let b = wrap.querySelector(".card-note");
+    if (n <= 0) { if (b) b.remove(); return; }
     if (!b) {
       b = document.createElement("button");
       b.type = "button";
-      b.className = "card-note";
+      b.className = "card-note has";
       b.setAttribute("data-note-open", "1");
-      nameEl.insertBefore(b, nameEl.firstChild);   // 이름보다 앞
+      b.innerHTML = NOTE_RIBBON;
+      wrap.appendChild(b);
     }
-    const n = unreadCount();
-    b.classList.toggle("has", n > 0);
-    b.textContent = n > 0 ? (n > 9 ? "9+" : String(n)) : "";
-    b.title = n > 0
-      ? `안 읽은 쪽지 ${n}통 — 눌러서 봐요`
-      : "쪽지함 — 받은 쪽지가 없어요";
+    b.title = `새 쪽지 ${n}통 — 눌러서 봐요`;
     b.setAttribute("aria-label", b.title);
   }
 
@@ -268,18 +278,18 @@
         /* 🧘 혼자 방 — 카드는 전부 내 것입니다. 쪽지도 업적도 뜻이 없고,
            프꾸 창을 여는 길만 남습니다 (script_profile.js 가 맡아요). */
         if (window.SOLO) return;
-        /* 내 카드는 🗂️ 나의 작업이 열립니다 — 건드리지 않습니다 */
-        if (e.target.closest("[data-record-of]")) return;
-        if (e.target.closest("[data-edit-profile]")) return;
-        if (e.target.closest("[data-pick-status]")) return;
-        if (e.target.closest(".share-card")) return;
-
-        /* 내 카드의 쪽지 아이콘 — 바로 📮 쪽지 탭으로 */
+        /* 내 카드의 쪽지 리본 — 바로 📮 쪽지 탭으로.
+           ★ 프사 칸 안에 있으므로 [data-edit-profile] 보다 먼저 봅니다 */
         if (e.target.closest("[data-note-open]")) {
           window.openMyWork?.();
           window.switchMyWorkTab?.("note");
           return;
         }
+        /* 내 카드는 🗂️ 나의 작업이 열립니다 — 건드리지 않습니다 */
+        if (e.target.closest("[data-record-of]")) return;
+        if (e.target.closest("[data-edit-profile]")) return;
+        if (e.target.closest("[data-pick-status]")) return;
+        if (e.target.closest(".share-card")) return;
         const card = e.target.closest(".user-card[data-card-nick]");
         if (!card) return;
         const nick = card.getAttribute("data-card-nick");

@@ -2254,6 +2254,9 @@ function bindCardEditDelegate() {
       e.preventDefault(); e.stopPropagation();
       return;
     }
+    /* 📮 프사 모서리의 쪽지 리본 (2026-09-07) — 프사 칸 안에 있어서
+       프로필 창보다 먼저 가려내야 합니다. 여는 일은 script_note.js 몫. */
+    if (e.target?.closest?.("[data-note-open]")) return;
     /* 프사 → 프로필 설정 */
     if (e.target?.closest?.("[data-edit-profile]")) {
       e.preventDefault(); e.stopPropagation();

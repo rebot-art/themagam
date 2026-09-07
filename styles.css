@@ -4810,7 +4810,14 @@ html[data-theme-style="studio"] .brand-stamp{ color: #fff; }
 /* 아래칸 — 이름·목표·진척을 가운데 정렬 */
 .card-foot{ text-align: center; }
 .card-name{
+  /* 🎖️ [2026-09-07] 배지(최대 7개)가 이름 앞에 붙습니다. 한 줄에 안 들어가면
+     (배지 7개 + 12자 닉) 배지 줄이 위로 올라가고 이름은 아래 줄 — 왼쪽부터
+     잘리던 것을 막습니다. 짧은 닉은 예전처럼 한 줄. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+  row-gap: 2px;
   font-size: var(--fs-lg);
   letter-spacing: -0.2px;
 }
@@ -7295,48 +7302,34 @@ html[data-theme-style="studio"] .user-card{
   white-space: pre-wrap;
 }
 
-/* 내 카드 이름 오른편의 쪽지 자리 — 안테나와 짝을 이룹니다.
-   왼쪽 위에 접속 점, 오른쪽 위에 쪽지. 평소에는 옅은 윤곽만. */
+/* 📮 새 쪽지 리본 — 내 프사 **왼쪽 위 모서리** (2026-09-07 — 콩).
+   예전엔 이름 줄 맨 앞의 작은 원(평소엔 옅은 윤곽, 오면 빨갛게)이었는데
+   배지가 이름 앞에 붙으면서 긴 닉에서 제일 먼저 잘렸습니다. 이제 새
+   쪽지가 있을 때만 초록 리본(선만, 배경 없음)이 프사 모서리에 톡. */
 .card-note{
-  flex: 0 0 auto;
-  margin-right: 5px;
-  width: 17px;
-  height: 17px;
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  z-index: 3;
   padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
+  border: 0;
   background: transparent;
-  color: transparent;
-  font-size: 10px;
-  font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
-  transition: background var(--anim-fast), border-color var(--anim-fast), color var(--anim-fast);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+  transform: rotate(-8deg);
+  animation: note-pop .45s ease-out;
 }
-/* 윤곽 안의 작은 점 — "여기가 쪽지 자리" 라는 표시 */
-.card-note::before{
-  content: "";
-  width: 5px; height: 5px;
-  border-radius: 999px;
-  background: var(--border-strong, var(--border));
-}
-.card-note:hover{ border-color: var(--accent-line); }
-
-/* 새 쪽지가 오면 색이 차오릅니다 */
-.card-note.has{
-  border-color: var(--danger-line);
-  background: var(--danger);
-  color: #fff;
-}
-.card-note.has::before{ display: none; }
-.card-note:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+.card-note svg{ display: block; }
+.card-note:hover{ transform: rotate(-8deg) scale(1.08); }
+.card-note:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; border-radius: 6px; }
+@keyframes note-pop{ from{ transform: rotate(-8deg) scale(.5); opacity: 0; } to{ transform: rotate(-8deg) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce){ .card-note{ animation: none; } }
 
 .user-card .card-foot{ position: relative; }
-/* 이름 줄 안에서 [쪽지] [닉네임] 으로 나란히 — 둘 다 오른쪽에 붙습니다 */
-.user-card.is-me .card-name{ display: flex; align-items: center; justify-content: flex-end; }
+/* [2026-09-07] 쪽지 자리가 프사로 옮겨 가서, 내 카드 이름 줄도 남들과 같게
+   (예전엔 [쪽지][닉] 을 오른쪽에 붙이느라 flex-end 였습니다) */
+.user-card.is-me .card-name{ display: flex; align-items: center; justify-content: center; }
 
 /* 남의 카드도 이제 눌립니다 — 눌러도 되는 곳이라고 알려줍니다 */
 .user-card[data-card-nick]:not(.is-me):not(.share-card){ cursor: pointer; }
