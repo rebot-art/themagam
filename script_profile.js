@@ -1283,8 +1283,10 @@ function renderProfilePanel() {
       <div class="set-title">카드 글자색</div>
       ${[
         ["nick", "닉네임",       curInkNick],
-        ["goal", "목표 · 🍅",    curInkGoal],
-        ["wh",   "작업 시간 ⏱",  curInkWh]
+        /* 🍅·⏱ 는 2026-09-07 부터 테마 고정색이라 여기서 뺐습니다
+           (콩: "고정값으로 바뀌었으니 목록에서 없애줘") */
+        ["goal", "목표",         curInkGoal],
+        ["wh",   "작업 시간",    curInkWh]
       ].map(([k, label, val]) => `
       <div class="color-row" style="margin-bottom:7px;">
         <span style="flex:0 0 84px;font-size:12.5px;font-weight:700;">${label}</span>
