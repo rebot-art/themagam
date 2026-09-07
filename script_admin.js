@@ -474,7 +474,7 @@
             let ms = 0;
             Object.values(best).forEach(sg => { ms += sg.b - sg.a; });
             per[d] = ms / 60000;
-            rawPer[d] = Object.values(best).map(sg => ({ a: sg.a, b: sg.b }));
+            rawPer[d] = Object.values(best).map(sg => ({ a: sg.a, b: sg.b, s: sg.s }));
           });
           minsByNick[n] = per;
           segsByNick[n] = rawPer;
@@ -759,8 +759,10 @@
       /* 🏅 출석률 순위 (2026-08-18) — 표가 보는 그 달 기준. ‹ › 를 따라갑니다 */
       출석률순위(rateRows, 앞달);
 
-      /* 🏅 개근 명단 굳히기 (2026-08-22) — 방 배경판이 읽어 갑니다 */
-      명단굳히기(ymKey, rateRows);
+      /* 🏅 개근 명단 굳히기 (2026-08-22) — 방 배경판이 읽어 갑니다.
+         🎖️ [2026-09-07 — 콩] 닉네임 앞 배지도 같은 자리(honors/{달}/badges)에
+         함께 굳힙니다 — 카드가 읽어 갑니다. */
+      명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
 
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
@@ -1368,7 +1370,7 @@
     return [달이름(now), 달이름(지난)];
   }
 
-  async function 명단굳히기(ymKey, rateRows) {
+  async function 명단굳히기(ymKey, rateRows, 배지) {
     try {
       /* 옛 달도, 앞달도 지나갑니다 — 최근두달() 은 지난달·이번달 둘뿐이라
          앞달(다음 달)은 여기서 자동으로 걸립니다. 아직 오지 않은 달의
@@ -1380,18 +1382,130 @@
       const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0 && !r.out)
                           .map(r => r.n)
                           .sort((a, b) => a.localeCompare(b, "ko"));
-      const 옛 = await db.ref(`honors/${ymKey}/list`).once("value");
-      const 옛명단 = 옛.val() || [];
-      if (JSON.stringify(옛명단) === JSON.stringify(명단)) return;   // 그대로면 안 씀
+      const 옛 = (await db.ref(`honors/${ymKey}`).once("value")).val() || {};
+      const 옛명단 = Array.isArray(옛.list) ? 옛.list : (옛.list ? Object.values(옛.list) : []);
+      const 옛배지 = 옛.badges || {};
+      const 새배지 = 배지 || {};
+      if (JSON.stringify(옛명단) === JSON.stringify(명단) &&
+          JSON.stringify(옛배지) === JSON.stringify(새배지)) return;   // 그대로면 안 씀
       /* 아무도 없으면 노드를 통째로 지웁니다 — 빈 목록을 남겨 두면
-         배경판이 "달성자 0명" 칸을 괜히 그립니다. */
+         배경판이 "달성자 0명" 칸을 괜히 그립니다.
+         ★ 규칙이 list·at 를 요구해서(보안규칙 honors/$ym), 개근이 아무도
+           없는 달에는 배지도 못 실립니다 — 달 초라 어차피 배지도 의미가
+           없는 때라 그대로 둡니다. */
       if (!명단.length) { await db.ref(`honors/${ymKey}`).remove(); return; }
       await db.ref(`honors/${ymKey}`).set({
         list: 명단,
+        badges: 새배지,
         at: firebase.database.ServerValue.TIMESTAMP,
         by: (window.myNick || window.ADMIN_NICK || "")
       });
     } catch (e) { console.warn("[adm honors]", e); }
+  }
+
+  /* =====================================================================
+     🎖️ 닉네임 앞 배지 (2026-09-07 — 콩 "업적 대신, 관리자 창에서 뽑는
+     성실 멤버 같은 기준으로 배지가 하나씩 붙는 시스템")
+     ---------------------------------------------------------------------
+     그 달 통계로 자동으로 뽑아 honors/{달}/badges/{닉} = ["개근", …] 에
+     굳힙니다(위 명단굳히기 와 한 번에). 카드는 **지난 달** 배지를 닉네임
+     앞에 답니다(script_realtime.js) — 이번 달은 아직 숫자가 덜 찼으니까요.
+     전부 관리자 표가 이미 읽어 둔 값으로 셉니다 — 새로 읽는 건 🍅(사람별
+     pomoSessions)와 📚(worklog, 방장만 읽힘)뿐.
+       📅 개근    출석률 100% (개근 명단과 같은 기준)
+       ⏱ 장인    작업 시간(Write+Job, multi 70%) 상위 3
+       ✍️ 다작    글자수 상위 5          (콩: "3명은 아쉬워")
+       🍅 뽀모왕  뽀모 완주 상위 5
+       📚 완결러  Work Log 회차 마침 18회 이상 (의무 출석일마다 한 편)
+       🦉 올빼미  23~03시 비중이 가장 높은 사람 (달 5시간 이상 앉은 사람 중)
+       🌅 아침형  05~09시 비중이 가장 높은 사람 (둘 중 하나만)
+       🌱 새싹    그 달에 처음 온 사람이 출석 기준을 채움
+     ★ 상위 n 은 값이 0 이면 안 줍니다(아무도 안 한 달에 1등은 없어요).
+     ===================================================================== */
+  const BADGE_META = {
+    "개근":   { e: "📅", t: "개근 — 출석률 100%" },
+    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 3" },
+    "다작":   { e: "✍️", t: "다작 — 글자수 상위 5" },
+    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 5" },
+    "완결러": { e: "📚", t: "완결러 — 회차 마침 18회" },
+    "올빼미": { e: "🦉", t: "올빼미 — 23~03시에 가장 많이" },
+    "아침형": { e: "🌅", t: "아침형 — 05~09시에 가장 많이" },
+    "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성" }
+  };
+  async function 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }) {
+    const out = {};
+    const 주기 = (n, k) => { (out[n] = out[n] || []).push(k); };
+    const 상위 = (값들, n) => Object.entries(값들)
+      .filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+    try {
+      /* 📅 개근 · 🌱 새싹 */
+      rateRows.forEach(r => {
+        if (!(r.state === "ok" && r.need > 0 && !r.out)) return;
+        주기(r.n, "개근");
+        if (firstSeen && String(firstSeen[r.n] || "").startsWith(ymKey)) 주기(r.n, "새싹");
+      });
+      /* ⏱ 장인 — Write+Job(multi 70%) 분 합계 · 🦉🌅 시간대 비중 */
+      const work = {}, night = {}, morn = {}, total = {};
+      nicks.forEach(n => {
+        let w = 0, nt = 0, mo = 0, tt = 0;
+        Object.values(segsByNick[n] || {}).forEach(list => list.forEach(sg => {
+          const ms = sg.b - sg.a;
+          w += 작업ms(sg.s, ms);     // Write 전액 · Job/multiT 는 방의 공용 셈(작업ms) 그대로
+          /* 시간대 — 구간을 15분씩 잘라 시각을 봅니다(자정을 걸쳐도 됨) */
+          for (let t = sg.a; t < sg.b; t += 900000) {
+            const h = new Date(t).getHours();
+            const step = Math.min(900000, sg.b - t);
+            tt += step;
+            if (h >= 23 || h < 3) nt += step;
+            if (h >= 5 && h < 9) mo += step;
+          }
+        }));
+        work[n] = w; night[n] = nt; morn[n] = mo; total[n] = tt;
+      });
+      상위(work, 3).forEach(n => 주기(n, "장인"));
+      const 비중 = (part) => {
+        let best = "", bv = 0;
+        nicks.forEach(n => {
+          if (total[n] < 5 * 3600000) return;          // 달 5시간 미만은 표본이 작아 뺍니다
+          const v = part[n] / total[n];
+          if (v > bv) { bv = v; best = n; }
+        });
+        return bv > 0 ? best : "";
+      };
+      const 올 = 비중(night), 아 = 비중(morn);
+      if (올) 주기(올, "올빼미");
+      if (아 && 아 !== 올) 주기(아, "아침형");
+      /* ✍️ 다작 — wordlog/{날}/{닉}.total */
+      const words = {};
+      Object.values(wordMonth || {}).forEach(day => Object.entries(day || {}).forEach(([n, r]) => {
+        if (!nicks.includes(n)) return;
+        words[n] = (words[n] || 0) + Math.max(0, Number(r?.total || 0));
+      }));
+      상위(words, 5).forEach(n => 주기(n, "다작"));
+      /* 🍅 뽀모왕 — users/{닉}/pomoSessions/{날}.count */
+      const pomo = {};
+      await Promise.all(nicks.map(async n => {
+        try {
+          const v = (await db.ref(`users/${n}/pomoSessions`).once("value")).val() || {};
+          let c = 0;
+          Object.entries(v).forEach(([d, o]) => { if (d.startsWith(ymKey)) c += Math.max(0, Number(o?.count || 0)); });
+          pomo[n] = c;
+        } catch (e) { pomo[n] = 0; }
+      }));
+      상위(pomo, 5).forEach(n => 주기(n, "뽀모왕"));
+      /* 📚 완결러 — worklog/{닉}/ep 에서 done && doneDay 가 그 달 */
+      await Promise.all(nicks.map(async n => {
+        try {
+          const v = (await db.ref(`worklog/${n}/ep`).once("value")).val() || {};
+          const c = Object.values(v).filter(x => x && x.done && String(x.doneDay || "").startsWith(ymKey)).length;
+          if (c >= 18) 주기(n, "완결러");
+        } catch (e) {}   // 운영진은 worklog 를 못 읽습니다 — 그러면 이 배지만 조용히 빠집니다
+      }));
+    } catch (e) { console.warn("[adm badges]", e); }
+    /* 순서를 고정해 둡니다 — 카드에 늘 같은 차례로 */
+    const 차례 = Object.keys(BADGE_META);
+    Object.keys(out).forEach(n => { out[n] = 차례.filter(k => out[n].includes(k)); });
+    return out;
   }
 
   function 출석률순위(rateRows, 앞달) {

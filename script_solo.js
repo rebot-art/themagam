@@ -565,6 +565,27 @@
     const 옛나 = _get("status/" + 내닉());
     if (옛나 && typeof 옛나 === "object") out[내닉()] = { ...out[내닉()], ...옛나 };
 
+    /* 🎖️ 배지 미리보기 (2026-09-07) — 진짜 방은 관리자가 굳힌
+       honors/{지난 달}/badges 를 읽는데, 이 방엔 그런 게 없으니 유령마다
+       자리 번호로 정해지는 표본을 심어 둡니다(내 카드는 다 채워 7개).
+       카드는 지난 달 것만 보므로 지난 달 자리에 넣습니다. */
+    try {
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+      const 지난 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const 종류 = ["개근", "장인", "다작", "뽀모왕", "완결러", "올빼미", "아침형", "새싹"];
+      const badges = {};
+      _친구.forEach(f => {
+        if (f.idx === 0) { badges[f.nick] = ["개근", "장인", "다작", "뽀모왕", "완결러", "올빼미", "새싹"]; return; }
+        const n = f.idx % 4;                       // 0~3개
+        const pick = [];
+        for (let i = 0; i < n; i++) pick.push(종류[(f.idx * 3 + i * 2) % 종류.length]);
+        const 정리 = 종류.filter(k => pick.includes(k));
+        if (정리.includes("올빼미") && 정리.includes("아침형")) 정리.splice(정리.indexOf("아침형"), 1);
+        if (정리.length) badges[f.nick] = 정리;
+      });
+      _설정(`honors/${지난}`, { list: Object.keys(badges), badges, at: now });
+    } catch (e) {}
+
     window._statusCache = out;
     /* ★ [고침 2026-08-15] 예전에는 내 카드 하나만 status 에 넣고, 나머지는
          _statusCache 에만 얹어 두었습니다. 그런데 status 를 듣는 쪽

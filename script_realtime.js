@@ -431,8 +431,36 @@
      달이 바뀌면 듣는 자리도 다시 겁니다 (_honorKeys 로 판별).
      ===================================================================== */
   let _honors = {};        // { "2026-08": ["닉", ...] }
+  let _badges = {};        // { "2026-08": { 닉: ["개근", …] } } — 🎖️ 닉네임 앞 배지 (2026-09-07)
   let _honorRefs = [];     // 지금 듣고 있는 곳 [[ref, handler], ...]
   let _honorKeys = "";     // 다시 걸어야 하나
+
+  /* 🎖️ 배지 그림·설명 — script_admin.js 의 BADGE_META 와 **같아야** 합니다
+     (관리자 페이지는 이 파일을 안 실어서 한 벌 더 둡니다. checks 가 둘을 맞춰 봅니다). */
+  const BADGE_META = {
+    "개근":   { e: "📅", t: "개근 — 출석률 100%" },
+    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 3" },
+    "다작":   { e: "✍️", t: "다작 — 글자수 상위 5" },
+    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 5" },
+    "완결러": { e: "📚", t: "완결러 — 회차 마침 18회" },
+    "올빼미": { e: "🦉", t: "올빼미 — 23~03시에 가장 많이" },
+    "아침형": { e: "🌅", t: "아침형 — 05~09시에 가장 많이" },
+    "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성" }
+  };
+  window.BADGE_META = BADGE_META;
+  /** 닉네임 앞에 붙일 배지 HTML — **지난 달** 것만(이번 달은 숫자가 덜 찼어요).
+      없으면 빈 글. 최대 7개(올빼미·아침형은 둘 중 하나라 8종 중 7개가 상한). */
+  function 배지HTML(nick) {
+    const [지난] = 두달키();
+    const arr = (_badges[지난] || {})[nick];
+    if (!Array.isArray(arr) || !arr.length) return "";
+    return `<span class="card-badges" aria-label="지난 달 배지">` +
+      arr.slice(0, 7).map(k => {
+        const m = BADGE_META[k];
+        return m ? `<span class="card-badge" title="${escapeHtml(m.t)}">${m.e}</span>` : "";
+      }).join("") + `</span>`;
+  }
+  window.cardBadgeHtml = 배지HTML;
 
   function 달키(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -453,11 +481,18 @@
     _honorKeys = 표;
     keys.forEach(k => {
       try {
-        const r = db.ref(`honors/${k}/list`);
+        /* list 만 듣던 것을 통째(list + badges)로 — 배지가 같은 자리에 삽니다.
+           달마다 이름 몇 줄 + 배지 몇 줄이라 여전히 아주 작습니다. */
+        const r = db.ref(`honors/${k}`);
         const h = r.on("value", snap => {
-          const v = snap.val();
+          const o = snap.val() || {};
+          const v = o.list;
           _honors[k] = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+          _badges[k] = (o.badges && typeof o.badges === "object") ? o.badges : {};
           drawBoard();
+          /* 🎖️ 배지는 카드에 붙으니 카드도 다시 — 달이 바뀌거나 관리자가
+             굳힌 직후에만 오는 신호라 부담 없습니다 */
+          try { renderUserCards(); } catch (e) {}
         }, () => {});
         _honorRefs.push([r, h]);
       } catch (e) {}
@@ -1233,7 +1268,7 @@
                      시끄럽기만 해요. 값은 status 의 onPhone (updateStatus 참고). */
                    row.onPhone === true
                      ? `<span class="card-device" title="폰으로 접속 중">📱</span>` : ""}
-                <div class="card-name">${escapeHtml(u)}</div>
+                <div class="card-name">${배지HTML(u)}${escapeHtml(u)}</div>
                 <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line">🎯 ${goalText}</div></div>
                 ${metaBlock}
               </div>
