@@ -4811,15 +4811,19 @@ html[data-theme-style="studio"] .brand-stamp{ color: #fff; }
 .card-foot{ text-align: center; }
 .card-name{
   /* 🎖️ [2026-09-07] 배지(최대 7개)가 이름 앞에 붙습니다. 한 줄에 안 들어가면
-     (배지 7개 + 12자 닉) 배지 줄이 위로 올라가고 이름은 아래 줄 — 왼쪽부터
-     잘리던 것을 막습니다. 짧은 닉은 예전처럼 한 줄. */
+     (배지 7개 + 12자 닉) **배지는 다 두고 닉을 … 로 자릅니다** — 콩: 카드
+     높이가 흔들리는 것보다 닉이 잘리는 쪽. 한 줄 고정. */
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  row-gap: 2px;
   font-size: var(--fs-lg);
   letter-spacing: -0.2px;
+}
+.card-nick{
+  min-width: 0;                 /* flex 자식이 내용보다 작아질 수 있게 — 이게 없으면 … 이 안 생깁니다 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-goal .goal-line{ text-align: center; }
 

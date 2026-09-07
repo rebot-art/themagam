@@ -1268,7 +1268,7 @@
                      시끄럽기만 해요. 값은 status 의 onPhone (updateStatus 참고). */
                    row.onPhone === true
                      ? `<span class="card-device" title="폰으로 접속 중">📱</span>` : ""}
-                <div class="card-name">${배지HTML(u)}${escapeHtml(u)}</div>
+                <div class="card-name">${배지HTML(u)}<span class="card-nick">${escapeHtml(u)}</span></div>
                 <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line">🎯 ${goalText}</div></div>
                 ${metaBlock}
               </div>
