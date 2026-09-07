@@ -1229,8 +1229,13 @@
              보입니다. 투두 진척은 카드 팝업에서 봅니다. */
           const _whMs = Math.max(0, Number(row.workMs || 0));
           const _whM = Math.round(_whMs / 60000);
-          const whTxt = _whM < 60 ? `${_whM}m`
-            : `${Math.floor(_whM / 60)}h${_whM % 60 ? " " + (_whM % 60) + "m" : ""}`;
+          /* ★ [2026-09-07 — 콩] 숫자와 단위(h·m)를 갈라 감쌉니다 — 가로형
+             카드에서 **숫자만** 키우고 단위는 작고 옅게 두기 위해서예요
+             (styles.css 의 .wh-u). 세로형에서는 둘이 같은 크기라 티가
+             안 납니다. */
+          const _u = (t) => t.replace(/([hm])/g, '<i class="wh-u">$1</i>');
+          const whTxt = _u(_whM < 60 ? `${_whM}m`
+            : `${Math.floor(_whM / 60)}h${_whM % 60 ? " " + (_whM % 60) + "m" : ""}`);
           void tDone; void tTotal; void pct;
           /* [2026-08-06] 지금 뽀모를 돌리는 중이면 🍅 이 살짝 뜁니다.
              타이머는 각자 것이라 남은 시간은 모릅니다 — "달리는 중"만 보여요.
