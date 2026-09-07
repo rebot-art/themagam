@@ -11480,7 +11480,25 @@ html[data-lite] .pr-flash{ animation:none; }
 .card-wide .card-goal .goal-line{ font-size: calc((var(--fs-md) - 0.5px) * 1.15); }
 .card-wide .user-card > .card-state-row{
   justify-items: center;
-  margin-top: 8px;
+  /* ★ [콩 2026-09-07] 상태표를 10% 키우되 **여백을 먹고** 커지게.
+     카드 두 번(95%×95%) 줄이면서 상태표도 함께 작아졌는데, 그 뒤 따로
+     키운 글자들(작업시간·닉네임·목표) 옆에서 유독 작아 보였어요.
+     알약이 커진 만큼(약 3px)을 **위·아래 반반씩** 먹습니다 — 위는 여기서
+     8 → 6.5px, 아래는 닉네임 박스가 밀어내는 값이라 그쪽에서 깎습니다
+     (바로 아래 .card-foot 규칙). 카드 높이는 그대로예요 — 높이가 달라지면
+     줄이 들쭉날쭉해지니까요. */
+  margin-top: 6.5px;
+}
+/* 상태표 아래 간격 = 닉네임 박스가 위로 밀어내는 값. 반반의 나머지 절반 */
+.card-wide .card-foot{ margin-top: 6.5px; }
+.card-wide .user-card > .card-state-row .card-state{
+  font-size: calc(var(--fs-sm) * 1.05 * .9 * 1.1);
+  padding: 4.2px 10.5px;      /* 3.8 · 9.5 의 110% — 알약 비율 그대로 */
+}
+/* 폭 기준자(보이지 않는 자)도 같은 값이라야 칸 폭이 안 어긋납니다 */
+.card-wide .user-card > .card-state-row .card-state-ghost{
+  font-size: calc(var(--fs-sm) * 1.05 * .9 * 1.1);
+  padding: 0 10.5px;
 }
 /* 칩 상자(뽀모방·토마토) — 이름 상자 아래에 있을 때 몫이던 점선 구분선은
    지우고 가운데로 */
