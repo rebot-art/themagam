@@ -11399,6 +11399,11 @@ html[data-lite] .pr-flash{ animation:none; }
   justify-content: center;
   align-items: baseline;
   white-space: nowrap;
+  /* ⏱ ↔ 숫자 간격 = "1h 11m" 의 시간↔분 간격과 같게 (콩). 그 간격은
+     한 칸 띄어쓰기(약 .25em)에 word-spacing -.15em 을 더한 약 .1em 이라
+     여기도 .1em. 글자 크기가 바뀌어도 둘이 같이 움직입니다. */
+  gap: .1em;
+  font-size: calc((var(--fs-lg) + 8px) * .9);   /* em 기준을 숫자·아이콘과 같게 */
 }
 /* ⏱ 아이콘 — 한 번 뺐다가 되살림(콩 "공간 될 거 같은데") — 색은 시간 글자와
    같은 --ink-wh 를 따르되 원래처럼 옅게 */
