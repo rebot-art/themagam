@@ -1769,25 +1769,31 @@
     const 카드 = 마당.querySelector(".user-card");
     if (!카드) { 마당.style.marginInline = ""; return; }
 
+    /* ★★★ [다시 고침 2026-09-07 — 콩 "폭이 넉넉한데 3장만 서고 아래로
+       내려가"] 여기서 자를 두 번 갈아탔다가 결국 어긋났습니다.
+         · 요소 자(zoom 적용 전 값을 돌려주는 것들)
+         · 카드에는 카드마다 zoom(90.25%)이 걸림
+         · 뿌리에는 화면 배율(uiZoom)이 걸림
+       셋을 섞으니 한 장의 폭을 실제보다 넓게 봐서 칸수를 적게 잡았고,
+       그 좁은 폭이 묶음 최대폭으로 박혀 **넉넉한 화면에서도 세 장**만
+       서게 됐어요.
+       그래서 **전부 화면 자(getBoundingClientRect)로 통일**해 재고,
+       마지막에 넣는 값만 요소 자로 되돌립니다(÷ uiZoom). 화면 자는 zoom 이
+       몇 겹이든 이미 다 반영된 값이라, 이 방에서 되풀이해 데인 "자 섞기"가
+       원리적으로 생기지 않습니다. */
+    const Z = window.uiZoom?.() || 1;
     const cs = getComputedStyle(마당);
-    const 안쪽 = 마당.clientWidth
-      - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    const padL = parseFloat(cs.paddingLeft) || 0;
+    const padR = parseFloat(cs.paddingRight) || 0;
     const 틈 = parseFloat(cs.columnGap) || 0;
-    /* ★ [고침 2026-09-07 — 콩 "왼쪽부터 채우기인데 묶음이 왼쪽으로 치우쳐"]
-       offsetWidth 는 **그 요소 안의 자(zoom 적용 전)** 값입니다. 가로형
-       카드에는 zoom(95%)이 걸려 있어서, 부모가 보는 실제 폭은 그보다
-       작아요. 안 곱하면 칸수·묶음 폭을 실제보다 넓게 잡아 묶음이 한쪽으로
-       밀립니다. zoom 을 곱해 **부모의 자**로 맞춥니다.
-       (화면 값을 끌어오는 게 아니라 요소 자끼리의 환산이라, 위의 "재는
-        자를 섞지 않는다" 원칙은 그대로 지켜집니다) */
-    const 배 = parseFloat(getComputedStyle(카드).zoom) || 1;
-    const 폭 = 카드.offsetWidth * 배;
+    const 틈화 = 틈 * Z;                                   // 화면 자로
+    const 안쪽 = 마당.getBoundingClientRect().width - (padL + padR) * Z;
+    const 폭 = 카드.getBoundingClientRect().width;         // 카드 zoom 까지 반영된 실제 폭
     if (!(안쪽 > 0) || !(폭 > 0)) { 마당.style.marginInline = ""; return; }
 
-    const 칸수 = Math.max(1, Math.floor((안쪽 + 틈) / (폭 + 틈)));
-    const 묶음 = 칸수 * (폭 + 틈) - 틈;
-    마당.style.maxWidth = Math.ceil(묶음
-      + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)) + "px";
+    const 칸수 = Math.max(1, Math.floor((안쪽 + 틈화) / (폭 + 틈화)));
+    const 묶음 = 칸수 * (폭 + 틈화) - 틈화;                 // 화면 자
+    마당.style.maxWidth = Math.ceil(묶음 / Z + padL + padR) + "px";   // 요소 자로 되돌려 입힘
     마당.style.marginInline = "auto";
   }
 
