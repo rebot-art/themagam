@@ -11456,8 +11456,8 @@ html[data-lite] .pr-flash{ animation:none; }
    (콩: "알파벳은 굵기도 약하게 해서 그대로 유지"). em 이라 숫자 크기가
    바뀌어도 늘 옛 크기(=.9배)에 머뭅니다. */
 .card-wide .card-side > .card-wh-t b .wh-u{
-  /* 숫자 대비 10% 작게, 굵기는 숫자와 같게 (콩 2026-09-07) */
-  font-size: .9em;
+  /* 숫자 대비 10% 작게 → 다시 그 10% (콩) = .81em, 굵기는 숫자와 같게 */
+  font-size: .81em;
   font-weight: inherit;
   font-style: normal;
 }
