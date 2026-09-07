@@ -2030,7 +2030,7 @@ body.room-bg-on{
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  font-size: 20px;           /* 12 → 14.4 → 16 → 20 (콩) — 아래로 커지는 건 괜찮음, 목표 줄만 안 가리면 */
+  font-size: 25px;           /* 12 → 14.4 → 16 → 20 → 25 (콩) — 절반(12.5px)이 카드 아래 여백 8px 을 넘어 📚 낱장 첫 선에 걸칩니다 */
   line-height: 1;
   padding: 1px 3px;
   border-radius: 999px;
@@ -2039,7 +2039,7 @@ body.room-bg-on{
 .card-badge{ display: inline-block; }
 /* 배지가 있는 상자만 아래 여백을 넉넉히 — 목표 줄 ↔ 배지 줄 간격 8 → 20px
    (콩 "2.5배"). 배지 없는 카드는 그대로. */
-.card-foot:has(.card-badges){ padding-bottom: 35px; }   /* 20 → 35 (콩) */
+.card-foot:has(.card-badges){ padding-bottom: 25px; }   /* 20 → 35 → 25 (콩) */
 .card-name{
   font-size: calc(var(--fs-lg) - 0.5px);
   font-weight: var(--fw-bold);
