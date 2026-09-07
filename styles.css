@@ -5903,6 +5903,12 @@ html[data-theme-style="ink"] .card-state{ border-radius: var(--r-full); }
 }
 /* 🍅 오늘 집중 횟수: 다크에서 밝은 라벤더로 */
 :root[data-is-dark="true"]{ --card-pomo: #CFC5F0; }
+/* ★ [2026-09-07 — 콩] 가로형 카드의 🍅 숫자 전용 색. 상태표 박스 위에서
+   읽혀야 해서 밝은 테마는 **더 진한 보라**, 어두운 테마는 밝은 라벤더로
+   갈라 둡니다 (원래 --card-pomo 는 이름 상자 안에서 쓰던 값이라 밝은
+   테마에서 옅었어요). 카드 배경·프로필 편집 색과 무관하게 고정입니다. */
+:root{ --card-pomo-ink: #5B4B96; }
+:root[data-is-dark="true"]{ --card-pomo-ink: #D6CDF5; }
 
 /* =====================================================================
    [2026-08-03·7차] 프로필 카드 고정 폭 · 채팅 접기 버튼
@@ -11501,4 +11507,20 @@ html[data-lite] .pr-flash{ animation:none; }
    (원래 이름 상자 안에 있을 땐 목표 색을 따랐는데, 상태표 박스로 옮겨
     오면서 그 규칙이 안 닿아 테마 기본색으로 떨어져 있었습니다 — 이제
     그 기본색을 **일부러** 쓰는 것으로 못 박습니다.) */
-.card-wide .card-side > .card-wh > .card-pomo-count{ color: var(--card-pomo); }
+.card-wide .card-side > .card-wh > .card-pomo-count{
+  /* ★ [콩 2026-09-07] 밝은 테마에서 연보라(#9B8FC7)가 배경에 묻혔습니다.
+     테마별로 **읽히는 쪽으로 진하게** 잡은 전용 색(--card-pomo-ink)을 쓰고,
+     굵게 + 알약 바탕도 조금 진하게(14 → 26%). 색은 프로필 편집과 무관하게
+     고정이라 카드 배경을 뭘로 골라도 늘 같습니다. */
+  color: var(--card-pomo-ink, var(--card-pomo));
+  background: color-mix(in srgb, var(--card-pomo-ink, var(--card-pomo)) 26%, transparent);
+  font-weight: var(--fw-bold);
+  font-size: 96%;            /* 80% → 96% (콩 "120%") */
+  padding: 1px 6px;
+}
+/* ⏱️ 뽀모방 딱지도 같은 크기로 (둘은 늘 짝 — 한쪽만 키우면 짝짝이) */
+.card-wide .card-side > .card-wh > .card-proom{
+  font-size: 96%;
+  font-weight: var(--fw-bold);
+  padding: 1px 6px;
+}
