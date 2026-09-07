@@ -2024,7 +2024,7 @@ body.room-bg-on{
      여백(카드 padding 8px)에 반쯤 걸쳐서, 가운데 정렬. 닉·목표는 그대로. */
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: -8px;              /* 이름 상자 밑선에서 카드 padding(8px)만큼 더 내려 = 카드 밑면 */
   transform: translate(-50%, 50%);
   z-index: 2;
   display: inline-flex;
@@ -2037,9 +2037,10 @@ body.room-bg-on{
   pointer-events: none;      /* 아래칸 클릭(목표·투두)을 가로막지 않게 */
 }
 .card-badge{ display: inline-block; }
-/* 배지가 있는 상자만 아래 여백을 넉넉히 — 목표 줄 ↔ 배지 줄 간격 8 → 20px
-   (콩 "2.5배"). 배지 없는 카드는 그대로. */
-.card-foot:has(.card-badges){ padding-bottom: 25px; }   /* 20 → 35 → 25 (콩) */
+/* ★ [콩] 배지 있는 상자만 아래 여백을 늘렸더니 **카드 높이가 달라져**
+   줄이 들쭉날쭉해졌습니다(콩 캡처). 여백은 남들과 똑같이 두고, 배지는
+   흐름 밖에서 **카드 밑면에 얹힌** 것처럼만 보이게 합니다 — 아래 bottom
+   값이 그 몫이라 높이에는 손끝 하나 안 닿습니다. */
 .card-name{
   font-size: calc(var(--fs-lg) - 0.5px);
   font-weight: var(--fw-bold);
