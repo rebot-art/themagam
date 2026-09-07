@@ -11403,9 +11403,10 @@ html[data-lite] .pr-flash{ animation:none; }
 /* ⏱ 아이콘 — 한 번 뺐다가 되살림(콩 "공간 될 거 같은데") — 색은 시간 글자와
    같은 --ink-wh 를 따르되 원래처럼 옅게 */
 .card-wide .card-side > .card-wh-t small{
-  font-size: var(--fs-2xs);
+  font-size: calc((var(--fs-lg) + 8px) * .9);   /* 숫자와 같은 크기 (콩 "굉장히 작게 보여") */
   font-weight: var(--fw-bold);
-  color: var(--ink-wh, var(--muted));
+  color: var(--muted);          /* 프로필 편집 색(--ink-wh)의 영향을 안 받게 고정 — 아이콘만 (콩) */
+  line-height: 1.1;
 }
 .card-wide .card-side > .card-wh-t b{
   font-size: calc((var(--fs-lg) + 8px) * .9);   /* +8 이 좋았는데 3차 그림에서 "그 90%" (콩) */
