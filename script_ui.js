@@ -1771,7 +1771,15 @@
     const 안쪽 = 마당.clientWidth
       - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     const 틈 = parseFloat(cs.columnGap) || 0;
-    const 폭 = 카드.offsetWidth;
+    /* ★ [고침 2026-09-07 — 콩 "왼쪽부터 채우기인데 묶음이 왼쪽으로 치우쳐"]
+       offsetWidth 는 **그 요소 안의 자(zoom 적용 전)** 값입니다. 가로형
+       카드에는 zoom(95%)이 걸려 있어서, 부모가 보는 실제 폭은 그보다
+       작아요. 안 곱하면 칸수·묶음 폭을 실제보다 넓게 잡아 묶음이 한쪽으로
+       밀립니다. zoom 을 곱해 **부모의 자**로 맞춥니다.
+       (화면 값을 끌어오는 게 아니라 요소 자끼리의 환산이라, 위의 "재는
+        자를 섞지 않는다" 원칙은 그대로 지켜집니다) */
+    const 배 = parseFloat(getComputedStyle(카드).zoom) || 1;
+    const 폭 = 카드.offsetWidth * 배;
     if (!(안쪽 > 0) || !(폭 > 0)) { 마당.style.marginInline = ""; return; }
 
     const 칸수 = Math.max(1, Math.floor((안쪽 + 틈) / (폭 + 틈)));
