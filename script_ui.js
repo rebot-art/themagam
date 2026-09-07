@@ -538,6 +538,10 @@
     const changed = wide !== cardWideNow;
     cardWideNow = wide;
     if (changed) window.rerenderUserCards?.();
+    /* ★ 🖥️ 화면 공유 카드는 프로필 카드를 재서 키를 맞춥니다 — 자리가
+       바뀐 **뒤에** 다시 재야 해요. 안 재면 옛 세로형 키가 남아 공유
+       카드만 길어집니다 (콩 캡처 2026-09-07). */
+    window.syncShareCardHeights?.();
   }
   window.applyCardShape = applyCardShape;
   window.getCardShape = () => currentCardShape;

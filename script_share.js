@@ -949,7 +949,17 @@
     const z = (window.cardZoom?.() || window.uiZoom?.() || 1);
     let h = 0;
     list.querySelectorAll(".user-card:not(.share-card)").forEach(el => {
-      h = Math.max(h, el.getBoundingClientRect().height / z);
+      /* ★★★ [고침 2026-09-07 — 콩 "화면공유 카드만 높이가 달라"]
+         가로형(정사각) 카드부터는 **카드 한 장 한 장에 zoom(90.25%)** 이
+         걸립니다(styles.css 의 카드 칸 규칙). 화면 값(rect)에는 그 축소가
+         이미 들어 있는데, 입히는 style.height 는 축소 전 값이라 그대로
+         쓰면 공유 카드만 그만큼 어긋나요. 그 카드의 zoom 으로도 나눠
+         **요소 자**로 되돌린 뒤 입힙니다 (공유 카드에도 같은 zoom 이
+         걸려 있어 화면에서는 다시 같은 크기가 됩니다).
+         ※ cardZoom 은 카드 마당 전체 배율, 이건 카드 한 장의 배율 — 둘이
+           따로 곱해집니다. */
+      const 제배 = parseFloat(getComputedStyle(el).zoom) || 1;
+      h = Math.max(h, el.getBoundingClientRect().height / z / 제배);
     });
     if (!h) return;                       // 프로필 카드가 아직 없으면 그대로 둡니다
     shares.forEach(el => { el.style.height = Math.round(h) + "px"; });
