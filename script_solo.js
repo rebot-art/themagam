@@ -399,81 +399,10 @@
     window.renderUserCards?.(window._statusCache);
   };
 
-  /* =====================================================================
-     📖 가로형 카드 — 다음 리뉴얼 미리보기 (이 방에서만, 2026-09-07 저녁)
-     ---------------------------------------------------------------------
-     2026-09-06 "정사각형이면 어떤 느낌일지"로 시작해 1~7차까지 다듬고
-     잠깐 본방 설정 › 테마 탭까지 갔던 가로형은, 같은 날 운영진 의견
-     ("초반에 선택권이 너무 많고 작업 외 관심이 분산된다")으로 본방에서
-     **통째로 걷어냈습니다.** 콩이 원래 보고 싶던 캡처1 구조는 여기서만
-     스위치로 미리 봅니다:
-         ┌────────────┬─────────┐
-         │  작업 시간  │         │
-         │ 뽀모방/토마토│ 프로필  │
-         │   상태표    │  사진   │
-         ├────────────┴─────────┤
-         │       닉네임 박스       │
-         └────────────────────────┘
-     [어떻게] 켬/끔은 이 기기(localStorage soloCardWide). 알맹이는 본방
-     파일에 그대로 숨어 있는 script_ui.js applyCardShape(카드 마당에
-     .card-wide) + styles.css `.card-wide …` 규칙. 이 방에서만 더 하는
-     일은 하나 — ⏱ 작업시간 줄(.card-wh)을 이름 상자에서 꺼내 쌓기 칸
-     (.card-side) 맨 위로 옮기는 것(아래 재배치). CSS 만으로는 다른
-     부모로 못 건너가서 DOM 을 옮깁니다. applyCardShape 가 매번
-     window.soloCardWideArrange 를 불러 주고, 본방에는 이 함수가 없어
-     아무 일도 안 일어납니다.
-     ★ 5차(09-06)에서 찾은 함정 — 책 표지형이 .card-avatar-wrap·
-       .card-side 에 깔아 둔 max-width:118px·align-self:center·width:100%
-       는 styles.css .card-wide 규칙이 이미 되돌려 둡니다.
-     ===================================================================== */
-  const WIDE_KEY = "soloCardWide";
-  function 가로켬() {
-    try { return _store()?.getItem(WIDE_KEY) === "1"; } catch (e) { return false; }
-  }
-  /* ★ [2026-09-07 새벽 — 콩 "순서를 작업시간 / 상태표 / 뽀모방·토마토 로,
-       상태표가 중심"] 시간 글자(.card-wh-t)와 칩 상자(.card-wh)를 갈라
-     쌓기 칸에 [시간, 상태표, 칩] 순으로 세웁니다. 끌 때는 시간을 칩 상자
-     맨 앞으로 되돌리고 상자를 이름 상자 끝으로.
-     ★ 작업시간 글자색(--ink-wh)은 이름 상자(.card-foot)의 style 에만
-       걸려 있어서, 꺼내 오면 색이 풀립니다(콩: "프로필 편집에서 색 변경이
-       안 먹어" — 혼자 방 탓이 아니라 이 이사 탓). 이사할 때 값을 같이
-       들고 옵니다. */
-  function 가로재배치(넣기) {
-    document.querySelectorAll("#user-cards > .user-card:not(.share-card)").forEach(card => {
-      const wh = card.querySelector(".card-wh");
-      if (!wh) return;
-      const wht = card.querySelector(".card-wh-t");
-      const side = card.querySelector(".card-side");
-      const foot = card.querySelector(".card-foot");
-      const state = card.querySelector(".card-state-row");
-      /* ★ [09-07 새벽 3차 그림 — 콩] 상태표는 쌓기 칸에서 **꺼내** 프사
-         아래 카드 전폭 한 줄로(.card-body 와 .card-foot 사이). 쌓기 칸에는
-         [작업시간 / 뽀모·토마토]만 남아 프사와 중심선을 맞춥니다.
-         상태 바꾸기 클릭은 알약 자체의 data-pick-status 라 어디 있든 됩니다. */
-      if (넣기) {
-        if (!side) return;
-        if (wht && wht.parentElement !== side) side.insertBefore(wht, side.firstChild);
-        if (wh.parentElement !== side) side.appendChild(wh);          // 칩은 맨 뒤
-        if (state && foot && state.nextElementSibling !== foot) card.insertBefore(state, foot);
-        const ink = foot?.style.getPropertyValue("--ink-wh");
-        if (wht) wht.style.setProperty("--ink-wh", ink || "");
-      } else {
-        if (wht && wht.parentElement !== wh) wh.insertBefore(wht, wh.firstChild);
-        if (foot && wh.parentElement !== foot) foot.appendChild(wh);
-        if (state && side && state.parentElement !== side) side.appendChild(state);
-        if (wht) wht.style.removeProperty("--ink-wh");
-      }
-    });
-  }
-  function 가로적용() { window.applyCardShape?.(가로켬() ? "wide" : "tall"); }
-  function 가로바꾸기(on) {
-    try { _store()?.setItem(WIDE_KEY, on ? "1" : "0"); } catch (e) {}
-    가로적용();
-  }
-  window.soloGetWide = 가로켬;
-  window.soloSetWide = 가로바꾸기;
-  window.soloCardWideArrange = 가로재배치;
-  window.addEventListener("load", () => setTimeout(가로적용, 900));   // 카드가 처음 그려진 뒤
+  /* [2026-09-07] 여기 있던 "📖 카드 가로형 미리보기" 스위치와 재배치 손은
+     본방으로 졸업했습니다 — 가로형이 이제 모두의 기본이라 고를 것이
+     없어졌어요. 알맹이는 script_realtime.js 가로재배치() ·
+     script_ui.js applyCardShape · styles.css .card-wide. */
   /** 오늘 나올 자리 번호들 — 0번(내 카드)은 늘 맨 앞 */
   function 뽑힌자리() {
     const n = 카드수(), m = 보일수();

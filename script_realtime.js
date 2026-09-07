@@ -435,6 +435,43 @@
   let _honorRefs = [];     // 지금 듣고 있는 곳 [[ref, handler], ...]
   let _honorKeys = "";     // 다시 걸어야 하나
 
+  /* =====================================================================
+     🃏 가로형(정사각) 카드의 줄 세우기 — 2026-09-07 본방 전면 적용
+     ---------------------------------------------------------------------
+     CSS 만으로는 다른 부모로 못 건너가는 둘을 여기서 옮깁니다.
+       · ⏱ 작업시간 글자(.card-wh-t) → 상태표 박스(.card-side) 맨 위
+       · 상태표 줄(.card-state-row)   → 프사 아래, 이름 상자 바로 앞
+     끄면(좁은 화면) 전부 제자리로 되돌립니다. 카드를 다시 그릴 때마다
+     불려도 탈이 없게 만들었어요(이미 그 자리면 아무 일도 안 함).
+     ★ 작업시간 글자색(--ink-wh)은 이름 상자에만 걸린 변수라, 꺼내 올 때
+       값을 같이 들고 옵니다 — 안 그러면 프로필에서 고른 색이 풀립니다.
+     ★ 원래는 🧘 혼자 방(script_solo.js)에만 있던 손인데, 가로형이 본방
+       기본이 되면서 이리로 옮겼습니다. */
+  function 가로재배치(넣기) {
+    document.querySelectorAll("#user-cards > .user-card:not(.share-card)").forEach(card => {
+      const wh = card.querySelector(".card-wh");
+      if (!wh) return;
+      const wht = card.querySelector(".card-wh-t");
+      const side = card.querySelector(".card-side");
+      const foot = card.querySelector(".card-foot");
+      const state = card.querySelector(".card-state-row");
+      if (넣기) {
+        if (!side) return;
+        if (wht && wht.parentElement !== side) side.insertBefore(wht, side.firstChild);
+        if (wh.parentElement !== side) side.appendChild(wh);
+        if (state && foot && state.nextElementSibling !== foot) card.insertBefore(state, foot);
+        const ink = foot?.style.getPropertyValue("--ink-wh");
+        if (wht) wht.style.setProperty("--ink-wh", ink || "");
+      } else {
+        if (wht && wht.parentElement !== wh) wh.insertBefore(wht, wh.firstChild);
+        if (foot && wh.parentElement !== foot) foot.appendChild(wh);
+        if (state && side && state.parentElement !== side) side.appendChild(state);
+        if (wht) wht.style.removeProperty("--ink-wh");
+      }
+    });
+  }
+  window.cardWideArrange = 가로재배치;
+
   /* 🎖️ 배지 그림·설명 — script_admin.js 의 BADGE_META 와 **같아야** 합니다
      (관리자 페이지는 이 파일을 안 실어서 한 벌 더 둡니다. checks 가 둘을 맞춰 봅니다). */
   const BADGE_META = {
@@ -1112,9 +1149,17 @@
           /* 카드 배경과 무늬 — 각자 프로필에서 고른 값 */
           const cardBg  = window.sanitizeHexColor?.(prof.cardBg) || "";
           const _legacyInk = window.sanitizeHexColor?.(prof.cardTextColor) || "";
-          const inkNick = window.sanitizeHexColor?.(prof.cardNickColor) || _legacyInk;
-          const inkGoal = window.sanitizeHexColor?.(prof.cardGoalColor) || _legacyInk;
-          const inkWh   = window.sanitizeHexColor?.(prof.cardWhColor)   || _legacyInk;
+          /* ★ [2026-09-07 — 콩] 다크에서도 읽히게 자동 치환.
+             카드 배경을 **안 고른 사람**의 글자색만 손봅니다 — 배경을 고른
+             사람은 그 배경에 맞춰 색을 고른 것이라, 건드리면 오히려 망가져요.
+             셈은 채팅 닉네임 색과 같은 손(닉읽히는색)을 그대로 씁니다:
+             밝은 테마면 고른 색 그대로, 어두운 테마에서만 너무 어두운·
+             탁한 색을 읽히는 밝기까지 끌어올립니다. 보는 사람 테마 기준이라
+             각자 화면에서 알아서 읽혀요. */
+          const 읽히게 = (c) => (cardBg ? c : (window.닉읽히는색?.(c) || c));
+          const inkNick = 읽히게(window.sanitizeHexColor?.(prof.cardNickColor) || _legacyInk);
+          const inkGoal = 읽히게(window.sanitizeHexColor?.(prof.cardGoalColor) || _legacyInk);
+          const inkWh   = 읽히게(window.sanitizeHexColor?.(prof.cardWhColor)   || _legacyInk);
           const inkStyle = (inkNick || inkGoal || inkWh)
             ? ` style="${inkNick ? `--ink-nick:${inkNick};` : ""}${inkGoal ? `--ink-goal:${inkGoal};` : ""}${inkWh ? `--ink-wh:${inkWh};` : ""}"`
             : "";

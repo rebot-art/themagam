@@ -516,13 +516,12 @@
        클래스는 body 에 있어 사실 그대로지만, 좁아졌다 넓어진 사이에
        한 번 더 맞춰 두면 안전합니다(진짜 방·혼자 방 공용).
      ===================================================================== */
-  /* ★★ [2026-09-07 저녁 — 본방에서 걷어냄] 설정 › 테마 탭의 라디오와
-     계정 저장(prefs/cardShape)은 같은 날 운영진 의견("초반에 선택권이
-     너무 많고, 작업 외적인 데로 관심이 분산된다")으로 통째로 뺐습니다.
-     아래 손은 **그대로 두되 본방에서는 아무도 안 부릅니다** — 부르는
-     곳은 🧘 혼자 방(script_solo.js)뿐이라, 본방은 늘 세로형입니다.
-     다음 리뉴얼에 되살릴 때는 라디오 + 저장 한 쌍만 다시 붙이면 됩니다. */
-  let currentCardShape = "tall";
+  /* ★★★ [2026-09-07 — 콩] 가로형(정사각) 카드가 **본방 기본**이 됐습니다.
+     고르는 것이 아니라 카드 모양 자체를 바꾼 것이라(운영진: 초반에
+     선택권이 너무 많으면 관심이 분산된다) 설정 라디오도, 계정 저장도
+     없습니다. 남은 갈림길은 하나 — **좁은 화면(833px 이하)에서는 세로형**.
+     폰에서 넓은 카드는 답답하니까요. 창을 넓히면 곧바로 돌아옵니다. */
+  let currentCardShape = "wide";
   let cardWideNow = false;     // 좁은 화면 안전장치까지 거친 "지금 실제로 가로형인가"
   function applyCardShape(shape) {
     if (shape === "wide" || shape === "tall") currentCardShape = shape;
@@ -532,9 +531,8 @@
        세로형/가로형 탭으로 딴 모양을 미리 볼 수 있어야 해서요
        (편집기 액자는 script_profile.js 가 따로 붙입니다). */
     document.getElementById("user-cards")?.classList.toggle("card-wide", wide);
-    /* 🧘 혼자 방만 — ⏱ 작업시간 줄을 쌓기 칸으로 옮기는 손(캡처1 구조).
-       본방에는 이 함수가 없어 조용히 지나갑니다. */
-    window.soloCardWideArrange?.(wide);
+    /* ⏱ 작업시간·상태표를 가로형 자리로 옮기는 손 (script_realtime.js) */
+    window.cardWideArrange?.(wide);
     /* 실제 모양이 바뀌면 카드를 다시 그립니다 — 스티커 자리가 모양별
        (stickerPos / stickerPosWide)이라 HTML 자체가 달라지거든요. */
     const changed = wide !== cardWideNow;

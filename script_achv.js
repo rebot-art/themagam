@@ -368,21 +368,26 @@
     const today = dayKey();
     if (!force && window.AppStore?.getItem(CACHE_KEY) === today && _stats) return _stats;
 
-    const [attSnap, wcSnap, meSnap, baseSnap] = await Promise.all([
+    /* ★ [다이어트 2026-09-07 — 콩] 예전에는 users/{닉} 을 **통째로** 읽었습니다.
+       업적이 실제로 보는 건 pomoSessions·timeSegs 둘뿐인데, 그 아래에는
+       프꾸(사진 포함)·투두·쪽지·음악까지 다 들어 있어 한 사람이 하루 한 번
+       훑을 때마다 몇 백 KB 가 딸려 왔어요. 둘만 콕 집어 읽습니다 —
+       이 몫이 절반 아래로 떨어집니다. (읽는 횟수는 그대로 4번) */
+    const [attSnap, wcSnap, pomoSnap, segSnap, baseSnap] = await Promise.all([
       window.db.ref("attendance").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       window.db.ref("wordlog").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       /* 잠긴 칸 — 내 것이라 읽힙니다 */
-      window.db.ref(`users/${nick}`).once("value"),
+      window.db.ref(`users/${nick}/pomoSessions`).once("value"),
+      window.db.ref(`users/${nick}/timeSegs`).once("value"),
       window.db.ref(`achv/${nick}/base`).once("value")
     ]);
 
     const att = attSnap.val() || {};
     const wcs = wcSnap.val() || {};
-    const mine = meSnap.val() || {};
     const src = {
       att, wcs,
-      pomo: mine.pomoSessions || {},
-      segs: mine.timeSegs || {},
+      pomo: pomoSnap.val() || {},
+      segs: segSnap.val() || {},
       nick,
       base: baseSnap.val() || {}
     };

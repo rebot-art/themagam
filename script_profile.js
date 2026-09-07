@@ -1142,18 +1142,8 @@ function soloProfileBlockHtml(tgt) {
           ${m >= n ? "만들어 둔 자리가 전부 나옵니다." : `${n}자리 중 ${m}명이 그때그때 뽑혀요.`}
         </span>
       </div>
-      <!-- 📖 가로형 카드 미리보기 (2026-09-07 저녁) — 본방에서는 운영진
-           의견으로 걷어냈고, 다음 리뉴얼까지 이 방에서만 캡처1 구조를
-           미리 봅니다 (script_solo.js 가로적용). -->
-      <label class="set-row" style="gap:8px; align-items:center; cursor:pointer;">
-        <input type="checkbox" id="solo-wide"${window.soloGetWide?.() ? " checked" : ""}>
-        <span>📖 카드 가로형 미리보기 (다음 리뉴얼용)</span>
-      </label>
-      <p class="hint" style="margin:2px 0 0;">
-        왼쪽에 [작업시간 / 뽀모방·토마토 / 상태표]를 쌓고 오른쪽에 프사,
-        아래 닉네임 박스는 카드 너비만큼. <b>이 방에서만</b> 보이고
-        진짜 방은 세로형 그대로예요.
-      </p>
+      <!-- [2026-09-07] "📖 카드 가로형 미리보기" 스위치는 본방 기본이 되며
+           걷어냈습니다 (styles.css .card-wide). -->
       <div class="set-row">
         <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
         <input type="text" id="solo-card-nick" maxlength="12"
@@ -1537,9 +1527,6 @@ function bindSoloProfileBlock() {
   const shuf = document.getElementById("solo-reshuffle");
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
 
-  /* 📖 가로형 미리보기 (2026-09-07 저녁, 혼자 방 전용) */
-  const wd = document.getElementById("solo-wide");
-  if (wd) wd.onchange = () => { window.soloSetWide?.(wd.checked); };
 
   /* 🖥️ 가짜 화면 사진 */
   /* 🖥️ 뭉갬 슬라이더 — 미리보기를 진짜 방에서 보일 모습으로 (2026-08-21) */
@@ -1874,6 +1861,8 @@ function bindProfilePanel() {
      카드 폭(120%)·높이가 달라 같은 %가 딴 자리라서, 하나로 두면 한쪽에서
      프사 모서리에 맞춘 스티커가 다른 쪽에선 빈 여백에 떠 버립니다.
      기본 탭은 "내가 지금 보는 모양"(좁은 화면 안전장치까지 거친 값). */
+  /* 본방은 이제 늘 가로형이라 기본 탭도 가로형입니다(좁은 화면이면 세로형).
+     탭 자체는 🧘 혼자 방에서만 보입니다 — 본방에서는 고를 것이 없어요. */
   let _stkShape = window.cardWideNow?.() ? "wide" : "tall";
   const _stkPosKey = (shape) => (shape === "wide" ? "stickerPosWide" : "stickerPos");
 
