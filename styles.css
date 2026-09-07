@@ -11400,7 +11400,13 @@ html[data-lite] .pr-flash{ animation:none; }
   align-items: baseline;
   white-space: nowrap;
 }
-.card-wide .card-side > .card-wh-t small{ display: none; }
+/* ⏱ 아이콘 — 한 번 뺐다가 되살림(콩 "공간 될 거 같은데") — 색은 시간 글자와
+   같은 --ink-wh 를 따르되 원래처럼 옅게 */
+.card-wide .card-side > .card-wh-t small{
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--ink-wh, var(--muted));
+}
 .card-wide .card-side > .card-wh-t b{
   font-size: calc((var(--fs-lg) + 8px) * .9);   /* +8 이 좋았는데 3차 그림에서 "그 90%" (콩) */
   font-weight: var(--fw-bold);
@@ -11426,6 +11432,10 @@ html[data-lite] .pr-flash{ animation:none; }
   padding-top: 0;
   border-top: none;
 }
+/* 칩 순서 [🍅 토마토 / ⏱️ 뽀모방] — DOM 은 뽀모방이 먼저(본방 규칙: 딱지 →
+   숫자)라 여기서만 order 로 뒤집습니다 (콩) */
+.card-wide .card-side > .card-wh > .card-proom{ order: 2; margin-left: 1px; }
+.card-wide .card-side > .card-wh > .card-pomo-count{ order: 1; margin-left: 0; }
 /* [작업시간 / 상태표 / 뽀모방·토마토] 를 **한 덩어리**로 — 칸 안에서도
    세로 가운데로 모아, 이 덩어리의 중심선이 프사 중심선(.card-body 의
    align-items:center)과 같은 높이에. 줄 사이는 10px(콩 "2배쯤"). */
@@ -11439,7 +11449,7 @@ html[data-lite] .pr-flash{ animation:none; }
      불투명도만 50% — 테마가 바뀌면 같이 따라갑니다. */
   padding: 7px 7px 8px;
   border-radius: var(--r-md);
-  background-color: color-mix(in srgb, var(--foot-veil) 50%, transparent);
+  background-color: color-mix(in srgb, var(--foot-veil) 40%, transparent);   /* 50 → 40% (콩 "현재의 80%") */
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
