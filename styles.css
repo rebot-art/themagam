@@ -2030,7 +2030,7 @@ body.room-bg-on{
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  font-size: 12px;
+  font-size: 14.4px;         /* 12 → 14.4 (콩 "120%") — 아래로 커지는 건 괜찮음, 목표 줄만 안 가리면 */
   line-height: 1;
   padding: 1px 3px;
   border-radius: 999px;
@@ -4825,7 +4825,7 @@ html[data-theme-style="studio"] .brand-stamp{ color: #fff; }
      높이가 흔들리는 것보다 닉이 잘리는 쪽. 한 줄 고정. */
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;    /* 아래칸은 오른쪽 정렬 (6037행 규칙과 같게) */
   font-size: var(--fs-lg);
   letter-spacing: -0.2px;
 }
@@ -7343,7 +7343,7 @@ html[data-theme-style="studio"] .user-card{
 .user-card .card-foot{ position: relative; }
 /* [2026-09-07] 쪽지 자리가 프사로 옮겨 가서, 내 카드 이름 줄도 남들과 같게
    (예전엔 [쪽지][닉] 을 오른쪽에 붙이느라 flex-end 였습니다) */
-.user-card.is-me .card-name{ display: flex; align-items: center; justify-content: center; }
+.user-card.is-me .card-name{ display: flex; align-items: center; justify-content: flex-end; }   /* 남들과 같게 오른쪽 (6037행 규칙) */
 
 /* 남의 카드도 이제 눌립니다 — 눌러도 되는 곳이라고 알려줍니다 */
 .user-card[data-card-nick]:not(.is-me):not(.share-card){ cursor: pointer; }
