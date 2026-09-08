@@ -528,12 +528,29 @@
 
     let segsAll = {}, pomoAll = {}, cur = null, resetAll = {};
     try {
-      const snap = await db.ref(`users/${nick}`).once("value");
-      const v = snap.val() || {};
-      segsAll = v.timeSegs || {};
-      pomoAll = v.pomoSessions || {};
-      cur = v.timeCur || null;
-      resetAll = v.workReset || {};
+      /* ★★★★ [고침 2026-09-08 — 콩 "다운로드가 확 치솟았어", 프로파일러로
+         잡음] 여기서 `users/{닉}` 을 **통째로** 읽고 있었습니다. 그런데 이
+         함수는 카드 타이머가 **1분마다** 부르는 자리예요(_refreshTodayWork).
+         그 노드에는 timeSegs 말고도 프꾸(사진!)·투두·쪽지·음악·업적이 전부
+         들어 있어서, 프로파일러에 한 번에 **평균 47kB**로 잡혔습니다 —
+         5분 동안 그 경로만 3.78MB, 전체 내려받기의 **73%**.
+         사람이 늘수록 곱으로 늘어나는 자리라(각자 자기 것을 1분마다),
+         17명이면 하루 1GB 를 훌쩍 넘습니다. 어제 다운로드가 튄 진짜 원인.
+         ★ 쓰는 건 넷뿐이라 **그 넷만 콕 집어** 읽습니다. 요청 수는 1 → 4로
+           늘지만(요청 수는 요금과 무관), 내려받는 양은 47kB → 1kB 아래로
+           떨어집니다. 날짜 범위까지 좁히면 더 줄지만, timeSegs 는 이 함수가
+           "오늘부터 거꾸로 N일"을 셈해야 해서 통째로 둡니다(그래도 이 사람
+           것 하나뿐이라 작아요). */
+      const [segSnap, pomoSnap, curSnap, resetSnap] = await Promise.all([
+        db.ref(`users/${nick}/timeSegs`).once("value"),
+        db.ref(`users/${nick}/pomoSessions`).once("value"),
+        db.ref(`users/${nick}/timeCur`).once("value"),
+        db.ref(`users/${nick}/workReset`).once("value")
+      ]);
+      segsAll  = segSnap.val()   || {};
+      pomoAll  = pomoSnap.val()  || {};
+      cur      = curSnap.val()   || null;
+      resetAll = resetSnap.val() || {};
     } catch (e) {}
 
     for (let i = days - 1; i >= 0; i--) {
