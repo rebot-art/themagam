@@ -1463,18 +1463,17 @@
         work[n] = w; night[n] = nt; morn[n] = mo; total[n] = tt;
       });
       상위(work, 3).forEach(n => 주기(n, "장인"));
-      const 비중 = (part) => {
-        let best = "", bv = 0;
-        nicks.forEach(n => {
-          if (total[n] < 5 * 3600000) return;          // 달 5시간 미만은 표본이 작아 뺍니다
-          const v = part[n] / total[n];
-          if (v > bv) { bv = v; best = n; }
-        });
-        return bv > 0 ? best : "";
-      };
-      const 올 = 비중(night), 아 = 비중(morn);
-      if (올) 주기(올, "올빼미");
-      if (아 && 아 !== 올) 주기(아, "아침형");
+      /* ★ [고침 2026-09-08 — 콩 "한 명한테만 주는 거였구나 ㅜㅜ, 채운
+         순으로 각각 5명씩"] 처음엔 **비중(제 작업 중 밤 비율)이 가장 높은
+         한 명**만 줬습니다. 그러면 밤에 오래 해도 낮에도 앉아 있으면
+         비중이 희석돼 밀리고, 무엇보다 딱 한 명이라 서운했어요.
+         이제 다른 배지들과 같은 결로 — **그 시간대에 쌓은 시간 총량
+         상위 5명**. 밤·아침 둘 다 많이 한 사람은 둘 다 받습니다
+         (그래서 한 사람이 8종을 다 받을 수도 있어요 — 카드도 8개까지
+          답니다). 표본이 작은 사람을 거르던 5시간 문턱은 뺐습니다 —
+         총량으로 줄 세우면 애초에 위로 못 올라오니까요. */
+      상위(night, 5).forEach(n => 주기(n, "올빼미"));
+      상위(morn, 5).forEach(n => 주기(n, "아침형"));
       /* ✍️ 다작 — wordlog/{날}/{닉}.total */
       const words = {};
       Object.values(wordMonth || {}).forEach(day => Object.entries(day || {}).forEach(([n, r]) => {

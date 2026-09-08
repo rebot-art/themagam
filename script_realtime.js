@@ -491,8 +491,10 @@
     const [지난] = 두달키();
     const arr = (_badges[지난] || {})[nick];
     if (!Array.isArray(arr) || !arr.length) return "";
+    /* 8종이 전부 붙을 수도 있습니다 (2026-09-08 — 올빼미·아침형이 각각
+       상위 5명이 되면서 한 사람이 둘 다 받을 수 있게 됐어요) */
     return `<span class="card-badges" aria-label="지난 달 배지">` +
-      arr.slice(0, 7).map(k => {
+      arr.slice(0, 8).map(k => {
         const m = BADGE_META[k];
         return m ? `<span class="card-badge" title="${escapeHtml(m.t)}">${m.e}</span>` : "";
       }).join("") + `</span>`;
