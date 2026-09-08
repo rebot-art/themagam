@@ -1781,7 +1781,12 @@
        마지막에 넣는 값만 요소 자로 되돌립니다(÷ uiZoom). 화면 자는 zoom 이
        몇 겹이든 이미 다 반영된 값이라, 이 방에서 되풀이해 데인 "자 섞기"가
        원리적으로 생기지 않습니다. */
-    const Z = window.uiZoom?.() || 1;
+    /* ★ [고침 2026-09-08 — 콩 "95% 로 보면 줄이 이상해져, 90% 면 멀쩡"]
+       카드 마당(.user-cards-grid) **자체에** 화면 배율(--card-zoom)이
+       걸려 있습니다. 화면 자 → 요소 자로 되돌릴 때 그 배율까지 곱해야
+       하는데 뿌리 배율(uiZoom)만 봤어요. 뒤집힌 방에서 uiZoom 은 늘 1이라
+       95% 에서만 5% 어긋났고, 90% 에서 멀쩡해 보인 건 우연입니다. */
+    const Z = (window.cardZoom?.() || 1) * (window.uiZoom?.() || 1);
     const cs = getComputedStyle(마당);
     const padL = parseFloat(cs.paddingLeft) || 0;
     const padR = parseFloat(cs.paddingRight) || 0;

@@ -1488,11 +1488,17 @@
     const gap = parseFloat(cs.columnGap) || 12;
     const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
     /* 여기까지 왔다는 건 사람 수나 창 폭이 진짜로 달라졌다는 뜻입니다.
-       이때는 제대로 재요 — 자주 오지 않으니 값을 치를 만합니다. */
+       이때는 제대로 재요 — 자주 오지 않으니 값을 치를 만합니다.
+       ★★ [고침 2026-09-08 — 콩 "95% 로 보면 줄이 이상해"] 카드 폭은 화면
+         자(rect), 마당 폭은 요소 자(clientWidth)로 재고 있었습니다. 마당
+         자체에 화면 배율(--card-zoom)이 걸려 있어 배율이 100% 가 아니면
+         두 값의 자가 달라져 한 줄 장수를 잘못 셌어요. **전부 화면 자로**
+         재서 맞춥니다(카드마다 걸린 zoom 도 rect 에 이미 들어 있습니다). */
     const cw = first.getBoundingClientRect().width;
     if (!cw) return;
+    const Z = (window.cardZoom?.() || 1) * (window.uiZoom?.() || 1);
     _마당폭 = list.clientWidth;
-    const C = Math.floor((_마당폭 - padX + gap) / (cw + gap));
+    const C = Math.floor((_마당폭 * Z - padX * Z + gap * Z) / (cw + gap * Z));
     if (C < 3 || n <= C || n % C !== 1) return;
 
     const br = document.createElement("div");
