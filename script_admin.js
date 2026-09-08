@@ -1385,7 +1385,10 @@
       const 옛 = (await db.ref(`honors/${ymKey}`).once("value")).val() || {};
       const 옛명단 = Array.isArray(옛.list) ? 옛.list : (옛.list ? Object.values(옛.list) : []);
       const 옛배지 = 옛.badges || {};
-      const 새배지 = 배지 || {};
+      /* 배지뽑기가 null 을 주면 "이 달은 안 셌다" 는 뜻입니다 — 그때는
+         이미 굳혀 둔 배지를 그대로 둡니다(빈 것으로 덮어쓰면 카드에서
+         배지가 사라져요). */
+      const 새배지 = (배지 === null) ? 옛배지 : (배지 || {});
       if (JSON.stringify(옛명단) === JSON.stringify(명단) &&
           JSON.stringify(옛배지) === JSON.stringify(새배지)) return;   // 그대로면 안 씀
       /* 아무도 없으면 노드를 통째로 지웁니다 — 빈 목록을 남겨 두면
@@ -1432,7 +1435,23 @@
     "아침형": { e: "🌅", t: "아침형 — 아침 05~09시 상위 5", c: "아침 05~09시에 쌓은 작업 시간 상위 5명" },
     "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성", c: "들어온 첫 달에 출석 기준을 채우면 (한 번만)" }
   };
+  let _배지캐시 = { key: "", 값: null };   // { key: "2026-08|48", 값: {닉:[...]} }
+
   async function 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }) {
+    /* ★★★ [다이어트 2026-09-08 — 콩 "어제부터 다운로드가 확 치솟았어"]
+       ① **옛 달은 아예 안 셉니다.** 아래에서 사람마다 pomoSessions·worklog 를
+          읽는데, 명단굳히기() 는 최근 두 달이 아니면 그 값을 그냥 버립니다.
+          출석부에서 ‹ › 로 지난 달을 훑을 때마다 48명 × 두 갈래를 읽고
+          버리고 있었어요 — 어제 배지를 만들며 달을 여러 번 넘긴 것이
+          그대로 통신량이 됐습니다.
+       ② **같은 달을 다시 그릴 때는 방금 센 값을 씁니다.** 표는 휴가를
+          찍거나 창을 다시 열 때마다 다시 그려지는데, 그때마다 또 읽을
+          이유가 없어요(사람 수가 바뀌면 열쇠가 달라져 다시 셉니다).
+       ③ 📚 완결러는 **방장만** 셉니다 — worklog 는 방장·본인만 읽을 수
+          있어서, 운영진 화면에서는 48번의 거절된 요청만 오갔습니다. */
+    if (!최근두달().includes(ymKey)) return null;
+    const 열쇠 = `${ymKey}|${nicks.length}`;
+    if (_배지캐시.key === 열쇠 && _배지캐시.값) return _배지캐시.값;
     const out = {};
     const 주기 = (n, k) => { (out[n] = out[n] || []).push(k); };
     const 상위 = (값들, n) => Object.entries(값들)
@@ -1492,18 +1511,23 @@
         } catch (e) { pomo[n] = 0; }
       }));
       상위(pomo, 5).forEach(n => 주기(n, "뽀모왕"));
-      /* 📚 완결러 — worklog/{닉}/ep 에서 done && doneDay 가 그 달 */
-      await Promise.all(nicks.map(async n => {
-        try {
-          const v = (await db.ref(`worklog/${n}/ep`).once("value")).val() || {};
-          const c = Object.values(v).filter(x => x && x.done && String(x.doneDay || "").startsWith(ymKey)).length;
-          if (c >= 15) 주기(n, "완결러");
-        } catch (e) {}   // 운영진은 worklog 를 못 읽습니다 — 그러면 이 배지만 조용히 빠집니다
-      }));
+      /* 📚 완결러 — worklog/{닉}/ep 에서 done && doneDay 가 그 달.
+         ★ 방장만 읽을 수 있는 자리라, 운영진 화면에서는 아예 묻지 않습니다
+           (거절될 요청을 48번 보내 봐야 통신량만 씁니다). */
+      if (isOwner) {
+        await Promise.all(nicks.map(async n => {
+          try {
+            const v = (await db.ref(`worklog/${n}/ep`).once("value")).val() || {};
+            const c = Object.values(v).filter(x => x && x.done && String(x.doneDay || "").startsWith(ymKey)).length;
+            if (c >= 15) 주기(n, "완결러");
+          } catch (e) {}
+        }));
+      }
     } catch (e) { console.warn("[adm badges]", e); }
     /* 순서를 고정해 둡니다 — 카드에 늘 같은 차례로 */
     const 차례 = Object.keys(BADGE_META);
     Object.keys(out).forEach(n => { out[n] = 차례.filter(k => out[n].includes(k)); });
+    _배지캐시 = { key: 열쇠, 값: out };
     return out;
   }
 
