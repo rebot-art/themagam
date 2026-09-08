@@ -278,6 +278,8 @@
         /* 🧘 혼자 방 — 카드는 전부 내 것입니다. 쪽지도 업적도 뜻이 없고,
            프꾸 창을 여는 길만 남습니다 (script_profile.js 가 맡아요). */
         if (window.SOLO) return;
+        /* 🎖️ 배지 줄은 설명 팝업 몫입니다 (script_profile.js 가 엽니다) */
+        if (e.target.closest("[data-badge-of]")) return;
         /* 내 카드의 쪽지 리본 — 바로 📮 쪽지 탭으로.
            ★ 프사 칸 안에 있으므로 [data-edit-profile] 보다 먼저 봅니다 */
         if (e.target.closest("[data-note-open]")) {

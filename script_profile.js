@@ -2248,6 +2248,14 @@ function bindCardEditDelegate() {
     /* 📮 프사 모서리의 쪽지 리본 (2026-09-07) — 프사 칸 안에 있어서
        프로필 창보다 먼저 가려내야 합니다. 여는 일은 script_note.js 몫. */
     if (e.target?.closest?.("[data-note-open]")) return;
+    /* 🎖️ 배지 줄 (2026-09-08) — 이름 상자 안에 있어서 아래칸 손보다 먼저.
+       내 카드면 🗂️ 나의 작업이, 남의 카드면 📮 쪽지가 열리던 자리예요. */
+    const 배지 = e.target?.closest?.("[data-badge-of]");
+    if (배지) {
+      e.preventDefault(); e.stopPropagation();
+      window.openBadgeInfo?.(배지.getAttribute("data-badge-of"));
+      return;
+    }
     /* 프사 → 프로필 설정 */
     if (e.target?.closest?.("[data-edit-profile]")) {
       e.preventDefault(); e.stopPropagation();

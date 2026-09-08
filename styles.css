@@ -2034,9 +2034,43 @@ body.room-bg-on{
   line-height: 1;
   padding: 1px 3px;
   border-radius: 999px;
-  pointer-events: none;      /* 아래칸 클릭(목표·투두)을 가로막지 않게 */
+  /* [2026-09-08] 예전엔 pointer-events:none 이었습니다 — 이제 눌러서 설명을
+     여는 자리라 되살립니다. 배지 줄은 좁아서 아래칸을 크게 가리지 않아요. */
 }
 .card-badge{ display: inline-block; }
+/* 누를 수 있다는 표시 — 평소엔 티 나지 않게, 손을 올리면 살짝 떠오릅니다 */
+.card-badges{ cursor: pointer; pointer-events: auto; }
+.card-badges:hover{ filter: brightness(1.12) drop-shadow(0 1px 3px rgba(0,0,0,.35)); }
+.card-badges:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: 999px; }
+
+/* 🎖️ 배지 설명 팝업 껍데기 — 다른 팝업들과 같은 결(고정·가운데·어둡게) */
+#badge-modal{
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  z-index: 6400; background: rgba(0,0,0,.28); padding: var(--sp-4);
+}
+#badge-modal .modal-content{
+  width: min(430px, 100%);
+  position: relative;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+/* 🎖️ 배지 설명 팝업 (2026-09-08 — 콩) — 받은 것은 색이 살고, 못 받은 것은
+   옅게. 조건은 둘 다 보여줍니다(다음 달에 무엇을 노릴지 알 수 있게). */
+.badge-row{
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 9px 4px;
+  opacity: .45;
+  filter: grayscale(1);
+}
+.badge-row + .badge-row{ border-top: 1px solid var(--border); }
+.badge-row.got{ opacity: 1; filter: none; }
+.badge-row-e{ flex: 0 0 30px; text-align: center; font-size: 22px; line-height: 1.2; }
+.badge-row-t{ min-width: 0; }
+.badge-row-t b{ font-size: var(--fs-sm); }
+.badge-row-c{ display: block; font-size: var(--fs-xs); color: var(--muted); line-height: 1.55; }
 /* ★ [콩] 배지 있는 상자만 아래 여백을 늘렸더니 **카드 높이가 달라져**
    줄이 들쭉날쭉해졌습니다(콩 캡처). 여백은 남들과 똑같이 두고, 배지는
    흐름 밖에서 **카드 밑면에 얹힌** 것처럼만 보이게 합니다 — 아래 bottom

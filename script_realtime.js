@@ -475,16 +475,59 @@
   /* 🎖️ 배지 그림·설명 — script_admin.js 의 BADGE_META 와 **같아야** 합니다
      (관리자 페이지는 이 파일을 안 실어서 한 벌 더 둡니다. checks 가 둘을 맞춰 봅니다). */
   const BADGE_META = {
-    "개근":   { e: "📅", t: "개근 — 출석률 100%" },
-    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 3" },
-    "다작":   { e: "✍️", t: "다작 — 글자수 상위 5" },
-    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 5" },
-    "완결러": { e: "📚", t: "완결러 — 회차 마침 18회" },
-    "올빼미": { e: "🦉", t: "올빼미 — 23~03시에 가장 많이" },
-    "아침형": { e: "🌅", t: "아침형 — 05~09시에 가장 많이" },
-    "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성" }
+    "개근":   { e: "📅", t: "개근 — 출석률 100%",          c: "그달 출석률 100% (휴가를 뺀 의무 출석일을 다 채우기)" },
+    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 5",     c: "그달 작업 시간 상위 5명" },
+    "다작":   { e: "✍️", t: "다작 — 글자수 상위 5",        c: "그달 글자수 상위 5명" },
+    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 5",   c: "그달 뽀모 완주 횟수 상위 5명" },
+    "완결러": { e: "📚", t: "완결러 — 회차 마침 15회",     c: "Work Log 회차 '마침' 15회 이상" },
+    "올빼미": { e: "🦉", t: "올빼미 — 밤 23~03시 상위 5",  c: "밤 23~03시에 쌓은 작업 시간 상위 5명" },
+    "아침형": { e: "🌅", t: "아침형 — 아침 05~09시 상위 5", c: "아침 05~09시에 쌓은 작업 시간 상위 5명" },
+    "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성", c: "들어온 첫 달에 출석 기준을 채우면 (한 번만)" }
   };
   window.BADGE_META = BADGE_META;
+
+  /* =====================================================================
+     🎖️ 배지 설명 팝업 (2026-09-08 — 콩 "무슨 뜻인지 다들 모르니, 누르면
+     어떤 조건으로 붙었는지 뜨면 좋겠어")
+     ---------------------------------------------------------------------
+     카드 아래 배지 줄을 누르면 열립니다. 그 사람이 **받은 것은 색이 살고**
+     못 받은 것은 옅게 — 조건은 둘 다 보여줍니다(다음 달에 무엇을 노릴지
+     알 수 있게, 콩).
+     ★ 새로 저장하거나 읽어 오는 값이 없습니다 — 이미 듣고 있는
+       honors/{달}/badges(_badges)와 위 설명표만 씁니다. 서버 요청 0.
+     ★ 남의 카드 배지를 눌러도 **그 사람 기준**으로 엽니다 — 어차피 카드에
+       다 보이는 것이고, "쟤는 저걸 어떻게 받았지?" 가 바로 풀려요.
+     ===================================================================== */
+  function openBadgeInfo(nick) {
+    const m = document.getElementById("badge-modal");
+    const body = document.getElementById("badge-body");
+    const who = document.getElementById("badge-who");
+    if (!m || !body) return;
+    const [지난] = 두달키();
+    const 받은 = ((_badges[지난] || {})[nick] || []).filter(k => BADGE_META[k]);
+    const 달 = Number(지난.slice(5)) + "월";
+    if (who) {
+      who.innerHTML = 받은.length
+        ? `<b>${escapeHtml(nick)}</b> 님이 ${달}에 받은 배지는 <b>${받은.length}개</b>예요.`
+        : `<b>${escapeHtml(nick)}</b> 님은 ${달} 배지가 아직 없어요 — 아래가 받을 수 있는 것들이에요.`;
+    }
+    body.innerHTML = Object.keys(BADGE_META).map(k => {
+      const b = BADGE_META[k];
+      const got = 받은.includes(k);
+      return `<div class="badge-row${got ? " got" : ""}">
+          <span class="badge-row-e">${b.e}</span>
+          <span class="badge-row-t"><b>${escapeHtml(k)}</b>
+            <span class="badge-row-c">${escapeHtml(b.c)}</span></span>
+        </div>`;
+    }).join("");
+    m.style.display = "flex";
+  }
+  function closeBadgeInfo() {
+    const m = document.getElementById("badge-modal");
+    if (m) m.style.display = "none";
+  }
+  window.openBadgeInfo = openBadgeInfo;
+  window.closeBadgeInfo = closeBadgeInfo;
   /** 닉네임 앞에 붙일 배지 HTML — **지난 달** 것만(이번 달은 숫자가 덜 찼어요).
       없으면 빈 글. 최대 7개(올빼미·아침형은 둘 중 하나라 8종 중 7개가 상한). */
   function 배지HTML(nick) {
@@ -493,7 +536,8 @@
     if (!Array.isArray(arr) || !arr.length) return "";
     /* 8종이 전부 붙을 수도 있습니다 (2026-09-08 — 올빼미·아침형이 각각
        상위 5명이 되면서 한 사람이 둘 다 받을 수 있게 됐어요) */
-    return `<span class="card-badges" aria-label="지난 달 배지">` +
+    return `<span class="card-badges" role="button" tabindex="0" data-badge-of="${escapeHtml(nick)}"
+        title="배지가 무슨 뜻인지 보기" aria-label="지난 달 배지 — 눌러서 뜻 보기">` +
       arr.slice(0, 8).map(k => {
         const m = BADGE_META[k];
         return m ? `<span class="card-badge" title="${escapeHtml(m.t)}">${m.e}</span>` : "";
