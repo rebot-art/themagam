@@ -2456,7 +2456,7 @@
      ★ 대신 checks.js 가 **두 표를 직접 견줘서** 다르면 실패합니다.
        한쪽만 고치면 방에서 본 숫자와 성실 멤버 기준이 조용히 어긋나요.
      ===================================================================== */
-  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7 };
+  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7, repair: 0.3 };
   function 작업ms(status, ms) {
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;

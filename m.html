@@ -319,7 +319,7 @@
   ];
   /* ⏱ 작업 시간 무게 — ★★★ script_timelog.js 의 WORK_WEIGHT 와 **같아야** 합니다.
      이 페이지는 작업방 스크립트를 안 싣습니다. checks.js 가 두 표를 견줍니다. */
-  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7 };
+  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7, repair: 0.3 };
   function 작업ms(status, ms){
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;
