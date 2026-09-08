@@ -5,7 +5,17 @@
   // =====================================================
   let lastRendered = { user: null, ts: 0, ymd: null, msg: "" };
   let autoScrollEnabled = true;
-  let unreadCount = 0;
+  let unreadCount = 0;        // 🔽 새 메시지 플로팅 버튼용 (script_realtime.js 도 같이 씁니다)
+  /* ★★★ [고침 2026-09-08 — 콩 신고 "챗 배지가 제대로 안 뜬다"]
+     아래 알약 배지가 **플로팅 버튼과 같은 변수**를 쓰고 있었습니다.
+     이 방의 파일들은 모듈이 아니라 한 광장(window)을 함께 쓰는데,
+     script_realtime.js 의 새 메시지 손도 top-level `unreadCount` 를
+     건드립니다 — 맨 아래를 보고 있으면(대개 그렇죠) 새 메시지마다
+     `unreadCount = 0` 으로 되돌려 놓아요. 그래서 알약 배지는 아무리
+     쌓여도 늘 1 근처에 머물거나 아예 안 뜬 것처럼 보였습니다.
+     세는 뜻이 서로 다르므로(하나는 "스크롤을 올려 둔 채 놓친 수",
+     다른 하나는 "판을 닫아 둔 채 놓친 수") 변수를 **가릅니다.** */
+  let pillUnread = 0;         // 💬 아래 알약 배지용 — 이 파일만 씁니다
 
   /* ★ 아래 알약 배지 (2026-09-01 — 콩 신고 "배지가 사라졌어")
      수다방을 걷어내며 script_chatty.js 가 통째로 사라졌는데, 사실
@@ -18,7 +28,7 @@
   function renderChatTabBadge() {
     const b = document.getElementById("chat-tab-badge-main");
     if (!b) return;
-    const n = Math.max(0, unreadCount);
+    const n = Math.max(0, pillUnread);
     b.textContent = n > 99 ? "99+" : String(n);
     b.classList.toggle("hidden", n === 0);
   }
@@ -26,7 +36,7 @@
   /** 챗 판을 열면 script_dock.js 가 이걸 부릅니다 ("main" 하나뿐이라
       인자는 사실 안 봐도 되지만, 나중에 판이 늘어날 걸 대비해 받아 둡니다) */
   window.markChatRead = function () {
-    unreadCount = 0;
+    pillUnread = 0;
     renderChatTabBadge();
   };
 
@@ -49,9 +59,12 @@
       const near = (box.scrollHeight - box.scrollTop - box.clientHeight) <= 200;
       autoScrollEnabled = near;
       if (near) {
+        /* 맨 아래로 내려오면 **플로팅 버튼**만 지웁니다 — 아래 알약 배지는
+           "판을 열었나"가 기준이라 여기서 건드리면 안 됩니다(판을 닫아 둔
+           채 스크롤만 움직여도 배지가 사라져 버려요). */
         unreadCount = 0;
-        renderChatTabBadge();
         document.getElementById("new-msg-float")?.classList.add("hidden");
+        if (window.dockSeeing?.()) { pillUnread = 0; renderChatTabBadge(); }
       }
     });
     const floatBtn = document.getElementById("new-msg-float");
@@ -852,7 +865,7 @@
        챗 판이 열려 보고 있는 중이면(dockSeeing) 안 켭니다 — 보고
        있는데 숫자가 쌓이면 이상하니까요. */
     if (!isMe && !window.dockSeeing?.()) {
-      unreadCount += 1;
+      pillUnread += 1;
       renderChatTabBadge();
     }
   }
