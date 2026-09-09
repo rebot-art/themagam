@@ -133,6 +133,23 @@
                        font-size:11.5px; font-weight:600; color:var(--sub); }
   .empty{ text-align:center; color:var(--dim); font-size:13px; padding:40px 10px; line-height:1.8; }
 
+  /* 👥 고른 사람 탭 (2026-09-09 — 콩) */
+  .pick-box{ padding:12px 14px 14px; }
+  .pick-h{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:9px; }
+  .pick-h b{ font-size:12.5px; color:var(--ink); }
+  .pick-h .c{ font-size:11.5px; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .pick-h .sp{ flex:1; }
+  .mini{ font:inherit; font-size:11.5px; font-weight:700; cursor:pointer; color:var(--sub);
+         background:var(--fill); border:1px solid var(--line); border-radius:8px; padding:4px 9px; }
+  .mini:hover{ color:var(--deep); }
+  .names{ display:flex; flex-wrap:wrap; gap:5px; }
+  .nchip{ font:inherit; font-size:12px; cursor:pointer; border-radius:99px; padding:4px 11px;
+          border:1px solid var(--line); background:var(--panel); color:var(--dim); }
+  .nchip:hover{ color:var(--sub); }
+  .nchip.on{ background:rgba(179,55,43,.13); border-color:rgba(179,55,43,.45);
+             color:var(--deep); font-weight:700; }
+  .pick-hr{ border:0; border-top:1px dashed var(--line); margin:13px 0 0; }
+
   /* 📊 그래프 넷 — **한 줄에 하나씩, 넉 줄** (콩 2026-08-30 2차).
      2×2 로 두었더니 그래프가 작아 눈금이 답답했어요. 폭을 다 쓰면
      이레의 오르내림이 훨씬 잘 읽힙니다. */
@@ -172,6 +189,9 @@
       <button type="button" class="tab" data-tab="wt" role="tab">⏱️ 작업 시간</button>
       <button type="button" class="tab" data-tab="wc" role="tab">✍️ 글자수</button>
       <button type="button" class="tab" data-tab="ch" role="tab">📊 그래프</button>
+      <!-- 👥 고른 사람만 (2026-09-09 — 콩 "모임 두 개를 겹쳐 운영해서,
+           고른 멤버만 따로 출석을 보고 싶어") -->
+      <button type="button" class="tab" data-tab="pick" role="tab">👥 고른 사람</button>
     </div>
     <div class="bar">
       <button id="prev" type="button">‹ 지난주</button>
@@ -195,6 +215,11 @@
       방 안과 <b>같은 셈법</b>이에요 — 🔥WRITE는 전액, 💻JOB·📓multiT는 70%로 칩니다.<br>
       🔥 는 그날의 1등 · 합계 열의 🔥 는 이 주의 1등 · 가나다순<br>
       <b>2026년 8월 30일부터</b> 쌓이기 시작해요 — 그 전 기록은 안 보입니다.
+    </p>
+    <p class="foot" id="foot-pick" style="display:none">
+      고른 사람만 모아 봅니다 — <b>이 기기에만</b> 기억해요(서버에 안 올라갑니다).
+      다른 사람 화면에는 그대로 전체가 보여요.<br>
+      ● 은 그날 나온 날 · 칸에 손을 얹으면 첫 입장 시각 · 이름을 다시 누르면 뺍니다
     </p>
     <p class="foot" id="foot-ch" style="display:none">
       이 주 이레만 잘라 그린 그래프예요 · 옅은 세로 띠는 주말<br>
@@ -345,7 +370,7 @@
   async function 그리기() {
     document.querySelectorAll(".tab").forEach((b) =>
       b.classList.toggle("on", b.dataset.tab === _탭));
-    ["wc", "att", "wt", "ch"].forEach((k) => {
+    ["wc", "att", "wt", "ch", "pick"].forEach((k) => {
       el("foot-" + k).style.display = _탭 === k ? "block" : "none";
     });
     const 날들 = 주간틀();
@@ -355,6 +380,7 @@
       el("scroll").innerHTML = `<p class="empty">기록을 가져오지 못했어요.<br>잠시 뒤 새로고침해 주세요.</p>`;
       return;
     }
+    if (_탭 === "pick") return 고른사람그리기(날들);
     if (_탭 === "att") return 출석그리기(날들);
     if (_탭 === "wt")  return 작업시간그리기(날들);
     if (_탭 === "ch")  return 그래프탭(날들);
@@ -495,6 +521,121 @@
         <tbody>${몸}</tbody>
         <tfoot><tr>${바닥}</tr></tfoot>
       </table>`;
+  }
+
+  /* ── 👥 고른 사람 탭 (2026-09-09 — 콩) ─────────────────
+     "모임을 두 개 운영하는데, 겹치는 멤버만 따로 출석을 보고 싶어."
+     ★ 고른 이름은 **이 기기에만** 남습니다(localStorage). 서버에 한 글자도
+       안 올라가요 — 이 페이지는 원래 읽기 전용이고, 남의 화면에 내가 고른
+       명단이 비치면 곤란하니까요. 나중에 모두에게 열어도 각자 제 명단을
+       갖습니다.
+     ★ 이름은 nickOwner(방 명단, 읽기 열림)에서 한 번만 받아 둡니다 —
+       그래야 이 주에 한 번도 안 나온 사람도 고를 수 있어요. 출석 기록만
+       보면 결석한 사람이 목록에서 사라져 "누가 안 나왔는지"를 못 봅니다.
+     ★ 표는 출석 탭과 같은 잣대(attendance)를 씁니다. 다른 셈을 새로 두면
+       두 탭이 언젠가 어긋나요.
+     ────────────────────────────────────────────────── */
+  const PICK_KEY = "tm:weeklyPick";           // 이 기기에 기억하는 고른 이름들
+  let _명단 = null;                            // nickOwner 에서 한 번만
+  let _고름 = null;                            // Set
+
+  function 고름읽기() {
+    if (_고름) return _고름;
+    let arr = [];
+    try { arr = JSON.parse(localStorage.getItem(PICK_KEY) || "[]") || []; } catch (e) {}
+    _고름 = new Set(Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : []);
+    return _고름;
+  }
+  function 고름저장() {
+    try { localStorage.setItem(PICK_KEY, JSON.stringify([..._고름])); } catch (e) {}
+  }
+
+  /** 방 명단 — 한 번만 받아 둡니다 (이 주에 안 나온 사람도 골라야 해서) */
+  async function 명단읽기() {
+    if (_명단) return _명단;
+    try {
+      const snap = await firebase.database().ref("nickOwner").once("value");
+      _명단 = Object.keys(snap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
+    } catch (e) { _명단 = []; }
+    return _명단;
+  }
+
+  async function 고른사람그리기(날들) {
+    const 고름 = 고름읽기();
+    const 명단 = await 명단읽기();
+
+    /* 명단을 못 받았으면(권한·통신) 이 주에 나온 사람이라도 고르게 */
+    const 후보 = 명단.length ? 명단
+      : [...new Set(날들.flatMap(({ key }) => Object.keys(_att[key] || {})))]
+          .sort((a, b) => a.localeCompare(b, "ko"));
+
+    const 칩 = 후보.map((닉) =>
+      `<button type="button" class="nchip${고름.has(닉) ? " on" : ""}" data-pick="${esc(닉)}">${esc(닉)}</button>`
+    ).join("");
+
+    const 고른이 = 후보.filter((닉) => 고름.has(닉));
+
+    /* ── 고른 사람만 출석 표로 ── */
+    let 표 = "";
+    if (!고른이.length) {
+      표 = `<p class="empty">위에서 이름을 눌러 골라 주세요.<br>
+            두 모임에 겹치는 분들만 골라 두면 그분들 출석만 모아 봅니다.</p>`;
+    } else {
+      const 머리 = 머리줄(날들, "나온 날");
+      let 몸 = "";
+      const 날합 = {};
+      고른이.forEach((닉) => {
+        let 줄수 = 0;
+        let 칸 = `<td class="name">${esc(닉)}</td>`;
+        날들.forEach(({ key }) => {
+          const r = (_att[key] || {})[닉] || {};
+          const t = Number(r.firstAt || r.at) || 0;
+          if (t) {
+            줄수++;
+            날합[key] = (날합[key] || 0) + 1;
+            const d = new Date(t);
+            칸 += `<td class="o" title="${두자리(d.getHours())}:${두자리(d.getMinutes())} 첫 입장">●</td>`;
+          } else {
+            칸 += `<td class="z">·</td>`;
+          }
+        });
+        몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum">${줄수}일</td></tr>`;
+      });
+      let 바닥 = `<td class="name">나온 사람</td>`;
+      날들.forEach(({ key }) => { 바닥 += `<td class="n">${날합[key] ? 날합[key] + "명" : "·"}</td>`; });
+      바닥 += `<td class="n">${고른이.length}명</td>`;
+      표 = `<table>
+              <thead><tr>${머리}</tr></thead>
+              <tbody>${몸}</tbody>
+              <tfoot><tr>${바닥}</tr></tfoot>
+            </table>`;
+    }
+
+    el("scroll").innerHTML = `
+      <div class="pick-box">
+        <div class="pick-h">
+          <b>👥 볼 사람 고르기</b>
+          <span class="c">${고른이.length} / ${후보.length}명</span>
+          <span class="sp"></span>
+          <button type="button" class="mini" id="pick-none">모두 지우기</button>
+        </div>
+        <div class="names">${칩 || '<span class="c">명단을 불러오지 못했어요.</span>'}</div>
+        <hr class="pick-hr">
+      </div>
+      ${표}`;
+
+    /* 손가락 — 이름을 누르면 넣고 빼고, 표는 바로 다시 그립니다 */
+    el("scroll").querySelectorAll("[data-pick]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const 닉 = b.getAttribute("data-pick");
+        if (_고름.has(닉)) _고름.delete(닉); else _고름.add(닉);
+        고름저장();
+        고른사람그리기(날들);
+      });
+    });
+    el("pick-none")?.addEventListener("click", () => {
+      _고름.clear(); 고름저장(); 고른사람그리기(날들);
+    });
   }
 
   /* ── ⏱️ 작업 시간 탭 (2026-08-30 — 콩) ────────────────
