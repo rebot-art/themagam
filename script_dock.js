@@ -557,6 +557,14 @@
        판이 닫혀 보여도 "나 아직 방에 있구나" 를 알약이 말해 줍니다. */
     el("dock-pill-proom")?.classList.toggle(
       "joined", !!window.imInProom?.() && !_open.has("proom"));
+    /* 🍅 개인 뽀모도 같은 결로 (2026-09-10 — 콩).
+       ★ 여기서 class 를 직접 만지지 않고 **뽀모 쪽에 맡깁니다.**
+         남은 시간·단계를 아는 것은 저쪽뿐이라, 이쪽에서 반쪽만 그리면
+         글자와 배경이 어긋나요. 여닫는 순간 바로 맞으라고 부를 뿐입니다.
+       ★ 뽀모방(proom)은 반대로 dock 이 class 를 붙입니다 — 그건 "방에
+         있나"를 dock 이 알 수 있어서예요. 둘이 달라 보여도 각자 아는
+         쪽이 맡는다는 원칙은 같습니다. */
+    window.paintPomoPill?.();
   }
 
   /* =====================================================================
@@ -959,10 +967,33 @@
        그래서 이 알약만 250ms 기다렸다가 "한 번이면 열기"를 실행합니다.
        (음악이 없을 때는 기다릴 이유가 없으니 바로 엽니다) */
     let _musicClickTimer = null;
+    let _pomoClickTimer = null;
     document.addEventListener("click", (e) => {
       const pill = e.target.closest("[data-dock]");
       if (pill) {
         const id = pill.dataset.dock;
+        /* 🍅 [2026-09-10 — 콩] 내려둔 뽀모 알약도 두 번 누르면 멈춤/이어가기.
+           BGM 과 똑같은 길입니다 (250ms 기다렸다 한 번이면 열기).
+           ★ **내려두고 도는 동안에만** 이 길로 갑니다 —
+             ① 판이 펴져 있으면 판 안에 ⏸ 단추가 이미 있어요. 그때까지
+                250ms 를 기다리게 하면 판 여닫기가 굼떠 보입니다.
+             ② 안 도는 뽀모를 두 번 눌러 봐야 멈출 것이 없습니다.
+           ★ pomoRunningAny 는 **멈춰 있어도 참**입니다 — 안 그러면 한 번
+             멈춘 뒤로는 두 번 눌러도 안 이어져요. */
+        if (id === "pomo" && window.pomoRunningAny?.() && !_open.has("pomo")) {
+          if (_pomoClickTimer) {                       // 두 번째 클릭 — 멈춤/이어가기
+            clearTimeout(_pomoClickTimer);
+            _pomoClickTimer = null;
+            window.togglePomoRun?.();
+            window.paintPomoPill?.();                  // 1초를 안 기다리고 바로 반영
+            return;
+          }
+          _pomoClickTimer = setTimeout(() => {         // 한 번뿐이면 — 열기
+            _pomoClickTimer = null;
+            open(id);
+          }, 250);
+          return;
+        }
         if (id === "music" && window.musicHasPlayer?.()) {
           if (_musicClickTimer) {                      // 두 번째 클릭 — 일시정지 토글
             clearTimeout(_musicClickTimer);

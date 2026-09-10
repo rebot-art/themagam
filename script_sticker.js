@@ -3,8 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 마흔네 개. 채팅과 수다방 양쪽에서 씁니다.
-   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷)
+   말풍선 대신 크게 뜨는 손그림 쉰세 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -374,6 +374,162 @@
       textColor: "#2E7D57"
     },
     {
+      /* ── [2026-09-10] 딴짓 · 충전 여섯 ───────────────────
+         자리 무리(자리 비움 · 퇴근 · 출근 · 재출근) 바로 뒤.
+         자리가 **어디 있나** 라면 이쪽은 **뭐 하고 있나** 입니다.
+         여섯 다 얼굴이 아니라 **사물**로 그렸어요 — 자리 무리가 이미
+         사물이라 그래야 결이 맞고, 감탄·기분 쪽 얼굴들과도 안 섞입니다.
+         (하나 예외는 이따 봐 — 손 흔드는 게 뜻이라 사람이 있어야 합니다) */
+      id: "walk", cmd: "산책", label: "산책",
+      cmdRe: /^\/(산책|걷기|바람쐬러)$/,
+      svg: `<g transform="translate(15 49) rotate(-14)">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <g transform="translate(25 46) rotate(-14)">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <g transform="translate(28 36) rotate(-12)" opacity=".72">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <g transform="translate(38 33) rotate(-12)" opacity=".72">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <g transform="translate(41 23) rotate(-10)" opacity=".45">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <g transform="translate(51 20) rotate(-10)" opacity=".45">
+              <ellipse cx="0" cy="0" rx="3.6" ry="5.4" fill="#8A7B68"/>
+              <ellipse cx="0" cy="-6.8" rx="2.7" ry="2.1" fill="#8A7B68"/></g>
+            <path d="M3 52q3-10 6-1M9 53q2-8 5-1" stroke="#6FBF9B" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M62 48q4-11 8-2M56 51q3-8 6-1" stroke="#6FBF9B" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <ellipse cx="61" cy="12" rx="6" ry="4" fill="#C0DD97" stroke="#3A2A22" stroke-width="1.4"
+                     transform="rotate(-28 61 12)"/>
+            <path d="M57 15l7-5" stroke="#3A2A22" stroke-width="1.2"/>
+            <path d="M12 16l3 3M22 10l1 4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 외출 — 퇴근은 집 **전체**, 이건 문 하나. 실루엣이 아주 달라서
+         작게 줄여도 둘이 안 헷갈립니다. */
+      id: "out", cmd: "외출", label: "외출",
+      cmdRe: /^\/(외출|나갔다올게|잠깐외출)$/,
+      svg: `<rect x="12" y="14" width="26" height="38" rx="2" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M38 14l12 5v28l-12 5z" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <circle cx="41.5" cy="33" r="1.8" fill="#3A2A22"/>
+            <path d="M18 20h14M18 26h14" stroke="#EDE3D2" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M53 33h11M59 28l5.5 5-5.5 5" stroke="#6FBF9B" stroke-width="2.6" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 8l2 4M32 6l0 5M8 12l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* 이따 봐 — 뒤돌아 손 흔드는 뒷모습. 곧 돌아온다는 뜻입니다.
+         ★ 잘가요(손 하나 크게)·낼 봐요(달력)와 나란히 놔도 안 겹치게
+           **사람 뒷모습**으로 갔어요 — 셋 다 그림이 완전히 다릅니다.
+           잘가요는 오늘 끝, 낼 봐요는 내일, 이따 봐는 오늘 안에 돌아옴. */
+      id: "soon", cmd: "이따봐", label: "이따 봐", fs: 20,
+      /* ★ 처음엔 /다시올게 도 여기 별명으로 뒀는데, 콩이 「다시 올게요」를
+         따로 갖고 싶다고 해서 떼어 냈습니다. 슬래시 하나가 두 스티커에
+         걸리면 검사에서 걸리니 **반드시 한쪽에서 빼야** 합니다. */
+      cmdRe: /^\/(이따봐|이따보자)$/,
+      svg: `<path d="M18 52V41a12 12 0 0 1 24 0v11z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M18 45l-5 8" stroke="#3A2A22" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M41 43l10-14" stroke="#3A2A22" stroke-width="2.7" stroke-linecap="round"/>
+            <circle cx="53" cy="25" r="5" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.6"/>
+            <circle cx="30" cy="21" r="11" fill="#8A6A52" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M23 15q6-5 13-1" stroke="#A9866B" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M60 16q3-3 3-6M62 26q4 0 6-3M59 34q4 1 7 0" stroke="#8FB8E0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M10 20l3 3M8 32h4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 다시 올게요 — 문에 걸어 두는 「곧 돌아옵니다」 팻말.
+         [이따 봐와 어떻게 다른가]
+         이따 봐는 **사람이 손을 흔드는 인사**고, 이건 **자리에 남겨 두는
+         쪽지**입니다. 말하고 나가느냐, 말없이 걸어 두고 나가느냐의 차이라
+         그림도 사람 / 사물로 갈랐어요.
+         ★ 자리 비움(메모지 + zZ)과도 안 겹칩니다 — 저건 "한동안 없음",
+           이건 시계와 되돌아오는 화살표가 있어 "곧 옴" 입니다. */
+      id: "back", cmd: "다시올게", label: "다시 올게요", fs: 16,
+      cmdRe: /^\/(다시올게|다시올게요|금방올게|곧올게)$/,
+      svg: `<circle cx="36" cy="7" r="2.6" fill="none" stroke="#3A2A22" stroke-width="1.5"/>
+            <path d="M24 19L36 10L48 19" stroke="#8A7B68" stroke-width="1.6" fill="none"/>
+            <rect x="12" y="18" width="48" height="30" rx="4" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <circle cx="27" cy="33" r="9" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M27 27v6.5l4 3" stroke="#B3372B" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M44 41v-6a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="#6FBF9B" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M41.5 37.5L44 41.5l2.5-4" fill="none" stroke="#6FBF9B" stroke-width="2.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 14l3 3M64 14l-3 3M66 26h4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 인풋 — 펼친 책 위로 솟는 별 셋 = 채워지는 중.
+         독서만이 아니라 자료조사·강의 듣기까지 다 여기입니다. */
+      id: "input", cmd: "인풋", label: "인풋",
+      cmdRe: /^\/(인풋|독서|책)$/,
+      svg: `<path d="M36 28c-6-4.5-13-4.5-19-1.5v22c6-3 13-3 19 1.5z" fill="#FFFDF6" stroke="#3A2A22"
+                  stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M36 28c6-4.5 13-4.5 19-1.5v22c-6-3-13-3-19 1.5z" fill="#E8F0F8" stroke="#3A2A22"
+                  stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M36 28v22" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M22 33h9M22 38h9M41 33h9M41 38h9" stroke="#C9BCA8" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M24 18l1.2 2.6 2.6 1.2-2.6 1.2-1.2 2.6-1.2-2.6-2.6-1.2 2.6-1.2z" fill="#F0C674"/>
+            <path d="M36 8l1.7 3.7 3.7 1.7-3.7 1.7-1.7 3.7-1.7-3.7-3.7-1.7 3.7-1.7z" fill="#F0C674"/>
+            <path d="M48 17l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#F0A0B8"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 영화 — 슬레이트.
+         ★ 처음엔 팝콘으로 그렸는데, 판에 이미 밥그릇 셋(밥탐·맛점·맛저)이
+           있어서 58px 로 줄이면 "먹는 것" 무리로 빨려 들어갔습니다. */
+      id: "movie", cmd: "영화", label: "영화",
+      cmdRe: /^\/(영화|영화보는중|드라마)$/,
+      svg: `<rect x="12" y="28" width="48" height="24" rx="3" fill="#8B84A6" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M20 37h32M20 45h20" stroke="#FFFDF6" stroke-width="2.6" stroke-linecap="round"/>
+            <g transform="rotate(-11 14 26)">
+              <rect x="12" y="17" width="48" height="10" rx="2" fill="#5A5175" stroke="#3A2A22" stroke-width="1.6"/>
+              <path d="M19 17.8l-3.6 8.4M29 17.8l-3.6 8.4M39 17.8l-3.6 8.4M49 17.8l-3.6 8.4M58 17.8l-3.6 8.4"
+                    stroke="#FFFDF6" stroke-width="2.6"/>
+            </g>
+            <path d="M64 14l3-3M66 24h4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#5A5175"
+    },
+    {
+      /* 음악 — 헤드폰. 음표는 헤드밴드 **바깥**에 둡니다.
+         안에 넣었더니 헤드폰의 더듬이처럼 보였어요. */
+      id: "music", cmd: "음악", label: "음악",
+      cmdRe: /^\/(음악|노래|듣는중)$/,
+      svg: `<path d="M16 40v-8a20 20 0 0 1 40 0v8" fill="none" stroke="#3A2A22" stroke-width="3.2" stroke-linecap="round"/>
+            <rect x="9" y="34" width="13" height="18" rx="6" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.7"/>
+            <rect x="50" y="34" width="13" height="18" rx="6" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.7"/>
+            <circle cx="9" cy="26" r="3.2" fill="#AFA9EC" stroke="#3A2A22" stroke-width="1.3"/>
+            <path d="M12 26V14q4 1 4 4.5" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="60" cy="20" r="2.8" fill="#CFC9F4" stroke="#3A2A22" stroke-width="1.2"/>
+            <path d="M62.7 20V9.5q3.5 1 3.5 4" stroke="#3A2A22" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M24 12l2-4M48 14l3-4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* 멍 때리는 중 — 창틀에 걸터앉아 구름 흘러가는 걸 보는 그림.
+         ★ 쉰세 개 중 **창문은 얘 하나**라 판에서 절대 안 헷갈립니다.
+         ★ 이름이 여섯 자라 22px 로는 그림 밖으로 나가요 → fs 14.
+           (같은 뜻의 「멍~」은 얼굴 쪽에 따로 있습니다 — 콩이 둘 다 원함) */
+      id: "gaze", cmd: "멍때", label: "멍 때리는 중", fs: 14,
+      cmdRe: /^\/(멍때|멍때리기|멍때리는중|창밖)$/,
+      svg: `<rect x="14" y="10" width="44" height="38" rx="3" fill="#D6E8F4" stroke="#3A2A22" stroke-width="1.9"/>
+            <ellipse cx="26" cy="22" rx="8" ry="5" fill="#FFFDF6"/>
+            <ellipse cx="32" cy="20" rx="6" ry="4.4" fill="#FFFDF6"/>
+            <ellipse cx="45" cy="38" rx="7" ry="4.4" fill="#FFFDF6" opacity=".8"/>
+            <ellipse cx="50" cy="37" rx="5" ry="3.6" fill="#FFFDF6" opacity=".8"/>
+            <path d="M36 10v38M14 29h44" stroke="#3A2A22" stroke-width="1.7"/>
+            <rect x="10" y="48" width="52" height="4.5" rx="2" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="61" cy="15" r="1.9" fill="#A79A88"/>
+            <circle cx="66" cy="20" r="1.6" fill="#A79A88"/>
+            <circle cx="69" cy="26" r="1.3" fill="#A79A88"/>`,
+      textColor: "#6B7C8C"
+    },
+    {
       /* ── [2026-09-10] 해냈다 셋 ──────────────────────────
          자리(자리 비움·퇴근·출근·재출근)가 **어디 있는지**라면, 이 셋은
          **뭘 했는지**입니다. 자리 무리 바로 뒤에 붙였어요. */
@@ -606,6 +762,26 @@
             <circle cx="52" cy="46" r="1.9" fill="#A79A88"/>
             <circle cx="58" cy="47" r="1.7" fill="#A79A88"/>
             <circle cx="64" cy="48" r="1.5" fill="#A79A88"/>`,
+      textColor: "#6B7C8C"
+    },
+    {
+      /* 멍~ — 넋이 나간 얼굴. 눈이 **텅 빈 동그라미**입니다.
+         ★ 이 자리엔 이미 넋 나간 얼굴이 셋 있어요 — 아...(반쯤 감긴 눈) ·
+           헐(세로로 벌어진 입) · 죽겠어요(×× 눈). 그래서 눈을 속 빈
+           동그라미로 두고 **머리 위에 회색 구름**을 얹어 갈랐습니다.
+         ★ 창밖을 보는 「멍 때리는 중」과 짝입니다 — 이건 표정, 저건 상황. */
+      id: "meong", cmd: "멍", label: "멍~",
+      cmdRe: /^\/(멍|멍멍|멍하니)$/,
+      svg: `<ellipse cx="34" cy="15" rx="9" ry="5" fill="#DCD3C4"/>
+            <ellipse cx="26" cy="17" rx="7" ry="4.2" fill="#DCD3C4"/>
+            <ellipse cx="43" cy="17" rx="6.5" ry="4" fill="#DCD3C4"/>
+            <circle cx="34" cy="36" r="14" fill="#EDE3D2" stroke="#C9BCA8" stroke-width="1.4"/>
+            <circle cx="28" cy="34" r="3.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6"/>
+            <circle cx="40" cy="34" r="3.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6"/>
+            <ellipse cx="34" cy="44" rx="2.8" ry="2.2" fill="#8A7B68"/>
+            <circle cx="56" cy="30" r="1.9" fill="#A79A88"/>
+            <circle cx="61" cy="34" r="1.6" fill="#A79A88"/>
+            <circle cx="65" cy="38" r="1.3" fill="#A79A88"/>`,
       textColor: "#6B7C8C"
     },
     {

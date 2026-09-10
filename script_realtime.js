@@ -1826,11 +1826,78 @@
     window.updatePomoHeaderStatus?.({ running: false });
     window.updatePomoSetupUI?.({ running: false });
     window.updatePomoProgressBar?.(1, 1);
+    _paintPomoPill();
   }
+
+  /* =====================================================================
+     🍅 내려둔 동안 알약이 곧 타이머 (2026-09-10 — 콩)
+     ---------------------------------------------------------------------
+     [무엇이 달라지나]
+     뽀모 판을 내려두면 남은 시간이 안 보였습니다. 그래서 시간을 보려고
+     판을 폈다가 다시 내리는 일이 반복됐어요. 이제 **판이 닫혀 있는
+     동안에만** 알약 글자가 「🍅 집중 · 24:59」가 되고, 알약 배경이 지난
+     만큼 왼쪽부터 차오릅니다.
+
+     [왜 뽀모방과 같은 길로 가나]
+     ⏱️ 뽀모방이 2026-08-30 에 이미 같은 일을 합니다 (script_proom.js).
+     생김새를 맞춰 두면 두 알약이 한 식구로 보이고, CSS(.dock-pill.joined)
+     도 그대로 빌려 쓸 수 있어 새로 만들 것이 없습니다.
+
+     [통신량 — ★ 여기가 중요합니다]
+     이 기능은 **서버를 한 글자도 안 읽고 안 씁니다.**
+     개인 뽀모는 원래부터 내 브라우저 안에서만 도는 시계고(끝나는 시각을
+     이 기기에 적어 둘 뿐), 여기서 하는 일은 이미 1초마다 돌던 _pomoTick
+     안에서 **글자와 색을 바꾸는 것**뿐이에요. 듣기(on)를 새로 걸지 않고,
+     status 에도 아무것도 더 싣지 않습니다. 그래서 다운로드가 늘 이유가
+     없습니다. (2026-09 다운로드가 4.4GB 까지 갔다가 잡힌 참이라, 새
+     기능은 이 한 줄을 꼭 확인하고 넣습니다.)
+
+     ★ 시계 길이라 여기서 하는 일은 textContent · classList · style 뿐입니다.
+     ★ 원래 글자는 dataset.orig 에 한 번만 담아 두고 거기서 되살립니다 —
+       글자를 두 군데 적으면 언젠가 한쪽만 고쳐져요.
+     ===================================================================== */
+  function _paintPomoPill() {
+    const 알약 = document.getElementById("dock-pill-pomo");
+    if (!알약) return;                       // 좁은 화면(탭 배치)에는 없습니다
+    const 라벨 = 알약.querySelector(".dock-pill-label");
+    /* 판이 펴져 있으면 알약은 원래 모습으로 — 같은 숫자를 두 군데
+       보여 주면 어느 쪽을 봐야 할지 눈이 헤맵니다. */
+    const 내려둠 = !(window.dockOpened?.() || []).includes("pomo");
+
+    if (_pomo && 내려둠) {
+      if (라벨 && !라벨.dataset.orig) 라벨.dataset.orig = 라벨.textContent;
+      const 남은 = Math.max(0, _isPaused() ? _pomo.pausedLeft : (_pomo.endAt - Date.now()));
+      const 총 = (_pomo.phase === "work" ? _pomo.workMin : _pomo.restMin) * 60000;
+      const mm = String(Math.floor(남은 / 60000)).padStart(2, "0");
+      const ss = String(Math.floor((남은 % 60000) / 1000)).padStart(2, "0");
+      알약.classList.add("joined");
+      알약.classList.toggle("rest", _pomo.phase === "rest");
+      /* 멈춰 있으면 차오르는 것도 멈춥니다 — 막대만 흐르면 "도는 줄" 압니다 */
+      알약.style.setProperty("--pr-pct",
+        Math.min(100, Math.max(0, (총 - 남은) / 총 * 100)).toFixed(1) + "%");
+      if (라벨) 라벨.textContent =
+        (_isPaused() ? "⏸️ 멈춤 · " : _pomo.phase === "rest" ? "☕ 휴식 · " : "🍅 집중 · ")
+        + mm + ":" + ss;
+      /* 두 번 눌러 멈출 수 있다는 것을 알려 줍니다 — 알약만 보고는
+         모를 일이라, 마우스를 올리면 뜨게 해 둡니다 (BGM 과 같은 결). */
+      알약.title = _isPaused() ? "두 번 누르면 이어가요 · 한 번 누르면 판이 펴집니다"
+                              : "두 번 누르면 잠깐 멈춰요 · 한 번 누르면 판이 펴집니다";
+    } else if (알약.classList.contains("joined")) {
+      알약.classList.remove("joined", "rest");
+      알약.style.removeProperty("--pr-pct");
+      알약.removeAttribute("title");
+      if (라벨 && 라벨.dataset.orig) 라벨.textContent = 라벨.dataset.orig;
+    }
+  }
+  /* 판을 여닫는 순간 바로 맞추려고 dock 이 부릅니다 (1초를 안 기다리게) */
+  window.paintPomoPill = _paintPomoPill;
 
   /* 1초마다 도는 몸통 — 남은 시간을 다시 그리고, 다 되면 단계를 넘깁니다 */
   function _pomoTick() {
     if (!_pomo) return;
+    /* ★ 알약을 **맨 먼저** 그립니다. 아래 판 요소(timer-pill)가 없으면
+       그대로 돌아가 버리는데, 그때도 알약은 돌아야 하니까요. */
+    _paintPomoPill();
     const pill = document.getElementById("timer-pill");
     const text = document.getElementById("timer-text");
     if (!pill || !text) return;
@@ -2771,6 +2838,11 @@
   window.resumePomodoro = resumePomodoro;
   window.isPomodoroPaused = _isPaused;
   window.isPomodoroRunning = isPomodoroRunning;
+  /* ★ isPomodoroRunning 과 다릅니다 — 저건 "지금 달리는 중"(멈춤이면 거짓)이고
+     이건 "세션이 살아 있나"(멈춰 있어도 참)입니다. 알약 더블클릭은 멈춰 있을
+     때도 먹혀야 하니(이어가기) 이쪽을 봅니다. 둘을 헷갈리면 한 번 멈춘 뒤로는
+     알약이 영영 안 먹히는 사고가 납니다. */
+  window.pomoRunningAny = () => !!_pomo;
   window.pomodoroPhase = pomodoroPhase;
   window.requireAdminPin = requireAdminPin;
   window.clearAllChat = clearAllChat;

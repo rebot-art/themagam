@@ -9757,7 +9757,13 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 /* ⏱️ 내려뒀지만 방에는 있음 (콩 2026-08-30) — **알약이 곧 진행 바.**
    글자는 「🍅 뽀모방 참여 중 · 16:03」(script_proom.js 의 시계가 씀),
    배경은 --pr-pct 만큼 왼쪽부터 차오릅니다. 참여자에게만 보여요 —
-   .joined 자체가 "참여 중 + 내려둠" 일 때만 붙습니다. */
+   .joined 자체가 "참여 중 + 내려둠" 일 때만 붙습니다.
+
+   [2026-09-10] 🍅 **개인 뽀모도 같은 옷을 입습니다** (script_realtime.js
+   의 _paintPomoPill). 판을 내려둔 동안 글자가 「🍅 집중 · 24:59」가 되고
+   같은 방식으로 차오릅니다. 그래서 이 규칙은 뽀모방 전용이 아니에요 —
+   .dock-pill.joined 인 알약이면 무엇이든 이 옷을 입습니다. 새 규칙을
+   따로 만들지 않은 이유이기도 하고요 (둘이 달라 보이면 안 됩니다). */
 .dock-pill.joined{
   border-color: var(--accent);
   color: var(--text);
