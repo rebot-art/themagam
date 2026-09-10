@@ -3,8 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 서른아홉 개. 채팅과 수다방 양쪽에서 씁니다.
-   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉)
+   말풍선 대신 크게 뜨는 손그림 마흔네 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -504,8 +504,12 @@
          맞장구(좋아요·최고예요·고마워요·끄덕끄덕·오케이) 와
          기분(ㅋㅋ·ㅎㅎ·ㅠㅠ) 사이. 남의 말에 튀어나오는 한 마디들이라
          딱 그 사이가 제자리입니다. */
-      id: "wow", cmd: "헐", label: "헐 대박", fs: 21,
-      cmdRe: /^\/(헐|대박|와)$/,
+      /* ★ [2026-09-10 · 콩] 처음엔 「헐 대박」이었습니다. 감탄 다섯을 들이면서
+         「헐」이 따로 생겼고, 슬래시 하나가 두 스티커에 걸리면 안 되니
+         이쪽을 「대박」으로 물러 줬어요. **id 는 그대로 wow** 라서 지난
+         채팅에 남은 것도 안 깨지고, 이름만 「대박」으로 바뀌어 보입니다. */
+      id: "wow", cmd: "대박", label: "대박",
+      cmdRe: /^\/(대박|쩐다|와)$/,
       svg: `<circle cx="32" cy="34" r="14" fill="#F3D9A0"/>
             <circle cx="26" cy="31" r="3.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
             <circle cx="26" cy="31" r="1.7" fill="#3A2A22"/>
@@ -518,6 +522,91 @@
             <circle cx="64" cy="32.5" r="1.5" fill="#F0997B"/>
             <path d="M10 22l4 3M8 34h5M10 46l4-3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#C2762B"
+    },
+    {
+      /* ── [2026-09-10] 감탄 다섯 ──────────────────────────
+         대박(놀라움) 뒤, 미안해요 앞. 남의 말에 튀어나오는 소리라
+         반응 무리 한가운데가 제자리입니다.
+
+         [다섯을 한 세트로 그린 이유]
+         얼굴 크기(r=14)와 자리를 다섯이 똑같이 맞추고 **눈과 입만**
+         바꿨습니다. ㅋㅋㅋ·ㅎㅎㅎ·ㅠㅠㅠ 가 이미 그렇게 한 가족으로
+         보이는데, 감탄도 같은 방식으로 묶어야 판에서 "이 줄은 감탄" 이
+         한눈에 읽혀요. 낱개로 예쁘게 그리는 것보다 이게 낫습니다. */
+      id: "wau", cmd: "와우", label: "와우",
+      cmdRe: /^\/(와우|우와|와아)$/,
+      svg: `<circle cx="34" cy="32" r="14" fill="#F7D154"/>
+            <path d="M0 -4L1.3-1.3L4 0L1.3 1.3L0 4L-1.3 1.3L-4 0L-1.3-1.3Z" fill="#3A2A22"
+                  transform="translate(28 29) scale(1.05)"/>
+            <path d="M0 -4L1.3-1.3L4 0L1.3 1.3L0 4L-1.3 1.3L-4 0L-1.3-1.3Z" fill="#3A2A22"
+                  transform="translate(40 29) scale(1.05)"/>
+            <path d="M28 38q6 8 12 0z" fill="#B3372B" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M13 15l1.6 3.6 3.6 1.6-3.6 1.6-1.6 3.6-1.6-3.6-3.6-1.6 3.6-1.6z" fill="#F0C674"/>
+            <path d="M57 20l1.3 3 3 1.3-3 1.3-1.3 3-1.3-3-3-1.3 3-1.3z" fill="#F0A0B8"/>
+            <path d="M34 14v-5M52 14l3-4M16 44l-4 3M56 42l4 2" stroke="#F0C674" stroke-width="2.3" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 오 — 다섯 중 유일하게 **눈썹**이 있습니다. 눈썹이 올라가면
+         담백한 감탄이 되고, 입까지 작아서 와우와 안 겹쳐요. */
+      id: "oh", cmd: "오", label: "오",
+      cmdRe: /^\/(오|오오|오호)$/,
+      svg: `<circle cx="34" cy="32" r="14" fill="#9BD9C4"/>
+            <path d="M25 24.5q3.5-3 7 0M36 24.5q3.5-3 7 0" stroke="#3A2A22" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <circle cx="29" cy="31" r="1.9" fill="#3A2A22"/>
+            <circle cx="39" cy="31" r="1.9" fill="#3A2A22"/>
+            <ellipse cx="34" cy="40" rx="2.7" ry="3.4" fill="#3A2A22"/>
+            <path d="M54 24q4-3 4-8" stroke="#F0C674" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+            <circle cx="59" cy="30" r="1.7" fill="#F0C674"/>`,
+      textColor: "#1F6B5C"
+    },
+    {
+      /* 호에엑 — 기겁. /히이익 · /헉 도 같은 그림입니다.
+         ★ 셋을 따로 그리지 않은 이유: 뜻이 거의 같아서, 판에 셋이 나란히
+           있으면 고를 때 고민만 늘어납니다. 부르는 이름만 셋으로 뒀어요. */
+      id: "eek", cmd: "호에엑", label: "호에엑", fs: 19,
+      cmdRe: /^\/(호에엑|히이익|헉|기겁)$/,
+      svg: `<circle cx="34" cy="33" r="14" fill="#B7D3E8"/>
+            <circle cx="28" cy="31" r="4.2" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
+            <circle cx="28" cy="31" r="1.5" fill="#3A2A22"/>
+            <circle cx="40" cy="31" r="4.2" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
+            <circle cx="40" cy="31" r="1.5" fill="#3A2A22"/>
+            <path d="M27 41l3 3 3-3 3 3 3-3" stroke="#3A2A22" stroke-width="2" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22 15l-2-6M34 13V7M46 15l2-6" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M54 26q-3 5-3 7.2a3 3 0 0 0 6 0Q57 31 54 26z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.1"/>
+            <path d="M13 30q-2.4 4-2.4 5.8a2.4 2.4 0 0 0 4.8 0Q15.4 34 13 30z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 헐 — 얼이 빠진 놀람. 죽겠어요(×× 눈)와 달리 눈은 멀쩡한 점이고
+         **입이 세로로** 벌어집니다. 뒤의 세로 점선이 충격이에요. */
+      id: "heol", cmd: "헐", label: "헐",
+      cmdRe: /^\/(헐|허얼)$/,
+      svg: `<path d="M12 16v16M60 16v16" stroke="#A79FC4" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 4"/>
+            <circle cx="34" cy="32" r="14" fill="#EDE9F5" stroke="#C9C2D8" stroke-width="1.4"/>
+            <path d="M28 20v4M40 20v4" stroke="#A79FC4" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="28" cy="30" r="2" fill="#3A2A22"/>
+            <circle cx="40" cy="30" r="2" fill="#3A2A22"/>
+            <ellipse cx="34" cy="41" rx="3.2" ry="5" fill="#3A2A22"/>
+            <path d="M20 46q-3 3-3 6M48 46q3 3 3 6" stroke="#A79FC4" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#5A5175"
+    },
+    {
+      /* 아... — 허탈하거나 이제야 알아들었을 때. 눈이 반쯤 풀린 가로선이고,
+         옆의 점 셋이 말끝을 흐립니다. 고개를 살짝 기울여 힘을 뺐어요. */
+      id: "ah", cmd: "아", label: "아...",
+      cmdRe: /^\/(아|아아|아하)$/,
+      svg: `<g transform="rotate(9 34 33)">
+              <circle cx="34" cy="33" r="14" fill="#F3DCC4"/>
+              <path d="M25.5 30.5h6M37.5 30.5h6" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+              <ellipse cx="34" cy="40" rx="3" ry="3.8" fill="#3A2A22"/>
+            </g>
+            <path d="M50 22q5-2 6-7" stroke="#C9BCA8" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <circle cx="52" cy="46" r="1.9" fill="#A79A88"/>
+            <circle cx="58" cy="47" r="1.7" fill="#A79A88"/>
+            <circle cx="64" cy="48" r="1.5" fill="#A79A88"/>`,
+      textColor: "#6B7C8C"
     },
     {
       /* 미안해요 — 고개를 숙인 얼굴 + 땀 한 방울.
