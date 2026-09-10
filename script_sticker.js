@@ -3,7 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 열다섯 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 서른아홉 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -26,6 +27,12 @@
 
    ★ 글꼴은 인터넷에서 받아옵니다. 느리거나 막히면 잠깐 기본 글꼴로
      보였다가 바뀝니다 — 글자가 사라지진 않아요.
+
+   [글씨 크기 — fs (2026-09-10)]
+   이름은 보통 22px 로 씁니다. 그런데 「참잘했어요」처럼 다섯 자가 되면
+   그 크기로는 그림 밖으로 삐져나가요. 그래서 스티커마다 `fs` 를 적어
+   그 하나만 줄일 수 있게 했습니다. **안 적으면 예전 그대로 22px** 이라,
+   기존 스물다섯 개는 한 글자도 안 건드렸어요.
    ===================================================================== */
 (function () {
   "use strict";
@@ -86,6 +93,20 @@
       textColor: "#2E7D57"
     },
     {
+      /* ── [2026-09-10] 하루의 처음과 끝 셋 ──────────────────
+         인사 넷(방가·리하이·어서와·잘가)은 **방에 들고 나는** 인사였고,
+         이 셋은 **하루**를 여닫는 인사입니다. 그래서 인사 무리 안에
+         섞어 두되, 굿모닝은 앞(들어올 때)·낼봐/굿밤은 뒤(나갈 때)로
+         갈라 놨어요 — 판에서 위아래로 하루가 흐르게. */
+      id: "morning", cmd: "굿모닝", label: "굿모닝",
+      cmdRe: /^\/(굿모닝|모닝|좋은아침)$/,
+      svg: `<path d="M21 44a15 15 0 0 1 30 0z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M8 44h56" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M36 20v-6M20 28l-4-4M52 28l4-4M13 40H7M65 40h-6" stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M11 16q3-3 5 0q2-3 5 0" stroke="#8FB8E0" stroke-width="1.8" fill="none" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+        {
       /* ★ 방가방가가 이미 "얼굴 + 흔드는 손" 입니다. 잘가요까지 얼굴을
          넣으면 판에서 둘이 헷갈려요. 그래서 **손만** 크게 그리고,
          흔들리는 결을 양옆에 넣어 움직임으로 구분했습니다. */
@@ -98,6 +119,37 @@
       textColor: "#2F6191"
     },
     {
+      /* 낼 봐요 — 잘가요(오늘 그만) 바로 뒤. 손을 또 그리면 잘가요와
+         겹치니까 **달력**으로 갔습니다. 내일 칸에 동그라미가 쳐 있어요. */
+      id: "seeya", cmd: "낼봐", label: "낼 봐요",
+      cmdRe: /^\/(낼봐|내일봐|낼봐요)$/,
+      svg: `<path d="M26 18v6M46 18v6" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <rect x="16" y="22" width="40" height="32" rx="5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M16 27a5 5 0 0 1 5-5h30a5 5 0 0 1 5 5v3H16z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M23 38h6M33 38h6M43 38h6M23 46h6M33 46h6M43 46h6" stroke="#C9BCA8" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="36" cy="46" r="6.5" fill="none" stroke="#B3372B" stroke-width="2.2"/>
+            <path d="M62 14l-3 3M9 14l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 굿밤 — 🛏️ 이불 덮고 누운 얼굴.
+         ★ 초승달만 쓰면 맛저(달+별)와 헷갈리고, zZ 만 쓰면 자리 비움과
+           겹칩니다. 그래서 **눕힌 얼굴 + 이불**을 본체로 두고 달·zZ 는
+           곁들이로만 뒀어요 — 셋 중 어느 것과도 안 겹칩니다. */
+      id: "gnight", cmd: "굿밤", label: "굿밤",
+      cmdRe: /^\/(굿밤|잘자|굿나잇)$/,
+      svg: `<ellipse cx="36" cy="40" rx="22" ry="9" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="30" cy="34" r="11" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M24.5 33.5q2.5 2.4 5 0M32.5 33.5q2.5 2.4 5 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M28 40q2.5 2 4.5 0" stroke="#3A2A22" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M12 43h48v6a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M12 47h48" stroke="#3A2A22" stroke-width="1.2" opacity=".45"/>
+            <path d="M60 10a7 7 0 1 0 4 12 8.4 8.4 0 0 1-4-12z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.4"/>
+            <text x="43" y="24" font-family="'Gamja Flower',cursive" font-size="15" fill="#8FB8E0">zZ</text>
+            <path d="M14 16l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#AFA9EC"/>`,
+      textColor: "#4A3F9E"
+    },
+        {
       /* ── 밥 셋 ─────────────────────────────────────────────
          날마다 오갈 말이라 인사 바로 뒤, 판의 첫 줄 언저리에 둡니다.
          밥그릇 하나를 셋이 나눠 쓰되 한눈에 갈리게 했어요 —
@@ -146,6 +198,19 @@
       textColor: "#2F6191"
     },
     {
+      /* 카페인 — 밥 셋(밥탐·맛점·맛저) 뒤에 붙입니다. 마감방에서 커피는
+         끼니의 넷째니까요. 김만 그리면 맛점의 김과 헷갈려서 **번개**를
+         옆에 뒀어요 — "충전" 이 한눈에 읽힙니다. */
+      id: "coffee", cmd: "커피", label: "카페인", fs: 21,
+      cmdRe: /^\/(커피|카페인|충전)$/,
+      svg: `<path d="M18 28h30v14c0 6-5 10-11 10h-8c-6 0-11-4-11-10z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M18.5 28h29v5h-29z" fill="#7A5439"/>
+            <path d="M48 32h5a6.5 6.5 0 0 1 0 13h-5" fill="none" stroke="#3A2A22" stroke-width="2"/>
+            <path d="M26 22q3-4 0-8M36 22q3-4 0-8" stroke="#C9BCA8" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M62 12l-7 10h5l-4 9" stroke="#F0C674" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#993C1D"
+    },
+        {
       id: "pat", cmd: "토닥", label: "토닥토닥",
       svg: `<circle cx="27" cy="34" r="14" fill="#F0C674"/>
             <circle cx="22" cy="33" r="1.7" fill="#3A2A22"/>
@@ -195,6 +260,88 @@
       textColor: "#C2557A"
     },
     {
+      /* 아자아자 — 주먹 둘이 위로 불끈.
+         ★ [2026-09-10 · 콩] 처음엔 이 그림을 「박수」로 냈는데, 주먹이라
+           손뼉으로 안 읽히고 오히려 응원처럼 보인다는 얘기가 나왔어요.
+           그림은 그대로 두고 **이름만** 아자아자로 옮겼습니다 — 응원
+           무리(파이팅·힘내요·할뚜이따) 바로 뒤가 제자리예요.
+           박수는 아래에 글자 스티커로 새로 그렸습니다. */
+      id: "aza", cmd: "아자", label: "아자아자",
+      cmdRe: /^\/(아자|아자아자|아자자)$/,
+      svg: `<g transform="rotate(-20 22 39)">
+              <rect x="4" y="33" width="10" height="13" rx="3.5" fill="#F6C4AC" stroke="#3A2A22" stroke-width="1.5"/>
+              <rect x="10" y="30" width="24" height="19" rx="8" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.7"/>
+              <path d="M18 31v17M24 30.5v18M30 31.5v16" stroke="#3A2A22" stroke-width="1.4" opacity=".5"/>
+            </g>
+            <g transform="rotate(20 50 39)">
+              <rect x="58" y="33" width="10" height="13" rx="3.5" fill="#F6C4AC" stroke="#3A2A22" stroke-width="1.5"/>
+              <rect x="38" y="30" width="24" height="19" rx="8" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.7"/>
+              <path d="M42 31.5v16M48 30.5v18M54 31v17" stroke="#3A2A22" stroke-width="1.4" opacity=".5"/>
+            </g>
+            <path d="M36 23v-9M27 26l-4-7M45 26l4-7" stroke="#F0C674" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M15 54l-3 4M57 54l3 4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* ── [2026-09-10] 칭찬 셋 ────────────────────────────
+         응원(파이팅·힘내요·할뚜이따·아자아자)은 **하기 전**에 하는 말이고,
+         이 셋은 **하고 난 뒤**에 하는 말입니다. 그래서 응원 바로 뒤.
+
+         [박수는 왜 그림이 아니라 글자인가 — 콩 결정]
+         손을 어떻게 그려도 58px 로 줄면 두 덩어리로 뭉개졌습니다.
+         손가락을 하나하나 그린 안도 만들어 봤지만, 이 방에서 오갈 말은
+         모양보다 **소리**에 가까웠어요 — 그래서 손을 빼고 「짝짝짝!」을
+         그림 자리에 넣었습니다. 글씨는 다른 스티커 이름과 같은 감자꽃이고
+         흔들림 필터도 똑같이 걸려서, 손그림들 사이에 놔도 안 겉돕니다.
+         세 글자의 색을 조금씩 다르게 해서 소리가 연달아 나는 느낌을 줬어요. */
+      id: "clap", cmd: "박수", label: "박수",
+      cmdRe: /^\/(박수|짝짝|짝짝짝)$/,
+      svg: `<text x="36" y="36" text-anchor="middle" font-size="21"
+                  font-family="'Gamja Flower', cursive" stroke-width="0.6" paint-order="stroke"
+                  transform="rotate(-5 36 34)"
+            ><tspan fill="#C2762B" stroke="#C2762B">짝</tspan
+            ><tspan fill="#E08A2E" stroke="#E08A2E">짝</tspan
+            ><tspan fill="#B3372B" stroke="#B3372B">짝!</tspan></text>
+            <path d="M14 14l1.6 3.6 3.6 1.6-3.6 1.6-1.6 3.6-1.6-3.6-3.6-1.6 3.6-1.6z" fill="#F0C674"/>
+            <path d="M58 42l1.4 3.2 3.2 1.4-3.2 1.4-1.4 3.2-1.4-3.2-3.2-1.4 3.2-1.4z" fill="#F0C674"/>
+            <path d="M55 13l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#F0A0B8"/>
+            <path d="M16 46l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" fill="#F0A0B8"/>
+            <path d="M6 30h5M61 28h5M36 50v4M36 12v-4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 참잘했어요 — 어릴 적 공책에 찍히던 그 도장.
+         ★ 글씨가 다섯 자라 22px 로는 그림 밖으로 삐져나갑니다. 그래서
+           fs 로 17px 까지 낮췄어요 (아래 stickerHtml 참고). */
+      id: "stamp", cmd: "참잘", label: "참잘했어요", fs: 17,
+      cmdRe: /^\/(참잘|참잘했어요|참참)$/,
+      svg: `<g transform="rotate(-9 36 34)">
+              <circle cx="36" cy="34" r="19.5" fill="none" stroke="#B3372B" stroke-width="2.6"/>
+              <circle cx="36" cy="34" r="15" fill="#FBE7E1" stroke="#B3372B" stroke-width="1.6"/>
+              <path d="M27 30q3-4 6 0M39 30q3-4 6 0" stroke="#B3372B" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+              <path d="M29 38q7 6 14 0" stroke="#B3372B" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            </g>
+            <path d="M11 16l3 3M61 16l-3 3M36 8v3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 칭찬해요 — 하트를 뿅뿅 날리는 얼굴.
+         ★ 처음엔 "쓰다듬는 손 + 얼굴" 로 그렸는데 토닥토닥과 판박이였어요.
+           손을 빼고 하트를 날리니 비로소 갈립니다. */
+      id: "praise", cmd: "칭찬", label: "칭찬해요",
+      cmdRe: /^\/(칭찬|칭찬해|칭찬해요)$/,
+      svg: `<circle cx="26" cy="37" r="13" fill="#CFC9F4"/>
+            <path d="M18 35q3-4 6 0M28 35q3-4 6 0" stroke="#3A2A22" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+            <path d="M21 42q5 4 10 0" stroke="#3A2A22" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+            <path d="M0 0c-1.6-2.4-5-1.6-5 .8 0 2.1 3 3.7 5 5.2 2-1.5 5-3.1 5-5.2 0-2.4-3.4-3.2-5-.8z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.3" stroke-linejoin="round" transform="translate(50 30)"/>
+            <path d="M0 0c-1.6-2.4-5-1.6-5 .8 0 2.1 3 3.7 5 5.2 2-1.5 5-3.1 5-5.2 0-2.4-3.4-3.2-5-.8z"
+                  fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round" transform="translate(59 17) scale(.75)"/>
+            <path d="M0 0c-1.6-2.4-5-1.6-5 .8 0 2.1 3 3.7 5 5.2 2-1.5 5-3.1 5-5.2 0-2.4-3.4-3.2-5-.8z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="2.1" stroke-linejoin="round" transform="translate(45 13) scale(.55)"/>`,
+      textColor: "#C2557A"
+    },
+        {
       id: "away", cmd: "자리비움", label: "자리 비움",
       svg: `<rect x="18" y="24" width="36" height="22" rx="6" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.8"/>
             <path d="M26 32h20M26 38h13" stroke="#8A7B68" stroke-width="2" stroke-linecap="round"/>
@@ -227,6 +374,50 @@
       textColor: "#2E7D57"
     },
     {
+      /* ── [2026-09-10] 해냈다 셋 ──────────────────────────
+         자리(자리 비움·퇴근·출근·재출근)가 **어디 있는지**라면, 이 셋은
+         **뭘 했는지**입니다. 자리 무리 바로 뒤에 붙였어요. */
+      id: "dash", cmd: "달린다", label: "달린다",
+      cmdRe: /^\/(달린다|달려|집중)$/,
+      svg: `<circle cx="43" cy="18" r="6.5" fill="#6FBF9B" stroke="#3A2A22" stroke-width="1.5"/>
+            <path d="M41 25l-5 12" stroke="#3A2A22" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M41 29l8 5M40 31l-9 2" stroke="#3A2A22" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M36 37l9 8M36 37l-6 11" stroke="#3A2A22" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M6 22h14M4 32h16M8 42h12" stroke="#8FB8E0" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M53 50q5-4 4-10" stroke="#F0997B" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 1빡 완료 — 뽀모 한 판을 끝냈을 때.
+         ★ id 에 숫자를 못 씁니다 (판정이 /^\[\[스티커:([a-z]+)\]\]$/ 라서요).
+           그래서 이름은 「1빡」이어도 id 는 pomo 예요. 여기 숫자를 넣으면
+           지난 채팅의 스티커가 통째로 안 읽힙니다.
+         ★ 오케이(동그라미+체크)와 안 겹치게, 체크는 토마토 **바깥**의
+           작은 배지로 뺐습니다. */
+      id: "pomo", cmd: "1빡", label: "1빡 완료", fs: 19,
+      cmdRe: /^\/(1빡|일빡|한빡|빡완료)$/,
+      svg: `<circle cx="32" cy="38" r="16" fill="#E4705C" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M23 32q4-5 9-5" stroke="#F6C4AC" stroke-width="3" fill="none" stroke-linecap="round" opacity=".85"/>
+            <path d="M32 22v-6M32 22l-8-4M32 22l8-4M32 22l-6 5M32 22l6 5" stroke="#6FBF9B" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="55" cy="48" r="10" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M50 48l3.6 4 7-8" stroke="#2E7D57" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 20l3 3M13 32H8" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 마감 완료 — 원고 더미에 깃발을 꽂았습니다. 이 방에서 제일
+         자랑스러운 한 마디라 색은 붉게. */
+      id: "done", cmd: "마감완료", label: "마감 완료", fs: 19,
+      cmdRe: /^\/(마감완료|끝냈다|마감끝)$/,
+      svg: `<rect x="14" y="32" width="34" height="22" rx="3" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.5" transform="rotate(-7 31 43)"/>
+            <rect x="19" y="30" width="34" height="24" rx="3" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M25 38h22M25 44h22M25 50h13" stroke="#C9BCA8" stroke-width="2" stroke-linecap="round"/>
+            <path d="M52 34V10" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M52 11h14l-4 5 4 5H52z" fill="#B3372B" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M11 22l3 3M14 14H9" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+        {
       /* 따봉 — 방에서 제일 자주 오갈 말이라 크고 단순하게.
          손등(코랄)과 소매(연한 코랄)를 나눠서 작게 줄여도 형태가 삽니다. */
       id: "good", cmd: "좋아", label: "좋아요",
@@ -309,6 +500,54 @@
       textColor: "#1F6B5C"
     },
     {
+      /* ── [2026-09-10] 반응 셋 ────────────────────────────
+         맞장구(좋아요·최고예요·고마워요·끄덕끄덕·오케이) 와
+         기분(ㅋㅋ·ㅎㅎ·ㅠㅠ) 사이. 남의 말에 튀어나오는 한 마디들이라
+         딱 그 사이가 제자리입니다. */
+      id: "wow", cmd: "헐", label: "헐 대박", fs: 21,
+      cmdRe: /^\/(헐|대박|와)$/,
+      svg: `<circle cx="32" cy="34" r="14" fill="#F3D9A0"/>
+            <circle cx="26" cy="31" r="3.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
+            <circle cx="26" cy="31" r="1.7" fill="#3A2A22"/>
+            <circle cx="38" cy="31" r="3.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
+            <circle cx="38" cy="31" r="1.7" fill="#3A2A22"/>
+            <ellipse cx="32" cy="42" rx="4.4" ry="5.4" fill="#B3372B"/>
+            <path d="M55 13v12" stroke="#B3372B" stroke-width="3.2" stroke-linecap="round"/>
+            <circle cx="55" cy="30" r="1.9" fill="#B3372B"/>
+            <path d="M64 20v8" stroke="#F0997B" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="64" cy="32.5" r="1.5" fill="#F0997B"/>
+            <path d="M10 22l4 3M8 34h5M10 46l4-3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 미안해요 — 고개를 숙인 얼굴 + 땀 한 방울.
+         죽겠어요(×× 눈)와 달리 눈은 감겨 있고 입이 물결입니다. */
+      id: "sorry", cmd: "미안", label: "미안해요",
+      cmdRe: /^\/(미안|미안해|죄송|ㅈㅅ)$/,
+      svg: `<g transform="rotate(18 34 35)">
+              <circle cx="34" cy="35" r="14" fill="#F5C4B3"/>
+              <path d="M27 33q2.6 3 5.2 0M36 33q2.6 3 5.2 0" stroke="#3A2A22" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+              <path d="M30 42q2-2 4 0t4 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            </g>
+            <path d="M55 24q-3 5-3 7.4a3 3 0 0 0 6 0Q58 29 55 24z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.1"/>
+            <path d="M14 22l3 3M12 34h4" stroke="#C9BCA8" stroke-width="2" stroke-linecap="round"/>`,
+      textColor: "#A34A32"
+    },
+    {
+      /* 잠깐만요 — 모래시계. 자리 비움(메모지+zZ)은 **오래** 자리를
+         뜨는 것이고, 이건 **곧 돌아오는** 것입니다. */
+      id: "wait", cmd: "잠깐", label: "잠깐만요",
+      cmdRe: /^\/(잠깐|잠만|잠깐만|1분만)$/,
+      svg: `<path d="M22 14h28M22 52h28" stroke="#3A2A22" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M26 15c0 8 10 12 10 18 0-6 10-10 10-18zM26 51c0-8 10-12 10-18 0 6 10 10 10 18z"
+                  fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M28.5 19h15c-1 4-7.5 7-7.5 11 0-4-6.5-7-7.5-11z" fill="#F0C674"/>
+            <path d="M28.5 48c1-4 7.5-6 7.5-6s6.5 2 7.5 6z" fill="#F0C674"/>
+            <path d="M36 34v6" stroke="#F0C674" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M13 24l3 3M59 24l-3 3M13 42l3-3M59 42l-3-3" stroke="#8FB8E0" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B07D12"
+    },
+        {
       /* 웃음·울음은 짝으로 둡니다. 얼굴 크기와 눈 위치를 맞춰서
          나란히 놓았을 때 한 세트로 보이게 했어요. */
       id: "haha", cmd: "ㅋㅋ", label: "ㅋㅋㅋ",
@@ -406,7 +645,7 @@
     return `<svg class="msg-sticker" width="${px}" height="${px}" viewBox="0 0 72 82"
                  role="img" aria-label="${s.label}" filter="url(#crayon-rough)">
       ${s.svg}
-      <text x="36" y="72" text-anchor="middle" font-size="22"
+      <text x="36" y="72" text-anchor="middle" font-size="${s.fs || 22}"
             font-family="'Gamja Flower', cursive" fill="${s.textColor}"
             stroke="${s.textColor}" stroke-width="0.5" paint-order="stroke"
       >${s.label}</text>
@@ -464,9 +703,14 @@
          ★ 겹쳐도 됩니다 — 🙌 힘내요는 토닥이에도, 응원왕에도 듭니다.
            위로이면서 응원이니까요. */
       const ACHV_STK = {
-        cGreet: ["hi", "rehi", "welcome", "bye"],   // 👋 인사왕
-        cPat:   ["pat", "cheerup"],                  // 🫶 토닥이
-        cCheer: ["fight", "cheerup", "cando"]        // 📣 응원왕
+        /* [2026-09-10] 새로 든 열셋 중 인사·위로·응원에 해당하는 것들을
+           같이 물려 놨습니다. 업적 기준을 안 고치면, 새 스티커를 아무리
+           써도 배지가 안 붙어서 "왜 나만 안 되지" 가 됩니다. */
+        /* ★ 한 줄에 하나씩 — checks.js 가 줄 단위로 읽습니다 (여러 줄로
+           나누면 "아예 없음" 으로 잡혀요). */
+        cGreet: ["hi", "rehi", "welcome", "bye", "morning", "seeya", "gnight"], // 👋 인사왕
+        cPat:   ["pat", "cheerup", "praise"],                                   // 🫶 토닥이
+        cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]           // 📣 응원왕
       };
       Object.keys(ACHV_STK).forEach(k => {
         if (ACHV_STK[k].includes(id)) window.achvBump?.(k);
