@@ -8977,8 +8977,8 @@ html[data-theme-style="studio"] .user-card{
 }
 .input-wrap #message{
   flex: 1;
-  /* 단추(32) + 좌우 숨쉴 틈 */
-  padding-right: 42px;
+  /* 단추 둘(🖼 🖍️ = 32×2) + 좌우 숨쉴 틈 — [2026-09-11] 🖼 가 늘면서 넓혔습니다 */
+  padding-right: 76px;
 }
 .sticker-btn{
   position: absolute;
@@ -8998,6 +8998,22 @@ html[data-theme-style="studio"] .user-card{
   justify-content: center;
   transition: background var(--anim-fast), transform var(--anim-fast);
 }
+/* 🖼 기간이 지나 사라진 그림 — 주소 글자 대신 안내를 보여 줍니다.
+   [2026-09-11] 챗 그림은 창고 수명 규칙이 7일 뒤 지웁니다. 그때 주소만
+   덩그러니 남으면 "이게 뭐지" 가 되니까요. */
+.msg-img-gone{
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border);
+  background: var(--fill-1);
+  color: var(--muted-strong);
+  font-size: var(--fs-sm);
+}
+/* [2026-09-11] 🖼 그림 단추 — 🖍️ 왼쪽으로 한 칸 */
+.sticker-btn.img-btn{ right: 41px; }
+/* 끌어다 놓는 동안 — 판 테두리로 "여기 놓으면 돼요" 를 알립니다 */
+.imgup-over{ outline: 2px dashed var(--accent); outline-offset: -3px; }
 .sticker-btn:hover{ background: var(--fill-2); }
 .sticker-btn:active{ transform: scale(.92); }
 .sticker-btn[aria-expanded="true"]{ background: var(--fill-3); }

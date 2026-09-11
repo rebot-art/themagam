@@ -197,7 +197,13 @@
     const 불렸나 = !내것 && 나를불렀나(r.msg);
     const 풍선칸 = "sr-bubble" + (스티커 ? " sticker" : 큰이모지 ? " emoji" : "")
                  + (불렸나 ? " mention" : "");
-    const 속 = 스티커 || esc(r.msg);
+    /* [2026-09-11 — 콩] 주소를 눌러서 열 수 있게.
+       ★ 챗이 쓰던 함수를 그대로 빌립니다 (script_chat.js: linkifyEscaped).
+         같은 일을 두 곳에 적으면 언젠가 한쪽만 고쳐져요.
+       ★ 이 한 줄로 **그림 주소가 그림으로 펼쳐지는 것까지** 따라옵니다 —
+         🖼 그림 보내기가 "주소를 글로 보내는" 방식인 이유가 이것입니다.
+       ★ 반드시 esc() 로 먼저 막은 뒤에 링크만 되살립니다 (태그 주입 불가). */
+    const 속 = 스티커 || (window.linkifyEscaped?.(esc(r.msg)) ?? esc(r.msg));
 
     /* 프사 — 남의 말에만, 묶이지 않은 첫 줄에만 (카톡과 같은 결) */
     const 프사 = (!내것 && !묶음)
@@ -334,6 +340,10 @@
         <div class="sr-write">
           <!-- 🖼 스티커 — 챗과 같은 것을 씁니다. 고르기 판이 "어느 글칸에
                놓을지" 를 받도록 고쳤어요 (script_sticker.js) -->
+          <!-- 🖼 그림 (2026-09-11) — 폰에는 Ctrl+V 가 없어서 이 단추가
+               사진을 보내는 **유일한 길**입니다 -->
+          <button type="button" class="sr-stk" id="sroom-img-btn"
+                  aria-label="그림 보내기" title="그림 보내기 (Ctrl+V 도 돼요)">🖼</button>
           <button type="button" class="sr-stk" id="sroom-sticker-btn"
                   data-sroom-sticker="1" aria-label="스티커" title="스티커">🙂</button>
           <textarea id="sroom-in" class="sr-in" rows="1" maxlength="${SROOM_LEN}"
@@ -343,6 +353,13 @@
         </div>
       </div>`;
     sroom줄그리기();
+    /* 🖼 판을 다시 그릴 때마다 부릅니다 — 단추가 새로 생기니까요.
+       (붙여넣기는 안에서 한 번만 달립니다) */
+    window.imgUpAttach?.({
+      folder: "sroomimg", inputId: "sroom-in",
+      btnId: "sroom-img-btn", hostId: "dock-body-sroom",
+      send: () => sroom보내기()
+    });
   }
 
   /** 대화 줄만 갈아 끼웁니다 — 글칸은 손대지 않아요 (커서·조합 지킴) */

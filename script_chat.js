@@ -612,7 +612,7 @@
           return `<a class="msg-img-link" href="${clean}" target="_blank" rel="noopener noreferrer"
             ><img class="msg-img" src="${clean}" alt="공유한 그림" loading="lazy"
                   referrerpolicy="no-referrer"
-                  onerror="this.parentNode.textContent=this.src"></a>${tail}`;
+                  onerror="this.parentNode.className='msg-img-gone';this.parentNode.textContent='🖼 기간이 지나 사라진 그림이에요'"></a>${tail}`;
         }
         return `<a class="msg-link" href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>${tail}`;
       }

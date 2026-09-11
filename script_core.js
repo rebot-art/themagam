@@ -571,6 +571,14 @@ window.AppSession = AppSession;
       callIfFn("updateStatus", true);
       callIfFn("listenStatus");
       callIfFn("listenPomodoro");
+      /* 🖼 그림 보내기 — 챗 글칸에 붙여넣기·단추·끌어놓기를 답니다.
+         올린 뒤 주소를 글칸에 넣고 원래 send() 를 부르므로, 답장·멘션
+         판단까지 기존 흐름 그대로예요 (script_imgup.js). */
+      window.imgUpAttach?.({
+        folder: "chatimg", inputId: "message",
+        btnId: "chat-img-btn", hostId: "chat-box",
+        send: () => window.send?.()
+      });
       /* [철거 2026-08-14] listenNotice(머리말 한줄 공지) — 자리에 시계가 앉음 */
       callIfFn("listenNotes");
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
@@ -961,9 +969,17 @@ window.AppSession = AppSession;
       for (let 바퀴 = 0; 바퀴 < 20; 바퀴++) {
         const snap = await window.db.ref(경로).orderByChild("time")
           .endAt(오늘.getTime() - 1).limitToFirst(400).once("value");
-        const 묶음 = {}; let n = 0;
-        snap.forEach((c) => { 묶음[c.key] = null; n++; });
+        const 묶음 = {}; const 글들 = []; let n = 0;
+        snap.forEach((c) => { 묶음[c.key] = null; 글들.push(c.val()?.msg); n++; });
         if (!n) break;
+        /* 🖼 [2026-09-11 — 콩] 그림도 같이 지웁니다.
+           비밀방은 자정에 대화가 쓸리는데 그림이 창고에 남으면, 대화는
+           사라졌는데 **그림은 주소만 알면 영영 열리는** 상태가 돼요.
+           비밀방이라는 이름과 어긋나서 함께 지웁니다.
+           ★ 지우기 **전에** 부릅니다 — 지운 뒤에는 주소를 알 길이 없어요.
+           ★ 실패해도 조용히 넘어갑니다 (imgUpDeleteMsgs 안에서 삼킴).
+             그림 하나 못 지운 것 때문에 대화 청소가 멈추면 더 나쁩니다. */
+        try { await window.imgUpDeleteMsgs?.(글들); } catch (e) {}
         await window.db.ref(경로).update(묶음);   // 한 번에 400줄
         if (n < 400) break;
       }
