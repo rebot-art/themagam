@@ -9039,7 +9039,49 @@ html[data-theme-style="studio"] .user-card{
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: 0 10px 28px rgba(0,0,0,.22);
-  max-width: min(348px, calc(100vw - 16px));
+  /* 5칸이 딱 들어가는 너비 — 58px 그림 + 안쪽 여백 = 한 칸 66px.
+     348px 이던 시절엔 14px 이 모자라 판이 살짝 삐져나왔습니다. */
+  max-width: min(362px, calc(100vw - 16px));
+
+  /* ★★★ [2026-09-12 — 콩 "판 아래쪽이 잘려 보인다는 의견이 있어"]
+     스티커가 쉰셋이 되면서 5칸 × **열한 줄 = 높이 784px** 이 됐습니다.
+     세로가 800px 안 되는 화면(노트북 13인치·폰)에서는 판이 위에도
+     아래에도 못 들어가, 통째로 화면 밖으로 밀려나 있었어요.
+     콩의 아이맥은 세로가 길어서 멀쩡히 보였습니다 — 그래서 화면을
+     만든 사람만 모르고 있었던 자리예요.
+
+     두 겹으로 막습니다:
+       ① 여기 — 판은 **화면보다 클 수 없고**, 넘치면 속으로 굴립니다
+       ② script_sticker.js — 위아래 중 **넓은 쪽**에 놓고 화면 안에 가둠
+     ★ 이 max-height 를 지우면 그날로 다시 잘립니다. 지우지 마세요. */
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);   /* 폰 주소창을 뺀 진짜 높이 */
+  overflow-y: auto;
+  /* 판 속을 다 굴린 뒤에도 뒤쪽 채팅이 따라 움직이지 않게 */
+  overscroll-behavior: contain;
+}
+/* ── 화면이 넓으면 **짧고 넓게** 폅니다 (2026-09-12) ──
+   굴려서 찾는 것보다 한눈에 보이는 게 나아요. 쉰세 개 기준 —
+     5칸 → 11줄 784px   8칸 → 7줄 502px   10칸 → 6줄 436px
+   ★ 칸 수를 바꿀 땐 "마지막 줄에 하나만 남지 않는가" 를 꼭 보세요
+     (53은 5·8·10 어디로 나눠도 3개·5개·3개가 남아 괜찮습니다).
+     checks.js 가 세 칸 수를 모두 검사합니다. */
+@media (min-width: 600px){
+  .sticker-pop{
+    grid-template-columns: repeat(8, 1fr);
+    max-width: min(572px, calc(100vw - 16px));
+  }
+}
+@media (min-width: 820px){
+  .sticker-pop{
+    grid-template-columns: repeat(10, 1fr);
+    max-width: min(712px, calc(100vw - 16px));
+  }
+}
+/* 아주 좁은 폰 — 여백을 조금 줄여 5칸이 그대로 들어가게 */
+@media (max-width: 400px){
+  .sticker-pop{ gap: 2px; padding: 6px; }
+  .sticker-pop .sticker-opt{ padding: 2px; }
 }
 .sticker-opt{
   border: 1px solid transparent;

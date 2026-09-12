@@ -1007,9 +1007,24 @@
     const _z = (window.uiZoom?.() || 1);
     const VW = innerWidth / _z, VH = innerHeight / _z;
     const w = pop.offsetWidth, h = pop.offsetHeight;
+
+    /* ★★★ 화면 안에 가두기 (2026-09-12 — 콩 "아래쪽이 잘려 보인대")
+       예전 셈은 이랬습니다 —
+         위로 올려 보고 → 안 들어가면 **무조건 아래로**.
+       스티커가 쉰셋이 되어 판이 784px 로 자라자, 세로 800px 이 안 되는
+       화면에서는 "아래로" 가 곧 **화면 밖**이었어요. 아래쪽 700px 넘게
+       잘려 나갑니다. 위에도 아래에도 못 들어가는 경우를 아예 안 따져
+       본 셈이라, 그 상황이 오기 전까지는 멀쩡해 보였습니다.
+
+       이제 위에 들어가면 위로, 아니면 아래로 — 그러고 나서 **끝으로
+       넘치면 끌어당겨** 화면 안에 넣습니다. styles.css 가 판 높이를
+       화면보다 작게 잡아 두므로(max-height), 끌어당길 자리는 늘 있어요.
+       넘치는 만큼은 판 속을 굴려서 봅니다. */
+    const 위칸 = r.top / _z - 8;                  // 단추 위로 남은 높이
     let left = Math.min(r.left / _z, VW - w - 8);
-    let top = r.top / _z - h - 8;
-    if (top < 8) top = r.bottom / _z + 8;     // 위가 좁으면 아래로
+    let top = (h <= 위칸) ? (r.top / _z - h - 8)   // 위에 들어가면 위로 (원래대로)
+                          : (r.bottom / _z + 8);  // 아니면 아래로
+    top = Math.max(8, Math.min(top, VH - h - 8)); // ★ 그리고 반드시 화면 안
     pop.style.left = Math.max(8, left) + "px";
     pop.style.top = top + "px";
 
