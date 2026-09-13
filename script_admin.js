@@ -663,13 +663,26 @@
             .filter(dk => vacs[dk] !== true && leaves[dk] !== true));
         const 명절수 = 명절집합.size;
 
+        /* ★★★ [고침 2026-09-13 — 콩 "오늘 포함해도 18일 남았는데 못 채움으로 떠"]
+           ① **오늘도 셉니다.** 오늘은 아직 안 끝난 날이라 지금 들어오면
+              출석이 돼요. 이미 오늘 출석한 사람은 attDays 에 들어 있으니
+              그때만 건너뜁니다 (두 번 세지 않게).
+           ② **연휴는 빼지 않습니다.** 휴가와 달라요 —
+                🏖️ 휴가 : "안 나온다" 고 선언한 날
+                🎑 연휴 : 기준은 낮아지지만 **나오면 그대로 출석**인 날
+              기준(need)에서 뺀 건 **의무**이고, 여기서 세는 건 **기회**입니다.
+              연휴를 기회에서까지 빼니, 채울 수 있는 사람에게 🔴 불가가
+              떴습니다 (콩이 곰미·자몽에이드 줄에서 잡아냈어요).
+           ★ script_mywork.js 도 같은 셈입니다 — 다르면 두 화면이 다른
+             말을 합니다. */
         let daysLeft = 0;
         if (isThisMonth) {
-          for (let d = todayD + 1; d <= daysInMonth; d++) {
+          /* ★ 앞달은 todayD 가 0 입니다 ('오늘이 0일인 이번 달'로 셈해요).
+             0일부터 돌면 없는 날짜를 하나 세니 1일부터 시작합니다. */
+          for (let d = Math.max(1, todayD); d <= daysInMonth; d++) {
             const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
-            /* ★ 연휴도 뺍니다 — 기준에서 이미 빠진 날을 "나올 수 있는 날"
-               로 세면 두 번 봐주는 셈이 됩니다 (휴가와 같은 이치). */
-            if (vacs[dk] !== true && leaves[dk] !== true && !명절집합.has(dk)) daysLeft++;
+            if (d === todayD && attMonth[dk]?.[n]) continue;   // 오늘 이미 출석
+            if (vacs[dk] !== true && leaves[dk] !== true) daysLeft++;
           }
         }
         /* ★ ruleOf 의 식은 손대지 않습니다 — script_mywork.js 와 **글자까지

@@ -10470,6 +10470,26 @@ html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-
 .mw-rule-fill.ok{    background: #2E8B6B; }
 .mw-rule-fill.maybe{ background: #C99A2C; }
 .mw-rule-fill.bad{   background: #B3372B; }
+/* 🎑 명절 연휴로 기준이 내려간 달 (2026-09-13 — 콩 "한눈에 보이게")
+   진행바 바로 아래. 출근부 표의 연휴 칸과 **같은 주황**을 씁니다 —
+   두 화면에서 같은 색이 같은 뜻이어야 설명이 필요 없어요. */
+.mw-rule-holi{
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid #E8C48F;
+  background: #FBEFDC;
+  color: #7A4A16;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+.mw-rule-holi b{ color: #5E3608; }
+/* 다크 — 밝은 주황을 그대로 두면 혼자 튀어서 눈이 아픕니다.
+   ★ 이 방의 다크 표식은 :root[data-is-dark="true"] 입니다 (body.dark 아님). */
+:root[data-is-dark="true"] .mw-rule-holi{
+  border-color: #6B5230; background: #3A2E1C; color: #EBC98F;
+}
+:root[data-is-dark="true"] .mw-rule-holi b{ color: #FFE0A8; }
 .mw-rule-why{
   margin: 8px 0 0;
   font-size: var(--fs-xs);
