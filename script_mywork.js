@@ -295,9 +295,18 @@
        ★ 입장 전 날과, 이미 휴가로 찍은 날은 빼지 않습니다 — 두 번 빼면
          기준이 실제보다 더 내려갑니다. */
     const 명절날 = (window.holidayDays?.(y, m) || [])
-      .filter(k => Number(k.slice(8)) > beforeN)
-      .filter(k => _vacs[k] !== true);
-    const 명절수 = 명절날.length;
+      .filter(k => Number(k.slice(8)) > beforeN);
+    /* ★★★ [2026-09-13 — 콩 "추석 연휴 1일? 4일 아니었어?"]
+       연휴 일수를 **두 가지**로 나눠 둡니다. 섞어 쓰다 화면에 1일이
+       떴어요 (연휴 나흘 중 사흘에 휴가가 찍혀 있던 사람).
+
+         명절전체 : 이 달 연휴 그대로 — **화면에 보여 줄 때** 씁니다.
+                    "이번 달은 18일이 16일이 됐다" 는 방 전체의 이야기라
+                    내 휴가에 따라 4일이 1일이 되면 안 됩니다.
+         명절수   : 휴가로 이미 찍힌 날을 뺀 것 — **셈에만** 씁니다.
+                    같은 날을 양쪽에서 빼면 기준이 실제보다 더 내려가요. */
+    const 명절전체 = 명절날.length;
+    const 명절수 = 명절날.filter(k => _vacs[k] !== true).length;
 
     const eff = Math.max(0, member - vacCount - 명절수);
     const need = Math.round((eff / daysInMonth) * RULE_DAYS);
@@ -307,7 +316,7 @@
        "이번 달은 18일이 16일이 됐다" 는 **방 전체의 이야기**가 안 보입니다.
        내 휴가가 반영된 진짜 내 기준은 바로 위 큰 숫자와 아래 셈에 있어요. */
     const 연휴전기본 = Math.round((member / daysInMonth) * RULE_DAYS);
-    const 연휴후기본 = Math.round((Math.max(0, member - 명절수) / daysInMonth) * RULE_DAYS);
+    const 연휴후기본 = Math.round((Math.max(0, member - 명절전체) / daysInMonth) * RULE_DAYS);
 
     /* =====================================================================
        남은 날 — "지금부터 다 나오면 채울 수 있는가"
@@ -342,7 +351,8 @@
     const state = attended >= need ? "ok"
                 : (이번달인가 && attended + daysLeft >= need) ? "maybe" : "bad";
     return { need, daysInMonth, vacCount, beforeN, daysLeft, state, 이번달인가,
-             명절수, 연휴전기본, 연휴후기본, 명절이름: window.holidayName?.(y, m) || "",
+             명절수, 명절전체, 연휴전기본, 연휴후기본,
+             명절이름: window.holidayName?.(y, m) || "",
              vacCap: vacCapOf(y, m) };
   }
 
@@ -368,8 +378,10 @@
     const 조각 = [];
     if (r.beforeN) 조각.push(`입장 전 ${r.beforeN}일`);
     if (r.vacCount) 조각.push(`휴가 ${r.vacCount}일`);
-    /* 🎑 연휴는 왜 기준이 내려갔는지 가장 궁금해하는 칸이라 이름까지 적습니다 */
-    if (r.명절수) 조각.push(`🎑 ${r.명절이름 || "명절"} ${r.명절수}일`);
+    /* ★ [2026-09-13 — 콩 "추석 연휴 내용 중복, 마지막에 나오는 건 삭제"]
+       연휴 이야기는 바로 위 주황 줄이 합니다. 여기까지 또 적으면 같은
+       말이 두 번인데, 게다가 여기 숫자는 휴가와 겹친 날을 뺀 값이라
+       위와 달라 보였어요 (위 4일 / 아래 1일). 한 자리에서만 말합니다. */
     const 셈 = 조각.length
       ? ` (이번 달: ${r.daysInMonth}일 중 ${조각.join(" · ")} → <b>${r.need}일</b>)`
       : "";
@@ -379,8 +391,8 @@
        아래 셈 조각에도 같은 내용이 적히지만 거기는 작은 회색 글씨라,
        "이번 달만 다르다" 는 이야기는 눈에 먼저 들어와야 해요.
        ★ 연휴가 없는 달에는 줄 자체가 없습니다 — 늘 떠 있으면 안 읽힙니다. */
-    const 명절줄 = r.명절수
-      ? `<div class="mw-rule-holi">🎑 <b>${r.명절이름 || "명절"} 연휴 ${r.명절수}일</b>이 있어
+    const 명절줄 = r.명절전체
+      ? `<div class="mw-rule-holi">🎑 <b>${r.명절이름 || "명절"} 연휴 ${r.명절전체}일</b>이 있어
            이번 달은 <b>${r.연휴전기본}일 → ${r.연휴후기본}일</b>로 낮아졌어요</div>`
       : "";
 
@@ -394,7 +406,13 @@
     return `
       <div class="mw-rule">
         <div class="mw-rule-head">
-          <span class="mw-rule-t">📏 ${r.이번달인가 ? "이번 달" : "이 달"} 의무 출석 <b>${r.need}일</b></span>
+          <span class="mw-rule-t">📏 ${r.이번달인가 ? "이번 달" : "이 달"} 의무 출석 <b>${r.need}일</b>${
+            /* 🏖️ 내 휴가가 반영된 숫자라는 표시 (2026-09-13 — 콩).
+               위 주황 줄은 휴가를 뺀 **기본** 기준을 말하므로, 두 숫자가
+               다른 이유를 여기서 한 마디로 알려 줍니다.
+               ★ 휴가를 안 찍었으면 아예 안 붙습니다 — 늘 붙어 있으면
+                 아무 뜻도 없는 글자가 돼요. */
+            r.vacCount ? ` <span class="mw-rule-vacnote">(휴가 적용)</span>` : ""}</span>
           <span class="mw-rule-pill ${cls}">${pill}</span>
         </div>
         <div class="mw-rule-bar"><span class="mw-rule-fill ${cls}" style="width:${pct}%"></span></div>

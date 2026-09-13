@@ -10470,6 +10470,14 @@ html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-
 .mw-rule-fill.ok{    background: #2E8B6B; }
 .mw-rule-fill.maybe{ background: #C99A2C; }
 .mw-rule-fill.bad{   background: #B3372B; }
+/* 🏖️ "(휴가 적용)" — 큰 숫자가 **내 휴가까지 반영된** 값이라는 표시.
+   주황 줄은 휴가를 뺀 기본 기준을 말하니, 두 숫자가 다른 이유를 여기서
+   한 마디로 알려 줍니다 (2026-09-13 — 콩). */
+.mw-rule-vacnote{
+  font-size: var(--fs-xs);
+  font-weight: normal;
+  color: var(--muted);
+}
 /* 🎑 명절 연휴로 기준이 내려간 달 (2026-09-13 — 콩 "한눈에 보이게")
    진행바 바로 아래. 출근부 표의 연휴 칸과 **같은 주황**을 씁니다 —
    두 화면에서 같은 색이 같은 뜻이어야 설명이 필요 없어요. */
