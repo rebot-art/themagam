@@ -242,6 +242,9 @@
     .adm-att-table th{ font-weight: 700; }
     .adm-att-table th.d{ background: #DCEDF8; }
     .adm-att-table th.d.we{ background: #E2EAD8; }
+    /* 🎑 명절 연휴 (2026-09-13) — 주말보다 한 뼘 진하게.
+       "이 날들이 빠져서 기준이 내려갔구나" 가 표에서 바로 읽혀야 해요. */
+    .adm-att-table th.d.holi{ background: #F2D7B0; color: #7A4A16; font-weight: 700; }
     /* [2026-08-11] 규칙 칸 — 이름보다 **왼쪽**. 가로로 밀어도 이름과 함께
        따라옵니다. 이름 칸이 left:0 이었으므로 그 자리를 넘겨받고,
        이름 칸은 이 칸의 폭(66px)만큼 오른쪽으로 밀어 둡니다. */
@@ -859,7 +862,9 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202609120700"></script>
+  <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
+  <script src="script_holiday.js"></script>
+  <script src="script_admin.js?v=202609131101"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

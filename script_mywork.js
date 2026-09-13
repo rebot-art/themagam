@@ -288,21 +288,35 @@
          안 생깁니다. */
     const beforeN = beforeNOf(y, m, daysInMonth);
     const member = daysInMonth - beforeN;
-    const eff = Math.max(0, member - vacCount);
+
+    /* 🎑 명절 연휴는 의무 출석일에서 빠집니다 (2026-09-13 — 콩)
+       ★ 표는 script_holiday.js 한 곳에만 있습니다 — 관리자 출근부도
+         같은 표를 봅니다(두 벌로 적으면 언젠가 어긋나요).
+       ★ 입장 전 날과, 이미 휴가로 찍은 날은 빼지 않습니다 — 두 번 빼면
+         기준이 실제보다 더 내려갑니다. */
+    const 명절날 = (window.holidayDays?.(y, m) || [])
+      .filter(k => Number(k.slice(8)) > beforeN)
+      .filter(k => _vacs[k] !== true);
+    const 명절수 = 명절날.length;
+
+    const eff = Math.max(0, member - vacCount - 명절수);
     const need = Math.round((eff / daysInMonth) * RULE_DAYS);
 
-    /* 남은 날 — 오늘 이후, 앞으로 낼 휴가는 뺍니다 (두 번 봐주지 않게) */
+    /* 남은 날 — 오늘 이후, 앞으로 낼 휴가와 연휴는 뺍니다
+       (기준에서 이미 빠진 날이라, 여기서도 빼야 두 번 봐주지 않아요) */
     const 이번달인가 = today >= 이달첫날 && today <= 이달끝날;
+    const 명절집합 = new Set(명절날);
     let daysLeft = 0;
     if (이번달인가) {
       for (let d = 1; d <= daysInMonth; d++) {
         const k = dateStr(y, m, d);
-        if (k > today && _vacs[k] !== true) daysLeft++;
+        if (k > today && _vacs[k] !== true && !명절집합.has(k)) daysLeft++;
       }
     }
     const state = attended >= need ? "ok"
                 : (이번달인가 && attended + daysLeft >= need) ? "maybe" : "bad";
     return { need, daysInMonth, vacCount, beforeN, daysLeft, state, 이번달인가,
+             명절수, 명절이름: window.holidayName?.(y, m) || "",
              vacCap: vacCapOf(y, m) };
   }
 
@@ -328,6 +342,8 @@
     const 조각 = [];
     if (r.beforeN) 조각.push(`입장 전 ${r.beforeN}일`);
     if (r.vacCount) 조각.push(`휴가 ${r.vacCount}일`);
+    /* 🎑 연휴는 왜 기준이 내려갔는지 가장 궁금해하는 칸이라 이름까지 적습니다 */
+    if (r.명절수) 조각.push(`🎑 ${r.명절이름 || "명절"} ${r.명절수}일`);
     const 셈 = 조각.length
       ? ` (이번 달: ${r.daysInMonth}일 중 ${조각.join(" · ")} → <b>${r.need}일</b>)`
       : "";

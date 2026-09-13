@@ -576,8 +576,12 @@
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
-        const cls = "d" + (dow === 0 || dow === 6 ? " we" : "") + (dk === todayKey ? " today" : "");
-        head += `<th class="${cls}">${d}</th>`;
+        /* 🎑 연휴 날은 머리글에 표시해 둡니다 — 기준이 왜 내려갔는지
+           표에서 바로 보여야 "왜 16일이지?" 가 안 생겨요. */
+        const 명절 = (window.holidayDays?.(base.getFullYear(), base.getMonth()) || []).includes(dk);
+        const cls = "d" + (dow === 0 || dow === 6 ? " we" : "") + (dk === todayKey ? " today" : "")
+                  + (명절 ? " holi" : "");
+        head += `<th class="${cls}"${명절 ? ` title="${window.holidayName?.(base.getFullYear(), base.getMonth()) || "명절"} 연휴 — 의무 출석일에서 빠집니다"` : ""}>${d}</th>`;
       }
       head += "</tr>";
 
@@ -649,18 +653,30 @@
         /* ── 규칙 칸 ──
            ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
              빠졌으니, 나올 수 있는 날로 세면 두 번 봐주는 셈이 돼요. */
+        /* 🎑 이 사람에게 적용되는 연휴 날 (2026-09-13 — 콩)
+           ★ 입장 전(beforeN)은 이미 빠졌으니 그 뒤만,
+           ★ 휴가·개인사정으로 이미 찍힌 날은 빼지 않습니다 — 두 번 빼면
+             기준이 실제보다 더 내려가요. */
+        const 명절집합 = new Set(
+          (window.holidayDays?.(base.getFullYear(), base.getMonth()) || [])
+            .filter(dk => Number(dk.slice(8)) > beforeN)
+            .filter(dk => vacs[dk] !== true && leaves[dk] !== true));
+        const 명절수 = 명절집합.size;
+
         let daysLeft = 0;
         if (isThisMonth) {
           for (let d = todayD + 1; d <= daysInMonth; d++) {
             const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
-            if (vacs[dk] !== true && leaves[dk] !== true) daysLeft++;
+            /* ★ 연휴도 뺍니다 — 기준에서 이미 빠진 날을 "나올 수 있는 날"
+               로 세면 두 번 봐주는 셈이 됩니다 (휴가와 같은 이치). */
+            if (vacs[dk] !== true && leaves[dk] !== true && !명절집합.has(dk)) daysLeft++;
           }
         }
         /* ★ ruleOf 의 식은 손대지 않습니다 — script_mywork.js 와 **글자까지
            같아야** 하는 약속이 있어서요(다르면 멤버 화면과 관리자 화면이
            다른 기준을 말합니다). 대신 넣는 값에 개인사정을 얹습니다:
            쉰 날은 기준에서 빠진다는 점에서 휴가와 셈이 같아요. */
-        const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays + leaveDays, attended: attDays, daysLeft });
+        const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays + leaveDays + 명절수, attended: attDays, daysLeft });
 
         /* ★★★ [2026-08-30 — 콩] **할인 전 기준**도 함께 냅니다.
            ---------------------------------------------------------------
@@ -681,7 +697,7 @@
              200%로 1등을 독차지해, 안 쉬고 18일 나온 사람이 이길
              방법이 없어져요. */
         const 원래 = leaveDays
-          ? ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays, attended: attDays, daysLeft })
+          ? ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays + 명절수, attended: attDays, daysLeft })
           : r;
         /* ★★ 문턱은 "지금 못 채웠다" 가 아니라 **"남은 날을 다 나와도
            못 채운다"**(state === "bad") 입니다. 달 중간에 att < need 는
