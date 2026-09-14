@@ -213,6 +213,7 @@
   let _timer      = null;    // 5초 타이머
   let _agoTimer   = null;    // 끊김 살피는 타이머 (1초)
   let _screensRef = null;    // screens 구독 — 공유 중일 때만 삽니다
+  let _screensH = null;      // 그 구독의 손잡이 셋 (added·changed·removed)
   let _screensCache = null;
   let _shareW     = SHARE_DEFAULT_W;      // 지금 뭉갬 정도 (가로 픽셀)
   let _lastShareHtml = null; // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
@@ -404,19 +405,64 @@
   /* ---------------------------------------------------------------
      구독 — 공유 중인 동안에만 삽니다
      --------------------------------------------------------------- */
+  /* =====================================================================
+     ★★★ 바뀐 사람 것만 받습니다 (2026-09-14 — 콩 "다운로드가 또 솟았어")
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     예전에는 screens 를 통째로 `.on("value")` 로 들었습니다. 그러면
+     **누구 한 사람의 화면이 바뀔 때마다 공유 중인 전원의 그림이 다시**
+     내려옵니다. 한 장이 최대 40KB 니까 —
+
+       혼자 공유      : 15초마다 40KB      (그대로)
+       넷이 공유      : 15초마다 160KB × 4번 = 받는 양이 **네 배**
+                        (내 것 한 장 바뀔 때마다 넷 다 다시 오니까요)
+
+     동시에 공유하는 사람이 늘수록 제곱으로 붑니다. 9월 13일에 솟은
+     것도 여기였어요.
+
+     [고친 것]
+     child_added / child_changed / child_removed 로 바꿔서, **바뀐 그
+     사람 한 칸만** 받습니다. 화면에 보이는 것은 완전히 똑같아요 —
+     손에 든 목록(_screensCache)을 한 칸씩 고쳐 갈 뿐입니다.
+     출석 도장이 쓰는 것과 같은 수법입니다(script_realtime.js 참고).
+
+     ★ 처음 붙을 때는 있는 만큼 child_added 가 한 번씩 옵니다 — 첫 화면에
+       받는 양은 예전과 같습니다. 줄어드는 것은 **그 뒤로 계속**이에요.
+     ===================================================================== */
   function listenScreens() {
     /* ★ 안 보기로 해 둔 사람은 **아예 안 붙습니다** — 받는 양이 0 입니다 */
     if (!watchOn()) { detachScreens(); return; }
     if (_screensRef) return;
     _screensRef = db.ref("screens");
-    _screensRef.on("value", snap => {
-      _screensCache = snap.val() || null;
+    if (!_screensCache) _screensCache = {};
+
+    const 한칸바뀜 = (snap) => {
+      if (!_screensCache) _screensCache = {};
+      _screensCache[snap.key] = snap.val();
       renderShareCards();
-    });
+    };
+    const 한칸빠짐 = (snap) => {
+      if (_screensCache) delete _screensCache[snap.key];
+      renderShareCards();
+    };
+    /* ★ 손잡이를 들고 있어야 나중에 **이 구독만** 뗄 수 있습니다.
+       off() 를 맨손으로 부르면 남이 같은 자리에 붙여 둔 것까지 떨어져요. */
+    _screensH = {
+      added:   _screensRef.on("child_added",   한칸바뀜),
+      changed: _screensRef.on("child_changed", 한칸바뀜),
+      removed: _screensRef.on("child_removed", 한칸빠짐)
+    };
   }
   function detachScreens() {
-    try { _screensRef && _screensRef.off(); } catch (e) {}
+    try {
+      if (_screensRef && _screensH) {
+        _screensRef.off("child_added",   _screensH.added);
+        _screensRef.off("child_changed", _screensH.changed);
+        _screensRef.off("child_removed", _screensH.removed);
+      }
+    } catch (e) {}
     _screensRef = null;
+    _screensH = null;
   }
 
   /* ---------------------------------------------------------------
