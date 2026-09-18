@@ -164,7 +164,11 @@
       /* ⌨️ 사진은 forestImg/{id} 에 따로 삽니다 — 여기엔 "있다"는 표시와
          모델명만 둡니다 (쪽지 목록을 가볍게 유지하려고) */
       hasImg: v.hasImg === true,
-      model:  typeof v.model === "string" ? v.model.slice(0, 40) : ""
+      model:  typeof v.model === "string" ? v.model.slice(0, 40) : "",
+      /* 🧷 이 쪽지가 붙어 있는 판 번호 (2026-09-18 — 콩)
+         없으면 null — 아래 판번호채우기() 가 한 번만 메워 줍니다. */
+      pg: (v.pg == null || !isFinite(Number(v.pg))) ? null
+          : Math.max(0, Math.round(Number(v.pg)))
     };
   }
 
@@ -453,10 +457,77 @@
   }
 
   const PAGE_SIZE = 24;
-  let _page = 0;         // 지금 보는 판 (0부터)
+  let _page = 0;         // 지금 보는 판 (0부터 — **몇 번째 판인지**이지 판 번호가 아닙니다)
 
   function rootNotes() { return _notes.filter(n => !n.parent); }
-  function pageCount() { return Math.max(1, Math.ceil(rootNotes().length / PAGE_SIZE)); }
+
+  /* =====================================================================
+     🧷 쪽지는 **붙인 판에 그대로 머뭅니다** (2026-09-18 — 콩)
+     ---------------------------------------------------------------------
+     [무엇이 불편했나 — 콩의 말]
+     "한 달 지난 쪽지가 사라지면서 빈자리를 메꾸는 형식인가 봐. 그러니까
+      처음 자리 잡아 둔 게 소용이 없어져. 앞페이지로 넘어가서 다른 쪽지와
+      겹치기도 하고."
+
+     맞는 진단이었습니다. 예전에는 쪽지를 **시간순 한 줄로 세워 놓고
+     24장씩 잘라서** 판을 만들었어요. 그래서 앞쪽 쪽지 하나가 시들면
+     뒤의 모든 쪽지가 한 칸씩 당겨집니다 — 판을 넘나들며 자리가 흔들리고,
+     x·y 좌표는 그대로라 남의 쪽지와 겹쳤습니다.
+
+     [이제]
+     쪽지마다 **제 판 번호(pg)** 를 달고 삽니다. 한 번 3번 판에 붙은
+     쪽지는 앞 쪽지가 아무리 사라져도 3번 판에 그대로 있어요.
+       · 빈자리는 **빈자리 그대로** 둡니다 (누가 거기 새로 붙이면 채워져요)
+       · 한 판의 쪽지가 **전부** 사라지면 그 판이 통째로 없어지고,
+         뒤 판들이 통째로 앞당겨집니다 — 번호만 당겨지고 **판 안의 배치는
+         하나도 안 흔들립니다**
+
+     ★ 화면의 「1 2 3」은 **몇 번째 판인가**이고, pg 는 **판의 이름**입니다.
+       둘을 헷갈리면 엉뚱한 판이 열려요 — 아래 판이름들() 을 거쳐 씁니다.
+     ===================================================================== */
+  function 판이름들() {
+    const s = new Set();
+    _notes.forEach(n => { if (!n.parent) s.add(n.pg == null ? 0 : n.pg); });
+    return [...s].sort((a, b) => a - b);
+  }
+  function pageCount() { return Math.max(1, 판이름들().length); }
+
+  /** 몇 번째 판(idx)에 붙어 있는 쪽지들 */
+  function 판의쪽지(idx) {
+    const 이름들 = 판이름들();
+    if (!이름들.length) return [];
+    const 이름 = 이름들[clamp(idx, 0, 이름들.length - 1)];
+    return _notes.filter(n => !n.parent && (n.pg == null ? 0 : n.pg) === 이름);
+  }
+
+  /* =====================================================================
+     옛 쪽지에 판 번호 메우기 — 딱 한 번
+     ---------------------------------------------------------------------
+     이 기능이 생기기 전 쪽지에는 pg 가 없습니다. 지금 화면에 보이는
+     자리 그대로(시간순 24장씩) 번호를 매겨 **서버에 적어 둡니다.**
+
+     ★ 왜 화면에서만 계산하지 않고 서버에 적나요?
+       머릿속으로만 세면 다음에 한 장이 시들 때 또 밀립니다 — 고치려던
+       바로 그 문제예요. 한 번 적어 두면 그때부터 자리가 고정됩니다.
+     ★ 보안규칙은 "글이 그대로인 수정" 을 열어 두고 있어서(♥ 때문),
+       pg 만 얹는 이 수정은 규칙을 안 건드리고 통과합니다.
+     ★ 여러 사람이 동시에 해도 **같은 값**을 적습니다 (시간순은 누구에게나
+       같으니까요). 먼저 적힌 뒤에 들어온 사람은 메울 것이 없어 지나갑니다.
+     ===================================================================== */
+  async function 판번호채우기() {
+    if (!window.db) return;
+    const 뿌리 = rootNotes();
+    const 메울것 = [];
+    뿌리.forEach((n, i) => {
+      if (n.pg == null) 메울것.push([n, Math.floor(i / PAGE_SIZE)]);
+    });
+    if (!메울것.length) return;
+    메울것.forEach(([n, pg]) => { n.pg = pg; });   // 화면은 먼저 고쳐 둡니다
+    const 묶음 = {};
+    메울것.forEach(([n, pg]) => { 묶음[n.id + "/pg"] = pg; });
+    /* 실패해도 조용히 — 이번 화면은 이미 맞고, 다음에 다시 시도합니다 */
+    try { await window.db.ref("forest").update(묶음); } catch (e) {}
+  }
 
   function pagerHtml() {
     const pc = pageCount();
@@ -478,9 +549,8 @@
       return `<p class="fr-empty">아직 아무 쪽지도 없어요.<br>빈 곳을 눌러 첫 쪽지를 붙여 보세요.</p>`;
     }
     /* 뿌리 쪽지만 보드에 — 답쪽지는 제 부모 밑으로 들어갑니다 */
-    const all = rootNotes();
     _page = clamp(_page, 0, pageCount() - 1);
-    const roots = all.slice(_page * PAGE_SIZE, (_page + 1) * PAGE_SIZE);
+    const roots = 판의쪽지(_page);
     const byParent = {};
     _notes.forEach(n => {
       if (!n.parent) return;
@@ -595,6 +665,18 @@
       at: Date.now(),
       hearts: 0
     };
+
+    /* 🧷 어느 판에 붙일 것인가 (2026-09-18 — 콩)
+       ★ **지금 보고 있는 판**입니다. 예전에는 무조건 맨 끝 판으로
+         보냈는데, 그러면 "여기 빈자리에 붙여야지" 하고 고른 자리가
+         엉뚱한 판으로 날아갔어요.
+       ★ 다만 지금 판이 스물네 장으로 꽉 찼으면 새 판을 엽니다 —
+         꽉 찬 판에 더 얹으면 쪽지가 서로 포개집니다. */
+    const 이름들 = 판이름들();
+    const 꽉참 = 판의쪽지(_page).length >= PAGE_SIZE;
+    const 새판 = 꽉참 || !이름들.length;
+    note.pg = 새판 ? ((이름들.length ? 이름들[이름들.length - 1] : -1) + 1)
+                   : 이름들[clamp(_page, 0, 이름들.length - 1)];
     /* ⌨️ 사진이 있으면 표시만 쪽지에, 알맹이는 따로 */
     const shot = _compose.shot || "";
     if (shot) {
@@ -621,7 +703,8 @@
       window.achvBump?.("cForest");     // 🏅 대숲지기 (누가 썼는지는 여전히 안 남습니다)
       _notes.push(normalize(ref.key, note));
       _compose = null;
-      _page = pageCount() - 1;          // 새 쪽지는 맨 끝 판에 붙습니다 — 거기로 데려다줘요
+      /* 붙인 판에 그대로 머뭅니다. 새 판을 연 경우에만 그리로 옮겨 가요 */
+      if (새판) _page = pageCount() - 1;
       render();
     } catch (e) {
       console.warn("[대숲] 쪽지를 붙이지 못했어요", e);
@@ -916,6 +999,7 @@
 
     await loadNotes();
     await sweepOld();               // 서른 날 지난 쪽지는 조용히 걷어냅니다
+    await 판번호채우기();            // 🧷 옛 쪽지에 판 번호를 딱 한 번 메웁니다
     _page = pageCount() - 1;        // 열면 맨 끝 판(최신)부터
     if (isOpen()) render();
   }
