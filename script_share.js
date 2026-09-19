@@ -128,6 +128,23 @@
      바뀝니다 (뭉개짐보다 이게 더 답답해요).
      320px 이면 한 장이 보통 12~30KB, 10초마다 보내니 한 사람당 시간당
      5~12MB 남짓입니다. */
+  /* =====================================================================
+     🚦 사람이 많을수록 뜸하게 (2026-09-19 — 콩 "지금 화공을 6명 쓰는 중")
+     ---------------------------------------------------------------------
+     화면 공유는 **사람 수의 제곱**으로 무거워집니다. 여섯이면
+     「여섯이 보내고 × 여섯이 받고」 = 서른여섯 자리예요.
+
+       동시 2명 · 15초 →  0.63MB/분
+       동시 6명 · 15초 →  5.63MB/분      ← 아홉 배
+       동시 6명 · 30초 →  2.81MB/분      ← 절반으로
+
+     그래서 **셋까지는 예전 그대로 15초**, 넷부터 30초, 일곱부터 45초로
+     저절로 늦춥니다. 사람이 줄면 다시 빨라져요.
+     ★ 평소(한둘)에는 아무것도 안 바뀝니다 — 드문 날만 눌립니다.
+     ★ 화질은 그대로예요. 뜸해질 뿐입니다. */
+  const SHARE_CROWD_STEP   = 3;           // 세 명마다 한 칸씩
+  const SHARE_INTERVAL_MAX = 45000;       // 아무리 많아도 45초까지만
+
   const SHARE_MAX_BYTES   = 40 * 1024;    // 한 장 상한 40KB
   const SHARE_QUALITIES   = [0.5, 0.4, 0.3, 0.22];  // 상한을 넘으면 품질을 낮춰 다시
 
@@ -214,6 +231,8 @@
   let _agoTimer   = null;    // 끊김 살피는 타이머 (1초)
   let _screensRef = null;    // screens 구독 — 공유 중일 때만 삽니다
   let _screensH = null;      // 그 구독의 손잡이 셋 (added·changed·removed)
+  let _공유인원 = 1;         // 지금 같이 공유 중인 사람 수 (주기를 정하는 값)
+  let _받기멈춤 = false;     // 🙈 딴 창을 보는 동안 받기를 멈췄는가
   let _screensCache = null;
   let _shareW     = SHARE_DEFAULT_W;      // 지금 뭉갬 정도 (가로 픽셀)
   let _lastShareHtml = null; // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
@@ -371,8 +390,22 @@
   /* 방장이 콘솔에서 들여다볼 수 있게 — 문턱을 조일 때 씁니다 */
   window.shareSkipStat = () => ({ 건너뛴: _건너뛴, 문턱: 보낼비율 });
 
+  /** 지금 보낼 주기 — 같이 공유하는 사람이 많을수록 길어집니다 */
+  function 보낼주기() {
+    const n = Math.max(1, _공유인원);
+    return Math.min(SHARE_INTERVAL_MAX,
+                    SHARE_INTERVAL_MS * Math.ceil(n / SHARE_CROWD_STEP));
+  }
+  window.shareIntervalNow = 보낼주기;   // 방장이 콘솔에서 들여다볼 수 있게
+
   async function pushFrame() {
     if (!_sharing || !myNick) return;
+
+    /* 🚦 아직 주기가 안 됐으면 여기서 돌아갑니다 — 모자이크를 뜨기
+       **전**이라 그림 만드는 품도 같이 아낍니다.
+       ★ 타이머는 15초 그대로 둡니다. 사람이 줄어 주기가 짧아졌을 때
+         바로 따라가려면 자주 물어봐야 해요. */
+    if (_마지막보냄 && Date.now() - _마지막보냄 < 보낼주기() - 900) return;
 
     /* ★ 무거운 일(모자이크 만들기)보다 **먼저** 물어봅니다 */
     const 지문 = 지문뜨기();
@@ -432,17 +465,23 @@
   function listenScreens() {
     /* ★ 안 보기로 해 둔 사람은 **아예 안 붙습니다** — 받는 양이 0 입니다 */
     if (!watchOn()) { detachScreens(); return; }
+    if (_받기멈춤) return;                 // 🙈 딴 창 보는 중 — 아래 참고
     if (_screensRef) return;
     _screensRef = db.ref("screens");
     if (!_screensCache) _screensCache = {};
 
+    const 인원세기 = () => {
+      _공유인원 = Math.max(1, Object.keys(_screensCache || {}).length);
+    };
     const 한칸바뀜 = (snap) => {
       if (!_screensCache) _screensCache = {};
       _screensCache[snap.key] = snap.val();
+      인원세기();
       renderShareCards();
     };
     const 한칸빠짐 = (snap) => {
       if (_screensCache) delete _screensCache[snap.key];
+      인원세기();
       renderShareCards();
     };
     /* ★ 손잡이를 들고 있어야 나중에 **이 구독만** 뗄 수 있습니다.
@@ -464,6 +503,45 @@
     _screensRef = null;
     _screensH = null;
   }
+
+  /* =====================================================================
+     🙈 딴 창을 보는 동안에는 남의 화면을 안 받습니다
+        (2026-09-19 — 콩 "통신량을 더 줄일 방법이 있을까?")
+     ---------------------------------------------------------------------
+     화면 공유를 켜 놓고 한글·워드로 넘어가 작업하는 일이 아주 흔합니다.
+     그 동안에는 **남의 화면을 볼 일이 없는데도 계속 받고** 있었어요.
+     여섯이 공유 중이면 1분에 1MB 넘게 그냥 흘려보내는 셈입니다.
+
+     그래서 탭이 가려진 채 1분이 지나면 받기를 멈추고, 돌아오면 다시
+     받습니다.
+     ★ **보내는 것은 안 멈춥니다** — 내 화면은 남들이 봐야 하니까요.
+     ★ 1분을 기다리는 이유: 잠깐 딴 창 봤다 오는 것까지 끊으면, 돌아올
+       때마다 모두의 그림을 다시 받아 오히려 손해예요 (여섯이면 240KB).
+     ★ 멈춰 있는 동안에도 마지막 그림은 화면에 그대로 남아 있습니다
+       (_screensCache 를 안 비웁니다) — 돌아왔을 때 허전하지 않게.
+     ===================================================================== */
+  const HIDE_PAUSE_MS = 60 * 1000;
+  let _숨김타이머 = null;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (_숨김타이머 || _받기멈춤 || !_screensRef) return;
+      _숨김타이머 = setTimeout(() => {
+        _숨김타이머 = null;
+        if (!document.hidden || !_screensRef) return;
+        _받기멈춤 = true;
+        detachScreens();
+      }, HIDE_PAUSE_MS);
+      return;
+    }
+    /* 돌아왔습니다 */
+    if (_숨김타이머) { clearTimeout(_숨김타이머); _숨김타이머 = null; }
+    if (_받기멈춤) {
+      _받기멈춤 = false;
+      if (_sharing || window.SOLO) listenScreens();
+      renderShareCards();
+    }
+  });
 
   /* ---------------------------------------------------------------
      켜기 · 끄기
