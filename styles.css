@@ -10227,7 +10227,30 @@ html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-
 .dock-mode .user-cards-grid > *{
   flex: 0 0 var(--card-w);
   max-width: var(--card-w);
+  /* ★★★ [고침 2026-09-19 — 콩 "줄 사이 간격이 달라 보여"]
+     ---------------------------------------------------------------------
+     둘째 줄과 셋째 줄 사이만 **두 배**로 벌어져 있었습니다.
+
+     [왜]
+     「혼자 내려간 카드 구제」(fixLonelyCard)가 끼워 넣는 **줄바꿈 띠**
+     (.card-row-break) 때문입니다. 키가 0 이라 안 보이지만, flex 에게는
+     엄연한 **한 줄**이에요. 그래서 줄 간격(row-gap)이
+         윗줄 ─gap─ [보이지 않는 띠] ─gap─ 아랫줄
+     처럼 **두 번** 들어갑니다. 20px 이 40px 이 돼요.
+     카드가 7·7·1 로 떨어지는 날(=마지막 한 장이 외로운 날)에만 띠가
+     끼므로, 어떤 날은 멀쩡하고 어떤 날은 벌어져 더 헷갈렸습니다.
+
+     [고침]
+     줄 사이를 **gap 이 아니라 카드의 아래 여백**으로 만듭니다. 그러면
+     키 0 에 여백 0 인 띠는 아무 자리도 안 차지해요.
+       · row-gap: 0            ← 아래 .user-cards-grid 규칙
+       · 카드마다 margin-bottom ← 여기
+       · 띠는 margin: 0        ← 아래 .card-row-break 규칙 (그대로)
+     좌우 간격(column-gap)은 예전 그대로입니다. */
+  margin-bottom: calc(var(--cards-gap, 12px) + 8px);
 }
+/* 줄 사이는 위 여백이 맡습니다 — gap 으로 주면 띠가 한 번 더 먹습니다 */
+.dock-mode .user-cards-grid{ row-gap: 0; }
 /* 줄바꿈 띠 — 혼자 내려간 카드 구제용 (script_realtime.js fixLonelyCard).
    폭 100%를 차지하는 높이 0짜리라, 뒤의 카드들을 다음 줄로 내립니다 */
 .dock-mode .user-cards-grid > .card-row-break{
