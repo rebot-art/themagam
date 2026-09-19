@@ -724,12 +724,19 @@
        그래서 뼈대는 한 번만 세우고, 매번은 **속만** 갈아 끼웁니다.
        개근 줄은 내용이 정말 달라졌을 때만 손대요. */
     if (!box.firstChild) {
+      /* [바꿈 2026-09-19 — 콩] 세 칸을 세로로 쌓던 것을 **두 줄기**로 폅니다.
+           왼쪽 : 📊 접속 현황  (위)  ·  🏅 개근 (아래)
+           오른쪽: 🔥 지금 참여 중  (왼쪽 두 칸을 합친 만큼 길게)
+         세로로 쌓으니 판이 길어져 카드를 가리고, 흐름 칸은 짧은데
+         옆이 텅 비었어요. 양쪽 키는 CSS 가 맞춥니다(grid stretch). */
       box.innerHTML = `<div class="rb-inner">
-        <div class="rb-box">
-          <div class="rb-t rb-t-row"><span>📊 오늘 접속 현황</span><span class="rb-att" id="rb-att"></span></div>
-          <div class="rb-bars" id="rb-bars"></div>
+        <div class="rb-col" id="rb-left">
+          <div class="rb-box">
+            <div class="rb-t rb-t-row"><span>📊 오늘 접속 현황</span><span class="rb-att" id="rb-att"></span></div>
+            <div class="rb-bars" id="rb-bars"></div>
+          </div>
         </div>
-        <div class="rb-box">
+        <div class="rb-box rb-col-r">
           <div class="rb-t rb-t-row"><span id="rb-feed-t"></span><span class="rb-att" id="rb-wc"></span></div>
           <div class="rb-fb" id="rb-feed"></div>
         </div>
@@ -751,7 +758,9 @@
     if (흐름) 흐름.innerHTML = 흐름줄들();
 
     const 개근 = 개근HTML();
-    const 속 = box.querySelector(".rb-inner");
+    /* ★ 개근 칸은 **왼쪽 줄기 안**으로 들어갑니다 (2026-09-19).
+       .rb-inner 에 그냥 붙이면 격자의 세 번째 칸이 되어 판이 무너져요. */
+    const 속 = box.querySelector("#rb-left") || box.querySelector(".rb-inner");
     let 칸 = box.querySelector("#rb-honor");
     if (!개근) { 칸?.remove(); return; }
     if (!칸) {

@@ -11022,9 +11022,42 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
      가운데를 다시 잡아 줍니다. */
 html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
 
+/* =====================================================================
+   두 줄기로 (2026-09-19 — 콩 "양쪽 높이 맞춰서")
+   ---------------------------------------------------------------------
+     왼쪽 : 📊 접속 현황 (위) · 🏅 개근 (아래)
+     오른쪽: 🔥 지금 참여 중 (왼쪽 두 칸을 합친 만큼 길게)
+
+   세로로 셋을 쌓으니 판이 길어져 카드를 가렸고, 흐름 칸은 짧은데
+   양옆이 텅 비어 있었습니다.
+
+   ★ 양쪽 키 맞추기는 **격자가 알아서** 합니다 — grid 의 칸은 기본이
+     stretch 라서, 긴 쪽에 맞춰 짧은 쪽도 늘어납니다. 높이를 숫자로
+     적어 두면 줄 수가 달라질 때마다 어긋나요.
+   ★ 왼쪽은 space-between — 접속 현황은 위에, 개근은 **아래 끝**에
+     붙습니다. 그래야 오른쪽 칸과 아랫변이 나란히 서요.
+   ===================================================================== */
 .rb-inner{
-  width: min(420px, calc(100% - 28px));
+  width: min(760px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  align-items: stretch;
+}
+.rb-col{
   display: flex; flex-direction: column; gap: 9px;
+  justify-content: space-between;
+}
+/* 오른쪽 칸 속도 위아래로 벌려 둡니다 — 줄이 적어도 판이 안 쭈그러들게 */
+.rb-col-r{ display: flex; flex-direction: column; }
+.rb-col-r .rb-fb{ flex: 1 1 auto; }
+
+/* 좁은 화면에서는 예전처럼 한 줄기로 — 두 칸으로 나누면 글자가 잘립니다 */
+@media (max-width: 720px){
+  .rb-inner{
+    width: min(420px, calc(100% - 28px));
+    grid-template-columns: 1fr;
+  }
 }
 .rb-box{
   background: var(--foot-veil, rgba(253,251,247,.72));
