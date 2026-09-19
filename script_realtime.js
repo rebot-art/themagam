@@ -332,9 +332,14 @@
     for (let h = 0; h < 24; h++) {
       const v = Number(_pulse[String(h).padStart(2, "0")] || 0);
       const 앞날 = h > 지금;
-      const 키 = 앞날 ? 5 : Math.max(5, (최다 ? v / 최다 : 0) * 39 + 3);
+      /* ★ [바꿈 2026-09-19 — 콩] px 이 아니라 **%** 로 그립니다.
+         칸이 남는 높이를 받아 커지게 되면서(styles.css .rb-col > .rb-box
+         :first-child) 막대만 46px 자리에 주저앉아 있으면 제목 아래가
+         휑하게 비어요. 백분율로 그리면 칸이 커진 만큼 막대도 같이 큽니다.
+         (예전 값 그대로 옮긴 것입니다 — 46px 기준 5px ≒ 11%, 42px ≒ 91%) */
+      const 키 = 앞날 ? 11 : Math.max(11, (최다 ? v / 최다 : 0) * 85 + 6.5);
       칸.push(`<span class="rp-b${h === 지금 ? " now" : ""}${앞날 ? " future" : ""}"
-                     style="height:${키.toFixed(1)}px"
+                     style="height:${키.toFixed(1)}%"
                      title="${h}시 — ${앞날 ? "아직" : v + "명"}"></span>`);
     }
     return `<span class="rp-lb">오늘</span>

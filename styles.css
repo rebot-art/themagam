@@ -11037,16 +11037,36 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
    ★ 왼쪽은 space-between — 접속 현황은 위에, 개근은 **아래 끝**에
      붙습니다. 그래야 오른쪽 칸과 아랫변이 나란히 서요.
    ===================================================================== */
+/* [넓힘 2026-09-19 — 콩 "「최다 n명」이 칸 밖으로 나와 있어"]
+   막대 스물넷 = 24 × 10.5px + 23 × 3px = 321px. 여기에 「최다 13명」
+   딱지(8px 여백 + 58px)와 칸 안쪽 여백(26px)을 더하면 **한 칸에 415px**
+   쯤 있어야 합니다. 760 ÷ 2 = 376 이라 40px 이 모자랐어요. */
+/* [2026-09-19 — 콩] 오른쪽 「지금 n명 참여 중」은 왼쪽의 **0.75배**.
+   줄 하나하나가 짧아서 반씩 나누면 오른쪽이 휑했어요.
+     왼쪽 426px : 오른쪽 320px  (746 ÷ 1.75 = 426.3)
+   ★ 왼쪽은 415px 밑으로 내려가면 「최다 n명」이 다시 삐져나옵니다. */
 .rb-inner{
-  width: min(760px, calc(100% - 28px));
+  width: min(755px, calc(100% - 28px));
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr .75fr;
   gap: 9px;
   align-items: stretch;
 }
+/* [고침 2026-09-19 — 콩 "오늘 접속과 개근 사이 간격이 너무 커"]
+   space-between 이 남는 높이를 **둘 사이에 몰아넣고** 있었습니다.
+   이제 위에서부터 차곡차곡(gap 9px — 양옆 칸 사이와 같은 값) 쌓고,
+   남는 높이는 **📊 접속 현황 칸이 받아 키가 커집니다**(아래 flex: 1). */
 .rb-col{
   display: flex; flex-direction: column; gap: 9px;
-  justify-content: space-between;
+}
+/* 남는 높이를 받는 쪽 — 왼쪽 줄기의 첫 칸(📊 접속 현황) */
+.rb-col > .rb-box:first-child{
+  flex: 1 1 auto;
+  display: flex; flex-direction: column;
+}
+/* 그 칸이 커진 만큼 막대도 같이 큽니다 (제목 아래를 다 차지) */
+.rb-col > .rb-box:first-child .rb-bars{
+  flex: 1 1 auto; height: auto; min-height: 46px;
 }
 /* 오른쪽 칸 속도 위아래로 벌려 둡니다 — 줄이 적어도 판이 안 쭈그러들게 */
 .rb-col-r{ display: flex; flex-direction: column; }
@@ -11076,9 +11096,12 @@ html[data-unzoom] .room-board .rb-inner{ zoom: var(--unzoom, 1); }
 /* 좁은 화면에서는 예전처럼 한 줄기로 — 두 칸으로 나누면 글자가 잘립니다 */
 @media (max-width: 720px){
   .rb-inner{
-    width: min(420px, calc(100% - 28px));
+    width: min(440px, calc(100% - 28px));   /* 「최다 n명」이 들어갈 만큼 */
     grid-template-columns: 1fr;
   }
+  /* 한 줄기일 때는 늘어날 남는 높이가 없습니다 — 원래 키로 */
+  .rb-col > .rb-box:first-child{ flex: 0 0 auto; }
+  .rb-col > .rb-box:first-child .rb-bars{ flex: 0 0 auto; height: 46px; }
 }
 .rb-box{
   background: var(--foot-veil, rgba(253,251,247,.72));
