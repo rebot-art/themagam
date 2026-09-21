@@ -564,7 +564,16 @@
           <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
           <button type="button" id="adm-log-open" class="adm-btn ghost adm-nav-side"
                   title="하루치 입장을 시간순으로 봅니다 (3시간에 한 번만 기록)">🕘 입장 기록</button>
+          <!-- ⏳ 옛 날짜의 ✔ 유효 출석 퍼뜨리기 (2026-09-21 — 콩). 방장만.
+               이 표는 원본 구간으로 **이미** 옛 날짜까지 가려서 보여 줍니다.
+               다만 주간 기록·나의 작업은 원본을 못 읽어요(본인·방장만 보는 자리).
+               그래서 여기서 계산해 둔 값을 그 둘이 읽는 자리에 적어 줍니다. -->
+          <span data-owner-only>
+            <button type="button" id="adm-att-fill" class="adm-btn ghost adm-nav-side"
+                    title="이 달의 머문 시간을 멤버 화면에도 보이도록 적어 둡니다">⏳ 옛 날짜 채우기</button>
+          </span>
         </div>
+        <div class="adm-msg" id="adm-att-fill-msg"></div>
         <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
         <div class="adm-att-legend">
           <span><b>규칙 칸</b> — 한 달 18일 출석. 늦게 들어오거나 휴가를 낸 만큼 기준이 낮아져요.</span>
@@ -942,7 +951,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609210447"></script>
+  <script src="script_admin.js?v=202609210503"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

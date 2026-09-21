@@ -423,6 +423,8 @@
      표를 그릴 때 사람마다 한 줄씩 챙겨 둡니다 — _vac셈 이 휴가 상한을
      빌려 쓰는 것과 같은 수법이에요(서버를 한 번도 더 안 읽습니다). */
   let _순위셈 = {};
+  /* ⏳ '옛 날짜 채우기' 재료 — 표를 그릴 때마다 새로 담깁니다 */
+  let _채울거리 = null;
 
   /* 🌿 [2026-08-30] 출석부를 **앞으로도** 넘길 수 있게 했습니다.
      ---------------------------------------------------------------
@@ -625,6 +627,13 @@
       const rows = nicks.map((n, 순번) => {
         const vacs = vacByNick[n] || {};
         const leaves = leaveByNick[n] || {};
+        /* ⏳ 옛 날짜의 머문 시간 — 원본 구간에서 바로 셉니다 (2026-09-21 — 콩)
+           ---------------------------------------------------------------
+           attendance 의 m 은 2026-09-21부터 쌓입니다. 그 전 날짜는 비어 있는데,
+           **원본(timeSegs)은 처음부터 다 남아 있어요** — 지우는 손이 아예 없습니다.
+           minsByNick 이 바로 그 원본을 날짜별로 더해 둔 값이고, 흉터(중복 구간)까지
+           이미 걸러져 있어요. 무게를 안 친 **순수 머문 분**이라 잣대도 같습니다.
+           ★ 서버를 한 번도 더 안 읽습니다 — 돋보기·그래프가 쓰던 값 그대로예요. */
         const mins = minsByNick[n] || {};
 
         /* 이 사람이 처음 나타난 날 — 출석과 휴가 중 이른 쪽.
@@ -674,7 +683,12 @@
                콩 결정으로 걷었습니다. 궁금하면 칸을 눌러 돋보기로 봅니다 */
             /* ✔ 유효 출석 (2026-09-21) — m 이 있는 날만 가릅니다.
                없으면(옛 날짜) 예전 모양 그대로 둡니다. */
-            const stay = rec && rec.m != null ? Number(rec.m) || 0 : null;
+            /* m 이 있으면 그것이 먼저 — 그날 본인 브라우저가 적은 값이라
+               제일 정확합니다. 없으면 원본 구간으로 메꿉니다.
+               ★ 원본조차 없는 날은 **모름**으로 둡니다 (0 으로 적으면
+                 "잠깐 들렀다" 로 잘못 읽혀요 — 모르는 것과 안 머문 것은 다릅니다). */
+            const stay = rec && rec.m != null ? Number(rec.m) || 0
+                       : (mins[dk] != null ? Math.round(Number(mins[dk]) || 0) : null);
             if (stay != null) {
               if (stay >= VALID_STAY_MIN) { cls += " full"; validDays++; }
               else cls += " brief";
@@ -843,13 +857,20 @@
          함께 굳힙니다 — 카드가 읽어 갑니다. */
       명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
 
+      /* ⏳ [2026-09-21] '옛 날짜 채우기' 가 쓸 재료를 남겨 둡니다.
+         표가 이미 읽어 둔 값 그대로예요 — 버튼을 눌러도 **서버를 다시 안 읽습니다**
+         (휴가 상한이 _vac셈 을, 순위가 rateRows 를 빌려 쓰는 것과 같은 수법). */
+      _채울거리 = { ymKey, attMonth, minsByNick, nicks };
+
       body.classList.remove("adm-msg");
       /* ✔ 유효 출석 범례 (2026-09-21) — 표만 보고는 진한 칸의 뜻을 모릅니다 */
       const 범례 = `<p class="adm-att-legend">
         <span class="lg full">09:20</span> ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b>
         · <span class="lg brief">09:20</span> 잠깐 들렀다 간 날
-        · 옅지도 진하지도 않은 칸은 머문 시간을 아직 모르는 날이에요
-        (2026-09-21부터 쌓입니다).
+        · 어느 쪽도 아닌 칸은 머문 기록이 없는 날이에요.
+        <br>옛 날짜는 <b>원본 구간</b>으로 여기서 바로 가려 보여 줍니다 —
+        주간 기록·멤버 달력에도 보이게 하려면 위 <b>[⏳ 옛 날짜 채우기]</b> 를 한 번 눌러 주세요
+        (달마다 한 번씩).
         <br>한 달 <b>${RULE_DAYS}일</b> 규칙은 예전처럼 <b>나온 날</b>로 셉니다 — 유효 출석은 눈으로만 구분해요.
       </p>`;
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>${범례}`;
@@ -1857,6 +1878,83 @@
        **문구가 바뀌었는지**를 압니다. 바뀌면 그날 다시 한 번 보여줘요.
        그래서 내용이 같아도 [인사 걸기] 를 누르면 다시 돕니다.
      ===================================================================== */
+  /* =====================================================================
+     ⏳ 옛 날짜의 ✔ 유효 출석 퍼뜨리기 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     [왜 필요한가]
+     머문 시간(attendance 의 m)은 2026-09-21부터 쌓입니다. 그 전 날짜는
+     비어 있어요. 그런데 **원본(users/{닉}/timeSegs)은 처음부터 다 남아
+     있습니다** — 지우는 손이 아예 없거든요.
+
+     이 표는 그 원본으로 옛 날짜까지 **이미** 가려서 보여 줍니다(위 mins).
+     문제는 다른 두 화면이에요:
+       · 주간 기록 📅 출석 탭 — 모두가 봅니다. 남의 timeSegs 는 못 읽어요.
+       · 나의 작업 달력 — users/{닉}/attend/mins 만 읽습니다.
+     둘 다 **원본에 손이 닿지 않는 자리**라, 여기서 셈해 둔 값을 그들이
+     읽는 자리에 적어 주는 수밖에 없습니다.
+
+     [안전하게 —]
+     ★ **이미 m 이 있는 날은 건드리지 않습니다.** 그날 본인 브라우저가
+       적은 값이 언제나 진실이에요.
+     ★ **원본이 없는 날은 건너뜁니다.** 0 으로 적으면 "잠깐 들렀다" 로
+       잘못 읽혀요 — 모르는 것과 안 머문 것은 다릅니다.
+     ★ **출석 도장이 있는 날만** 적습니다. 도장이 없는 날에 m 만 적으면
+       보안규칙 검사(at 이 있어야 함)에 걸려 **묶음 전체가 실패**합니다.
+     ★ 보고 있는 **그 달만** 합니다. 한 번에 전 기간을 쓰면 되돌리기가
+       어렵고, 어차피 달을 넘기며 한 번씩 누르면 됩니다.
+     ★ 서버를 **한 번도 다시 안 읽습니다** — 표가 쓰던 값 그대로입니다.
+     ===================================================================== */
+  async function fillOldStayMins() {
+    if (!ownerOnly("옛 날짜 채우기")) return;
+    const 거리 = _채울거리;
+    if (!거리) { msg("adm-att-fill-msg", "표를 먼저 불러와 주세요.", true); return; }
+
+    const { ymKey, attMonth, minsByNick, nicks } = 거리;
+    const 묶음 = {};          // attendance 한 번에
+    const 사람별 = {};        // users/{닉}/attend/mins 사람마다 한 번씩
+    let 칸 = 0;
+
+    nicks.forEach(n => {
+      const mins = minsByNick[n] || {};
+      Object.keys(mins).forEach(dk => {
+        if (!dk.startsWith(ymKey)) return;
+        const rec = attMonth[dk]?.[n];
+        if (!rec || !(rec.firstAt || rec.at)) return;   // 도장이 없는 날은 안 적습니다
+        if (rec.m != null) return;                      // 이미 있으면 그대로 둡니다
+        const 분 = Math.round(Number(mins[dk]) || 0);
+        if (!(분 > 0)) return;                          // 원본이 없거나 0 이면 모름으로 둡니다
+        묶음[`${dk}/${n}/m`] = 분;
+        (사람별[n] || (사람별[n] = {}))[dk] = 분;
+        칸++;
+      });
+    });
+
+    if (!칸) {
+      msg("adm-att-fill-msg", "이 달은 채울 것이 없어요 — 이미 다 있거나, 원본 기록이 없는 날들이에요.");
+      return;
+    }
+    if (!confirm(`${ymKey.replace("-", "년 ")}월 — ${칸}칸을 채울까요?\n\n` +
+                 "이미 적혀 있는 날은 건드리지 않아요. 주간 기록과 멤버의 '나의 작업' 달력에도 ✔ 가 보이게 됩니다.")) return;
+
+    msg("adm-att-fill-msg", "채우는 중…");
+    try {
+      await db.ref("attendance").update(묶음);
+      /* 개인 달력이 읽는 자리에도 같은 값을 — 사람마다 한 번씩입니다.
+         한 사람이 실패해도 나머지는 갑니다 (달력은 곁다리예요). */
+      let 실패 = 0;
+      await Promise.all(Object.keys(사람별).map(async n => {
+        try { await db.ref(`users/${n}/attend/mins`).update(사람별[n]); }
+        catch (e) { 실패++; }
+      }));
+      msg("adm-att-fill-msg",
+          `${칸}칸을 채웠어요.` + (실패 ? ` (달력 쪽 ${실패}명은 실패 — 다시 눌러도 돼요)` : "") +
+          " 멤버들은 새로고침하면 보여요.");
+      loadAttendance(_attOffset);      // 표를 다시 그려 결과를 눈으로 확인
+    } catch (e) {
+      msg("adm-att-fill-msg", "채우지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   /* =====================================================================
      🖥️ 화면 공유 제한 (2026-09-21 — 콩)
      ---------------------------------------------------------------------
@@ -3033,6 +3131,9 @@
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
+
+    /* ⏳ 옛 날짜 채우기 (방장에게만 보이는 칸) */
+    el("adm-att-fill")?.addEventListener("click", fillOldStayMins);
 
     /* 🖥️ 화면 공유 제한 (방장에게만 보이는 칸) */
     el("adm-share-save")?.addEventListener("click", saveShareLimit);
