@@ -418,10 +418,34 @@ function _무작위(n) {
 }
 
 /** File 또는 Blob → 정사각 축소 WebP Blob.
-    ★ 🎞️ GIF 는 **손대지 않고 그대로** 돌려줍니다 (움직임을 지키려고). */
-function _프사줄이기(file) {
+    =====================================================================
+    🎞️ GIF — **새로 올리는 것은 안 받고, 옛 것은 그대로 옮깁니다**
+    ---------------------------------------------------------------------
+    [내가 저지른 일 — 2026-09-21 → 2026-09-22 바로잡음]
+    2026-08-22 에 콩이 움직이는 GIF 프사를 막았습니다(캔버스를 거치게 해서
+    첫 프레임만 남기는 방식이었어요). 그런데 프사를 창고로 옮기면서 이
+    함수를 새로 만들 때, **옛 GIF 프사의 움직임을 지키려고** 넣은
+    "GIF 는 손대지 않고 통과" 한 줄이 **새로 올리는 길에서도** 쓰였습니다.
+    그래서 차단이 조용히 풀렸고, 하루 만에 새 GIF 프사가 올라왔어요.
+
+    [그래서 길을 가릅니다 — 같은 함수, 다른 문]
+        새로 올리기(putMyPhoto)  → gif허용 없음 → **거절**
+        옛 것 옮기기(migrateMyPhoto) → gif허용 → 원본 그대로 통과
+    옮기는 길까지 막으면, 이미 GIF 프사인 분들이 **영영 옛 방식(글자 사진)
+    으로 남아** 모두가 계속 내려받게 됩니다 — 막으려던 바로 그 일이에요.
+
+    [왜 막나 — 콩 2026-08-22]
+    프사는 접속자 수만큼 화면에 뜹니다. 움직이는 그림 스무 개가 한 화면에서
+    계속 돌아요. 게다가 GIF 는 눌리지 않는 원본이라 여느 프사의 대여섯 배입니다.
+    ===================================================================== */
+function _프사줄이기(file, opts) {
+  const gif허용 = !!(opts && opts.gif허용);
   return new Promise((resolve, reject) => {
-    if (/^image\/gif$/i.test(file.type || "")) { resolve(file); return; }
+    if (/^image\/gif$/i.test(file.type || "")) {
+      if (gif허용) { resolve(file); return; }        // 옛 프사를 옮기는 길만
+      reject(new Error("움직이는 GIF 는 프사로 쓸 수 없어요.\n정지 그림(JPG·PNG)으로 올려 주세요."));
+      return;
+    }
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -470,8 +494,14 @@ async function _프사창고에(blob) {
 
 /** 사진 파일 하나를 프사로 겁니다 — 줄이고 · 올리고 · 옛것 지우고 · 적기 */
 async function putMyPhoto(file) {
+  /* 고르는 창에 accept="image/*" 가 있지만, 끌어다 놓거나 옛 브라우저면
+     아무 파일이나 들어올 수 있어요. 옛 길(fileToSquareDataUrl)이 보던
+     것을 여기서도 봅니다 — 길을 옮기면서 빠뜨리면 안 되는 것들입니다. */
+  if (!file || !/^image\//.test(file.type || "")) throw new Error("이미지 파일만 올릴 수 있어요.");
+  if (file.size > PHOTO_INPUT_MAX) throw new Error("파일이 너무 커요. 12MB 이하로 올려주세요.");
+
   const 옛 = sanitizePhotoUrl(profileTargetData()?.photoUrl);
-  const blob = await _프사줄이기(file);
+  const blob = await _프사줄이기(file);          // ★ gif허용 없음 — 새 GIF 는 거절
   const url  = await _프사창고에(blob);
   /* ★ photo(글자 사진)는 **null 로 지웁니다** — 남겨 두면 계속 내려받게 되어
      옮긴 보람이 없어요 (콩 2026-09-21: "옮기자마자 지우기"). */
@@ -508,7 +538,9 @@ async function migrateMyPhoto() {
     if (!옛사진) return;                            // 프사가 없거나 못 믿을 값
 
     const blob = await (await fetch(옛사진)).blob();
-    const 줄인것 = await _프사줄이기(blob);
+    /* ★ 여기만 gif허용 — 이미 GIF 프사인 분의 움직임을 지키면서 창고로
+       옮깁니다. 여기까지 막으면 그분들이 영영 옛 방식으로 남아요. */
+    const 줄인것 = await _프사줄이기(blob, { gif허용: true });
     const url = await _프사창고에(줄인것);
     /* ★★ saveMyProfile 을 안 씁니다 — 그쪽은 **프로필 창이 보고 있는 사람**
        에게 씁니다(혼자 방에서 유령 카드를 꾸밀 때 필요한 길이에요).
@@ -586,6 +618,10 @@ function fileToShotDataUrl(file) {
   });
 }
 
+/* ⚠️ [2026-09-22] 이 함수는 **더 이상 프사를 올리는 길이 아닙니다.**
+   프사는 창고(Storage)로 갑니다 — putMyPhoto 를 보세요. 여기 있던
+   GIF 막음·크기 검사는 그쪽으로 옮겨 두었습니다. 남겨 둔 것은 밖에서
+   부르는 곳이 있을까 해서예요(window.fileToSquareDataUrl). */
 function fileToSquareDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) return reject(new Error("파일이 없어요."));
