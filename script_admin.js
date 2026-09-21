@@ -867,6 +867,7 @@
       const 범례 = `<p class="adm-att-legend">
         <span class="lg full">09:20</span> ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b>
         · <span class="lg brief">09:20</span> 잠깐 들렀다 간 날
+        · <span class="lg leave">🌿</span> 개인사정 · <span class="lg vac">🏖️</span> 휴가
         · 어느 쪽도 아닌 칸은 머문 기록이 없는 날이에요.
         <br>옛 날짜는 <b>원본 구간</b>으로 여기서 바로 가려 보여 줍니다 —
         주간 기록·멤버 달력에도 보이게 하려면 위 <b>[⏳ 옛 날짜 채우기]</b> 를 한 번 눌러 주세요
