@@ -598,6 +598,16 @@
   let _제한읽음 = false;       // 한 번이라도 서버에서 읽었나 (읽기 전엔 허용)
   let _제한붙음 = false;
 
+  function 제한적용(v) {
+    v = v || {};
+    _제한 = {
+      on:       v.on !== false,
+      max:      Number(v.max)      > 0 ? Number(v.max)      : SHARE_LIMIT_BASE.max,
+      maxShare: Number(v.maxShare) > 0 ? Number(v.maxShare) : SHARE_LIMIT_BASE.maxShare
+    };
+    _제한읽음 = true;
+  }
+
   function 제한듣기() {
     if (_제한붙음) return;
     const d = window.db;
@@ -605,18 +615,56 @@
     _제한붙음 = true;
     try {
       d.ref("config/share").on("value", (snap) => {
-        const v = snap.val() || {};
-        _제한 = {
-          on:       v.on !== false,
-          max:      Number(v.max)      > 0 ? Number(v.max)      : SHARE_LIMIT_BASE.max,
-          maxShare: Number(v.maxShare) > 0 ? Number(v.maxShare) : SHARE_LIMIT_BASE.maxShare
-        };
-        _제한읽음 = true;
+        제한적용(snap.val());
         /* 방장이 값을 바꾸면 모두의 버튼 말풍선도 곧바로 따라갑니다 */
         try { renderShareButton(); } catch (e) {}
       }, () => { _제한붙음 = false; });   // 못 읽었으면 다음에 다시 시도
     } catch (e) { _제한붙음 = false; }
   }
+
+  /* =====================================================================
+     🐛 [고침 2026-09-21 — 콩이 잡음] **첫 번째 누름이 늘 통과하던 자리**
+     ---------------------------------------------------------------------
+     처음에는 켜도되나() 가 제한듣기() 를 부르고 곧바로 _제한읽음 을 봤습니다.
+     그런데 `.on("value")` 의 답은 **한 박자 뒤에** 옵니다. 그 사이에
+     _제한읽음 은 아직 false 라서 "못 읽었으니 막지 말자" 로 빠져나갔어요.
+
+     판을 열 때 미리 붙여 두면 대개 늦지 않지만, 한 번이라도 어긋나면
+     그대로 뚫립니다 — 실제로 뚫렸어요:
+       · 입장 **전**에 붙었는데 그때 규칙이 막으면 → 영영 false
+       · 붙기 전에 버튼을 누르면 → 그 누름은 통과
+
+     그래서 켜기 직전에 **기다렸다가** 봅니다. 값이 이미 있으면 한 글자도
+     더 안 읽고, 없을 때만 한 번(40바이트 남짓) 읽어요.
+     ★ 그래도 못 읽으면 막지 않습니다 — 그 약속은 그대로입니다.
+     ===================================================================== */
+  async function 제한보장() {
+    제한듣기();
+    if (_제한읽음) return;
+    try {
+      const snap = await window.db.ref("config/share").once("value");
+      제한적용(snap.val());
+    } catch (e) { /* 못 읽었으면 막지 않습니다 */ }
+  }
+
+  /* 🔎 방장이 콘솔에서 들여다볼 수 있게 (shareIntervalNow 와 같은 결).
+     "왜 안 막히지?" 를 눈으로 확인하는 자리입니다. */
+  window.shareLimitNow = function () {
+    const 접속 = 지금접속수(), 공유 = othersSharing();
+    return {
+      설정읽음: _제한읽음,
+      설정: Object.assign({}, _제한),
+      지금접속: 접속,
+      지금공유중: 공유,
+      나는방장: 방장인가(),
+      막히나: !_제한읽음 ? "아니오 (설정을 아직 못 읽음)"
+            : !_제한.on  ? "아니오 (제한이 꺼져 있음)"
+            : 방장인가()  ? "아니오 (방장은 예외)"
+            : (_제한.max > 0 && 접속 >= _제한.max) ? `예 — 접속 ${접속}명 ≥ ${_제한.max}명`
+            : (_제한.maxShare > 0 && 공유 >= _제한.maxShare) ? `예 — 공유 ${공유}명 ≥ ${_제한.maxShare}명`
+            : "아니오 (문턱 아래)"
+    };
+  };
 
   /* 🤫 방장만 조용히 지나갑니다 — 화면에 "예외" 라고 적지 않습니다.
      ★ 운영진은 포함하지 않습니다 (콩 2026-09-21). canAdmin() 을 쓰면
@@ -642,10 +690,11 @@
     return n;
   }
 
-  /** 지금 켜도 되나 — 안 되면 팝업을 띄우고 false */
-  function 켜도되나() {
-    제한듣기();
-    if (!_제한읽음) return true;        // 아직 못 읽음 → 막지 않습니다
+  /** 지금 켜도 되나 — 안 되면 팝업을 띄우고 false
+      ★ async 입니다: 설정을 아직 못 읽었으면 **기다렸다가** 봅니다 (위 주석). */
+  async function 켜도되나() {
+    await 제한보장();
+    if (!_제한읽음) return true;        // 그래도 못 읽었으면 막지 않습니다
     if (!_제한.on)  return true;
     if (방장인가()) return true;        // 🤫 조용히
 
@@ -843,7 +892,7 @@
     if (_sharing) return;
     /* 🚦 사람이 많으면 여기서 멈춥니다 — **창 고르기 판이 뜨기 전**입니다.
        창을 다 고른 뒤에 "안 됩니다" 라고 하면 훨씬 허탈해요. */
-    if (!켜도되나()) return;
+    if (!(await 켜도되나())) return;
 
     const stream = await _pickWindow();
     if (!stream) return;      // 고르기를 취소했거나 권한이 막혔습니다
@@ -942,8 +991,11 @@
     } catch (e) { return false; }
   }
 
-  /** 입장한 뒤에 한 번 — 아까 공유 중이었으면 단추를 깜빡입니다 */
+  /** 입장한 뒤에 한 번 — 아까 공유 중이었으면 단추를 깜빡입니다
+      ★ 여기서 제한듣기() 를 한 번 더 부릅니다. 판을 열 때는 **로그인 전**이라
+        규칙에 막혀 못 붙었을 수 있어요 — 입장 뒤에는 확실히 붙습니다. */
   function offerResume() {
+    제한듣기();                 // 🚦 로그인 뒤 다시 한 번 (위 주석)
     if (_sharing || !supported() || !myNick) return;
     if (!_표시있나()) return;
     const btn = document.getElementById("share-btn");
