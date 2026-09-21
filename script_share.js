@@ -543,6 +543,141 @@
     }
   });
 
+  /* =====================================================================
+     🚦 사람이 많을 때는 화면 공유를 잠시 쉬어 둡니다 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     [왜]
+     화면 공유의 통신량은 **올리는 쪽보다 내려받는 쪽**이 큽니다. 한 사람이
+     올린 그림을 공유 중인 전원이 각자 받으니까요 — 그래서 사람이 늘면
+     제곱으로 붑니다. 같은 통로로 채팅·글자수도 흐르니, 몰리는 때에는
+     잠깐 쉬어 두는 편이 방 전체에 낫습니다.
+
+     [문턱은 방장이 정합니다 — config/share]
+         config/share = { on: true, max: 14, maxShare: 5 }
+           on       : 이 장치를 쓸까 말까
+           max      : 접속 인원이 이만큼 **이상**이면 새로 못 켭니다
+           maxShare : 동시에 공유할 수 있는 사람 수 (이만큼까지만)
+
+     ★ config 는 이미 **누구나 읽기 · 방장만 쓰기** 입니다. 그래서
+       **보안규칙을 안 고쳐도 됩니다** (콘솔에 붙여넣을 것이 없어요).
+     ★ 판단은 각자의 브라우저가 합니다. 서버가 막아 주는 것이 아니라,
+       "지금 몇 명이지?" 를 각자 세어 보는 화면 차원의 약속이에요 —
+       공유를 '공유 중인 사람끼리만' 보는 것과 같은 결입니다.
+
+     [세는 값 — 서버에 한 번도 안 묻습니다]
+       접속 인원 : window._statusCache + isOnline — 머리말의 "n명 집필 중"과
+                   **똑같은 잣대**입니다. 두 숫자가 다르면 바로 의심받아요.
+       공유 인원 : othersSharing() — status 의 shareOn 만 셉니다. screens 를
+                   읽으면 **그림까지 통째로 내려받습니다**(한 장 12~40KB).
+                   막으려고 통신량을 쓰는 건 앞뒤가 안 맞아요.
+
+     [못 읽었으면 막지 않습니다]
+     _제한읽음 이 서기 전에는 늘 허용입니다. 통신이 잠깐 흔들렸다고
+     공유가 통째로 막히면 그게 더 곤란하니까요.
+
+     [이미 켜 둔 사람은 그대로 둡니다]
+     인원이 늘어 문턱을 넘어도 **끊지 않습니다.** 잘 쓰고 있는데 화면이
+     툭 꺼지면 고장으로 읽혀요. 새로 켜는 것만 막아도 부하는 안 늘어납니다.
+     ===================================================================== */
+  const SHARE_LIMIT_BASE = { on: true, max: 14, maxShare: 5 };
+  let _제한 = Object.assign({}, SHARE_LIMIT_BASE);
+  let _제한읽음 = false;       // 한 번이라도 서버에서 읽었나 (읽기 전엔 허용)
+  let _제한붙음 = false;
+
+  function 제한듣기() {
+    if (_제한붙음) return;
+    const d = window.db;
+    if (!d) return;            // 아직 준비 전 — 다음에 부를 때 다시
+    _제한붙음 = true;
+    try {
+      d.ref("config/share").on("value", (snap) => {
+        const v = snap.val() || {};
+        _제한 = {
+          on:       v.on !== false,
+          max:      Number(v.max)      > 0 ? Number(v.max)      : SHARE_LIMIT_BASE.max,
+          maxShare: Number(v.maxShare) > 0 ? Number(v.maxShare) : SHARE_LIMIT_BASE.maxShare
+        };
+        _제한읽음 = true;
+        /* 방장이 값을 바꾸면 모두의 버튼 말풍선도 곧바로 따라갑니다 */
+        try { renderShareButton(); } catch (e) {}
+      }, () => { _제한붙음 = false; });   // 못 읽었으면 다음에 다시 시도
+    } catch (e) { _제한붙음 = false; }
+  }
+
+  /* 🤫 방장만 조용히 지나갑니다 — 화면에 "예외" 라고 적지 않습니다.
+     ★ 운영진은 포함하지 않습니다 (콩 2026-09-21). canAdmin() 을 쓰면
+       운영진까지 딸려 들어와요. */
+  const SHARE_ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+  function 방장인가() {
+    try { return firebase.auth().currentUser?.uid === SHARE_ADMIN_UID; }
+    catch (e) { return false; }
+  }
+
+  /** 지금 접속 중인 사람 수 — 머리말 "n명 집필 중" 과 같은 잣대 */
+  function 지금접속수() {
+    const cache = window._statusCache;
+    if (!cache) return 0;
+    const t = (typeof window.serverNow === "function") ? window.serverNow() : Date.now();
+    let n = 0;
+    for (const nick in cache) {
+      const row = cache[nick];
+      if (!row) continue;
+      if (typeof window.isOnline === "function" && !window.isOnline(row, t)) continue;
+      n++;
+    }
+    return n;
+  }
+
+  /** 지금 켜도 되나 — 안 되면 팝업을 띄우고 false */
+  function 켜도되나() {
+    제한듣기();
+    if (!_제한읽음) return true;        // 아직 못 읽음 → 막지 않습니다
+    if (!_제한.on)  return true;
+    if (방장인가()) return true;        // 🤫 조용히
+
+    const 접속 = 지금접속수();
+    if (_제한.max > 0 && 접속 >= _제한.max) {
+      막힘팝업("접속", 접속, _제한.max);
+      return false;
+    }
+    /* ★ 나는 아직 안 켰으니 othersSharing() 이 곧 '이미 켜진 사람 수' 입니다.
+       다섯까지 허용이면, 이미 다섯이면 내가 여섯째라 막힙니다. */
+    const 공유 = othersSharing();
+    if (_제한.maxShare > 0 && 공유 >= _제한.maxShare) {
+      막힘팝업("공유", 공유, _제한.maxShare);
+      return false;
+    }
+    return true;
+  }
+
+  /* 안내 팝업 — alert 이 아니라 방의 다른 팝업과 같은 모양입니다.
+     ★ 나무라지 않습니다. "지금은 곤란해요, 조금 있다 다시" 까지가 전부예요. */
+  function 막힘팝업(어느쪽, 값, 문턱) {
+    const box  = document.getElementById("share-block-modal");
+    const body = document.getElementById("share-block-body");
+    if (!box || !body) {                     // 껍데기가 없으면 예전 방식으로
+      alert("🖥️ 화면 공유\n\n" + (어느쪽 === "접속"
+        ? `지금 방에 ${값}명이나 계셔요 🙂\n안정적인 접속을 위해 ${문턱}명 이상 접속 중에는 화면 공유가 어려워요.\n조금 한산해지면 다시 켜 주세요!`
+        : `지금 ${값}명이 화면을 나누고 있어요 🙂\n안정적인 접속을 위해 화면 공유는 ${문턱}명까지만 함께 켤 수 있어요.\n한 자리 나면 다시 눌러 주세요!`));
+      return;
+    }
+    body.innerHTML = 어느쪽 === "접속"
+      ? `<p>지금 방에 <b>${값}명</b>이나 계셔요 🙂</p>
+         <p>안정적인 접속을 위해 <b>${문턱}명</b> 이상 접속 중에는
+            화면 공유가 어려워요.</p>
+         <p class="share-block-tail">조금 한산해지면 다시 켜 주세요!</p>`
+      : `<p>지금 <b>${값}명</b>이 화면을 나누고 있어요 🙂</p>
+         <p>안정적인 접속을 위해 화면 공유는 <b>${문턱}명</b>까지만
+            함께 켤 수 있어요.</p>
+         <p class="share-block-tail">한 자리 나면 다시 눌러 주세요!</p>`;
+    box.style.display = "flex";
+  }
+  function closeShareBlock() {
+    const box = document.getElementById("share-block-modal");
+    if (box) box.style.display = "none";
+  }
+  window.closeShareBlock = closeShareBlock;
+
   /* ---------------------------------------------------------------
      켜기 · 끄기
      --------------------------------------------------------------- */
@@ -634,6 +769,9 @@
     if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
     if (!myNick) { alert("먼저 입장한 뒤에 쓸 수 있어요."); return; }
     if (_sharing) return;
+    /* 🚦 사람이 많으면 여기서 멈춥니다 — **창 고르기 판이 뜨기 전**입니다.
+       창을 다 고른 뒤에 "안 됩니다" 라고 하면 훨씬 허탈해요. */
+    if (!켜도되나()) return;
 
     const stream = await _pickWindow();
     if (!stream) return;      // 고르기를 취소했거나 권한이 막혔습니다
@@ -848,11 +986,17 @@
     btn.classList.toggle("share-others", !_sharing && others > 0);
 
     if (label) label.textContent = _sharing ? "공유 중" : "화면 공유";
+    /* 🚦 지금 못 켜는 상태면 말풍선으로 미리 알려 줍니다 — 누르기 전에
+       알면 팝업까지 안 가도 되니까요 (버튼을 흐리게 하지는 않습니다:
+       한산해지면 다시 켜지는 버튼이라 '고장' 으로 보이면 안 돼요). */
+    const 막힘 = !_sharing && 지금막혔나();
     btn.title = _sharing
       ? "화면 공유 끄기"
-      : (others > 0
-          ? `${others}명이 화면을 공유하고 있어요 — 나도 켜면 볼 수 있어요`
-          : "내 창 하나를 뭉갠 그림으로 공유합니다 (원본은 나가지 않아요)");
+      : (막힘
+          ? 막힘
+          : others > 0
+            ? `${others}명이 화면을 공유하고 있어요 — 나도 켜면 볼 수 있어요`
+            : "내 창 하나를 뭉갠 그림으로 공유합니다 (원본은 나가지 않아요)");
   }
 
   /* 나 말고 몇 명이 공유 중인가.
@@ -873,6 +1017,22 @@
       n++;
     }
     return n;
+  }
+
+  /* 지금 켜면 막히는가 — 막히면 말풍선에 쓸 한 줄, 아니면 "" (2026-09-21).
+     ★ 팝업과 **같은 판단**을 씁니다. 여기만 따로 세면 말풍선과 팝업이
+       다른 말을 하게 돼요. */
+  function 지금막혔나() {
+    if (!_제한읽음 || !_제한.on || 방장인가()) return "";
+    const 접속 = 지금접속수();
+    if (_제한.max > 0 && 접속 >= _제한.max) {
+      return `지금 ${접속}명 접속 중 — 안정적인 접속을 위해 ${_제한.max}명 이상일 때는 잠시 쉬어 둬요`;
+    }
+    const 공유 = othersSharing();
+    if (_제한.maxShare > 0 && 공유 >= _제한.maxShare) {
+      return `화면 공유는 ${_제한.maxShare}명까지 — 한 자리 나면 켤 수 있어요`;
+    }
+    return "";
   }
 
   /* ---------------------------------------------------------------
@@ -1482,6 +1642,7 @@
 
     loadShareLevel();
     loadShareFit();
+    제한듣기();                 // 🚦 문턱 듣기 (db 가 아직이면 켤 때 다시 붙습니다)
     renderShareButton();
     bindShareClicks();
   })();

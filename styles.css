@@ -2044,6 +2044,37 @@ body.room-bg-on{
 .card-badges:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: 999px; }
 
 /* 🎖️ 배지 설명 팝업 껍데기 — 다른 팝업들과 같은 결(고정·가운데·어둡게) */
+/* =====================================================================
+   🚦 화면 공유 잠시 쉬어 두기 팝업 (2026-09-21 — 콩)
+   ---------------------------------------------------------------------
+   다른 팝업(#badge-modal 등)과 같은 결로 두되, 글이 짧아 가운데 정렬에
+   버튼 하나만 둡니다. ✕ 를 안 단 것은 손이 갈 곳을 하나로 모으려고요.
+   ===================================================================== */
+#share-block-modal{
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  z-index: 6400; background: rgba(0,0,0,.28); padding: var(--sp-4);
+}
+#share-block-modal .modal-content{
+  width: min(380px, 100%);
+  position: relative;
+  text-align: center;
+}
+#share-block-modal .share-block-ico{
+  font-size: 34px; line-height: 1; margin-bottom: 6px;
+}
+#share-block-modal .modal-title{ margin-bottom: var(--sp-3); }
+#share-block-body p{ margin: 0 0 6px; font-size: var(--fs-sm); line-height: 1.65; }
+#share-block-body p b{ color: var(--accent); }
+#share-block-body .share-block-tail{ margin-top: 10px; color: var(--muted); }
+#share-block-modal .share-block-ok{
+  margin-top: var(--sp-4); width: 100%;
+  font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  background: var(--accent); color: var(--me-text);
+  border: 0; border-radius: var(--r-sm); padding: 11px; cursor: pointer;
+}
+#share-block-modal .share-block-ok:hover{ filter: brightness(1.06); }
+
 #badge-modal{
   position: fixed; inset: 0;
   display: none; align-items: center; justify-content: center;

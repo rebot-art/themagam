@@ -778,6 +778,50 @@
         <div class="adm-msg" id="adm-hello-msg"></div>
       </div>
 
+      <!-- =====================================================================
+           🖥️ 화면 공유 제한 (2026-09-21 — 콩)
+           ---------------------------------------------------------------------
+           config/share = { on, max, maxShare }. config 는 **누구나 읽기 ·
+           방장만 쓰기** 라 보안규칙을 안 고쳐도 됩니다.
+           ★ data-owner-only — 운영진 화면에는 아예 안 보입니다 (콩: 방장만).
+           ★ "방장은 예외" 라는 말은 어디에도 안 적습니다 (콩: 소리없이).
+           ===================================================================== -->
+      <span data-owner-only>
+      <div class="adm-card">
+        <h2>🖥️ 화면 공유 제한</h2>
+        <p class="adm-sub">사람이 몰릴 때 화면 공유를 <b>잠시 못 켜게</b> 해요.
+          화면 공유는 한 사람이 올린 그림을 <b>공유 중인 전원이 각자 받아서</b>
+          사람이 늘면 통신량이 제곱으로 붑니다.<br>
+          <b>이미 켜 둔 사람은 끊지 않아요</b> — 새로 켜는 것만 막습니다.</p>
+
+        <label class="adm-radio"><input type="checkbox" id="adm-share-on">
+          인원이 많으면 화면 공유 막기</label>
+        <div class="adm-gap"></div>
+
+        <div class="adm-inline">
+          <span style="font-size:13px; white-space:nowrap;">접속 인원이</span>
+          <input type="number" id="adm-share-max" min="2" max="99" step="1" style="max-width:88px;">
+          <span style="font-size:13px; white-space:nowrap;">명 <b>이상</b>이면 막기</span>
+        </div>
+        <div class="adm-gap"></div>
+        <div class="adm-inline">
+          <span style="font-size:13px; white-space:nowrap;">동시에 공유는</span>
+          <input type="number" id="adm-share-cap" min="1" max="30" step="1" style="max-width:88px;">
+          <span style="font-size:13px; white-space:nowrap;">명까지만</span>
+        </div>
+
+        <p class="adm-sub" style="margin:8px 0 0;">멤버에게는 이렇게 떠요 —
+          <b>“지금 방에 17명이나 계셔요 🙂 안정적인 접속을 위해 14명 이상 접속 중에는
+          화면 공유가 어려워요. 조금 한산해지면 다시 켜 주세요!”</b><br>
+          바꾸면 <b>지금 방에 있는 사람들에게 곧바로</b> 반영돼요 (새로고침 안 해도 돼요).</p>
+
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-share-save">저장</button>
+        <button class="adm-btn ghost" id="adm-share-reset">기본값으로 (14명 · 5명)</button>
+        <div class="adm-msg" id="adm-share-msg"></div>
+      </div>
+      </span>
+
       <!-- 🛡️ 운영진 명단 (2026-08-17) — 방장에게만 보입니다.
            staff/{uid} = 닉네임. 닉을 적으면 nickOwner 에서 uid 를 찾아 넣어요. -->
       <div class="adm-card" id="adm-staff-card" data-owner-only>
@@ -892,7 +936,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609210336"></script>
+  <script src="script_admin.js?v=202609210410"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

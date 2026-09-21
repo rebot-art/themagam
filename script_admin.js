@@ -214,7 +214,7 @@
     loadAllowList();
     loadBanList();
     loadHello();
-    if (isOwner) loadStaffList();
+    if (isOwner) { loadStaffList(); loadShareLimit(); }
   }
 
   /* =====================================================================
@@ -1857,6 +1857,73 @@
        **문구가 바뀌었는지**를 압니다. 바뀌면 그날 다시 한 번 보여줘요.
        그래서 내용이 같아도 [인사 걸기] 를 누르면 다시 돕니다.
      ===================================================================== */
+  /* =====================================================================
+     🖥️ 화면 공유 제한 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+         config/share = { on, max, maxShare }
+
+     [보안규칙을 안 고쳐도 됩니다]
+     config 는 이미 `.read: true` · 쓰기는 방장뿐입니다. 하위 칸을 하나
+     더 두는 것이라 콘솔에 붙여넣을 것이 없어요.
+
+     [왜 모두가 읽어야 하나]
+     막는 판단은 **각자의 브라우저**가 합니다 (script_share.js). 서버가
+     막아 주는 것이 아니라 "지금 몇 명이지?" 를 각자 세어 보는 약속이라,
+     그 문턱 숫자는 모두가 읽을 수 있어야 해요.
+
+     ★ 값을 안 적어 두면 멤버 쪽이 코드 기본값(14명 · 5명)을 씁니다.
+       그래도 [저장] 을 한 번 눌러 두는 편이 낫습니다 — 나중에 이 칸을
+       열었을 때 "무엇이 걸려 있나" 가 서버에 또렷이 남아 있으니까요.
+     ★ 방장이 예외라는 말은 이 화면 어디에도 안 적습니다 (콩 2026-09-21).
+     ===================================================================== */
+  const SHARE_LIMIT_BASE = { on: true, max: 14, maxShare: 5 };
+  /* ★★ script_share.js 에도 **같은 이름·같은 값**으로 있습니다 —
+     checks.js 가 둘이 같은지 지킵니다 (다르면 관리자 화면이 말하는 기본값과
+     실제로 걸리는 문턱이 어긋나요). */
+
+  function 공유제한그리기(v) {
+    const on = el("adm-share-on"), mx = el("adm-share-max"), cp = el("adm-share-cap");
+    if (!on || !mx || !cp) return;
+    on.checked = (v.on !== false);
+    mx.value   = Number(v.max)      > 0 ? Number(v.max)      : SHARE_LIMIT_BASE.max;
+    cp.value   = Number(v.maxShare) > 0 ? Number(v.maxShare) : SHARE_LIMIT_BASE.maxShare;
+  }
+
+  async function loadShareLimit() {
+    if (!el("adm-share-on")) return;
+    try {
+      const v = (await db.ref("config/share").once("value")).val() || {};
+      공유제한그리기(v);
+      if (!Object.keys(v).length) {
+        msg("adm-share-msg", "아직 정해 둔 값이 없어요 — 지금은 기본값(14명 · 5명)으로 돌아갑니다.");
+      }
+    } catch (e) { 공유제한그리기({}); }
+  }
+
+  async function saveShareLimit() {
+    if (!ownerOnly("화면 공유 제한 설정")) return;
+    const on = !!el("adm-share-on")?.checked;
+    const max = Math.round(Number(el("adm-share-max")?.value));
+    const cap = Math.round(Number(el("adm-share-cap")?.value));
+    /* 사람이 손으로 적는 칸이라 여기서 한 번 걸러 줍니다 — 0 이나 빈칸이
+       들어가면 멤버 쪽이 "0명 이상이면 막기" 로 읽어 아무도 못 켜게 돼요. */
+    if (!(max >= 2 && max <= 99))  { msg("adm-share-msg", "접속 인원은 2 ~ 99 사이로 적어 주세요.", true); return; }
+    if (!(cap >= 1 && cap <= 30))  { msg("adm-share-msg", "동시 공유는 1 ~ 30 사이로 적어 주세요.", true); return; }
+    try {
+      await db.ref("config/share").set({ on, max, maxShare: cap, at: Date.now() });
+      msg("adm-share-msg", on
+        ? `저장했어요 — 접속 ${max}명 이상이면 못 켜고, 동시 공유는 ${cap}명까지예요. 지금 방에 있는 분들에게 바로 반영됩니다.`
+        : "저장했어요 — 제한을 꺼 두었습니다. 누구나 언제든 켤 수 있어요.");
+    } catch (e) {
+      msg("adm-share-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  function resetShareLimit() {
+    공유제한그리기(SHARE_LIMIT_BASE);
+    msg("adm-share-msg", "기본값을 넣어 두었어요 — [저장] 을 눌러야 적용돼요.");
+  }
+
   async function loadHello() {
     const ta = el("adm-hello");
     if (!ta) return;
@@ -2962,6 +3029,10 @@
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
+
+    /* 🖥️ 화면 공유 제한 (방장에게만 보이는 칸) */
+    el("adm-share-save")?.addEventListener("click", saveShareLimit);
+    el("adm-share-reset")?.addEventListener("click", resetShareLimit);
 
     /* 🛡️ 운영진 명단 (방장에게만 보이는 칸) */
     el("adm-staff-add")?.addEventListener("click", () => addStaff(el("adm-staff-nick")?.value));
