@@ -510,7 +510,13 @@ async function migrateMyPhoto() {
     const blob = await (await fetch(옛사진)).blob();
     const 줄인것 = await _프사줄이기(blob);
     const url = await _프사창고에(줄인것);
-    await saveMyProfile({ photoUrl: url, photo: null });
+    /* ★★ saveMyProfile 을 안 씁니다 — 그쪽은 **프로필 창이 보고 있는 사람**
+       에게 씁니다(혼자 방에서 유령 카드를 꾸밀 때 필요한 길이에요).
+       이전은 언제나 **내 것**이라야 하니, 닉을 박아서 씁니다.
+       남의 프로필에 내 사진을 적는 일은 절대 없어야 합니다. */
+    await db.ref(`users/${myNick}/profile`).update({ photoUrl: url, photo: null });
+    window._myProfile = { ...(window._myProfile || {}), photoUrl: url, photo: null };
+    window.rerenderUserCards?.();
     console.info("[프사] 창고로 옮겼어요");
   } catch (e) {
     /* 조용히 넘어갑니다 — 옛 사진이 그대로 보이니 아무도 불편하지 않아요 */
