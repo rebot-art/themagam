@@ -364,8 +364,20 @@
     for (const ch of String(nick)) h = (h*31 + ch.codePointAt(0)) % 360;
     return `hsl(${h} 52% 74%)`;
   }
+  /* 🗄️ [2026-09-21] 프사가 창고(Storage)로 옮겨 갔습니다 — 새 것은 photoUrl,
+     아직 안 옮긴 분은 옛 photo(글자 사진). 둘 다 읽어 줍니다.
+     ★ 아무 https 나 받지 않습니다 — 바깥 주소를 프사로 걸면 그 서버가
+       멤버들 접속을 들여다보게 돼요(본편 sanitizePhotoUrl 과 같은 잣대). */
+  function 프사(prof){
+    const p = prof || {};
+    const u = String(p.photoUrl || "");
+    if (/^https:\/\/firebasestorage\.googleapis\.com\/[^\s"'<>]*$/.test(u)) return u;
+    const d = String(p.photo || "");
+    return /^data:image\//.test(d) ? d : "";
+  }
+
   function avHtml(nick, photo){
-    if (photo && /^(https?:|data:image\/)/i.test(photo))
+    if (photo && /^(https:\/\/firebasestorage\.googleapis\.com\/|data:image\/)/i.test(photo))
       return `<img src="${esc(photo)}" alt="" loading="lazy">`;
     return `<span style="width:100%;height:100%;display:flex;align-items:center;
             justify-content:center;background:${hue(nick)}">${esc(String(nick).slice(0,1))}</span>`;
@@ -414,17 +426,36 @@
   /* =====================================================================
      듣기 — 접속 현황 · 프로필 · 전체 명단
      ===================================================================== */
+  const _profRefs = {};
+  /* 방에 있는 사람에 맞춰 프사 구독을 붙이고 뗍니다 (본편 syncProfileRefs 와 같은 결) */
+  function _profSync(nicks){
+    const want = new Set(nicks || []);
+    if (myNick) want.add(myNick);
+    Object.keys(_profRefs).forEach(n => {
+      if (want.has(n)) return;
+      try { _profRefs[n].off(); } catch(e){}
+      delete _profRefs[n]; delete _profiles[n];
+    });
+    want.forEach(n => {
+      if (_profRefs[n]) return;
+      const r = db.ref(`users/${n}/profile`);
+      _profRefs[n] = r;
+      r.on("value", s => { _profiles[n] = s.val() || {}; renderAll(); }, () => {});
+    });
+  }
+
   function start(){
     db.ref("status").on("value", s => { _status = s.val() || {}; renderAll(); });
     db.ref("nickOwner").on("value", s => { _owners = s.val() || {}; renderAll(); });
 
-    /* 프사는 users/{닉}/profile 만 공개로 열려 있습니다 */
-    db.ref("users").on("value", s => {
-      const v = s.val() || {};
-      _profiles = {};
-      Object.entries(v).forEach(([n, o]) => { _profiles[n] = (o && o.profile) || {}; });
-      renderAll();
-    }, () => { /* 규칙상 통째로는 못 읽을 수 있습니다 — 그때는 기본 프사로 */ });
+    /* 🖼 프사 — 지금 방에 있는 사람 것만 하나씩 듣습니다.
+       ★ [고침 2026-09-21] 예전에는 `users` 를 통째로 들었습니다. 그런데
+         보안규칙은 users **루트**에 읽기를 안 열어 줘서 이 구독은 **늘
+         실패**했어요 — 폰에서는 프사가 아예 안 떴고, 콘솔에만 오류가
+         쌓였습니다. 열려 있는 것은 users/{닉}/profile 뿐이라 그리로 갑니다.
+       ★ 통째로 읽는 편이 요청은 적지만, 되지도 않을뿐더러 남의 투두·쪽지·
+         작업기록까지 딸려 오는 자리예요. 지금이 맞습니다. */
+    db.ref("status").on("value", s => { _profSync(Object.keys(s.val() || {})); });
 
     loadMyTime();
   }
@@ -473,7 +504,7 @@
     const row = _status[myNick] || {};
     const prof = _profiles[myNick] || {};
     $("me-nick").textContent = myNick;
-    $("me-av").innerHTML = avHtml(myNick, prof.photo);
+    $("me-av").innerHTML = avHtml(myNick, 프사(prof));
 
     const st = stOf(row.status);
     const pill = $("me-status");
@@ -523,7 +554,7 @@
       const isOn = _seg === "on";
       return `<div class="person row">
         <span class="dot${isOn ? "" : " off"}"></span>
-        <div class="av" style="width:38px;height:38px;border-radius:10px;">${avHtml(n, prof.photo)}</div>
+        <div class="av" style="width:38px;height:38px;border-radius:10px;">${avHtml(n, 프사(prof))}</div>
         <div class="grow">
           <div class="nick">${esc(n)}</div>
           ${isOn && tag ? `<div class="sub">${esc(tag)}</div>` : ""}

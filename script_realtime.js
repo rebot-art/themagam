@@ -1195,7 +1195,9 @@
           // 카드 강조색 — 좌측 보더. 미설정이면 CSS 기본 토큰 사용
 
           // 프사 — 사진이 있으면 사진, 없으면 닉네임으로 만든 눈사람
-          const photo = window.sanitizePhoto?.(prof.photo) || "";
+          /* 🗄️ [2026-09-21] 창고 주소 먼저, 없으면 옛 글자 사진 */
+          const photo = window.photoSrcOf ? window.photoSrcOf(prof)
+                      : (window.sanitizePhoto?.(prof.photo) || "");
           const avatar = photo
             /* [고침 2026-08-13] loading="lazy" → decoding="sync".
                사진은 프로필에 저장된 데이터 주소(data:)라 lazy 가 무의미하고,

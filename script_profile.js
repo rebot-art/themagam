@@ -350,6 +350,177 @@ function sanitizePhoto(v) {
   return s;
 }
 
+/* =====================================================================
+   🗄️ 프사를 창고(Storage)로 (2026-09-21 — 콩)
+   ---------------------------------------------------------------------
+   [왜 옮기나]
+   여태 프사는 사진을 글자로 바꿔 **실시간 DB 안에** 담았습니다. 그런데
+   DB 자료는 브라우저가 **캐시하지 않아요** — 끊겼다 붙을 때마다 방에 있는
+   사람 전원의 사진을 통째로 다시 받았습니다. 한 사람이 재접속할 때
+   150~300KB, 넷이 한꺼번에 붙으면 1~2MB 가 순간에 오갔어요.
+   (2026-09-21 사용량 그래프에서 실제로 보인 출렁임이 이것입니다.)
+
+   창고에 두면 프사가 **주소를 가진 파일**이 됩니다. 브라우저가 캐시하니
+   두 번째부터는 아예 안 받아요. DB 에는 주소 한 줄(200바이트)만 남습니다.
+
+   [자리]  profileimg/{내 계정 uid}/{무작위}.webp
+   ★ 계정 uid 를 경로에 넣는 것이 핵심입니다. 창고 규칙이 "이 폴더는 이
+     계정만" 을 막아 줘요 — 프사 주소는 모두에게 보이는 값이라, 폴더를
+     안 가르면 **남의 프사를 바꿔칠 수 있습니다.**
+     (채팅 그림 chatimg 는 한 번 쓰고 마는 것이라 그대로 뒀습니다.)
+
+   [무엇으로 줄이나] WebP 화질 70 (콩이 미리보기에서 고름). JPEG 82 와
+   견줘 눈에 띄게 흐려지지 않으면서 절반 가까이 가볍습니다.
+   ★ 🎞️ GIF 프사는 **손대지 않고 원본 그대로** 올립니다. 캔버스로 다시
+     그리면 첫 프레임만 남아 정지화면이 되거든요. 크기는 크지만 캐시가
+     되므로 지금보다 오히려 훨씬 낫습니다.
+
+   [옛 것과 함께 살기]
+   photoUrl 이 있으면 그것, 없으면 예전 photo(글자 사진)를 씁니다. 아직
+   안 옮긴 분들 프사가 사라지면 안 되니까요. 옮기기는 각자 입장할 때
+   조용히 한 번씩 일어납니다(migrateMyPhoto).
+   ===================================================================== */
+
+/** 창고가 내어 주는 주소만 통과시킵니다 — 바깥 주소는 막아요.
+    ★ 여기를 열어 두면 남의 서버 그림을 프사로 걸 수 있습니다.
+      그 서버는 우리 멤버 전원의 접속을 들여다보게 돼요(추적). */
+function sanitizePhotoUrl(v) {
+  const s = String(v || "");
+  if (s.length > 700) return "";
+  return /^https:\/\/firebasestorage\.googleapis\.com\/[^\s"'<>]*$/.test(s) ? s : "";
+}
+
+/** 이 사람 프사로 쓸 주소 — 새 것(창고) 먼저, 없으면 옛 것(글자 사진) */
+function photoSrcOf(prof) {
+  return sanitizePhotoUrl(prof && prof.photoUrl) || sanitizePhoto(prof && prof.photo);
+}
+window.sanitizePhotoUrl = sanitizePhotoUrl;
+window.photoSrcOf       = photoSrcOf;
+
+/* ── 창고에 올리고 내리는 손 ───────────────────────────────── */
+
+const PHOTO_TYPE    = "image/webp";
+const PHOTO_QUALITY = 0.70;          // 콩이 미리보기에서 고른 값 (2026-09-21)
+const PHOTO_UP_MAX  = 400 * 1024;    // 창고 규칙과 같은 상한 (옛 GIF 를 감안)
+
+function _창고() {
+  try { return (window.firebase && firebase.storage) ? firebase.storage() : null; }
+  catch (e) { return null; }
+}
+function _내uid() {
+  try { return firebase.auth().currentUser?.uid || ""; } catch (e) { return ""; }
+}
+function _무작위(n) {
+  const A = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const a = new Uint32Array(n || 20);
+  (window.crypto || {}).getRandomValues?.(a);
+  return [...a].map(x => A[x % A.length]).join("");
+}
+
+/** File 또는 Blob → 정사각 축소 WebP Blob.
+    ★ 🎞️ GIF 는 **손대지 않고 그대로** 돌려줍니다 (움직임을 지키려고). */
+function _프사줄이기(file) {
+  return new Promise((resolve, reject) => {
+    if (/^image\/gif$/i.test(file.type || "")) { resolve(file); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+        const c = document.createElement("canvas");
+        c.width = PHOTO_SIZE; c.height = PHOTO_SIZE;
+        const x = c.getContext("2d");
+        x.imageSmoothingQuality = "high";
+        x.drawImage(img, sx, sy, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+        /* WebP 를 못 만드는 브라우저면 toBlob 이 JPEG 로 돌려줍니다 —
+           그대로 써도 아무 문제 없어요(주소로 오가는 파일이라). */
+        c.toBlob(b => b ? resolve(b) : reject(new Error("사진을 줄이지 못했어요.")),
+                 PHOTO_TYPE, PHOTO_QUALITY);
+      } catch (e) { reject(e); }
+      finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("이 사진은 못 읽었어요.")); };
+    img.src = url;
+  });
+}
+
+/** 옛 프사 파일을 창고에서 지웁니다 — 안 지우면 바꿀 때마다 쌓여요.
+    ★ 실패해도 조용히 넘어갑니다. 파일 하나 못 지운 것 때문에 새 프사가
+      안 걸리면 그게 더 나쁩니다. */
+async function _옛프사지우기(url) {
+  const st = _창고();
+  const 길 = window.imgUpPathOf?.(url);
+  if (!st || !길 || !/^profileimg\//.test(길)) return;
+  try { await st.ref(길).delete(); } catch (e) {}
+}
+
+/** Blob → 창고 → 주소. 실패하면 던집니다(부르는 쪽이 알려 줘야 해서). */
+async function _프사창고에(blob) {
+  const st = _창고();
+  const uid = _내uid();
+  if (!st)  throw new Error("창고에 연결되지 않았어요.");
+  if (!uid) throw new Error("로그인 뒤에 쓸 수 있어요.");
+  if (blob.size > PHOTO_UP_MAX) throw new Error("사진이 너무 커요. 다른 사진을 써주세요.");
+  const 끝 = /webp/.test(blob.type) ? "webp" : /gif/.test(blob.type) ? "gif" : "jpg";
+  const ref = st.ref(`profileimg/${uid}/${_무작위(20)}.${끝}`);
+  await ref.put(blob, { contentType: blob.type || "image/webp" });
+  return await ref.getDownloadURL();
+}
+
+/** 사진 파일 하나를 프사로 겁니다 — 줄이고 · 올리고 · 옛것 지우고 · 적기 */
+async function putMyPhoto(file) {
+  const 옛 = sanitizePhotoUrl(profileTargetData()?.photoUrl);
+  const blob = await _프사줄이기(file);
+  const url  = await _프사창고에(blob);
+  /* ★ photo(글자 사진)는 **null 로 지웁니다** — 남겨 두면 계속 내려받게 되어
+     옮긴 보람이 없어요 (콩 2026-09-21: "옮기자마자 지우기"). */
+  await saveMyProfile({ photoUrl: url, photo: null });
+  _옛프사지우기(옛);
+  return url;
+}
+
+/** 프사 떼기 — 창고 파일까지 함께 */
+async function clearMyPhoto() {
+  const 옛 = sanitizePhotoUrl(profileTargetData()?.photoUrl);
+  await saveMyProfile({ photoUrl: null, photo: null });
+  _옛프사지우기(옛);
+}
+
+/* =====================================================================
+   🚚 조용한 이전 — 입장할 때 내 것만 한 번 (2026-09-21)
+   ---------------------------------------------------------------------
+   방장이 쉰두 명 것을 한꺼번에 옮기려면 창고 규칙을 느슨하게 풀어야
+   합니다(남의 폴더에 쓸 수 있어야 하니까요). 그래서 **각자 자기 것만**
+   옮깁니다 — 규칙은 단단한 채로, 본인은 아무것도 몰라도 됩니다.
+
+   ★ 도장을 찍어 두지 않습니다. 실패하면 다음 입장 때 다시 해 보는 게
+     맞아요 — 한 번 실패했다고 영영 옛 사진으로 남으면 안 됩니다.
+   ★ 옮길 것이 없으면 **서버를 한 번도 안 건드립니다**(내 프로필은 이미
+     _myProfile 에 들어와 있어요).
+   ===================================================================== */
+async function migrateMyPhoto() {
+  try {
+    if (!myNick || !_창고() || !_내uid()) return;
+    const p = window._myProfile || {};
+    if (sanitizePhotoUrl(p.photoUrl)) return;      // 이미 옮겼습니다
+    const 옛사진 = sanitizePhoto(p.photo);
+    if (!옛사진) return;                            // 프사가 없거나 못 믿을 값
+
+    const blob = await (await fetch(옛사진)).blob();
+    const 줄인것 = await _프사줄이기(blob);
+    const url = await _프사창고에(줄인것);
+    await saveMyProfile({ photoUrl: url, photo: null });
+    console.info("[프사] 창고로 옮겼어요");
+  } catch (e) {
+    /* 조용히 넘어갑니다 — 옛 사진이 그대로 보이니 아무도 불편하지 않아요 */
+    console.warn("[프사 이전]", e);
+  }
+}
+window.putMyPhoto      = putMyPhoto;
+window.clearMyPhoto    = clearMyPhoto;
+window.migrateMyPhoto  = migrateMyPhoto;
+
 /** File → 정사각 크롭 + 축소 → data URL */
 /* =====================================================================
    🖥️ 가짜 화면용 — 액자와 같은 비율로 자릅니다 (2026-08-15)
@@ -884,7 +1055,7 @@ window.snowmanSvg = snowmanSvg;
 function chatAvatarHtml(user) {
   const nick = String(user || "");
   const prof = (window._profileCache || {})[nick] || {};
-  const photo = sanitizePhoto(prof.photo);
+  const photo = photoSrcOf(prof);
   const attrs = `data-avatar-of="${escapeHtml(nick)}"`;
 
   return photo
@@ -899,7 +1070,7 @@ function refreshChatAvatars() {
 
   box.querySelectorAll("[data-avatar-of]").forEach(el => {
     const nick = el.dataset.avatarOf || "";
-    const photo = sanitizePhoto((window._profileCache || {})[nick]?.photo);
+    const photo = photoSrcOf((window._profileCache || {})[nick]);
 
     if (photo) {
       const img = el.querySelector("img");
@@ -1067,6 +1238,10 @@ async function afterJoinLoadProfile() {
   const p = await loadMyProfile();
   window._myProfile = p;
 
+  /* 🚚 [2026-09-21] 내 프사가 아직 옛 방식(글자 사진)이면 조용히 창고로.
+     ★ 기다리지 않습니다 — 입장이 이것 때문에 늦어지면 안 돼요.
+     ★ 옮길 것이 없으면 안쪽에서 곧장 돌아가므로 값이 0 입니다. */
+  try { migrateMyPhoto(); } catch (e) {}
 }
 
 window.listenProfiles = listenProfiles;
@@ -1232,7 +1407,7 @@ function renderProfilePanel() {
   /* 꾸밀 카드 — 평소엔 내 카드, 혼자 방에서 유령 카드를 누르면 그 카드 */
   const _tgt = profileTargetNick();
   const p = profileTargetData();
-  const photo = sanitizePhoto(p.photo);
+  const photo = photoSrcOf(p);
   const curSnowBg = sanitizeHexColor(p.snowBg) || snowColor(_tgt);
   const curCardBg = sanitizeHexColor(p.cardBg) || "#FFFFFF";
   const curPat = sanitizePattern(p.cardPattern);
@@ -2161,8 +2336,9 @@ function bindProfilePanel() {
       photoBtn.textContent = "줄이는 중…";
 
       try {
-        const dataUrl = await fileToSquareDataUrl(file);
-        await saveMyProfile({ photo: dataUrl });
+        /* 🗄️ [2026-09-21] 창고(Storage)로 올립니다 — DB 에는 주소만 남아요 */
+        photoBtn.textContent = "올리는 중…";
+        const dataUrl = await putMyPhoto(file);
 
         if (photoPrev) {
           photoPrev.classList.add("has-photo");
@@ -2174,8 +2350,8 @@ function bindProfilePanel() {
         }
         photoClear?.classList.remove("hidden");
         if (photoHint) {
-          photoHint.textContent =
-            `카드와 채팅에 이 사진이 보여요. (${Math.round(dataUrl.length / 1024)}KB)`;
+          /* 이제 주소라서 길이로 크기를 잴 수 없습니다 — 안내만 바꿉니다 */
+          photoHint.textContent = "카드와 채팅에 이 사진이 보여요.";
         }
         window.rerenderUserCards?.();
         // 사진을 올리면 눈사람이 안 보이므로 배경색 칸도 숨깁니다
@@ -2191,7 +2367,7 @@ function bindProfilePanel() {
 
   if (photoClear) {
     photoClear.onclick = async () => {
-      await saveMyProfile({ photo: "" });
+      await clearMyPhoto();
       if (photoPrev) {
         photoPrev.classList.remove("has-photo");
         photoPrev.innerHTML = snowmanSvg(profileTargetNick());
