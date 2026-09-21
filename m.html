@@ -211,6 +211,14 @@
   <p class="sub">작업방과 같은 닉네임·비밀번호로 들어와요.</p>
   <input id="g-nick" type="text" placeholder="닉네임" autocomplete="off" autocapitalize="off" spellcheck="false">
   <input id="g-pw" type="password" placeholder="비밀번호" autocomplete="current-password" enterkeyhint="go">
+  <!-- 🔠 Caps Lock 알림 (2026-09-21) — 비밀번호 칸은 점으로 가려져서
+       본인도 대문자인지 모릅니다. 브라우저가 알려 주는 값이라 서버와 무관해요.
+       (폰에는 Caps Lock 이 없지만, 블루투스 자판을 쓰면 있습니다) -->
+  <p class="msg" id="g-caps" role="status" hidden
+     style="color:#7A5E1E;background:#FBF0CE;border:1px solid #E6D49A;
+            border-radius:8px;padding:7px 10px;margin:8px 0 0;font-size:12.5px">
+    🔠 <b>Caps Lock</b>이 켜져 있어요 — 대문자로 들어갑니다
+  </p>
   <button id="g-go" type="button">입장하기</button>
   <p class="msg" id="g-msg" role="status"></p>
   <p class="note">
@@ -443,6 +451,17 @@
       r.on("value", s => { _profiles[n] = s.val() || {}; renderAll(); }, () => {});
     });
   }
+
+  /* 🔠 Caps Lock 알림 — 본편(script_auth.js)과 같은 방식 */
+  (function(){
+    const 칸 = $("g-pw"), 알림 = $("g-caps");
+    if (!칸 || !알림) return;
+    const 보이기 = on => { 알림.hidden = !on; };
+    ["keydown","keyup"].forEach(ev => 칸.addEventListener(ev, e => {
+      try { 보이기(!!e.getModifierState?.("CapsLock")); } catch(er){}
+    }));
+    칸.addEventListener("blur", () => 보이기(false));
+  })();
 
   function start(){
     db.ref("status").on("value", s => { _status = s.val() || {}; renderAll(); });

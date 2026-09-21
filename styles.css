@@ -2075,6 +2075,25 @@ body.room-bg-on{
 }
 #share-block-modal .share-block-ok:hover{ filter: brightness(1.06); }
 
+/* 🔠 Caps Lock 알림 (2026-09-21 — 콩)
+   ★ 붉은 '오류' 색이 아니라 모래색입니다. 틀렸다고 나무라는 게 아니라
+     "이거 켜져 있어요" 하고 알려 주는 것이라서요. */
+.caps-warn{
+  margin-top: var(--sp-2);
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  /* ★ **불투명**한 바탕입니다. 반투명으로 두면 다크 테마에서 뒤가 비쳐
+     어두워지고, 그 위의 어두운 글씨가 묻혀요 (검사가 잡아 줬습니다).
+     이 딱지는 어느 테마에서든 "여기 좀 보세요" 하는 자리라, 테마를
+     따라가기보다 **늘 같은 모래색 쪽지**로 두는 편이 맞습니다. */
+  background: #FBF0CE;
+  border: 1px solid #E6D49A;
+  font-size: var(--fs-xs);
+  color: #7A5E1E;
+  line-height: 1.5;
+}
+.caps-warn b{ color: #5E4713; }
+
 #badge-modal{
   position: fixed; inset: 0;
   display: none; align-items: center; justify-content: center;

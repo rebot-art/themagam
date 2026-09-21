@@ -378,5 +378,56 @@
     });
   });
 
+  /* =====================================================================
+     🔠 Caps Lock 알림 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     "비밀번호가 달라요" 로 헤매는 일의 제일 흔한 범인입니다. 비밀번호 칸은
+     점으로 가려져서 **본인도 대문자로 들어가는지 모르거든요.**
+     (실제로 오늘 감자님이 여기서 막혔습니다.)
+
+     ★ 브라우저가 알려 주는 값(getModifierState)이라 **서버는 한 글자도
+       안 오갑니다.** 통신량과 무관해요.
+     ★ 키를 누르기 전에는 알 길이 없습니다 — 그래서 칸에 처음 글자를
+       치는 순간부터 뜹니다. 그거면 충분해요.
+     ★ 비밀번호 바꾸는 칸(pw-new1/2)에도 답니다. 새 비밀번호를 대문자로
+       만들어 놓고 다음 날 못 들어오는 일이 더 고약하니까요.
+     ===================================================================== */
+  const CAPS_FIELDS = ["pw-input", "pw-now", "pw-new", "pw-new2"];
+
+  function _capsWatch() {
+    CAPS_FIELDS.forEach(id => {
+      const 칸 = el(id);
+      if (!칸 || 칸.dataset.capsOn) return;
+      칸.dataset.capsOn = "1";
+
+      /* ★ 알림을 **그 칸 바로 아래**에 만들어 붙입니다. 한 자리에 박아 두면
+         설정 창에서 친 경고가 대문에 뜨는 꼴이 돼요. */
+      const 알림 = document.createElement("div");
+      알림.className = "caps-warn";
+      알림.setAttribute("role", "status");
+      알림.hidden = true;
+      알림.innerHTML = "🔠 <b>Caps Lock</b>이 켜져 있어요 — 대문자로 들어갑니다";
+      칸.insertAdjacentElement("afterend", 알림);
+
+      const 보이기 = (on) => { 알림.hidden = !on; };
+      /* keydown·keyup 둘 다 — 켜는 순간에도, 끄는 순간에도 따라갑니다 */
+      ["keydown", "keyup"].forEach(ev => {
+        칸.addEventListener(ev, (e) => {
+          try { 보이기(!!e.getModifierState?.("CapsLock")); } catch (er) {}
+        });
+      });
+      /* 칸을 떠나면 내립니다 — 엉뚱한 자리에 남아 있으면 무엇에 대한
+         말인지 알 수 없어요 */
+      칸.addEventListener("blur", () => 보이기(false));
+    });
+  }
+  /* 설정 창은 나중에 그려질 수 있어서 한 박자 뒤에 한 번 더 봅니다.
+     이미 붙은 칸은 dataset 표시로 건너뛰므로 여러 번 불려도 안전해요. */
+  document.addEventListener("DOMContentLoaded", () => {
+    _capsWatch();
+    setTimeout(_capsWatch, 1500);
+  });
+  window.capsWatch = _capsWatch;
+
   window.Auth = { nickToEmail, MIN_PW, MAIL_DOMAIN };
 })();
