@@ -429,15 +429,23 @@
     .adm-att-table td.cell.leave{ background: #DCE9D6; }
     .adm-att-table td.vac-c .lv-n{ margin-left: 3px; color: #4F7A4A; }
 
-    /* ✔ 유효 출석 (2026-09-21 — 콩)
+    /* ✔ 유효 출석 — **밑줄만** (2026-09-21 — 콩이 고른 마지막 모양)
        ---------------------------------------------------------------
-       넘은 쪽을 **또렷하게**, 못 넘은 쪽은 그냥 옅게. 빨강은 안 씁니다
-       (2026-08-14 에 '1시간 미만 붉은 표시' 를 잔소리라고 걷어낸 적 있어요).
-       ★ m 이 없는 옛 날짜는 둘 중 어느 쪽도 안 붙어 예전 모양 그대로입니다. */
-    .adm-att-table td.cell.full{
-      background: #E3F0DC; color: #2E6B2B; font-weight: 700;
-      box-shadow: inset 0 -2px 0 #7FA96F;
-    }
+       처음에는 연두 바탕을 깔았습니다. 그런데 이 방에서는 유효 출석이
+       **거의 모든 칸**이라, 표가 통째로 초록이 되고 정작 드물어서 눈에
+       띄어야 할 🌿 개인사정(잎색)이 그 안에 묻혔어요.
+
+       그래서 바탕색은 **특별한 상태에만** 두기로 했습니다 —
+         🩵 하늘  = 1시간이 안 된 날
+         🌿 잎색  = 개인사정
+         🏖️ 모래  = 휴가
+       유효 출석은 평범한 칸 그대로 두고 **아래 밑줄 한 줄**만 답니다.
+       제일 흔한 것이 제일 조용한 모양이라, 표가 차분해지고 드문 것이
+       비로소 보입니다. (콩: "유효출석 바탕 초록을 걷어내면 돼")
+
+       ★ 글자색·굵기도 건드리지 않습니다. 밑줄 하나로 충분해요.
+       ★ m 이 없는 옛 날짜는 밑줄도 바탕도 없어 예전 모양 그대로입니다. */
+    .adm-att-table td.cell.full{ box-shadow: inset 0 -2px 0 #7FA96F; }
     /* 🩵 1시간 미만 머문 날 — 하늘색 (2026-09-21 — 콩)
        ---------------------------------------------------------------
        [왜 하늘색인가]
@@ -462,7 +470,7 @@
       font-size: 10px; font-variant-numeric: tabular-nums;
     }
     .adm-att-legend .lg.full{
-      background: #E3F0DC; color: #2E6B2B; font-weight: 700;
+      background: #FFFDF8; color: #4A3F33;
       box-shadow: inset 0 -2px 0 #7FA96F;
     }
     .adm-att-legend .lg.brief{ background: #DCEAF7; color: #2A5E86; }
@@ -966,7 +974,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609210531"></script>
+  <script src="script_admin.js?v=202609210535"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
