@@ -140,18 +140,39 @@
   /* =====================================================================
      서버에서 받기 — 판을 처음 열 때 한 번만 listener 를 답니다
      ===================================================================== */
+  /* =====================================================================
+     🎧 판을 닫으면 귀도 뗍니다 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     여태 한 번 열면 그 세션 내내 듣고 있었습니다. 품평은 **안 시들어서
+     계속 자라는** 자리라(운영진 결정 2026-08-12), 끊겼다 붙을 때마다
+     그때까지 쌓인 품평을 통째로 다시 받았어요.
+     ★ _pubs · _revs 는 안 비웁니다 — 다시 열었을 때 빈 판이 잠깐 보이는
+       것보다, 옛 내용이 보이다가 새것으로 바뀌는 편이 낫습니다.
+     ===================================================================== */
+  let _pubRefs = [];
+
   function listenPub() {
     if (_listening || !window.db) return;
     _listening = true;
-    window.db.ref("pubs").on("value", snap => {
+    const r1 = window.db.ref("pubs");
+    const h1 = r1.on("value", snap => {
       _pubs = snap.val() || {};
       render();
     }, err => console.warn("[품평] 출판사 목록을 못 받아왔어요", err));
-    window.db.ref("pubreview").on("value", snap => {
+    const r2 = window.db.ref("pubreview");
+    const h2 = r2.on("value", snap => {
       _revs = snap.val() || {};
       render();
     }, err => console.warn("[품평] 품평을 못 받아왔어요", err));
+    _pubRefs = [[r1, h1], [r2, h2]];
   }
+
+  function closePubReview() {
+    _pubRefs.forEach(([r, h]) => { try { r.off("value", h); } catch (e) {} });
+    _pubRefs = [];
+    _listening = false;
+  }
+  window.closePubReview = closePubReview;
 
   /* =====================================================================
      그리기

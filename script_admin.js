@@ -382,25 +382,120 @@
     return Math.max(1, Math.round((member / daysInMonth) * VAC_DAYS));
   }
 
-  async function loadFirstSeen() {
-    if (_firstSeen) return _firstSeen;
+  /* =====================================================================
+     📌 "이 사람 언제부터 있었나" 를 한 번만 셈해 둡니다 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     [무엇이 무거웠나]
+     여태 출석부를 열 때마다 `attendance` 를 **통째로** 읽었습니다. 보관이
+     1000일이라, 쉰두 명 × 수백 날이 매번 내려왔어요 — 이 페이지에서 가장
+     큰 읽기였고, 2026-09-21 통신량 그래프의 스파이크가 대부분 이것입니다.
+
+     그런데 이 값은 **한 번 정해지면 안 바뀝니다.** 그래서 셈한 결과를
+     서버에 적어 두고 다음부터는 그것만 읽습니다.
+
+         config/firstSeen = { map: { 닉: "YYYY-MM-DD" }, at: 시각 }
+
+     ★ config 는 누구나 읽고 **방장만 씁니다** — 규칙을 안 고쳐도 돼요.
+     ★ 명단에 새로 생긴 닉만 따로 채웁니다. 그 사람의 첫 출석일은
+       `users/{닉}/attend/days` 의 **가장 이른 키 한 줄**이면 충분해요
+       (전체를 훑을 이유가 없습니다).
+     ★ 값이 이상하면 방장이 [📌 다시 셈] 으로 통째로 다시 만들 수 있습니다.
+     ★ 못 읽거나 못 적어도 **표는 그대로 뜹니다** — 이 값은 "입장 전" 빗금을
+       그릴지 말지에만 쓰여요.
+     ===================================================================== */
+  const FIRSTSEEN_PATH = "config/firstSeen";
+
+  /** 통째로 다시 셈합니다 — 처음 한 번, 또는 방장이 [다시 셈] 을 누를 때만 */
+  async function 처음온날통째로(nicks) {
     const out = {};
-    try {
-      const snap = await db.ref("attendance").once("value");
-      const all = snap.val() || {};
-      Object.keys(all).forEach(day => {
-        Object.keys(all[day] || {}).forEach(n => {
-          const r = all[day][n];
-          if (!r || !(r.firstAt || r.at)) return;
-          if (!out[n] || day < out[n]) out[n] = day;
-        });
+    const snap = await db.ref("attendance").once("value");
+    const all = snap.val() || {};
+    Object.keys(all).forEach(day => {
+      Object.keys(all[day] || {}).forEach(n => {
+        const r = all[day][n];
+        if (!r || !(r.firstAt || r.at)) return;
+        if (!out[n] || day < out[n]) out[n] = day;
       });
-    } catch (e) {
-      console.warn("[adm firstSeen]", e);
-      return null;            // 못 읽으면 표시를 아예 안 합니다 (틀리게 칠하느니)
-    }
-    _firstSeen = out;
+    });
+    /* 🏖️🌿 휴가·개인사정만 찍힌 날도 "있었던" 날입니다 — 그때 이미
+       멤버였다는 뜻이니까요. 통째로 셈할 때 함께 담아 둡니다. */
+    await Promise.all((nicks || []).map(async n => {
+      for (const 칸 of ["vacations", "leaves"]) {
+        try {
+          const v = (await db.ref(`users/${n}/${칸}`).once("value")).val() || {};
+          Object.keys(v).forEach(d => {
+            if (v[d] === true && (!out[n] || d < out[n])) out[n] = d;
+          });
+        } catch (e) {}
+      }
+    }));
     return out;
+  }
+
+  /** 명단에 새로 생긴 닉만 — 개인 출석맵의 가장 이른 키 한 줄 */
+  async function 처음온날한사람(n) {
+    try {
+      const s = await db.ref(`users/${n}/attend/days`)
+        .orderByKey().limitToFirst(1).once("value");
+      let d = null;
+      s.forEach(c => { d = c.key; });
+      return d;
+    } catch (e) { return null; }
+  }
+
+  async function loadFirstSeen(nicks, 다시) {
+    if (_firstSeen && !다시) return _firstSeen;
+    let map = null;
+    if (!다시) {
+      try { map = (await db.ref(FIRSTSEEN_PATH).once("value")).val()?.map || null; }
+      catch (e) { map = null; }
+    }
+
+    if (!map) {
+      /* 처음이거나 [다시 셈] — 이때만 통째로 읽습니다 */
+      try { map = await 처음온날통째로(nicks); }
+      catch (e) { console.warn("[adm firstSeen]", e); return null; }
+      await 처음온날저장(map);
+    } else {
+      /* 명단에 새로 생긴 사람만 채웁니다 */
+      const 빠진 = (nicks || []).filter(n => !map[n]);
+      if (빠진.length) {
+        const 더 = {};
+        await Promise.all(빠진.map(async n => {
+          const d = await 처음온날한사람(n);
+          if (d) 더[n] = d;
+        }));
+        if (Object.keys(더).length) {
+          map = Object.assign({}, map, 더);
+          await 처음온날저장(map);
+        }
+      }
+    }
+    _firstSeen = map;
+    return map;
+  }
+
+  async function 처음온날저장(map) {
+    /* 운영진 화면에서는 조용히 넘어갑니다 — 규칙상 방장만 쓸 수 있어요 */
+    if (!isOwner) return;
+    try { await db.ref(FIRSTSEEN_PATH).set({ map, at: Date.now() }); }
+    catch (e) { console.warn("[adm firstSeen 저장]", e); }
+  }
+
+  /** 📌 다시 셈 — 명단이 크게 바뀌었거나 값이 이상할 때 방장이 누릅니다 */
+  async function rebuildFirstSeen() {
+    if (!ownerOnly("입장일 다시 셈")) return;
+    if (!confirm("입장일을 통째로 다시 셈할까요?\n\n출석 기록 전체를 한 번 읽습니다 (통신량이 좀 들어요).")) return;
+    msg("adm-att-fill-msg", "다시 셈하는 중…");
+    try {
+      const nicks = Object.keys((await db.ref("nickOwner").once("value")).val() || {});
+      _firstSeen = null;
+      await loadFirstSeen(nicks, true);
+      msg("adm-att-fill-msg", "다시 셈했어요.");
+      loadAttendance(_attOffset);
+    } catch (e) {
+      msg("adm-att-fill-msg", "다시 셈하지 못했어요. " + (e.code || e.message || ""), true);
+    }
   }
 
   function hhmm(ts) {
@@ -456,12 +551,13 @@
     el("adm-att-month").textContent += monthOffset < 0 ? " (앞으로)" : "";
 
     try {
-      /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번 */
-      const [asnap, nickSnap, firstSeen, wsnap] = await Promise.all([
+      /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번
+         ★ [2026-09-21] 입장일(firstSeen)은 여기서 빠졌습니다 — 명단(nicks)을
+           알아야 새로 생긴 닉만 채울 수 있어서, 명단이 온 **뒤에** 부릅니다. */
+      const [asnap, nickSnap, wsnap] = await Promise.all([
         db.ref("attendance").orderByKey()
           .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
         db.ref("nickOwner").once("value"),
-        loadFirstSeen(),
         /* ✍️ 한 달치 글자수 — 아래 그래프가 씁니다. 날짜 범위로 한 번에
            받아 오므로 요청은 하나예요(하루씩 31번 부르면 안 됩니다).
            한 달 50KB 안팎 — 관리자 페이지는 방장만 가끔 열어서 괜찮습니다. */
@@ -472,6 +568,9 @@
       const wordMonth = wsnap.val() || {};
       const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
       if (!nicks.length) { body.innerHTML = "아직 기록이 없어요."; return; }
+
+      /* 📌 입장일 — 적어 둔 것을 읽고, 새 닉만 채웁니다 (위 주석 참고) */
+      const firstSeen = await loadFirstSeen(nicks);
 
       const vacByNick = {};
       /* 🌿 개인사정(병가) — 방장만 찍습니다. 휴가와 달리 상한이 없고,
@@ -484,11 +583,17 @@
          서버 요청은 그대로입니다. */
       const segsByNick = {};  // { 닉: {날짜: [{a,b}, …]} }
       await Promise.all(nicks.map(async n => {
+        /* ★ [2026-09-21] **그 달만** 읽습니다. 예전에는 통째로 읽었어요 —
+           표에 그리는 것도, 규칙을 셈하는 것도 그 달뿐인데 전 기간이
+           쉰두 번 내려왔습니다. 입장일은 위에서 적어 둔 값을 쓰므로
+           옛 날짜가 더는 필요 없어요. */
         try {
-          vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
+          vacByNick[n] = (await db.ref(`users/${n}/vacations`).orderByKey()
+            .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
         } catch (e) { vacByNick[n] = {}; }
         try {
-          leaveByNick[n] = (await db.ref(`users/${n}/leaves`).once("value")).val() || {};
+          leaveByNick[n] = (await db.ref(`users/${n}/leaves`).orderByKey()
+            .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
         } catch (e) { leaveByNick[n] = {}; }
         try {
           const segs = (await db.ref(`users/${n}/timeSegs`).orderByKey()
@@ -564,12 +669,14 @@
       const bornOf = {};
       nicks.forEach(n => {
         let b = firstSeen ? firstSeen[n] : null;
+        /* 🏖️🌿 이 달에 찍힌 휴가·개인사정으로 앞당깁니다.
+           ★ 적어 둔 값(firstSeen)에는 **셈해 둔 시점까지의** 휴가가 이미
+             들어 있습니다. 여기서는 그 뒤에 새로 찍힌 이 달 것만 보태요 —
+             쉬는 중인 사람을 "입장 전" 으로 그리면 표가 통째로 잿빛이 됩니다. */
         const vs = vacByNick[n] || {};
         Object.keys(vs).forEach(d => {
           if (vs[d] === true && (!b || d < b)) b = d;
         });
-        /* 🌿 개인사정도 마찬가지 — 쉬는 중인 사람을 "입장 전"으로
-           그리면 표가 통째로 잿빛이 됩니다 */
         const ls = leaveByNick[n] || {};
         Object.keys(ls).forEach(d => {
           if (ls[d] === true && (!b || d < b)) b = d;
@@ -1782,6 +1889,10 @@
         if (byNick && Object.prototype.hasOwnProperty.call(byNick, nick)) attUpd[`${day}/${nick}`] = null;
       });
       if (Object.keys(attUpd).length) await db.ref("attendance").update(attUpd);
+      /* 📌 적어 둔 입장일에서도 지웁니다 (2026-09-21) — 안 지우면 같은 닉으로
+         다시 들어왔을 때 **옛 입장일**이 따라붙어 "입장 전" 이 잘못 그려져요. */
+      try { await db.ref(`${FIRSTSEEN_PATH}/map/${nick}`).remove(); } catch (e) {}
+      if (_firstSeen) delete _firstSeen[nick];
 
       const wlUpd = {};
       Object.entries(wlSnap.val() || {}).forEach(([day, byNick]) => {
@@ -3138,8 +3249,9 @@
     el("adm-hello-save")?.addEventListener("click", saveHello);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
 
-    /* ⏳ 옛 날짜 채우기 (방장에게만 보이는 칸) */
+    /* ⏳ 옛 날짜 채우기 · 📌 입장일 다시 셈 (방장에게만 보이는 칸) */
     el("adm-att-fill")?.addEventListener("click", fillOldStayMins);
+    el("adm-att-rebuild")?.addEventListener("click", rebuildFirstSeen);
 
     /* 🖥️ 화면 공유 제한 (방장에게만 보이는 칸) */
     el("adm-share-save")?.addEventListener("click", saveShareLimit);

@@ -409,6 +409,12 @@
     render();
   }
   function closeFiles() {
+    /* 🎧 [2026-09-21] 창을 닫으면 귀도 뗍니다 — 안 떼면 한 번 열어 본 사람은
+       그 세션 내내 듣고, 끊겼다 붙을 때마다 목록을 통째로 다시 받아요.
+       ★ _rows 는 안 비웁니다 (다시 열 때 옛 목록이 잠깐 보이는 편이 낫습니다) */
+    try { _ref && _ref.off(); } catch (e) {}
+    _ref = null;
+
     const m = el("files-modal");
     if (m) m.style.display = "none";
   }
