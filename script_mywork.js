@@ -64,6 +64,20 @@
      그 사이에 dblclick 이 오지 않으면 그때 고릅니다. */
   const DBL_MS = 280;
 
+  /* =====================================================================
+     ✔ 유효 출석 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     도장은 들어오는 순간 찍힙니다. 그 자리에 **얼마나 머물렀는지**
+     (users/{닉}/attend/mins/{날} — 분, 무게 안 침)가 이 문턱을 넘으면
+     달력의 ✓ 가 진해져요. 못 넘으면 옅은 ✓, 모르는 옛 날짜는 그냥 ✓.
+
+     ★ 한 달 ${RULE_DAYS}일 규칙은 **나온 날**로 셉니다 — 여기서 가리는 건
+       눈으로 보는 구분뿐이에요 (콩 2026-09-21).
+     ★★ 같은 이름·같은 값이 script_timelog.js · script_admin.js ·
+        weekly.html 에도 있습니다 (checks.js 가 넷이 같은지 지킵니다).
+     ===================================================================== */
+  const VALID_STAY_MIN = 60;
+
   /* ---------------------------------------------------------------
      상태
      --------------------------------------------------------------- */
@@ -71,6 +85,7 @@
   let _sel = "";               // 고른 날짜 "YYYY-MM-DD"
   let _tab = "todo";           // "todo" | "goal" | "rec"
   let _days = {};              // 출석 도장   users/{닉}/attend/days
+  let _mins = {};              // 그날 머문 분 users/{닉}/attend/mins (✔ 유효 출석용)
   let _vacs = {};              // 🏖️ 휴가     users/{닉}/vacations
   let _marksFor = "";          // 위 둘을 누구 것으로 읽어왔는가
   let _clickTimer = null;
@@ -157,6 +172,11 @@
     try {
       _days = (await window.db.ref(`users/${nick}/attend/days`).once("value")).val() || {};
     } catch (e) { _days = {}; }
+    /* ✔ 유효 출석 — 그날 머문 분. 도장 맵 바로 옆이라 읽기가 하나 늘 뿐이고,
+       방 전체 attendance 를 내려받지 않아도 됩니다 (2026-09-21) */
+    try {
+      _mins = (await window.db.ref(`users/${nick}/attend/mins`).once("value")).val() || {};
+    } catch (e) { _mins = {}; }
     try {
       _vacs = (await window.db.ref(`users/${nick}/vacations`).once("value")).val() || {};
     } catch (e) { _vacs = {}; }
@@ -425,6 +445,14 @@
       </div>`;
   }
 
+  /** 분 → "1시간 20분" — 달력 말풍선이 씁니다 */
+  function 머문글(분) {
+    const n = Math.max(0, Math.round(Number(분) || 0));
+    if (n < 60) return `${n}분`;
+    const h = Math.floor(n / 60), r = n % 60;
+    return r ? `${h}시간 ${r}분` : `${h}시간`;
+  }
+
   function calHtml() {
     const y = _y, m = _m;
     const lastDay = new Date(y, m + 1, 0).getDate();
@@ -432,7 +460,7 @@
     const today = todayStr();
     const marks = todoMarks();
 
-    let attended = 0, vacCount = 0;
+    let attended = 0, vacCount = 0, validCount = 0;
     let cells = DOW.map(d => `<span class="att-dow">${d}</span>`).join("");
     for (let i = 0; i < firstDow; i++) cells += `<span></span>`;
 
@@ -442,6 +470,11 @@
       const vac = !!_vacs[key];
       if (on) attended++;
       if (vac) vacCount++;
+      /* ✔ 유효 출석 — 머문 분을 모르는 날(옛 날짜)은 어느 쪽도 아닙니다 */
+      const stay = on && _mins[key] != null ? Number(_mins[key]) || 0 : null;
+      const full = stay != null && stay >= VALID_STAY_MIN;
+      const brief = stay != null && !full;
+      if (full) validCount++;
 
       const mk = marks[key];
       /* 미완료가 하나도 없으면 점을 옅게 — "다 했다"가 한눈에 보이게 */
@@ -451,17 +484,21 @@
 
       const cls = ["att-day",
         on ? "on" : "", vac ? "vac" : "",
+        full ? "full" : "", brief ? "brief" : "",
         key === today ? "today" : "",
         key === _sel ? "picked" : ""
       ].filter(Boolean).join(" ");
 
       const label = `${m + 1}월 ${d}일`
-        + (on ? ", 출석" : "") + (vac ? ", 휴가" : "")
+        + (on ? (full ? ", 유효 출석" : ", 출석") : "") + (vac ? ", 휴가" : "")
+        + (stay != null ? `, ${머문글(stay)} 머묾` : "")
         + (mk ? `, 할 일 ${mk.n}개` : "");
 
       cells += `<span class="${cls}" data-d="${key}" role="button" tabindex="0"
                       aria-label="${label}" aria-pressed="${key === _sel ? "true" : "false"}"
-                      title="${dowLabel(key)} — 클릭: 그날 할 일 · 더블 클릭: 휴가">${
+                      title="${dowLabel(key)}${
+                        stay != null ? ` · ${머문글(stay)} 머묾${full ? " — ✔ 유효 출석" : ""}` : ""
+                      } — 클릭: 그날 할 일 · 더블 클릭: 휴가">${
         vac ? "🏖️" : (on ? "✓" : d)}${dot}</span>`;
     }
 
@@ -476,7 +513,9 @@
       <div class="att-grid">${cells}</div>
 
       <div class="mw-calfoot">
-        <span>${esc(me())} · 이 달 <b>${attended}일</b> 출석했어요</span>
+        <span>${esc(me())} · 이 달 <b>${attended}일</b> 출석했어요${
+          validCount ? ` <span class="mw-valid" title="${VALID_STAY_MIN}분 넘게 머문 날이에요 — 한 달 ${RULE_DAYS}일 규칙은 나온 날로 세니 안심하세요">✔ 유효 ${validCount}일</span>` : ""
+        }</span>
         ${(() => {
           /* 🏖️ 쓴 날 / 이 달 상한 (2026-08-17). 상한은 입장일에 따라
              줄어듭니다 — vacCapOf 참고. 넘친 사람은 붉게만 보이고
@@ -491,7 +530,8 @@
       </div>
       ${ruleHtml(y, m, attended, vacCount)}
       <p class="mw-calhint">
-        <b>클릭</b> — 그날 할 일 보기 · <b>더블 클릭</b> — 휴가로 표시
+        <b>클릭</b> — 그날 할 일 보기 · <b>더블 클릭</b> — 휴가로 표시<br>
+        진한 <b>✓</b> 는 ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b>, 옅은 ✓ 는 잠깐 들른 날이에요.
       </p>`;
   }
 

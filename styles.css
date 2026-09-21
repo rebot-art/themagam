@@ -6380,6 +6380,24 @@ html[data-theme-style="studio"] .user-card{
   color: var(--me-text);
   font-weight: var(--fw-bold);
 }
+/* =====================================================================
+   ✔ 유효 출석 (2026-09-21 — 콩)
+   ---------------------------------------------------------------------
+   도장은 들어오는 순간 찍히니, 얼굴만 비춘 날과 세 시간 앉아 있은 날이
+   똑같아 보였습니다. 60분 넘게 머문 날만 **꽉 찬 칸**으로 두고,
+   잠깐 들른 날은 **테두리만 있는 빈 칸**으로 둡니다.
+   ★ 빨강으로 나무라지 않습니다 — 2026-08-14 에 '1시간 미만 붉은 표시' 를
+     잔소리 같다고 걷어낸 적이 있어요. 못 넘은 쪽을 깎는 게 아니라
+     넘은 쪽을 또렷하게 하는 방향입니다.
+   ★ 머문 시간을 모르는 옛 날짜는 둘 중 어느 쪽도 안 붙어, 예전처럼
+     꽉 찬 칸 그대로 보입니다 (모르는 것을 미달로 칠하지 않으려고).
+   ===================================================================== */
+.att-day.on.brief{
+  background: var(--fill-1, rgba(0,0,0,.04));
+  color: var(--accent);
+  font-weight: var(--fw-medium);
+  box-shadow: inset 0 0 0 1px var(--accent-ring, rgba(0,0,0,.28));
+}
 .att-day.today{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
 /* [2026-08-05] 🏖️ 휴가 날 — 출석과 구분되는 모래빛 배경 */
 .att-day.vac{
@@ -7000,6 +7018,11 @@ html[data-theme-style="studio"] .user-card{
 /* 출석 도장 — 붉은 칸에 흰 ✓ (.att-day.on 은 var(--accent)/var(--me-text)) */
 #mywork-modal .att-day.on{ border-color: #B3372B; }
 #mywork-modal .att-day.vac{ color: #6B5F52; }
+/* ✔ 유효 출석 — 잠깐 들른 날은 붉은 테두리만 (2026-09-21) */
+#mywork-modal .att-day.on.brief{
+  background: transparent; color: #B3372B; border-color: rgba(179,55,43,.45);
+  box-shadow: none;
+}
 /* 오늘은 옅은 테두리, 고른 날은 짙은 안쪽 테두리 — 둘이 겹쳐도 구분됩니다 */
 #mywork-modal .att-day.today{ outline: 2px solid rgba(179,55,43,.40); outline-offset: 1px; }
 #mywork-modal .att-day.picked{ box-shadow: inset 0 0 0 2px #4A140D; }
@@ -7028,6 +7051,10 @@ html[data-theme-style="studio"] .user-card{
 /* 🏖️ 상한을 넘긴 휴가 (2026-08-17) — 상한이 줄기 전에 찍어 둔 날입니다.
    막지는 않고 눈에만 띄게 합니다. 점선 밑줄은 "설명이 붙어 있다"는 표시 */
 .mw-calfoot .mw-vac{ cursor: help; }
+/* ✔ 이 달 유효 출석 일수 — 자랑거리라 붉게 (2026-09-21) */
+.mw-calfoot .mw-valid{
+  margin-left: 4px; color: #B3372B; font-weight: var(--fw-bold); cursor: help;
+}
 .mw-calfoot .mw-vac.over{
   color: #B3372B;
   text-decoration: underline dotted rgba(179,55,43,.5);

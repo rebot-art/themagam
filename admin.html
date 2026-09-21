@@ -425,6 +425,34 @@
     /* 🌿 개인사정 — 휴가(모래색)와 헷갈리지 않게 잎색으로 (2026-08-30) */
     .adm-att-table td.cell.leave{ background: #DCE9D6; }
     .adm-att-table td.vac-c .lv-n{ margin-left: 3px; color: #4F7A4A; }
+
+    /* ✔ 유효 출석 (2026-09-21 — 콩)
+       ---------------------------------------------------------------
+       넘은 쪽을 **또렷하게**, 못 넘은 쪽은 그냥 옅게. 빨강은 안 씁니다
+       (2026-08-14 에 '1시간 미만 붉은 표시' 를 잔소리라고 걷어낸 적 있어요).
+       ★ m 이 없는 옛 날짜는 둘 중 어느 쪽도 안 붙어 예전 모양 그대로입니다. */
+    .adm-att-table td.cell.full{
+      background: #E3F0DC; color: #2E6B2B; font-weight: 700;
+      box-shadow: inset 0 -2px 0 #7FA96F;
+    }
+    .adm-att-table td.cell.brief{ color: rgba(74,63,51,.42); }
+    /* 합계 칸의 작은 ✔n — 나온 날 옆에 유효 일수 */
+    .adm-att-table td.sum-c .vd-n{
+      margin-left: 3px; color: #2E6B2B; font-size: 10px; font-weight: 700;
+    }
+    .adm-att-table td.sum-c{ white-space: nowrap; }
+    .adm-att-legend{
+      margin: 6px 2px 0; font-size: 11px; line-height: 1.7; color: #7A6B58;
+    }
+    .adm-att-legend .lg{
+      display: inline-block; padding: 1px 4px; border-radius: 3px;
+      font-size: 10px; font-variant-numeric: tabular-nums;
+    }
+    .adm-att-legend .lg.full{
+      background: #E3F0DC; color: #2E6B2B; font-weight: 700;
+      box-shadow: inset 0 -2px 0 #7FA96F;
+    }
+    .adm-att-legend .lg.brief{ background: #F6F1EA; color: rgba(74,63,51,.42); }
     .adm-chart-note.rest{ color: #4F7A4A; }
     .adm-chart-note.rest .q{ color: #8A7B68; }
     .adm-att-table td.cell.short{ background: #F3D9D3; }
@@ -864,7 +892,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609191322"></script>
+  <script src="script_admin.js?v=202609210325"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

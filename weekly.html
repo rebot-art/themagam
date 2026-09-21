@@ -112,6 +112,12 @@
   td.n{ font-variant-numeric:tabular-nums; color:var(--ink); }
   td.z{ color:rgba(138,123,104,.5); }         /* 안 쓴 날 · 안 나온 날 */
   td.o{ color:var(--red); font-size:14px; }   /* 📅 나온 날 */
+  /* ✔ 유효 출석 (2026-09-21 — 콩) — 오래 머문 날은 꽉 찬 ●,
+     잠깐 들른 날은 빈 ○. 빨강으로 나무라지 않고 진하기로만 가릅니다.
+     머문 시간을 모르는 옛 날짜는 예전처럼 그냥 ● 입니다. */
+  td.o.brief{ color:rgba(138,123,104,.62); font-size:12px; }
+  td.n.sum .vd{ color:var(--red); }
+  .legend{ margin:8px 10px 0; font-size:11px; line-height:1.7; color:#8A7B68; }
   tr.me td.name{ color:var(--red); }
   tr:hover td{ background:rgba(163,88,70,.045); }
   tr:hover td.name{ background:rgba(240,234,221,.9); }
@@ -271,6 +277,20 @@
   let _나 = "";
   let _wordlog = null;                       // 한 번만 읽어 두고 주간만 갈아 끼웁니다
   let _att = null;                           // 출석 — 같은 방식
+
+  /* ✔ 유효 출석 문턱 (2026-09-21 — 콩). attendance/{날}/{닉}.m 이 그날
+     **머문 분**(무게 안 침)입니다 — script_timelog.js 가 적어 둬요.
+     ★★ 같은 이름·같은 값이 script_timelog.js · script_admin.js ·
+        script_mywork.js 에도 있습니다 (checks.js 가 넷이 같은지 지킵니다). */
+  const VALID_STAY_MIN = 60;
+
+  /** 분 → "1시간 20분" — 말풍선이 씁니다 */
+  function 머문글(분) {
+    const m = Math.max(0, Math.round(Number(분) || 0));
+    if (m < 60) return `${m}분`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h}시간 ${r}분` : `${h}시간`;
+  }
   let _wt = null;                            // 작업 시간 (worktime, 분)
   let _pulse = null;                         // roomStat — 시간대별 최다 동접
   let _탭 = "att";                           // att(출석) · wt(작업 시간) · wc(글자수) · ch(그래프)
@@ -473,14 +493,14 @@
      ────────────────────────────────────────────────── */
   function 출석그리기(날들) {
 
-    const 값 = {};                             // 닉 → { 날키: 첫 입장 ms }
+    const 값 = {};                             // 닉 → { 날키: { t: 첫 입장 ms, m: 머문 분|null } }
     날들.forEach(({ key }) => {
       const 하루 = _att[key] || {};
       Object.keys(하루).forEach((닉) => {
         const r = 하루[닉] || {};
         const t = Number(r.firstAt || r.at) || 0;
         if (!t) return;
-        (값[닉] || (값[닉] = {}))[key] = t;
+        (값[닉] || (값[닉] = {}))[key] = { t, m: r.m == null ? null : Number(r.m) || 0 };
       });
     });
     const 사람 = Object.keys(값).sort((a, b) => a.localeCompare(b, "ko"));
@@ -495,20 +515,33 @@
     let 몸 = "";
     const 날합 = {};
     사람.forEach((닉) => {
-      let 줄수 = 0;
+      let 줄수 = 0, 유효 = 0;
       let 칸 = `<td class="name">${esc(닉)}</td>`;
       날들.forEach(({ key }) => {
-        const t = 값[닉][key] || 0;
-        if (t) {
+        const v = 값[닉][key];
+        if (v && v.t) {
           줄수++;
           날합[key] = (날합[key] || 0) + 1;
-          const d = new Date(t);
-          칸 += `<td class="o" title="${두자리(d.getHours())}:${두자리(d.getMinutes())} 첫 입장">●</td>`;
+          const d = new Date(v.t);
+          const 때 = `${두자리(d.getHours())}:${두자리(d.getMinutes())} 첫 입장`;
+          /* ✔ 유효 출석 — m(머문 분)이 있는 날만 가릅니다. 없으면 예전 그대로 ● */
+          if (v.m == null) {
+            칸 += `<td class="o" title="${때}">●</td>`;
+          } else if (v.m >= VALID_STAY_MIN) {
+            유효++;
+            칸 += `<td class="o" title="${때} · ${머문글(v.m)} 머묾 — ✔ 유효 출석">●</td>`;
+          } else {
+            칸 += `<td class="o brief" title="${때} · ${머문글(v.m)} 머묾 (유효 출석은 ${VALID_STAY_MIN}분부터)">○</td>`;
+          }
         } else {
           칸 += `<td class="z">·</td>`;
         }
       });
-      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum">${줄수}일</td></tr>`;
+      const 꼬리 = 유효
+        ? `${줄수}일<span class="vd"> ✔${유효}</span>`
+        : `${줄수}일`;
+      몸 += `<tr class="${닉 === _나 ? "me" : ""}">${칸}<td class="n sum" title="나온 날 ${줄수}일${
+        유효 ? ` · 그중 ✔ 유효 출석 ${유효}일` : ""}">${꼬리}</td></tr>`;
     });
 
     let 바닥 = `<td class="name">나온 사람</td>`;
@@ -520,7 +553,12 @@
         <thead><tr>${머리}</tr></thead>
         <tbody>${몸}</tbody>
         <tfoot><tr>${바닥}</tr></tfoot>
-      </table>`;
+      </table>
+      <p class="legend">
+        <b>●</b> ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b> ·
+        <b>○</b> 잠깐 들렀다 간 날 ·
+        머문 시간을 모르는 옛 날짜는 그냥 ● 예요 (2026-09-21부터 쌓입니다).
+      </p>`;
   }
 
   /* ── 👥 고른 사람 탭 (2026-09-09 — 콩) ─────────────────

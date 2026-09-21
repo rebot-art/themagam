@@ -107,6 +107,28 @@
   /** 작업 시간에 조금이라도 들어가는 상태인가 */
   function isWorkStatus(s) { return !!WORK_WEIGHT[s]; }
 
+  /* =====================================================================
+     🕰️ 머문 시간 — **무게를 안 칩니다** (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     workSum 과 짝입니다. 같은 그릇을 받아 하나는 무게를 치고(작업 시간),
+     하나는 안 칩니다(머문 시간). 🛌Break·🚶Away 도 그대로 세요 — "그 자리에
+     있었다" 를 재는 잣대라서입니다. 유효 출석이 이걸 봅니다.
+     ★ 셈을 두 벌 두지 않으려고 여기 함께 둡니다 — 무게 규칙이 바뀌어도
+       머문 시간은 흔들리지 않아야 해요.
+     ===================================================================== */
+  /** { 상태: ms } 그릇을 **무게 없이** 통째로 더합니다 */
+  function staySum(totals) {
+    let n = 0;
+    for (const s in (totals || {})) n += Number(totals[s]) || 0;
+    return n;
+  }
+
+  /* 유효 출석 문턱 — 이 분을 넘게 머문 날이 ✔ 유효 출석입니다.
+     ★★ 읽는 쪽(script_admin.js · script_mywork.js · weekly.html)에도
+        **같은 이름·같은 값**으로 있습니다. 하나만 고치면 화면마다 다른
+        말을 하게 돼요 — checks.js 가 넷이 같은지 지킵니다. */
+  const VALID_STAY_MIN = 60;
+
   const OFFLINE_MIN_MS = 5 * 60 * 1000;   // 이보다 오래 끊겼으면 그 구간을 집계에서 뺍니다
   const SEG_CAP_MS     = 6 * 60 * 60 * 1000; // 한 구간의 상한 (상식 밖 값 방지)
   const ALIVE_TICK_MS  = 30 * 1000;
@@ -254,6 +276,43 @@
      ★ 남의 값은 못 씁니다 (보안규칙이 본인 것만 허락).
      ===================================================================== */
   const _공개보낸 = {};      // 날짜 → 마지막으로 보낸 분
+  const _머문보낸 = {};      // 날짜 → 마지막으로 보낸 **머문 분** (아래 참고)
+
+  /* =====================================================================
+     🕰️ 머문 시간 — 유효 출석의 잣대 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     [작업 시간과 무엇이 다른가]
+     바로 위 worktime 은 **무게를 친** 숫자입니다 (WRITE 100% · JOB 70% …).
+     여기 '머문 분' 은 **무게를 안 칩니다** — 🛌Break 도 🚶Away 도 그대로
+     셉니다. 콩이 고른 잣대가 "순수 접속 시간" 이라서요 (2026-09-21).
+
+         "그 자리에 얼마나 있었나" → 머문 분  (여기)
+         "그중 얼마나 일했나"     → 작업 분  (worktime)
+
+     ★ 끊긴 시간은 어차피 구간에 없습니다. 5분 넘게 끊기면 그 사이는
+       timeSegs 에 아예 안 적히니(OFFLINE_MIN_MS), 켜 두고 잔 시간이
+       머문 시간으로 둔갑하지 않아요.
+
+     [왜 attendance 안에 적는가]
+     출석부·주간 기록이 이미 attendance 를 읽고 있습니다. 거기 숫자 하나를
+     얹으면 **읽기가 한 번도 안 늘어요.** 게다가 attendance 는 누구나 읽을
+     수 있는 자리라(`.read: true`) 남의 유효 여부도 그냥 보입니다 —
+     원본(timeSegs)은 본인·방장만 보는 자리라 이 길이 아니면 못 보여줘요.
+
+     ★ 보안규칙은 **안 고쳐도 됩니다.** attendance/$day/$nick 은 이미
+       본인이 쓸 수 있고, 검사도 `at` 이 있는지만 봅니다. 그래서
+       set 이 아니라 **update** 로 얹습니다 — set 으로 덮으면 firstAt 이
+       날아가고 검사에도 걸려요.
+     ★ 그날 도장이 없으면 update 가 검사에 걸려 실패합니다. 맞는 동작이에요
+       (자정을 넘겨 새 날짜에 시간만 쌓인 경우 — 출석은 본인이 나갔다
+       들어와서 찍는 것이 이 방의 약속입니다).
+
+     [나의 작업 달력 몫으로 한 벌 더]
+     달력은 `users/{닉}/attend/days` 만 읽습니다. 거기 옆에 같은 값을
+     한 번 더 적어 둬요 — 내 것 하나만 읽으면 되니 달력이 방 전체
+     출석을 내려받지 않아도 됩니다. 두 자리에 적지만 **셈은 여기 한 번**
+     이라 어긋날 일이 없습니다 (attendance 와 attend/days 가 이미 그런 사이).
+     ===================================================================== */
 
   async function 공개시간올리기(updates) {
     if (!myNick || !db) return;
@@ -265,19 +324,35 @@
     });
     if (!날들.size) return;
     for (const day of 날들) {
+      let 합 = null;
       try {
         const snap = await db.ref(`users/${myNick}/timeSegs/${day}`).once("value");
-        const 합 = {};
+        합 = {};
         snap.forEach((c) => {
           const v = c.val() || {};
           const ms = Number(v.b) - Number(v.a);
           if (ms > 0) 합[v.s] = (합[v.s] || 0) + ms;
         });
+      } catch (e) { continue; }   // 원본을 못 읽었으면 이 날은 건너뜁니다
+
+      /* ① 작업 분 (무게 침) → worktime */
+      try {
         const 분 = Math.round(workSum(합) / 60000);
-        if (_공개보낸[day] === 분) continue;      // 안 바뀌었으면 안 씁니다
-        _공개보낸[day] = 분;
-        await db.ref(`worktime/${day}/${myNick}`).set(분);
+        if (_공개보낸[day] !== 분) {            // 안 바뀌었으면 안 씁니다
+          _공개보낸[day] = 분;
+          await db.ref(`worktime/${day}/${myNick}`).set(분);
+        }
       } catch (e) { /* 공개 칸은 곁다리라 조용히 넘깁니다 */ }
+
+      /* ② 머문 분 (무게 없음) → attendance 의 m · 개인 달력용 mins
+         ★ ①이 실패해도 ②는 따로 시도합니다 — 둘은 서로 곁다리예요. */
+      try {
+        const 머문 = Math.round(staySum(합) / 60000);
+        if (_머문보낸[day] === 머문) continue;
+        _머문보낸[day] = 머문;
+        await db.ref(`attendance/${day}/${myNick}`).update({ m: 머문 });
+        await db.ref(`users/${myNick}/attend/mins/${day}`).set(머문);
+      } catch (e) { /* 도장이 없는 날 등 — 조용히 넘깁니다 */ }
     }
   }
 
@@ -1042,7 +1117,7 @@
   };
 
   window.workMs = workMs; window.workSum = workSum; window.isWorkStatus = isWorkStatus;
-  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, isWorkStatus,
+  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus,
                      GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;

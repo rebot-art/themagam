@@ -515,6 +515,32 @@
       _설정(`honors/${지난}`, { list: Object.keys(badges), badges, at: now });
     } catch (e) {}
 
+    /* ✔ 유효 출석 미리보기 (2026-09-21 — 콩)
+       ---------------------------------------------------------------
+       '나의 작업' 달력에서 세 가지가 어떻게 다르게 보이는지 여기서
+       눈으로 확인합니다 (진짜 방에 올리기 전에).
+         · 진한 ✓ — 60분 넘게 머문 ✔ 유효 출석
+         · 옅은 ✓ — 잠깐 들렀다 간 날
+         · 그냥 ✓ — 머문 시간을 모르는 옛 날짜 (mins 가 없는 날)
+       ★ 이 방은 가짜 DB라 서버로는 한 글자도 안 나갑니다. */
+    try {
+      const 나 = 내닉();
+      const t = new Date();
+      const 날키 = (d) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const days = {}, mins = {};
+      const 표본 = [
+        [2, 15], [3, 200], [5, 58], [6, 95], [8, null], [9, null],
+        [10, 300], [12, 42], [13, 60], [15, 130], [16, 7], [17, 240]
+      ];
+      표본.forEach(([d, m]) => {
+        if (d > t.getDate()) return;              // 아직 안 온 날은 안 찍습니다
+        days[날키(d)] = true;
+        if (m !== null) mins[날키(d)] = m;        // null = 머문 시간을 모르는 옛 날
+      });
+      _설정(`users/${나}/attend/days`, days);
+      _설정(`users/${나}/attend/mins`, mins);
+    } catch (e) {}
+
     window._statusCache = out;
     /* ★ [고침 2026-08-15] 예전에는 내 카드 하나만 status 에 넣고, 나머지는
          _statusCache 에만 얹어 두었습니다. 그런데 status 를 듣는 쪽

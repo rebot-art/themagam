@@ -323,6 +323,33 @@
      ===================================================================== */
   const RULE_DAYS = 18;       // 한 달 기준 출석일 (달을 통째로 있은 사람)
 
+  /* =====================================================================
+     ✔ 유효 출석 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     여태 출석은 **들어온 순간** 찍혔습니다. 얼굴만 비추고 나간 날과
+     세 시간 붙어 있은 날이 표에서 똑같이 보였어요.
+
+     그래서 그날 **머문 시간**(attendance/{날}/{닉}.m — 분, 무게 안 침)이
+     이 문턱을 넘으면 ✔ 유효 출석으로 진하게, 못 넘으면 연하게 그립니다.
+
+     ★★★ [규칙(18일)은 안 건드립니다 — 콩 2026-09-21]
+       18일 셈은 지금처럼 **도장 기준**이에요. 눈으로만 구분합니다.
+       바꾸려면 아래 attDays 대신 validDays 를 ruleOf 에 넣으면 되는데,
+       그건 규칙을 **세게 만드는** 일이라 미리 공지가 필요합니다.
+
+     ★★ [빨강을 안 씁니다] 2026-08-14 에 '1시간 미만 붉은 표시' 를 잔소리
+       같다고 걷어낸 적이 있어요. 그래서 이번엔 **못 넘은 쪽을 나무라지
+       않고, 넘은 쪽을 또렷하게** 하는 방향입니다.
+
+     ★ [모르는 날은 손대지 않습니다] 머문 분은 2026-09-21 부터 쌓입니다.
+       그 전 날짜에는 m 이 없어요. 없으면 **예전 그대로** 그립니다 —
+       모르는 것을 '미달' 로 칠하면 지난 기록이 통째로 억울해집니다.
+
+     ★★ 같은 이름·같은 값이 script_timelog.js · script_mywork.js ·
+        weekly.html 에도 있습니다 (checks.js 가 넷이 같은지 지킵니다).
+     ===================================================================== */
+  const VALID_STAY_MIN = 60;  // 이 분 넘게 머문 날이 ✔ 유효 출석
+
   /** 한 사람의 이 달 규칙 셈 */
   function ruleOf({ daysInMonth, beforeN, vacInMonth, attended, daysLeft }) {
     const member = daysInMonth - beforeN;              // 멤버였던 날
@@ -379,6 +406,14 @@
   function hhmm(ts) {
     const d = new Date(ts);
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  /** 분 → "1시간 20분" (0 이면 "0분") — 유효 출석 말풍선이 씁니다 */
+  function 머문글(분) {
+    const m = Math.max(0, Math.round(Number(분) || 0));
+    if (m < 60) return `${m}분`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h}시간 ${r}분` : `${h}시간`;
   }
 
   /* 닉 → { days, cap } — 방장이 휴가를 찍을 때 상한을 견주는 데 씁니다.
@@ -571,7 +606,8 @@
       totRow += "</tr>";
 
       let head = `<tr><th class="rule-h" title="한 달 ${RULE_DAYS}일 규칙 — 늦게 들어온 분은 있었던 날수에 비례해 기준을 낮춥니다">규칙</th>` +
-                 `<th class="name-h">이름</th><th class="sum-h">출석</th>` +
+                 `<th class="name-h">이름</th>` +
+                 `<th class="sum-h" title="나온 날 · 작은 ✔ 는 ${VALID_STAY_MIN}분 넘게 머문 유효 출석">출석</th>` +
                  `<th class="sum-h" title="쓴 휴가 / 이 달 상한 — 상한은 입장일에 따라 ${VAC_DAYS}일에서 비율로 줄어요">휴가</th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
@@ -610,6 +646,7 @@
         }
 
         let attDays = 0, vacDays = 0, leaveDays = 0, cells = "";
+        let validDays = 0;      // ✔ 유효 출석 (머문 시간이 문턱을 넘은 날)
         if (beforeN > 0) {
           /* 칸을 하나로 합칩니다 — 흩어진 빈 칸보다 "여기까지는 없었다" 가
              한눈에 읽힙니다. 좁으면 글자는 생략해요. */
@@ -628,13 +665,22 @@
           if (inAt) attDays++;
           if (isLeave) leaveDays++;
           else if (isVac) vacDays++;
-          let cls = "cell", txt = "";
+          let cls = "cell", txt = "", tip = "";
           if (isLeave) { cls += " leave"; txt = "🌿"; }
           else if (isVac) { cls += " vac"; txt = "🏖️"; }
           else if (inAt) {
             txt = hhmm(inAt);
             /* [뺌 2026-08-14] 1시간 미만 붉은 표시(short) — 잔소리 같다는
                콩 결정으로 걷었습니다. 궁금하면 칸을 눌러 돋보기로 봅니다 */
+            /* ✔ 유효 출석 (2026-09-21) — m 이 있는 날만 가릅니다.
+               없으면(옛 날짜) 예전 모양 그대로 둡니다. */
+            const stay = rec && rec.m != null ? Number(rec.m) || 0 : null;
+            if (stay != null) {
+              if (stay >= VALID_STAY_MIN) { cls += " full"; validDays++; }
+              else cls += " brief";
+              tip = ` title="${hhmm(inAt)} 첫 입장 · ${머문글(stay)} 머묾${
+                stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}"`;
+            }
           }
           if (dk === todayKey) cls += " today";
           /* 출석한 칸은 눌러서 그날 구간 내역을 볼 수 있습니다 (돋보기) */
@@ -648,7 +694,7 @@
                눌러 봐야 permission denied 만 봅니다. */
           const lv = isOwner ? ` data-leave-nick="${escapeHtml(n)}" data-leave-day="${dk}"` : "";
           if (isOwner) cls += " leave-able";
-          cells += `<td class="${cls}"${dig}${lv}>${txt}</td>`;
+          cells += `<td class="${cls}"${tip}${dig}${lv}>${txt}</td>`;
         }
         /* ── 규칙 칸 ──
            ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
@@ -770,7 +816,11 @@
                    ? `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>`
                    : "") +
                `</span></td>` +
-               `<td class="sum-c">${attDays}</td>${vacCell}${cells}</tr>`;
+               `<td class="sum-c${validDays ? " has-vd" : ""}" title="나온 날 ${attDays}일${
+                   validDays ? ` · 그중 ✔ 유효 출석 ${validDays}일 (${VALID_STAY_MIN}분 넘게 머문 날)` : ""
+                 }">${attDays}${
+                   validDays ? `<span class="vd-n">✔${validDays}</span>` : ""
+                 }</td>${vacCell}${cells}</tr>`;
       }).join("");
 
       /* 📈 한 달 흐름 — 위 머리글이 쓰는 값 그대로 (2026-08-16) */
@@ -794,7 +844,15 @@
       명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
 
       body.classList.remove("adm-msg");
-      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
+      /* ✔ 유효 출석 범례 (2026-09-21) — 표만 보고는 진한 칸의 뜻을 모릅니다 */
+      const 범례 = `<p class="adm-att-legend">
+        <span class="lg full">09:20</span> ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b>
+        · <span class="lg brief">09:20</span> 잠깐 들렀다 간 날
+        · 옅지도 진하지도 않은 칸은 머문 시간을 아직 모르는 날이에요
+        (2026-09-21부터 쌓입니다).
+        <br>한 달 <b>${RULE_DAYS}일</b> 규칙은 예전처럼 <b>나온 날</b>로 셉니다 — 유효 출석은 눈으로만 구분해요.
+      </p>`;
+      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>${범례}`;
       bindDig(body);
     } catch (e) {
       console.warn("[adm attendance]", e);
