@@ -331,6 +331,10 @@
     .adm-hour-chip.on{ background: #4A140D; color: #FFFDF6; border-color: transparent; }
     /* 그래프 4개 — 2×2 (2026-08-18). 그래프가 clientWidth 를 재서 그리므로
        칸이 좁아지면 알아서 좁게 그립니다. 900px 아래에선 도로 한 줄. */
+    /* 📊 그래프 접기 (2026-09-22) */
+    .adm-charts-fold{ margin-top: 12px; }
+    .adm-charts-open{ width: 100%; text-align: left; }
+    .adm-charts-why{ color: #A0917E; font-weight: 400; font-size: 11.5px; }
     .adm-chart-grid{
       display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px;
     }
@@ -584,6 +588,10 @@
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
           <button type="button" id="adm-att-next" title="다음 달 (다다음 달까지)">›</button>
+          <!-- 🔄 [2026-09-22] 한 번 읽은 달은 손에 쥐고 있어서, 표를 다시 그려도
+               서버를 안 읽습니다. 다른 창에서 뭔가 바뀌었을 때만 이걸 누르세요. -->
+          <button type="button" id="adm-att-reload" class="adm-btn ghost adm-nav-side"
+                  title="쥐고 있던 자료를 버리고 서버에서 새로 읽습니다">🔄 새로 읽기</button>
           <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
           <button type="button" id="adm-log-open" class="adm-btn ghost adm-nav-side"
                   title="하루치 입장을 시간순으로 봅니다 (3시간에 한 번만 기록)">🕘 입장 기록</button>
@@ -621,6 +629,23 @@
              관리자 페이지를 무겁게 할 이유가 없습니다. -->
         <!-- [2026-08-18] 그래프 4개를 2×2 로 — 세로로 네 개를 쌓으니
              페이지가 한없이 길어졌습니다 (콩 요청). 좁은 화면에선 도로 한 줄. -->
+        <!-- =====================================================================
+             📊 그래프는 **접어 둡니다** (2026-09-22 — 콩)
+             ---------------------------------------------------------------------
+             ⏱️ 작업 시간과 🕐 시간대 그래프는 멤버마다 그 달 구간(timeSegs)을
+             하나씩 읽어야 합니다 — 쉰두 명이면 쉰두 번이에요. 🎖️ 배지는 거기에
+             더해 멤버당 두 번을 더 읽습니다(백네 번).
+             그런데 콩이 그래프를 보는 것은 **중순과 월말**, 멤버들에게 공유할
+             때뿐입니다. 표만 보려고 연 날에도 그 값을 다 받고 있었어요.
+             ★ 그래서 펼칠 때 읽습니다. 한 번 펼치면 그 달은 쥐고 있어요.
+             ===================================================================== -->
+        <div class="adm-charts-fold">
+          <button type="button" class="adm-btn ghost adm-charts-open" id="adm-charts-btn">
+            📊 그래프 보기 <span class="adm-charts-why">— 펼칠 때 불러와요</span>
+          </button>
+        </div>
+
+        <div id="adm-charts-wrap" hidden>
         <div class="adm-chart-grid">
         <div class="adm-chart" id="adm-att-chart"></div>
 
@@ -643,6 +668,7 @@
              (처음엔 🔥 연속 출석이었는데, 이 방 규칙은 "매일"이 아니라
              "한 달 18일"이라 취지에 안 맞아 콩이 바꿨습니다) -->
         <div class="adm-chart" id="adm-streak"></div>
+        </div><!-- /adm-charts-wrap -->
 
         <div class="adm-msg" id="adm-att-msg"></div>
       </div>
@@ -978,7 +1004,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609211725"></script>
+  <script src="script_admin.js?v=202609220908"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

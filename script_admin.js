@@ -492,7 +492,7 @@
       _firstSeen = null;
       await loadFirstSeen(nicks, true);
       msg("adm-att-fill-msg", "다시 셈했어요.");
-      loadAttendance(_attOffset);
+      loadAttendance(_attOffset, { 다시읽기: true });
     } catch (e) {
       msg("adm-att-fill-msg", "다시 셈하지 못했어요. " + (e.code || e.message || ""), true);
     }
@@ -521,6 +521,39 @@
   /* ⏳ '옛 날짜 채우기' 재료 — 표를 그릴 때마다 새로 담깁니다 */
   let _채울거리 = null;
 
+  /* =====================================================================
+     🗃️ 한 번 읽은 달은 손에 쥐고 있습니다 (2026-09-22 — 콩)
+     ---------------------------------------------------------------------
+     [무엇이 낭비였나]
+     출석부는 **다시 그릴 때마다 서버를 통째로 다시 읽었습니다.** 그런데
+     다시 그리는 일이 생각보다 잦아요 —
+       · 🌿 개인사정을 찍거나 지울 때마다 (규칙·순위·개근이 달라지니까)
+       · ⏳ 옛 날짜를 채운 뒤
+       · 🩹 출석을 손으로 넣은 뒤
+     콩이 "체크했다 지우기 몇 번" 한 것이 그때마다 **쉰두 명 몫을 새로
+     내려받는** 일이었습니다 (2026-09-22 사용량 그래프의 3.8MB 봉우리).
+
+     [고침] 읽은 자료를 달 단위로 쥐고 있다가, 다시 그릴 때는 **그걸 씁니다.**
+     서버 요청이 **0** 이에요. 값을 바꾼 쪽(개인사정 토글)은 쥐고 있는 자료의
+     그 칸만 손으로 고쳐 주면 화면과 서버가 어긋나지 않습니다.
+
+     ★ 달을 옮기면 그 달 자료가 없으니 그때 읽습니다.
+     ★ 서버 쪽이 바뀌는 일(멤버 삭제·출석 복구·옛 날짜 채우기)은
+       `{다시읽기:true}` 로 불러 **일부러** 새로 읽습니다.
+     ★ [🔄 새로 읽기] 버튼도 뒀어요 — 다른 창에서 뭔가 바뀌었을 때.
+     ===================================================================== */
+  let _달자료 = null;      // { ymKey, attMonth, wordMonth, nicks, vacByNick, … }
+  const _굳힌달 = new Set();   // 🎖️ 배지를 이미 뽑은 달 (아래 명단굳히기 주석 참고)
+  const _펼친달 = new Set();   // 📊 그래프를 펼쳐 둔 달
+
+  /** 달 표시(offset) → "YYYY-MM" — 읽기 전에 달 이름이 필요할 때 */
+  function _ymKeyOf(monthOffset) {
+    const b = new Date();
+    b.setDate(1);
+    b.setMonth(b.getMonth() - monthOffset);
+    return `${b.getFullYear()}-${String(b.getMonth() + 1).padStart(2, "0")}`;
+  }
+
   /* 🌿 [2026-08-30] 출석부를 **앞으로도** 넘길 수 있게 했습니다.
      ---------------------------------------------------------------
      개인사정은 대개 **미리** 알려집니다 — "다음 달 초에 수술이라
@@ -531,7 +564,11 @@
        계속 그리고, 실수로 2027년에 병가를 찍어 놓고 못 찾습니다. */
   const 앞달한도 = 2;          // 다음 달, 다다음 달까지
 
-  async function loadAttendance(monthOffset) {
+  async function loadAttendance(monthOffset, opts) {
+    const 다시읽기 = !!(opts && opts.다시읽기);
+    /* 📊 그래프·배지에 쓰는 무거운 값(멤버별 timeSegs)을 읽을까.
+       한 번 펼쳐 둔 달은 계속 읽습니다 — 이미 보고 있는데 사라지면 이상해요. */
+    const 무거운것 = !!(opts && opts.무거운것) || _펼친달.has(_ymKeyOf(monthOffset));
     _attOffset = monthOffset;
     _vac셈 = {};
     _순위셈 = {};
@@ -551,6 +588,13 @@
     el("adm-att-month").textContent += monthOffset < 0 ? " (앞으로)" : "";
 
     try {
+      /* 🗃️ 쥐고 있는 달이면 서버를 한 번도 안 읽습니다 (위 주석 참고) */
+      if (!다시읽기 && _달자료 && _달자료.ymKey === ymKey &&
+          (!무거운것 || _달자료.무거운것)) {
+        await 그리기(_달자료, { ymKey, daysInMonth, base, todayKey, monthOffset });
+        return;
+      }
+
       /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번
          ★ [2026-09-21] 입장일(firstSeen)은 여기서 빠졌습니다 — 명단(nicks)을
            알아야 새로 생긴 닉만 채울 수 있어서, 명단이 온 **뒤에** 부릅니다. */
@@ -582,7 +626,10 @@
          알 수 없어서요. 같은 자료를 한 번 더 읽지 않으려는 것뿐,
          서버 요청은 그대로입니다. */
       const segsByNick = {};  // { 닉: {날짜: [{a,b}, …]} }
-      await Promise.all(nicks.map(async n => {
+      /* 📊 [2026-09-22] 무거운 것은 **펼칠 때만** 읽습니다 (아래 그래프 접기).
+         멤버마다 그 달 구간(timeSegs)을 하나씩 읽어야 해서 쉰두 번이에요.
+         표만 볼 때는 필요 없는 값이라, 안 읽으면 빈 그릇으로 둡니다. */
+      await Promise.all((무거운것 ? nicks : []).map(async n => {
         /* ★ [2026-09-21] **그 달만** 읽습니다. 예전에는 통째로 읽었어요 —
            표에 그리는 것도, 규칙을 셈하는 것도 그 달뿐인데 전 기간이
            쉰두 번 내려왔습니다. 입장일은 위에서 적어 둔 값을 쓰므로
@@ -623,6 +670,25 @@
         } catch (e) { minsByNick[n] = {}; segsByNick[n] = {}; }
       }));
 
+      _달자료 = { ymKey, attMonth, wordMonth, nicks, vacByNick, leaveByNick,
+                  minsByNick, segsByNick, firstSeen, 무거운것 };
+      await 그리기(_달자료, { ymKey, daysInMonth, base, todayKey, monthOffset });
+    } catch (e) {
+      console.warn("[adm attendance]", e);
+      body.innerHTML = "불러오지 못했어요.";
+    }
+  }
+
+  /* 표·그래프·순위를 그립니다 — **서버를 한 번도 안 읽습니다.**
+     받아 둔 자료(자)와 그 달 셈(달)만 가지고 그려요. */
+  async function 그리기(자, 달) {
+    const { attMonth, wordMonth, nicks, vacByNick, leaveByNick,
+            minsByNick, segsByNick, firstSeen, 무거운것 } = 자;
+    const { ymKey, daysInMonth, base, todayKey, monthOffset } = 달;
+    const body = el("adm-att-body");
+    _vac셈 = {};
+    _순위셈 = {};
+    try {
       /* 날짜별 출석 인원 수 — 그날 attendance 기록(firstAt/at)이 있는 사람만 셉니다.
          휴가만 표시된 사람은 출근한 게 아니니 세지 않아요.
          명단(nickOwner)에 없는 옛 기록은 표에도 줄이 없으므로 함께 뺍니다. */
@@ -944,6 +1010,23 @@
                  }</td>${vacCell}${cells}</tr>`;
       }).join("");
 
+      /* =====================================================================
+         📊 그래프·배지는 **펼쳤을 때만** (2026-09-22 — 콩)
+         ---------------------------------------------------------------------
+         ⏱️·🕐 그래프는 멤버별 timeSegs 가 있어야 하고, 🎖️ 배지는 거기에
+         멤버당 두 번을 더 읽습니다. 표만 보는 날에는 그 값을 아예 안 읽어요.
+         ★ 📈 흐름·✍️ 글자수는 읽은 값으로 그려 공짜지만, 접힌 칸 안에 같이
+           들어 있어 보이지도 않으니 함께 건너뜁니다.
+         ★ 펼침/접힘은 아래 wrap 의 hidden 으로 갈립니다 — 그리는 일 자체를
+           건너뛰는 것이 핵심이에요(그려 놓고 감추면 아낀 게 없습니다).
+         ===================================================================== */
+      const 펼침 = !!무거운것;
+      const 접기칸 = el("adm-charts-wrap");
+      const 펼침단추 = el("adm-charts-btn");
+      if (접기칸) 접기칸.hidden = !펼침;
+      if (펼침단추) 펼침단추.hidden = 펼침;
+
+      if (펼침) {
       /* 📈 한 달 흐름 — 위 머리글이 쓰는 값 그대로 (2026-08-16) */
       그래프그리기({ ymKey, daysInMonth, base, cntByDay, totalByDay, isThisMonth, todayD });
 
@@ -962,7 +1045,21 @@
       /* 🏅 개근 명단 굳히기 (2026-08-22) — 방 배경판이 읽어 갑니다.
          🎖️ [2026-09-07 — 콩] 닉네임 앞 배지도 같은 자리(honors/{달}/badges)에
          함께 굳힙니다 — 카드가 읽어 갑니다. */
-      명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
+      /* 🎖️ [고침 2026-09-22 — 콩] 배지는 **이 달을 처음 그릴 때 한 번만** 뽑습니다.
+         ---------------------------------------------------------------
+         배지뽑기는 멤버마다 `pomoSessions` 와 `worklog/{닉}/ep` 를 하나씩
+         읽습니다 — 쉰두 명이면 **백네 번**이에요. 그런데 이것이 표를 다시
+         그릴 때마다 돌고 있었습니다. 🌿 개인사정을 켰다 껐다 할 때마다
+         백네 번씩 읽은 셈이라, 콩이 본 봉우리의 큰 몫이 여기였어요.
+         ★ 배지는 **지난 달 기록**으로 매겨져 달 안에서는 안 바뀝니다 —
+           한 번 굳히면 그 달은 더 볼 일이 없어요.
+         ★ 다시 뽑고 싶으면 [🔄 새로 읽기] 를 누르면 됩니다. */
+      if (!_굳힌달.has(ymKey)) {
+        _굳힌달.add(ymKey);
+        명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
+      }
+
+      }  /* /펼침 — 여기까지가 그래프·배지 */
 
       /* ⏳ [2026-09-21] '옛 날짜 채우기' 가 쓸 재료를 남겨 둡니다.
          표가 이미 읽어 둔 값 그대로예요 — 버튼을 눌러도 **서버를 다시 안 읽습니다**
@@ -976,9 +1073,10 @@
         · <span class="lg brief">09:20</span> 1시간이 안 되게 머문 날
         · <span class="lg leave">🌿</span> 개인사정 · <span class="lg vac">🏖️</span> 휴가
         · 어느 쪽도 아닌 칸은 머문 기록이 없는 날이에요.
-        <br>옛 날짜는 <b>원본 구간</b>으로 여기서 바로 가려 보여 줍니다 —
-        주간 기록·멤버 달력에도 보이게 하려면 위 <b>[⏳ 옛 날짜 채우기]</b> 를 한 번 눌러 주세요
-        (달마다 한 번씩).
+        <br>옛 날짜는 <b>원본 구간</b>으로 가려 보여 주는데, 그 값은
+        <b>[📊 그래프 보기]</b> 를 펼칠 때 함께 불러와요 ${무거운것 ? "" : "— 지금은 접혀 있어 안 떠요"}.
+        <b>[⏳ 옛 날짜 채우기]</b> 를 한 번 눌러 두면 접어 둔 채로도 보이고,
+        주간 기록·멤버 달력에도 보입니다 (달마다 한 번씩).
         <br>한 달 <b>${RULE_DAYS}일</b> 규칙은 예전처럼 <b>나온 날</b>로 셉니다 — 유효 출석은 눈으로만 구분해요.
       </p>`;
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>${범례}`;
@@ -1925,7 +2023,7 @@
       await db.ref("status/" + nick).remove();
       await db.ref("nickOwner/" + nick).remove();     // 맨 마지막 — 도장 반납
 
-      await loadAttendance(_attOffset);
+      await loadAttendance(_attOffset, { 다시읽기: true });
       msg("adm-att-msg", `🗑️ ${nick}님을 지웠어요.`);
     } catch (e) {
       console.warn("[adm removeMember]", e);
@@ -2061,7 +2159,7 @@
       msg("adm-att-fill-msg",
           `${칸}칸을 채웠어요.` + (실패 ? ` (달력 쪽 ${실패}명은 실패 — 다시 눌러도 돼요)` : "") +
           " 멤버들은 새로고침하면 보여요.");
-      loadAttendance(_attOffset);      // 표를 다시 그려 결과를 눈으로 확인
+      loadAttendance(_attOffset, { 다시읽기: true });   // m 이 바뀌었으니 새로 읽습니다
     } catch (e) {
       msg("adm-att-fill-msg", "채우지 못했어요. " + (e.code || e.message || ""), true);
     }
@@ -2560,6 +2658,12 @@
       if (!지금) await ref.set(true);
       else await ref.remove();
 
+      /* 🗃️ 쥐고 있는 자료의 그 칸만 고칩니다 — 이러면 다시 그려도 서버를
+         한 번도 안 읽어요. 안 고치면 화면이 옛 값으로 되돌아갑니다. */
+      if (_달자료 && _달자료.leaveByNick) {
+        const m = _달자료.leaveByNick[nick] || (_달자료.leaveByNick[nick] = {});
+        if (지금) delete m[dk]; else m[dk] = true;
+      }
       await loadAttendance(_attOffset);
       msg("adm-att-msg", 개인사정한줄({ nick, dk, 뺀건가: 지금, 전, 후: _순위셈[nick] || null }));
     } catch (e) {
@@ -3217,6 +3321,22 @@
     el("adm-pw")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) doLogin(); });
     el("adm-pin-btn")?.addEventListener("click", doPin);
     el("adm-pin")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) doPin(); });
+    /* 📊 그래프 펼치기 — 이때 무거운 값(멤버별 timeSegs)을 처음 읽습니다 */
+    el("adm-charts-btn")?.addEventListener("click", () => {
+      const btn = el("adm-charts-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "불러오는 중…"; }
+      _펼친달.add(_ymKeyOf(_attOffset));
+      loadAttendance(_attOffset, { 무거운것: true }).finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '📊 그래프 보기 <span class="adm-charts-why">— 펼칠 때 불러와요</span>';
+        }
+      });
+    });
+    el("adm-att-reload")?.addEventListener("click", () => {
+      _굳힌달.clear();                       // 🎖️ 배지도 다시 뽑습니다
+      loadAttendance(_attOffset, { 다시읽기: true });
+    });
     el("adm-att-prev")?.addEventListener("click", () => loadAttendance(_attOffset + 1));
     el("adm-att-next")?.addEventListener("click", () => loadAttendance(Math.max(-앞달한도, _attOffset - 1)));
     /* 출근부는 매번 다시 그려지므로 개별 [✕] 대신 표가 담긴 상자에 위임합니다 */
@@ -3465,7 +3585,7 @@
       const t = new Date(`${날}T${시각}:00`).getTime();
       if (!Number.isFinite(t)) { msg("adm-fix-msg", "시각을 읽지 못했어요.", true); return; }
       await db.ref(`attendance/${날}/${nick}`).set({ firstAt: t, at: t, fixed: true });
-      await loadAttendance(_attOffset);
+      await loadAttendance(_attOffset, { 다시읽기: true });
       const inp = el("adm-hand-nick"); if (inp) inp.value = "";
       msg("adm-fix-msg", `✅ ${nick} — ${날} ${시각} 로 넣었어요.`);
     } catch (e) {
@@ -3496,7 +3616,7 @@
       }
       const 수 = Object.keys(뭉치).length;
       if (수) await db.ref("attendance").update(뭉치);
-      await loadAttendance(_attOffset);
+      await loadAttendance(_attOffset, { 다시읽기: true });
       msg("adm-fix-msg", `✅ ${수}건을 넣었어요.` + (수 < 고른것.length
         ? ` (${고른것.length - 수}건은 그새 본인 기록이 생겨 건드리지 않았어요)` : ""));
       const box = el("adm-fix-list");
