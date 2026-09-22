@@ -616,11 +616,35 @@
            떨어집니다. 날짜 범위까지 좁히면 더 줄지만, timeSegs 는 이 함수가
            "오늘부터 거꾸로 N일"을 셈해야 해서 통째로 둡니다(그래도 이 사람
            것 하나뿐이라 작아요). */
+      /* ★★★★ [또 고침 2026-09-22 — 콩, 계측기로 잡음]
+         ---------------------------------------------------------------
+         위에서 "날짜 범위까지 좁히면 더 줄지만 … 그래도 이 사람 것 하나뿐이라
+         작아요" 라고 적어 두었는데, **그게 틀렸습니다.**
+
+         timeSegs 는 **지우는 손이 아예 없어서** 날마다 자랍니다. 그때
+         47kB 던 것이 2026-09-22 계측에서 **한 번에 90kB** 가 됐어요.
+         이 함수는 카드 타이머가 **1분마다** 부릅니다 — 계측기가 12분에
+         15번, **1.36MB**(그 창이 받은 양의 55%)로 잡았습니다.
+         사람 수만큼 곱해지는 자리라 내버려 두면 계속 나빠지기만 해요.
+
+         그래서 이제 **필요한 날짜만** 읽습니다. 이 함수가 셈하는 것은
+         아래 고리가 도는 날들(오늘부터 거꾸로 days 일, backWeeks 주 전)
+         뿐이라, 그 범위 밖은 받을 까닭이 없습니다.
+           · 카드 타이머(days=1)  → 하루치
+           · 나의 작업(days=7)    → 이레치
+         셋 다 날짜가 열쇠(YYYY-MM-DD)라 범위로 자를 수 있어요.
+         ★ timeCur 는 지금 열린 구간 하나라 그대로 둡니다. */
+      const 하루ms = 24 * 60 * 60 * 1000;
+      const 첫날 = ymd(dayStart(t) - (days - 1 + backWeeks * 7) * 하루ms);
+      const 끝날 = ymd(dayStart(t) - (backWeeks * 7) * 하루ms);
+      const 범위 = (가지) => db.ref(`users/${nick}/${가지}`)
+        .orderByKey().startAt(첫날).endAt(끝날);
+
       const [segSnap, pomoSnap, curSnap, resetSnap] = await Promise.all([
-        db.ref(`users/${nick}/timeSegs`).once("value"),
-        db.ref(`users/${nick}/pomoSessions`).once("value"),
+        범위("timeSegs").once("value"),
+        범위("pomoSessions").once("value"),
         db.ref(`users/${nick}/timeCur`).once("value"),
-        db.ref(`users/${nick}/workReset`).once("value")
+        범위("workReset").once("value")
       ]);
       segsAll  = segSnap.val()   || {};
       pomoAll  = pomoSnap.val()  || {};

@@ -379,8 +379,12 @@
       window.db.ref("attendance").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       window.db.ref("wordlog").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       /* 잠긴 칸 — 내 것이라 읽힙니다 */
-      window.db.ref(`users/${nick}/pomoSessions`).once("value"),
-      window.db.ref(`users/${nick}/timeSegs`).once("value"),
+      window.db.ref(`users/${nick}/pomoSessions`).orderByKey().limitToLast(SCAN_DAYS).once("value"),
+      /* ★ [2026-09-22] 여기도 날짜로 자릅니다. 훑는 것은 SCAN_DAYS(약 반년)
+         뿐인데 **전 기간**을 받고 있었어요 — timeSegs 는 지우는 손이 없어
+         해마다 자랍니다. 하루 한 번이라 덜 급했지만, 그냥 두면 내년에
+         이 한 번이 몇 MB가 됩니다. */
+      window.db.ref(`users/${nick}/timeSegs`).orderByKey().limitToLast(SCAN_DAYS).once("value"),
       window.db.ref(`achv/${nick}/base`).once("value")
     ]);
 
