@@ -639,9 +639,16 @@
              때뿐입니다. 표만 보려고 연 날에도 그 값을 다 받고 있었어요.
              ★ 그래서 펼칠 때 읽습니다. 한 번 펼치면 그 달은 쥐고 있어요.
              ===================================================================== -->
+        <!-- [고침 2026-09-23 — 콩] 접는 단추가 없어서, 한 번 펼치면 새로
+             고치기 전엔 못 닫았습니다. (⏳ 옛 날짜 채우기가 자료를 부르면서
+             제멋대로 펼쳐 버린 것도 같은 뿌리였어요 — 아래 script_admin.js
+             의 _펼친달 주석을 보세요.) 펼치기·접기를 한 자리에 나란히 둡니다. -->
         <div class="adm-charts-fold">
           <button type="button" class="adm-btn ghost adm-charts-open" id="adm-charts-btn">
             📊 그래프 보기 <span class="adm-charts-why">— 펼칠 때 불러와요</span>
+          </button>
+          <button type="button" class="adm-btn ghost adm-charts-open" id="adm-charts-fold-btn" hidden>
+            📊 그래프 접기 <span class="adm-charts-why">— 받아 둔 값은 그대로 쥐고 있어요</span>
           </button>
         </div>
 
@@ -1004,7 +1011,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202609221551"></script>
+  <script src="script_admin.js?v=202609221557"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
