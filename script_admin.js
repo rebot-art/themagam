@@ -2992,18 +2992,34 @@
     return out;
   }
 
-  async function workMsOf(nick, dk) {
+  /* ---------------------------------------------------------------------
+     ⏱ "5시간 넘게 일한 날" 을 어디서 세는가 (2026-09-23 — 통신량 점검)
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     예전에는 사람마다 × 날마다 users/{닉}/timeSegs/{날} 을 하나씩 열었습니다.
+     쉰세 명 × 나온 날 이레면 **337번, 1.28MB**. 계측기로 재보니 관리자
+     페이지가 쓰는 통신량의 73% 가 이 단추 하나였어요. 단추 한 번에.
+
+     [그런데 그 값은 이미 방 안에 있었습니다]
+     script_timelog.js 의 공개시간올리기() 가 날마다
+         worktime/{날}/{닉} = 그날 작업 분(分)   ← 무게를 **친** 숫자
+     을 올려둡니다. 여기서 세려던 것과 정확히 같은 셈이에요.
+     그래서 날마다 한 번씩, 이레면 **일곱 번**만 읽습니다.
+
+     [왜 이게 더 정직한가]
+     무게 치는 일을 여기서 다시 하지 않으니, 저쪽 규칙이 바뀌어도 여기가
+     엇나갈 일이 없습니다. 중복 구간 걸러내기도 저쪽에서 이미 끝났고요.
+
+     ★ worktime 은 2026-08-30 부터 쌓입니다 — 이레 창에는 넉넉합니다.
+     ★ 다만 "쌓이기 시작한 날보다 앞" 을 세는 창으로 넓힌다면, 그때는
+       이 선반이 비어 있다는 걸 기억해 주세요.
+  --------------------------------------------------------------------- */
+  const DIL_5H_MIN = DIL_5H_MS / 60000;   // 문턱은 한 군데서만 (분으로 견줍니다)
+
+  async function 날작업분(dk) {
     try {
-      const v = (await db.ref(`users/${nick}/timeSegs/${dk}`).once("value")).val() || {};
-      const best = {};
-      Object.values(v).filter(s => s && s.b > s.a).forEach(s => {
-        const k = `${s.s}|${s.a}`;
-        if (!best[k] || s.b > best[k].b) best[k] = s;
-      });
-      let ms = 0;
-      Object.values(best).forEach(s => { ms += 작업ms(s.s, s.b - s.a); });
-      return ms;
-    } catch (e) { return 0; }
+      return (await db.ref(`worktime/${dk}`).once("value")).val() || {};
+    } catch (e) { return {}; }
   }
 
   /* =====================================================================
@@ -3186,20 +3202,26 @@
     msg("adm-diligent-msg", "");
     try {
       const days = dilDayKeys();
-      /* 날짜별 출석부 — 누가 어느 날 나왔나 */
+      /* 날마다 두 번 — 출석부 한 장, 작업 분 한 장. 그게 전부입니다.
+         사람 수가 늘어도 읽는 횟수는 그대로 이레 × 2 예요. */
       const attByNick = {};
+      const 분표 = {};                       // 분표[날][닉] = 그날 작업 분 (무게 침)
       await Promise.all(days.map(async dk => {
-        const v = (await db.ref(`attendance/${dk}`).once("value")).val() || {};
-        Object.keys(v).forEach(n => { (attByNick[n] = attByNick[n] || []).push(dk); });
+        const [att, 분] = await Promise.all([
+          db.ref(`attendance/${dk}`).once("value"),
+          날작업분(dk)
+        ]);
+        Object.keys(att.val() || {}).forEach(n => { (attByNick[n] = attByNick[n] || []).push(dk); });
+        분표[dk] = 분;
       }));
 
       const rows = [];
-      await Promise.all(Object.entries(attByNick).map(async ([n, dks]) => {
-        const msArr = await Promise.all(dks.map(dk => workMsOf(n, dk)));
-        const total = msArr.reduce((a, b) => a + b, 0);
-        const d5 = msArr.filter(x => x >= DIL_5H_MS).length;
+      Object.entries(attByNick).forEach(([n, dks]) => {
+        const 분들 = dks.map(dk => Number((분표[dk] || {})[n]) || 0);
+        const total = 분들.reduce((a, b) => a + b, 0) * 60000;   // 보여줄 때는 다시 ms
+        const d5 = 분들.filter(x => x >= DIL_5H_MIN).length;
         rows.push({ n, att: dks.length, d5, total });
-      }));
+      });
 
       const pass = rows.filter(r => r.att >= DIL_NEED_ATT && r.d5 >= DIL_NEED_5H)
         .sort((a, b) => b.d5 - a.d5 || b.att - a.att || b.total - a.total);
