@@ -8340,6 +8340,15 @@ html[data-theme-style="studio"] .user-card{
    글자("공유 중")는 뺐습니다. 카드 아래에 이미 "○○의 화면" 이라고
    적혀 있어서 무엇인지 알 수 있고, 작은 카드에서 글자 알약은 그림을
    그만큼 가렸습니다. 대신 title·aria-label 로 뜻은 남겨 두었어요. */
+/* ▶ [고침 2026-09-28 — 콩] 둥근 알약 + 빨간 동그라미 → **검정 네모 + 빨간 재생 표시**.
+   ---------------------------------------------------------------------
+   ★ 네모인 까닭: 같은 날 닉네임 옆 딱지도 네모로 갔습니다. 이 방에서
+     **동그란 것은 "연결 안테나"** 자리가 됐어요 — 공유를 알리는 표시가
+     동그라면 그것과 결이 섞입니다.
+   ★ 크기를 padding 이 아니라 width·height 로 못박습니다. 안의 삼각형은
+     테두리로 그린 것이라 padding 으로는 정사각형이 안 나와요.
+   ★★★ 깜박이지 않습니다 — 머리말의 「공유 중」이 이미 깜박입니다.
+     (2026-09-28 멤버 의견) 여기에 animation 을 얹지 마세요. */
 .share-live{
   position: absolute;
   top: 6px;
@@ -8347,21 +8356,31 @@ html[data-theme-style="studio"] .user-card{
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(20,16,14,.55);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 2px;              /* 콩이 고른 '나' — 각지게 */
+  background: rgba(16,13,11,.80);
   /* 유리처럼 — 뒤 화면이 비쳐서 얹힌 느낌이 덜합니다.
      지원하지 않는 브라우저에서는 그냥 반투명으로 보입니다. */
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
+/* 빨간 재생 삼각형 — 테두리로 그립니다 (그림 파일도, SVG 도 필요 없어요).
+   ★ margin-left 는 눈속임 보정입니다. 삼각형은 무게가 왼쪽에 쏠려 있어,
+     상자 한가운데 두면 **왼쪽으로 치우쳐 보입니다.** */
 .share-live i{
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #FF3B30;
-  box-shadow: 0 0 5px rgba(255,59,48,.9);
   display: block;
+  width: 0;
+  height: 0;
+  border-radius: 0;
+  background: none;
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent #FF3B30;
+  margin-left: 1.5px;
+  /* 밝은 화면 위에서도 안 묻히게 — 옛 빨간 불이 쓰던 그 은은한 빛 */
+  filter: drop-shadow(0 0 4px rgba(255,59,48,.7));
 }
 
 /* 20초 넘게 소식이 없으면 흐리게 — 끊긴 것으로 봅니다
@@ -9182,10 +9201,10 @@ html[data-theme-style="studio"] .user-card{
 .share-live.is-mine{
   border: 0;
   cursor: pointer;
-  padding: 4px;                 /* span 일 때와 같은 크기로 */
+  padding: 0;                   /* span 일 때와 같은 크기로 — 크기는 위에서 못박습니다 */
   transition: transform var(--anim-fast), background var(--anim-fast);
 }
-.share-live.is-mine:hover{ background: rgba(20,16,14,.72); transform: scale(1.12); }
+.share-live.is-mine:hover{ background: rgba(10,8,7,.92); transform: scale(1.12); }
 .share-live.is-mine:active{ transform: scale(.94); }
 
 .blur-pop{
