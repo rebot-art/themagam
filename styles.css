@@ -11644,30 +11644,36 @@ html[data-lite] .pr-flash{ animation:none; }
 .card-share{
   display: inline-flex;
   align-items: center;
-  gap: 3px;
   flex: 0 0 auto;
-  margin-right: 4px;
-  font-size: .86em;
-  line-height: 1;
-  vertical-align: 1px;
+  margin-right: 5px;
+  vertical-align: -3px;
 }
-.card-share > i{
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #D9443A;
-  /* 다크에서도 살아 있게 — 붉은색은 어느 테마에서나 바탕과 붙지 않습니다 */
-  box-shadow: 0 0 0 0 rgba(217, 68, 58, .55);
-  animation: card-share-live 1.8s ease-out infinite;
+/* 높이를 em 으로 두면 **글자처럼** 늘고 줍니다 — 카드 크기를 바꿔도 따라와요. */
+.card-share svg{
+  height: 1.18em;
+  width: auto;
 }
+/* 🔴 말풍선 — 꽉 찬 빨강. **가만히 있습니다.**
+   ★★★ 이 덩치가 연결 안테나(8px 빨간 점)와 갈라 주는 유일한 장치입니다.
+     작은 원으로 줄이면 그 순간 도로 헷갈려요 (2026-09-28 콩 신고). */
+.card-share .bubble{ fill: #D9443A; }
+/* ▶ 재생 버튼 — 이것만 숨 쉽니다.
+   안테나는 **빨강**이 깜박이고 이쪽은 **흰색**이 깜박여서, 곁눈으로도
+   섞이지 않습니다. 움직이는 것의 색까지 갈라 둔 자리예요. */
+.card-share .play-bg{ fill: #FFFFFF; }
+.card-share .play-tri{ fill: #17120F; }
+.card-share .play{
+  animation: card-share-live 2.6s ease-in-out infinite;
+}
+/* 흐려지면 밑의 빨강이 비쳐 보여 발그레해집니다 — 꺼졌다 켜지는 것이
+   아니라 숨 쉬는 느낌이라, 여러 명이 켜도 시끄럽지 않아요. */
 @keyframes card-share-live{
-  0%   { opacity: 1;   box-shadow: 0 0 0 0   rgba(217, 68, 58, .55); }
-  70%  { opacity: .35; box-shadow: 0 0 0 5px rgba(217, 68, 58, 0); }
-  100% { opacity: 1;   box-shadow: 0 0 0 0   rgba(217, 68, 58, 0); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .18; }
 }
-/* 어지러움을 타는 분께는 깜박이지 않습니다 — 색은 그대로 남아 뜻은 삽니다 */
+/* 어지러움을 타는 분께는 깜박이지 않습니다 — 모양은 그대로 남아 뜻은 삽니다 */
 @media (prefers-reduced-motion: reduce){
-  .card-share > i{ animation: none; opacity: 1; }
+  .card-share .play{ animation: none; opacity: 1; }
 }
 
 /* =====================================================================
