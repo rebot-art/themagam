@@ -1320,6 +1320,27 @@
                눈이 안 헷갈립니다. */
           const proomChip = row.proom
             ? `<span class="card-proom" title="⏱️ 뽀모방에 있어요">⏱️</span>` : "";
+
+          /* 🖥️ [2026-09-28 — 콩] 화면 공유 중이면 닉네임 **왼쪽**에 딱지.
+             ---------------------------------------------------------------
+             [왜 필요한가] 공유 그림(screens)은 **공유하는 사람끼리만** 봅니다.
+             그래서 안 켠 사람에게는 지금 누가 공유 중인지 보일 길이 아예
+             없었어요. 카드에 딱지 하나면 "아 저 사람 켰구나" 가 됩니다.
+
+             [통신량] 0 입니다. row.shareOn 은 2026-08-17 부터 이미
+             접속자 정보(status)에 실려 모두에게 오고 있던 값이에요
+             (updateStatus 의 shareOn 칸 참고). 새 구독도, 새 읽기도 없이
+             **이미 손에 든 값을 그리기만** 합니다.
+             ★ 그러니 여기에 그림·크기·화질 같은 걸 얹지 마세요. 그 순간
+               "안 켠 사람은 안 받는다" 는 약속이 깨집니다.
+
+             [생김새] 빨간 점(녹화 중 느낌)이 숨 쉬듯 깜박이고 그 옆에 🖥️.
+             ★ 점은 CSS 애니메이션이라 서버와 아무 상관이 없습니다.
+             ★ 어지러움을 타는 분을 위해 prefers-reduced-motion 이면
+               깜박임을 멈춥니다 (색은 그대로 남아요). */
+          const shareChip = row.shareOn === true
+            ? `<span class="card-share" title="🖥️ 화면 공유 중이에요" aria-label="화면 공유 중"><i></i>🖥️</span>`
+            : "";
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
                  ${proomChip}${pomoChip}
@@ -1381,7 +1402,7 @@
                    row.onPhone === true
                      ? `<span class="card-device" title="폰으로 접속 중">📱</span>` : ""}
                 ${배지HTML(u)}
-                <div class="card-name"><span class="card-nick">${escapeHtml(u)}</span></div>
+                <div class="card-name">${shareChip}<span class="card-nick">${escapeHtml(u)}</span></div>
                 <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line">🎯 ${goalText}</div></div>
                 ${metaBlock}
               </div>

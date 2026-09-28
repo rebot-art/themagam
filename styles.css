@@ -11632,6 +11632,45 @@ html[data-lite] .pr-flash{ animation:none; }
 }
 
 /* =====================================================================
+   🖥️ 화면 공유 중 딱지 (2026-09-28 — 콩)
+   ---------------------------------------------------------------------
+   닉네임 **왼쪽**에 「깜박이는 빨간 점 + 🖥️」. 녹화 중 표시에서 따왔어요.
+   ★ 값은 접속자 정보(status)의 shareOn 그대로입니다 — 통신량 0.
+   ★ 점을 크게 키우지 마세요. 이 줄은 닉네임이 주인공이고, 딱지는
+     곁눈으로 알아차리기만 하면 되는 것이라 6px 로 둡니다.
+   ★ .card-name 은 text-align:right 라, 딱지를 이름 **앞**에 두면
+     자연히 이름 왼편에 붙습니다 (레이아웃을 건드릴 필요가 없어요).
+   ===================================================================== */
+.card-share{
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  margin-right: 4px;
+  font-size: .86em;
+  line-height: 1;
+  vertical-align: 1px;
+}
+.card-share > i{
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D9443A;
+  /* 다크에서도 살아 있게 — 붉은색은 어느 테마에서나 바탕과 붙지 않습니다 */
+  box-shadow: 0 0 0 0 rgba(217, 68, 58, .55);
+  animation: card-share-live 1.8s ease-out infinite;
+}
+@keyframes card-share-live{
+  0%   { opacity: 1;   box-shadow: 0 0 0 0   rgba(217, 68, 58, .55); }
+  70%  { opacity: .35; box-shadow: 0 0 0 5px rgba(217, 68, 58, 0); }
+  100% { opacity: 1;   box-shadow: 0 0 0 0   rgba(217, 68, 58, 0); }
+}
+/* 어지러움을 타는 분께는 깜박이지 않습니다 — 색은 그대로 남아 뜻은 삽니다 */
+@media (prefers-reduced-motion: reduce){
+  .card-share > i{ animation: none; opacity: 1; }
+}
+
+/* =====================================================================
    [2026-09-06 — 콩 "정사각형이면 어떤 느낌일지 궁금해"] 🧘 혼자 방
    전용 실험 → 1~5차는 프사·쌓기 칸을 옆으로 눕히는(row-reverse)
    구조를 시도했으나, 5차에서 진짜 원인(책 표지형 기본 CSS 잔여물)을
