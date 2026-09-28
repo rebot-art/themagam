@@ -1350,6 +1350,12 @@
                것끼리 색이 다르니(흰색 vs 빨강) 곁눈에도 안 섞여요.
              ★ 이모지를 안 쓰는 까닭: 기기마다 생김새가 달라서요
                (맥·윈도·안드로이드가 저마다 다르게 그립니다).
+             ★★ 말풍선은 **네모**입니다 (2026-09-28 4차 — 콩 "둥그라미라서
+               아래 목표와도 비슷해 보이는구나"). 바로 밑줄이 🎯 목표인데,
+               그 줄의 동그란 것들과 닮아 보였어요. 카드 한 장 안에서 같은
+               모양이 두 번 나오면 눈이 둘을 한 덩어리로 묶습니다.
+               ★ 그러니 다시 둥글게 만들지 마세요 — 위로는 안테나(작은 원),
+                 아래로는 목표 줄. 네모는 이 둘 **모두**와 갈라서는 모양입니다.
              ★ 꼬리는 **오른쪽 아래**로 답니다 (2026-09-28 콩). 딱지가
                닉네임 왼편에 서 있으니, 꼬리가 이름 쪽을 가리켜야 "이 사람
                이야기" 로 읽혀요. 왼쪽으로 달면 카드 바깥을 가리킵니다.
@@ -1360,7 +1366,7 @@
              ★ 어지러움을 타는 분을 위해 prefers-reduced-motion 이면
                깜박임을 멈춥니다 (모양은 그대로 남아 뜻은 삽니다). */
           const shareChip = row.shareOn === true
-            ? `<span class="card-share" title="🔴 화면 공유 중이에요" aria-label="화면 공유 중"><svg viewBox="0 0 22 22" width="14" height="14" aria-hidden="true" focusable="false"><circle class="bubble" cx="11" cy="9.9" r="9.2"/><path class="bubble" d="M15.4 16.4 L19.1 21.6 L11.6 18.6 Z"/><g class="play"><circle class="play-bg" cx="11" cy="9.9" r="4.95"/><path class="play-tri" d="M9.3 7.1 L13.85 9.9 L9.3 12.7 Z"/></g></svg></span>`
+            ? `<span class="card-share" title="🔴 화면 공유 중이에요" aria-label="화면 공유 중"><svg viewBox="0 1 22 21" width="14" height="14" aria-hidden="true" focusable="false"><rect class="bubble" x="1.2" y="2.2" width="19.6" height="15" rx="4.2"/><path class="bubble" d="M12.2 15 L18.6 21.4 L16.2 15 Z"/><g class="play"><circle class="play-bg" cx="11" cy="9.7" r="4.95"/><path class="play-tri" d="M9.3 6.9 L13.85 9.7 L9.3 12.5 Z"/></g></svg></span>`
             : "";
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
