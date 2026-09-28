@@ -235,7 +235,8 @@
   let _받기멈춤 = false;     // 🙈 딴 창을 보는 동안 받기를 멈췄는가
   let _screensCache = null;
   let _shareW     = SHARE_DEFAULT_W;      // 지금 뭉갬 정도 (가로 픽셀)
-  let _lastShareHtml = null; // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
+  let _lastShareHtml = null;
+  let _lastShareSkel = null;   // src·시각을 뺀 뼈대 (그림만 갈아 끼울지 가릅니다) // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
 
   function esc(s) {
     return window.escapeHtml ? window.escapeHtml(s) : String(s == null ? "" : s);
@@ -953,9 +954,30 @@
     detachScreens();
     _screensCache = null;
     _lastShareHtml = null;
-    renderShareCards();                // 공유를 끄면 남의 화면도 치웁니다
-    renderShareButton();
-    if (wasSharing) window.updateStatus?.();   // 남들 버튼에서도 표시를 뗍니다
+
+    /* ★★★ [안전장치 2026-09-29 — 콩 "off 를 누르니 튕겼다는 제보"]
+       ---------------------------------------------------------------------
+       아래 세 줄은 **화면을 다시 그리는 일**이고, 그 다음 두 줄은 **서버에서
+       내 그림을 치우는 일**입니다. 서버 치우기가 훨씬 중요해요 —
+       못 치우면 남들 화면에 내 옛 그림이 그대로 걸린 채 남습니다
+       (탭을 닫아 onDisconnect 가 돌기 전까지).
+
+       그런데 예전에는 그리기가 한 번 엎어지면 그 아래로 못 내려가,
+       **치우는 일까지 통째로 건너뛰었습니다.** 그리기는 화면 사정(카드가
+       막 새로 그려지는 중이라든지)에 따라 얼마든지 엎어질 수 있는데요.
+
+       그래서 그리기를 하나씩 따로 감쌉니다. 하나가 엎어져도 나머지가 돌고,
+       무엇보다 **서버 치우기에는 반드시 닿습니다.**
+       ★ 무슨 일이 있었는지 알 수 있게 [화면공유 끄기] 라는 표를 달아
+         콘솔에 적습니다 — 다음에 또 제보가 오면 이 글자로 찾으면 돼요. */
+    try { renderShareCards(); }        // 공유를 끄면 남의 화면도 치웁니다
+    catch (e) { console.warn("[화면공유 끄기 — 카드 다시 그리기]", e); }
+    try { renderShareButton(); }
+    catch (e) { console.warn("[화면공유 끄기 — 단추 다시 그리기]", e); }
+    if (wasSharing) {
+      try { window.updateStatus?.(); }  // 남들 버튼에서도 표시를 뗍니다
+      catch (e) { console.warn("[화면공유 끄기 — 접속 정보 알리기]", e); }
+    }
 
     if (wasSharing && myNick) {
       try { await db.ref("screens/" + myNick).onDisconnect().cancel(); } catch (e) {}
@@ -1295,6 +1317,50 @@
        (다시 그리면 <img> 가 새 요소가 되어 그림이 깜빡입니다) */
     if (html === _lastShareHtml && present === !!html) { tickShare(); return; }
 
+    /* ★★★ [고침 2026-09-29 — 콩 "화면 공유가 자꾸 끊어졌다가 다시 붙어"]
+       ---------------------------------------------------------------------
+       [무엇이 문제였나] 바로 위 검사는 **HTML 이 완전히 같을 때만** 손을
+       뗍니다. 그런데 새 그림이 오면 src 와 data-share-at 이 늘 달라져요.
+       그래서 **그림이 바뀔 때마다 카드를 통째로 지웠다 다시 붙였습니다.**
+       새로 붙은 <img> 는 새 요소라 브라우저가 그림을 처음부터 다시 그립니다 —
+       그 찰나가 눈에는 "끊어졌다 다시 붙는" 것으로 보였어요.
+       위 주석이 걱정하던 바로 그 일이, 정작 제일 흔한 길에서 벌어지고
+       있었던 셈입니다. 혼자 공유 중이면 15초마다 한 번씩요.
+
+       [어떻게] **달라진 것이 그림뿐이면 그림만 갈아 끼웁니다.**
+       카드도, <img> 요소도 그대로 두고 src 만 바꾸면 브라우저가 이어서
+       그리므로 깜빡임이 없습니다.
+       ★ 견주는 방법: src 와 data-share-at 을 지운 "뼈대"만 비교합니다.
+         닉네임이 늘거나 줄거나, 맞춤(cover/contain)이 바뀌거나, [off] 가
+         생기고 없어지면 뼈대가 달라져 아래 통째로 다시 그리기로 갑니다.
+       ★ 카드를 셀렉터로 찾지 않고 훑어서 짝을 짓습니다 — 닉네임에 이모지가
+         섞여 있어 셀렉터로 쓰면 깨질 수 있어요. */
+    /* ★ 두 칸을 한 번에 지웁니다. 일부러 `src` 와 `=` 를 붙여 쓰지 않았어요 —
+       붙여 두면 단일파일 빌드(build-single.py)가 이걸 **진짜 바깥 파일 주소**
+       로 알아듣고 "인라인 안 된 참조가 남았다"며 막습니다. */
+    const 뼈대 = html.replace(/ (?:src|data-share-at)="[^"]*"/g, "");
+    if (present && 뼈대 === _lastShareSkel) {
+      const 있는카드 = {};
+      list.querySelectorAll(".share-card").forEach(el => {
+        있는카드[el.getAttribute("data-share-nick")] = el;
+      });
+      let 다갈았나 = true;
+      rows.forEach(row => {
+        const card = 있는카드[row.nick];
+        if (!card) { 다갈았나 = false; return; }
+        card.setAttribute("data-share-at", row.at);
+        const img = card.querySelector(".share-img");
+        if (!img) { 다갈았나 = false; return; }
+        if (img.getAttribute("src") !== row.img) img.setAttribute("src", row.img);
+      });
+      if (다갈았나) {
+        _lastShareHtml = html;
+        _lastShareSkel = 뼈대;          // 뼈대는 그대로지만 짝을 맞춰 적어 둡니다
+        tickShare();
+        return;                       // 깜빡임 없이 그림만 갈아 끼웠습니다
+      }
+    }
+
     list.querySelectorAll(".share-card").forEach(el => el.remove());
 
     /* [고침 2026-08-06] 공유 카드를 그 사람의 프로필 카드 바로 뒤에 끼웁니다.
@@ -1312,6 +1378,7 @@
       own.insertAdjacentHTML("afterend", shareCardHtml(row));
     });
     _lastShareHtml = html;
+    _lastShareSkel = 뼈대;      // ★ 이걸 안 적으면 다음 판도 통째로 다시 그려 도로 깜빡입니다
 
     tickShare();
     syncShareHeights();
@@ -1513,7 +1580,22 @@
        카드를 눌러도 아무 일도 일어나지 않습니다. */
     list.addEventListener("click", (e) => {
       const off = e.target.closest("[data-share-stop]");
-      if (off) { e.stopPropagation(); stopScreenShare(); return; }
+      if (off) {
+        /* ★★ [안전장치 2026-09-29] 이 목록 한 자리에 클릭 손이 **넷**이나
+           붙어 있습니다 (공유·프로필·쪽지·기록). stopPropagation 은 위로
+           올라가는 것만 막지, **같은 자리에 붙은 형제들은 못 막습니다.**
+           지금은 넷 다 공유 카드를 알아서 비켜 가지만, 누구 하나가 조건을
+           느슨하게 고치는 순간 [off] 한 번에 엉뚱한 창이 열려요.
+           stopImmediatePropagation 으로 이 자리에서 끝냅니다. */
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        /* ★★ 기다리지 않고 부르므로, 안에서 엎어지면 **아무도 못 듣는
+           오류**가 됩니다. 반드시 받아서 콘솔에 적습니다. */
+        Promise.resolve(stopScreenShare())
+          .catch(err => console.warn("[화면공유 끄기 — off 단추]", err));
+        return;
+      }
 
       /* 내 카드의 "○○의 화면" — 보여줄 창 바꾸기 */
       const sw = e.target.closest("[data-share-switch]");
