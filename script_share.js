@@ -891,7 +891,18 @@
   async function startScreenShare() {
     if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
     if (!myNick) { alert("먼저 입장한 뒤에 쓸 수 있어요."); return; }
-    if (_sharing) return;
+    /* ★★★ [고침 2026-09-29 — 콩 "아무리 눌러도 창이 안 떠"]
+       ---------------------------------------------------------------------
+       예전에는 `if (_sharing) return;` 한 줄이었습니다. 그런데 켜는 도중
+       어딘가에서 엎어지면 **_sharing 만 참이고 도는 것은 하나도 없는**
+       어정쩡한 상태가 남았어요. 그 뒤로는 이 한 줄이 늘 먼저 걸려
+       단추가 **영영 죽습니다** — 새로고침 말고는 살릴 길이 없었어요.
+       ★ 진짜 공유 중인지는 `_sharing` 이 아니라 **시계가 도는가(_timer)**
+         로 가립니다. 켜다 만 찌꺼기면 조용히 씻어내고 다시 시작해요.
+       ★ 씻는 일은 **기다리지 않습니다.** 여기서 한 번이라도 기다리면
+         사파리가 "사람이 누른 직후" 로 안 쳐 줘서 고르기 판이 안 뜹니다. */
+    if (_sharing && _timer) return;          // 멀쩡히 공유 중
+    if (_sharing) 켜다만것씻기();             // 찌꺼기 — 씻고 다시
     /* 🚦 사람이 많으면 여기서 멈춥니다 — **창 고르기 판이 뜨기 전**입니다.
        창을 다 고른 뒤에 "안 됩니다" 라고 하면 훨씬 허탈해요.
 
@@ -907,22 +918,52 @@
 
     const stream = await _pickWindow();
     if (!stream) return;      // 고르기를 취소했거나 권한이 막혔습니다
-    _attachStream(stream);
 
-    _sharing = true;
-    _표시남기기(true);
+    /* ★★★ 여기서부터는 **하나라도 엎어지면 되돌립니다.**
+       예전에는 감싸는 것이 없어서, 중간에서 엎어지면 _sharing 만 참으로
+       남고 시계도 구독도 없는 상태가 됐어요 (위 주석 참고). */
+    try {
+      _attachStream(stream);
 
-    /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 미리 예약해 둡니다 */
-    await 끊길때지우기예약();
-    맥살피기();
+      _sharing = true;
+      _표시남기기(true);
 
-    listenScreens();
-    _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
-    _agoTimer = setInterval(tickShare, 1000);
-    renderShareButton();
-    window.updateStatus?.();           // 남들 버튼에도 "공유 중"이 뜨게
-    noticeOnce();
-    pushFrame();                       // 첫 장은 기다리지 않고 바로
+      /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 미리 예약해 둡니다 */
+      await 끊길때지우기예약();
+      맥살피기();
+
+      listenScreens();
+      _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
+      _agoTimer = setInterval(tickShare, 1000);
+      renderShareButton();
+      window.updateStatus?.();           // 남들 버튼에도 "공유 중"이 뜨게
+      noticeOnce();
+      pushFrame();                       // 첫 장은 기다리지 않고 바로
+    } catch (e) {
+      console.warn("[화면공유 켜기 — 실패해서 되돌립니다]", e);
+      켜다만것씻기();
+      renderShareButton();
+      alert("화면 공유를 켜지 못했어요. 한 번 더 눌러 봐 주세요.");
+    }
+  }
+
+  /* 🧹 켜다 만 것 씻기 (2026-09-29)
+     ---------------------------------------------------------------------
+     "켜는 중" 과 "켜졌다" 사이에서 엎어졌을 때 남는 것들을 걷습니다.
+     ★ **기다리는 일(await)을 하나도 두지 않습니다** — 켜기 직전에 불리므로,
+       여기서 기다리면 사파리가 고르기 판을 안 띄웁니다.
+     ★ 서버에 남았을지 모를 내 그림은 여기서 안 지웁니다. onDisconnect 예약과
+       다음 stopScreenShare 가 치워요. 지우려면 기다려야 하니까요. */
+  function 켜다만것씻기() {
+    _sharing = false;
+    if (_timer)    { clearInterval(_timer);    _timer = null; }
+    if (_agoTimer) { clearInterval(_agoTimer); _agoTimer = null; }
+    try { _stream && _stream.getTracks().forEach(t => { t.onended = null; t.stop(); }); } catch (e) {}
+    _stream = null;
+    try { _video && _video.remove(); } catch (e) {}
+    _video = null;
+    _지문 = null;
+    _마지막보냄 = 0;
   }
 
   async function stopScreenShare() {
@@ -1138,6 +1179,14 @@
          아무도 공유 안 함   → 평소 회색
        "지금 볼 게 있다"는 신호가 없으면, 켜 놓고도 아무도 안 보는 일이
        생깁니다. 눌러야 비로소 보이는 기능이라 더 그래요. */
+    /* ★★ [고침 2026-09-29 — 콩 "사파리에서 버튼이 비활성화 상태야"]
+       위 미지원 갈래가 dim 을 **붙이기만** 하고 떼는 자리가 없었습니다.
+       한 번이라도 미지원으로 판정되면(입장 전 이른 호출 등) 그 뒤로 영영
+       흐린 채였어요 — 눌러도 아무 일이 없으니 "고장" 으로 보입니다.
+       쓸 수 있는 상태면 **반드시 도로 걷습니다.** */
+    btn.classList.remove("dim");
+    btn.style.removeProperty("opacity");
+
     const others = othersSharing();
     btn.classList.toggle("share-on", _sharing);
     btn.classList.toggle("share-others", !_sharing && others > 0);
