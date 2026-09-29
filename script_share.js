@@ -235,8 +235,7 @@
   let _받기멈춤 = false;     // 🙈 딴 창을 보는 동안 받기를 멈췄는가
   let _screensCache = null;
   let _shareW     = SHARE_DEFAULT_W;      // 지금 뭉갬 정도 (가로 픽셀)
-  let _lastShareHtml = null;
-  let _lastShareSkel = null;   // src·시각을 뺀 뼈대 (그림만 갈아 끼울지 가릅니다) // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
+  let _lastShareHtml = null; // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
 
   function esc(s) {
     return window.escapeHtml ? window.escapeHtml(s) : String(s == null ? "" : s);
@@ -805,70 +804,12 @@
      켜기 · 끄기
      --------------------------------------------------------------- */
   /* 창 고르기 판을 띄웁니다. 취소하거나 막히면 null 을 돌려줍니다. */
-  /* =====================================================================
-     🪟 창 고르기 (2026-09-29 다시 씀 — 콩 "사파리에서 아무리 눌러도 안 떠")
-     ---------------------------------------------------------------------
-     [무엇이 문제였나] 예전에는 이랬습니다.
-
-         try { return await ...getDisplayMedia({ video: { frameRate: 1 } }); }
-         catch (e) { return null; }          ← 어떤 까닭이든 통째로 삼킴
-
-     사람이 취소한 것도, 권한이 막힌 것도, 규격이 안 맞아 거절된 것도
-     **모두 똑같은 null** 이 됐습니다. 부르는 쪽은 `if (!stream) return;`
-     으로 조용히 돌아가고요. 그래서 화면에는 아무 일도 안 일어나고
-     콘솔도 깨끗한, **아무 단서도 없는 고장**이 됩니다.
-     콩이 겪은 그대로예요 — "아무리 눌러도 창이 안 떠".
-
-     [고친 것 둘]
-     ① **까닭을 남깁니다.** 콘솔에 오류 이름과 말을 적고, 사람이 취소한
-        것이 아니면 화면에도 알립니다. 다음에 또 그러면 바로 압니다.
-     ② **규격을 두 단으로 둡니다.** frameRate 같은 조건을 사파리는 깐깐하게
-        보아 통째로 거절하는 일이 있습니다. 그래서 먼저 `ideal`(= 되면 좋고)
-        로 부드럽게 물어보고, 그래도 안 되면 **아무 조건 없이** 한 번 더.
-        ★ 조건은 CPU 를 아끼자는 것뿐이라, 못 걸어도 공유는 됩니다.
-          "조금 아끼려다 아예 안 되는" 쪽이 훨씬 나쁩니다.
-     ★ 사람이 취소했으면(NotAllowedError · AbortError) 두 번째는 안 물어요.
-       취소한 사람에게 창을 또 들이미는 건 실례입니다.
-     ===================================================================== */
-  let _고르기오류 = null;          // 마지막 실패 까닭
-
   async function _pickWindow() {
-    _고르기오류 = null;
-    /* ★★★ 고아 줄기 먼저 끊기 (2026-09-29 — 소소님 제보에서 배움)
-       앞서 끄기가 덜 끝나 화면 줄기가 남아 있으면, 브라우저가 **새 요청을
-       거절**합니다. 사람 눈에는 "아무리 눌러도 창이 안 뜬다" 로 보여요.
-       그래서 묻기 전에 남은 것이 있으면 조용히 끊고 시작합니다.
-       ★ 기다리지 않습니다 — 여기서 기다리면 사파리가 창을 안 띄웁니다. */
-    if (_stream) {
-      console.warn("[화면공유] 앞서 남은 화면 줄기를 끊고 다시 엽니다");
-      끊자화면줄기();
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 1 } });
+    } catch (e) {
+      return null;
     }
-    const 규격들 = [
-      { video: { frameRate: { ideal: 1 } } },   // 초당 한 장이면 넉넉합니다
-      { video: true }                            // 아무 조건 없이 (사파리 대비)
-    ];
-    for (const 규격 of 규격들) {
-      try {
-        return await navigator.mediaDevices.getDisplayMedia(규격);
-      } catch (e) {
-        _고르기오류 = e;
-        console.warn("[화면공유 — 창 고르기 실패]", e && e.name, e && e.message);
-        if (_사람이취소했나(e)) return null;
-      }
-    }
-    return null;
-  }
-  function _사람이취소했나(e) {
-    const n = e && e.name;
-    return n === "NotAllowedError" || n === "AbortError";
-  }
-  function _고르기실패알림() {
-    const e = _고르기오류;
-    if (!e || _사람이취소했나(e)) return;      // 취소는 고장이 아닙니다
-    alert("화면 고르기 창을 열지 못했어요 😢\n\n" +
-          "브라우저가 거절했습니다. 다른 브라우저(크롬)에서도 그런지 봐 주시고,\n" +
-          "콩에게 아래 글자를 알려 주시면 고치는 데 큰 도움이 돼요.\n\n" +
-          (e.name || "?") + " — " + (e.message || ""));
   }
 
   /* 고른 화면을 숨긴 <video> 에 물립니다.
@@ -949,18 +890,7 @@
   async function startScreenShare() {
     if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
     if (!myNick) { alert("먼저 입장한 뒤에 쓸 수 있어요."); return; }
-    /* ★★★ [고침 2026-09-29 — 콩 "아무리 눌러도 창이 안 떠"]
-       ---------------------------------------------------------------------
-       예전에는 `if (_sharing) return;` 한 줄이었습니다. 그런데 켜는 도중
-       어딘가에서 엎어지면 **_sharing 만 참이고 도는 것은 하나도 없는**
-       어정쩡한 상태가 남았어요. 그 뒤로는 이 한 줄이 늘 먼저 걸려
-       단추가 **영영 죽습니다** — 새로고침 말고는 살릴 길이 없었어요.
-       ★ 진짜 공유 중인지는 `_sharing` 이 아니라 **시계가 도는가(_timer)**
-         로 가립니다. 켜다 만 찌꺼기면 조용히 씻어내고 다시 시작해요.
-       ★ 씻는 일은 **기다리지 않습니다.** 여기서 한 번이라도 기다리면
-         사파리가 "사람이 누른 직후" 로 안 쳐 줘서 고르기 판이 안 뜹니다. */
-    if (_sharing && _timer) return;          // 멀쩡히 공유 중
-    if (_sharing) 켜다만것씻기();             // 찌꺼기 — 씻고 다시
+    if (_sharing) return;
     /* 🚦 사람이 많으면 여기서 멈춥니다 — **창 고르기 판이 뜨기 전**입니다.
        창을 다 고른 뒤에 "안 됩니다" 라고 하면 훨씬 허탈해요.
 
@@ -975,98 +905,66 @@
     if (!켜도되나()) return;
 
     const stream = await _pickWindow();
-    if (!stream) { _고르기실패알림(); return; }   // 취소했거나 브라우저가 거절했습니다
+    if (!stream) return;      // 고르기를 취소했거나 권한이 막혔습니다
 
-    /* ★★★ 여기서부터는 **하나라도 엎어지면 되돌립니다.**
-       예전에는 감싸는 것이 없어서, 중간에서 엎어지면 _sharing 만 참으로
-       남고 시계도 구독도 없는 상태가 됐어요 (위 주석 참고). */
-    try {
-      _attachStream(stream);
+    _attachStream(stream);
 
-      _sharing = true;
-      _표시남기기(true);
+    _sharing = true;
+    _표시남기기(true);
 
-      /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 미리 예약해 둡니다 */
-      await 끊길때지우기예약();
-      맥살피기();
+    /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 예약해 둡니다.
 
-      listenScreens();
-      _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
-      _agoTimer = setInterval(tickShare, 1000);
-      renderShareButton();
-      window.updateStatus?.();           // 남들 버튼에도 "공유 중"이 뜨게
-      noticeOnce();
-      pushFrame();                       // 첫 장은 기다리지 않고 바로
-    } catch (e) {
-      console.warn("[화면공유 켜기 — 실패해서 되돌립니다]", e);
-      켜다만것씻기();
-      renderShareButton();
-      alert("화면 공유를 켜지 못했어요. 한 번 더 눌러 봐 주세요.");
-    }
-  }
+       ★★★ [고침 2026-09-29 — 콩 "크롬은 되는데 사파리만 안 돼"]
+       ---------------------------------------------------------------------
+       여기에 `await` 가 붙어 있었습니다. 그런데 이 부탁은 **서버가 받았다고
+       답해 줘야** 끝나요. 답이 안 오면 오류도 안 나고 **그냥 영영 기다립니다.**
+       그러면 아래 여섯 줄이 통째로 안 돌아갑니다 —
+           listenScreens · 시계 둘 · renderShareButton · updateStatus · pushFrame
+       화면 줄기는 이미 잡혀 있으니(_attachStream 이 위에서 끝났습니다)
+       운영체제에는 "찍는 중" 표시가 뜨는데, 정작 더마감은 아무것도 모르는
+       상태가 됩니다. 콩이 본 그대로예요 —
+           사파리 공유 표시 ✅ / 단추 ❌ / 닉네임 옆 아이콘 ❌ / 공유 카드 ❌
+       그리고 `_sharing` 만 참이라 다시 눌러도 맨 앞에서 막히고요.
 
-  /* 🔌 화면 줄기를 확실히 끊습니다 (2026-09-29)
-     ---------------------------------------------------------------------
-     이것을 못 하면 운영체제의 "찍는 중" 테두리가 남고, 그 뒤로는 브라우저가
-     새 공유 요청을 거절합니다. 새로고침으로도 잘 안 풀려요 —
-     **탭을 아주 닫았다 열어야** 풀립니다. 그러니 여기서 반드시 끊습니다.
-     ★ 기다리는 일이 없어야 합니다. 창이 닫히는 순간에도 불리거든요. */
-  function 끊자화면줄기() {
-    try {
-      _stream && _stream.getTracks().forEach(t => { t.onended = null; t.stop(); });
-    } catch (e) {}
-    _stream = null;
-    try { _video && _video.remove(); } catch (e) {}
-    _video = null;
-  }
+       [왜 사파리만] 창 고르기 판이 떠 있는 동안 사파리가 이 페이지의 연결을
+       끊는 일이 있습니다. 그러면 파이어베이스는 이 부탁을 **다시 붙을 때까지
+       손에 들고만** 있어요 — 크롬은 연결이 안 끊겨서 바로 답이 오고요.
+       같은 코드가 한쪽에서만 멎은 까닭입니다.
 
-  /* 창을 닫거나 새로고침할 때도 놓지 않으면 테두리가 남습니다.
-     ★ pagehide 를 씁니다 — 사파리는 beforeunload 를 건너뛰는 일이 있어요. */
-  window.addEventListener("pagehide", 끊자화면줄기);
+       [고침] **기다리지 않습니다.** 부탁은 그대로 나가고, 답은 오는 대로
+       받습니다. 우리가 그 답을 기다려야 할 이유가 없어요 — 뒤따르는 일들은
+       모두 이 기기 안에서 하는 일이니까요.
+       ★ 여기에 await 를 다시 붙이지 마세요. 그 순간 사파리가 또 멎습니다.
+       ★ 예약이 늦어져도 잃는 것은 거의 없습니다. 연결이 돌아올 때마다
+         맥살피기() 가 다시 걸고, 정상으로 끌 때는 stopScreenShare 가 치웁니다. */
+    끊길때지우기예약();
+    맥살피기();
 
-  /* 🧹 켜다 만 것 씻기 (2026-09-29)
-     ---------------------------------------------------------------------
-     "켜는 중" 과 "켜졌다" 사이에서 엎어졌을 때 남는 것들을 걷습니다.
-     ★ **기다리는 일(await)을 하나도 두지 않습니다** — 켜기 직전에 불리므로,
-       여기서 기다리면 사파리가 고르기 판을 안 띄웁니다.
-     ★ 서버에 남았을지 모를 내 그림은 여기서 안 지웁니다. onDisconnect 예약과
-       다음 stopScreenShare 가 치워요. 지우려면 기다려야 하니까요. */
-  function 켜다만것씻기() {
-    _sharing = false;
-    if (_timer)    { clearInterval(_timer);    _timer = null; }
-    if (_agoTimer) { clearInterval(_agoTimer); _agoTimer = null; }
-    끊자화면줄기();
-    _지문 = null;
-    _마지막보냄 = 0;
+    listenScreens();
+    _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
+    _agoTimer = setInterval(tickShare, 1000);
+    renderShareButton();
+    window.updateStatus?.();           // 남들 버튼에도 "공유 중"이 뜨게
+    noticeOnce();
+    pushFrame();                       // 첫 장은 기다리지 않고 바로
   }
 
   async function stopScreenShare() {
     const wasSharing = _sharing;
     _sharing = false;
-
-    /* ★★★ [고침 2026-09-29 — 소소님 제보]
-       ---------------------------------------------------------------------
-       "off 를 누르자마자 화면이 사라졌어요. 다시 접속한 후에도 화공을 안 하는데
-        한글창에 공유 중일 때 나타나는 검은색+노란색 테두리가 그대로예요.
-        다시 공유하려 해도 안 돼요."
-
-       그 테두리는 **운영체제가 그리는 '지금 이 창이 찍히는 중' 표시**입니다.
-       곧 브라우저가 아직 화면을 붙잡고 있다는 뜻이에요. 화면 줄기(_stream)를
-       못 끊은 채로 남은 겁니다. 그리고 그 상태에서는 브라우저가 **새 공유
-       요청을 거절**합니다 — 콩이 사파리에서 겪은 "아무리 눌러도 안 떠" 가
-       바로 이것이었어요. 두 제보가 같은 뿌리였습니다.
-
-       [그래서] 줄기 끊기를 이 함수의 **맨 앞**으로 올립니다. 뒤에 무엇이
-       엎어지든, 남의 컴퓨터를 계속 찍고 있는 일만은 없어야 하니까요.
-       ★ 이 앞에 무언가를 끼워 넣지 마세요. 여기가 제일 앞이어야 합니다. */
-    끊자화면줄기();
-
     _표시남기기(false);          // 내 손으로 껐으니 다음에 안 물어봅니다
 
     if (_timer)    { clearInterval(_timer);    _timer = null; }
     if (_agoTimer) { clearInterval(_agoTimer); _agoTimer = null; }
     /* 머리에 모아둔 초를 마저 적습니다 — 안 그러면 30초까지 날아갑니다 */
     try { window.achvShareFlush?.(); } catch (e) {}
+
+    try {
+      _stream && _stream.getTracks().forEach(t => { t.onended = null; t.stop(); });
+    } catch (e) {}
+    _stream = null;
+    try { _video && _video.remove(); } catch (e) {}
+    _video = null;
 
     /* ★★★ [고침 2026-08-22 · 2차 — 콩 신고] 지문을 **반드시** 비웁니다.
        지문은 "마지막으로 보낸 화면의 모양" 이라, 안 비우고 끄면 다시 켰을 때
@@ -1081,29 +979,9 @@
     _screensCache = null;
     _lastShareHtml = null;
 
-    /* ★★★ [안전장치 2026-09-29 — 콩 "off 를 누르니 튕겼다는 제보"]
-       ---------------------------------------------------------------------
-       아래 세 줄은 **화면을 다시 그리는 일**이고, 그 다음 두 줄은 **서버에서
-       내 그림을 치우는 일**입니다. 서버 치우기가 훨씬 중요해요 —
-       못 치우면 남들 화면에 내 옛 그림이 그대로 걸린 채 남습니다
-       (탭을 닫아 onDisconnect 가 돌기 전까지).
-
-       그런데 예전에는 그리기가 한 번 엎어지면 그 아래로 못 내려가,
-       **치우는 일까지 통째로 건너뛰었습니다.** 그리기는 화면 사정(카드가
-       막 새로 그려지는 중이라든지)에 따라 얼마든지 엎어질 수 있는데요.
-
-       그래서 그리기를 하나씩 따로 감쌉니다. 하나가 엎어져도 나머지가 돌고,
-       무엇보다 **서버 치우기에는 반드시 닿습니다.**
-       ★ 무슨 일이 있었는지 알 수 있게 [화면공유 끄기] 라는 표를 달아
-         콘솔에 적습니다 — 다음에 또 제보가 오면 이 글자로 찾으면 돼요. */
-    try { renderShareCards(); }        // 공유를 끄면 남의 화면도 치웁니다
-    catch (e) { console.warn("[화면공유 끄기 — 카드 다시 그리기]", e); }
-    try { renderShareButton(); }
-    catch (e) { console.warn("[화면공유 끄기 — 단추 다시 그리기]", e); }
-    if (wasSharing) {
-      try { window.updateStatus?.(); }  // 남들 버튼에서도 표시를 뗍니다
-      catch (e) { console.warn("[화면공유 끄기 — 접속 정보 알리기]", e); }
-    }
+    renderShareCards();                // 공유를 끄면 남의 화면도 치웁니다
+    renderShareButton();
+    if (wasSharing) window.updateStatus?.();   // 남들 버튼에서도 표시를 뗍니다
 
     if (wasSharing && myNick) {
       try { await db.ref("screens/" + myNick).onDisconnect().cancel(); } catch (e) {}
@@ -1264,14 +1142,6 @@
          아무도 공유 안 함   → 평소 회색
        "지금 볼 게 있다"는 신호가 없으면, 켜 놓고도 아무도 안 보는 일이
        생깁니다. 눌러야 비로소 보이는 기능이라 더 그래요. */
-    /* ★★ [고침 2026-09-29 — 콩 "사파리에서 버튼이 비활성화 상태야"]
-       위 미지원 갈래가 dim 을 **붙이기만** 하고 떼는 자리가 없었습니다.
-       한 번이라도 미지원으로 판정되면(입장 전 이른 호출 등) 그 뒤로 영영
-       흐린 채였어요 — 눌러도 아무 일이 없으니 "고장" 으로 보입니다.
-       쓸 수 있는 상태면 **반드시 도로 걷습니다.** */
-    btn.classList.remove("dim");
-    btn.style.removeProperty("opacity");
-
     const others = othersSharing();
     btn.classList.toggle("share-on", _sharing);
     btn.classList.toggle("share-others", !_sharing && others > 0);
@@ -1451,50 +1321,6 @@
        (다시 그리면 <img> 가 새 요소가 되어 그림이 깜빡입니다) */
     if (html === _lastShareHtml && present === !!html) { tickShare(); return; }
 
-    /* ★★★ [고침 2026-09-29 — 콩 "화면 공유가 자꾸 끊어졌다가 다시 붙어"]
-       ---------------------------------------------------------------------
-       [무엇이 문제였나] 바로 위 검사는 **HTML 이 완전히 같을 때만** 손을
-       뗍니다. 그런데 새 그림이 오면 src 와 data-share-at 이 늘 달라져요.
-       그래서 **그림이 바뀔 때마다 카드를 통째로 지웠다 다시 붙였습니다.**
-       새로 붙은 <img> 는 새 요소라 브라우저가 그림을 처음부터 다시 그립니다 —
-       그 찰나가 눈에는 "끊어졌다 다시 붙는" 것으로 보였어요.
-       위 주석이 걱정하던 바로 그 일이, 정작 제일 흔한 길에서 벌어지고
-       있었던 셈입니다. 혼자 공유 중이면 15초마다 한 번씩요.
-
-       [어떻게] **달라진 것이 그림뿐이면 그림만 갈아 끼웁니다.**
-       카드도, <img> 요소도 그대로 두고 src 만 바꾸면 브라우저가 이어서
-       그리므로 깜빡임이 없습니다.
-       ★ 견주는 방법: src 와 data-share-at 을 지운 "뼈대"만 비교합니다.
-         닉네임이 늘거나 줄거나, 맞춤(cover/contain)이 바뀌거나, [off] 가
-         생기고 없어지면 뼈대가 달라져 아래 통째로 다시 그리기로 갑니다.
-       ★ 카드를 셀렉터로 찾지 않고 훑어서 짝을 짓습니다 — 닉네임에 이모지가
-         섞여 있어 셀렉터로 쓰면 깨질 수 있어요. */
-    /* ★ 두 칸을 한 번에 지웁니다. 일부러 `src` 와 `=` 를 붙여 쓰지 않았어요 —
-       붙여 두면 단일파일 빌드(build-single.py)가 이걸 **진짜 바깥 파일 주소**
-       로 알아듣고 "인라인 안 된 참조가 남았다"며 막습니다. */
-    const 뼈대 = html.replace(/ (?:src|data-share-at)="[^"]*"/g, "");
-    if (present && 뼈대 === _lastShareSkel) {
-      const 있는카드 = {};
-      list.querySelectorAll(".share-card").forEach(el => {
-        있는카드[el.getAttribute("data-share-nick")] = el;
-      });
-      let 다갈았나 = true;
-      rows.forEach(row => {
-        const card = 있는카드[row.nick];
-        if (!card) { 다갈았나 = false; return; }
-        card.setAttribute("data-share-at", row.at);
-        const img = card.querySelector(".share-img");
-        if (!img) { 다갈았나 = false; return; }
-        if (img.getAttribute("src") !== row.img) img.setAttribute("src", row.img);
-      });
-      if (다갈았나) {
-        _lastShareHtml = html;
-        _lastShareSkel = 뼈대;          // 뼈대는 그대로지만 짝을 맞춰 적어 둡니다
-        tickShare();
-        return;                       // 깜빡임 없이 그림만 갈아 끼웠습니다
-      }
-    }
-
     list.querySelectorAll(".share-card").forEach(el => el.remove());
 
     /* [고침 2026-08-06] 공유 카드를 그 사람의 프로필 카드 바로 뒤에 끼웁니다.
@@ -1512,7 +1338,6 @@
       own.insertAdjacentHTML("afterend", shareCardHtml(row));
     });
     _lastShareHtml = html;
-    _lastShareSkel = 뼈대;      // ★ 이걸 안 적으면 다음 판도 통째로 다시 그려 도로 깜빡입니다
 
     tickShare();
     syncShareHeights();
@@ -1714,22 +1539,7 @@
        카드를 눌러도 아무 일도 일어나지 않습니다. */
     list.addEventListener("click", (e) => {
       const off = e.target.closest("[data-share-stop]");
-      if (off) {
-        /* ★★ [안전장치 2026-09-29] 이 목록 한 자리에 클릭 손이 **넷**이나
-           붙어 있습니다 (공유·프로필·쪽지·기록). stopPropagation 은 위로
-           올라가는 것만 막지, **같은 자리에 붙은 형제들은 못 막습니다.**
-           지금은 넷 다 공유 카드를 알아서 비켜 가지만, 누구 하나가 조건을
-           느슨하게 고치는 순간 [off] 한 번에 엉뚱한 창이 열려요.
-           stopImmediatePropagation 으로 이 자리에서 끝냅니다. */
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        /* ★★ 기다리지 않고 부르므로, 안에서 엎어지면 **아무도 못 듣는
-           오류**가 됩니다. 반드시 받아서 콘솔에 적습니다. */
-        Promise.resolve(stopScreenShare())
-          .catch(err => console.warn("[화면공유 끄기 — off 단추]", err));
-        return;
-      }
+      if (off) { e.stopPropagation(); stopScreenShare(); return; }
 
       /* 내 카드의 "○○의 화면" — 보여줄 창 바꾸기 */
       const sw = e.target.closest("[data-share-switch]");
