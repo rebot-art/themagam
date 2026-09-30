@@ -49,14 +49,19 @@
   const THUMB_PATH = "M22 27h-9a3 3 0 0 0-3 3v21a3 3 0 0 0 3 3h9zM26 54h20.5a6 6 0 0 0 5.8-4.5l4.2-16a5 5 0 0 0-4.8-6.3H39l2-9.4A5 5 0 0 0 36.2 12c-1.4 0-2.7.7-3.4 1.9L26 27z";
   const STAR_PATH  = "M32 5l7.8 16.5L58 24l-13 12.6L48 55 32 45.8 16 55l3-18.4L6 24l18.2-2.5z";
   const FIRE_PATH  = "M34 5c2 10 12 14 12 28a14 14 0 0 1-28 0c0-6 3-10 6-13 0 5 2 8 5 9 0-9 2-17 5-24z";
-  function sticker(path, color, extra) {
-    return `<svg viewBox="0 0 64 62" width="40" height="38" aria-hidden="true">
+  /* [2026-09-30 콩] 넷의 **중심선을 나란히** — 판(64×62)의 세로 한가운데(31)에
+     모양의 한가운데를 맞춥니다. 불꽃은 원래 그림이 작아서(세로 42) 1.3배,
+     따봉은 손이 아래로 처져 있어서 3 만큼 올립니다. 하트·별은 그대로. */
+  function sticker(path, color, extra, xf) {
+    return `<svg viewBox="0 0 64 62" width="40" height="38" aria-hidden="true"><g${xf ? ` transform="${xf}"` : ""}>
       <path d="${path}" fill="${color}" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
-      <path d="${path}" fill="${color}"/>${extra || ""}</svg>`;
+      <path d="${path}" fill="${color}"/>${extra || ""}</g></svg>`;
   }
   const SVG = {
-    fire:  sticker(FIRE_PATH,  "#f0642b", `<path d="M32 29c3 4 6 6 6 11a6 6 0 0 1-12 0c0-4 3-6 6-11z" fill="#ffd36b"/>`),
-    thumb: sticker(THUMB_PATH, "#1f6fd1", `<path d="M14 32v18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`),
+    fire:  sticker(FIRE_PATH,  "#f0642b", `<path d="M32 29c3 4 6 6 6 11a6 6 0 0 1-12 0c0-4 3-6 6-11z" fill="#ffd36b"/>`,
+                   "translate(32 31) scale(1.3) translate(-32 -26)"),
+    thumb: sticker(THUMB_PATH, "#1f6fd1", `<path d="M14 32v18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`,
+                   "translate(0 -3)"),
     star:  sticker(STAR_PATH,  "#f2a51c", `<path d="M22 23l7-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`),
     heart: sticker(HEART_PATH, "#e6323c", `<path d="M14 20 C16 14 21 12 25 13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`)
   };
