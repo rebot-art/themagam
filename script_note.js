@@ -287,6 +287,8 @@
           window.switchMyWorkTab?.("note");
           return;
         }
+        /* 💘 프사 모서리의 하트 — script_heart.js 가 엽니다 (누가 쐈나) */
+        if (e.target.closest("[data-heart-open]")) return;
         /* 내 카드는 🗂️ 나의 작업이 열립니다 — 건드리지 않습니다 */
         if (e.target.closest("[data-record-of]")) return;
         if (e.target.closest("[data-edit-profile]")) return;
@@ -317,6 +319,14 @@
           window.openAchvOf?.(nick);
           return;
         }
+        /* ★ [2026-09-30 콩] 쪽지는 **네임 박스(.card-foot)** 만.
+             카드 바탕은 이제 💘 하트 자리(더블클릭, script_heart.js)라,
+             한 번 클릭에 쪽지가 뜨면 두 번째 클릭 전에 창이 가로막아요.
+             그래서 바탕 한 번 클릭엔 아무 일도 없습니다.
+               프사      → 업적
+               네임 박스 → 쪽지
+               바탕(더블) → 하트 */
+        if (!e.target.closest(".card-foot")) return;
         openNoteTo(nick);
       });
     }
