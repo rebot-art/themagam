@@ -3,7 +3,7 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 쉰세 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 쉰일곱 개. 채팅과 수다방 양쪽에서 씁니다.
    (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나)
 
    [왜 그림 파일이 아니라 코드로 그리나]
@@ -90,6 +90,19 @@
                   fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.1"/>
             <path d="M59 34c-1.4-2-4.2-1.4-4.2.7 0 1.8 2.5 3.1 4.2 4.4 1.7-1.3 4.2-2.6 4.2-4.4 0-2.1-2.8-2.7-4.2-.7z"
                   fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.1"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* [2026-09-30 콩] 웰컴 — 가랜드 깃발. 「어서와요」가 팔 벌린 사람이라
+         이쪽은 **사물**로 갈랐습니다. 방에 걸어 둔 환영 장식. */
+      id: "wel", cmd: "웰컴", label: "웰컴",
+      cmdRe: /^\/(웰컴|웰컴요|환영합니다)$/,
+      svg: `<path d="M8 18q28 16 56 0" stroke="#3A2A22" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M14 21l5 12 5-10z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M26 26l5 12 5-10z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M38 27l5 11 5-11z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M50 23l5 10 5-12z" fill="#6FBF9B" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M12 44l3 3M60 44l-3 3M36 48v4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#2E7D57"
     },
     {
@@ -358,11 +371,56 @@
       textColor: "#C2762B"
     },
     {
+      /* [2026-09-30 콩] 축 퇴근! — 고깔 쓴 서류가방. 「퇴근」이 집이라
+         이쪽은 **가방**으로 갈라 판에서 안 헷갈리게. 가방이 신나서 폴짝. */
+      id: "yay", cmd: "축퇴근", label: "축 퇴근!", fs: 19,
+      cmdRe: /^\/(축퇴근|퇴근축하|축퇴)$/,
+      svg: `<rect x="18" y="28" width="36" height="24" rx="5" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M28 28v-5a8 8 0 0 1 16 0v5" stroke="#3A2A22" stroke-width="2.2" fill="none"/>
+            <path d="M18 38h36" stroke="#3A2A22" stroke-width="1.6"/>
+            <rect x="32" y="35" width="8" height="6" rx="1.5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.3"/>
+            <path d="M36 21l-8 0 8-14 8 14z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round" transform="translate(16 -2) rotate(12 36 14)"/>
+            <circle cx="52" cy="5" r="2.4" fill="#F0C674"/>
+            <path d="M10 22l3 3M13 14H8M14 44l-4 2" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="8" cy="34" r="2" fill="#8FB8E0"/><circle cx="64" cy="40" r="2" fill="#6FBF9B"/>`,
+      textColor: "#C2762B"
+    },
+    {
       id: "on", cmd: "출근", label: "출근",
       svg: `<circle cx="36" cy="30" r="13" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
             <path d="M36 22v8l5 4" stroke="#B3372B" stroke-width="2.4" stroke-linecap="round" fill="none"/>
             <path d="M24 48h24M30 48l3-5M42 48l-3-5" stroke="#3A2A22" stroke-width="2" stroke-linecap="round"/>`,
       textColor: "#B3372B"
+    },
+    {
+      /* [2026-09-30 콩] 출글 — 타임카드에 IN 도장 찍는 연필. 「출근」이
+         시계라 이쪽은 **카드+연필**. 글 쓰러 들어왔다는 출석. */
+      id: "gin", cmd: "출글", label: "출글",
+      cmdRe: /^\/(출글|글출근|출글요)$/,
+      svg: `<rect x="14" y="16" width="30" height="38" rx="3" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M20 26h18M20 33h18M20 40h11" stroke="#C9BCA8" stroke-width="2" stroke-linecap="round"/>
+            <rect x="18" y="44" width="14" height="7" rx="1.5" fill="#B3372B"/>
+            <path d="M52 12l8 8-18 18-10 2 2-10z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M32 30l10 10" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M55 9l5 5" stroke="#F0997B" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M8 10l3 3M11 4H6" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* [2026-09-30 콩] 퇴글 — 연필이 가방 메고 원고지 문을 나갑니다.
+         출글(카드)과 짝은 아니지만, 문이 열리고 연필이 오른쪽으로 나가는
+         움직임으로 '끝'이 읽혀요. */
+      id: "gout", cmd: "퇴글", label: "퇴글",
+      cmdRe: /^\/(퇴글|글퇴근|퇴글요)$/,
+      svg: `<rect x="16" y="14" width="34" height="40" rx="3" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M22 22h22M22 29h22M22 36h22M22 43h22" stroke="#C9BCA8" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M50 14l-14 6v40l14-6z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M52 28l6 6-8 8-7 1 1-7z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M54 26l4 4" stroke="#F0997B" stroke-width="3" stroke-linecap="round"/>
+            <rect x="58" y="38" width="8" height="9" rx="2" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M62 38v-3" stroke="#3A2A22" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M8 20l3 3M10 30H5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
     },
     {
       id: "reon", cmd: "재출근", label: "재출근",
@@ -973,7 +1031,7 @@
            써도 배지가 안 붙어서 "왜 나만 안 되지" 가 됩니다. */
         /* ★ 한 줄에 하나씩 — checks.js 가 줄 단위로 읽습니다 (여러 줄로
            나누면 "아예 없음" 으로 잡혀요). */
-        cGreet: ["hi", "rehi", "welcome", "bye", "morning", "seeya", "gnight"], // 👋 인사왕
+        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "morning", "seeya", "gnight"], // 👋 인사왕 (웰컴 2026-09-30)
         cPat:   ["pat", "cheerup", "praise"],                                   // 🫶 토닥이
         cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]           // 📣 응원왕
       };

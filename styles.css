@@ -9309,15 +9309,16 @@ html[data-theme-style="studio"] .user-card{
   overscroll-behavior: contain;
 }
 /* ── 화면이 넓으면 **짧고 넓게** 폅니다 (2026-09-12) ──
-   굴려서 찾는 것보다 한눈에 보이는 게 나아요. 쉰세 개 기준 —
-     5칸 → 11줄 784px   8칸 → 7줄 502px   10칸 → 6줄 436px
-   ★ 칸 수를 바꿀 땐 "마지막 줄에 하나만 남지 않는가" 를 꼭 보세요
-     (53은 5·8·10 어디로 나눠도 3개·5개·3개가 남아 괜찮습니다).
+   굴려서 찾는 것보다 한눈에 보이는 게 나아요. 쉰일곱 개 기준 —
+     5칸 → 12줄   9칸 → 7줄   10칸 → 6줄
+   ★ 칸 수를 바꿀 땐 "마지막 줄에 하나만 남지 않는가" 를 꼭 보세요.
+     [2026-09-30] 57개가 되면서 8칸은 마지막 줄에 **하나**만 남아(57 % 8 = 1)
+     9칸으로 바꿨습니다 — 57 % 9 = 3. (53 때는 8칸이 5개 남아 괜찮았어요)
      checks.js 가 세 칸 수를 모두 검사합니다. */
 @media (min-width: 600px){
   .sticker-pop{
-    grid-template-columns: repeat(8, 1fr);
-    max-width: min(572px, calc(100vw - 16px));
+    grid-template-columns: repeat(9, 1fr);
+    max-width: min(640px, calc(100vw - 16px));
   }
 }
 @media (min-width: 820px){
