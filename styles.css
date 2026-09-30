@@ -7577,6 +7577,18 @@ html[data-theme-style="studio"] .user-card{
 .share-cheers .card-heart:hover{ transform: rotate(8deg) scale(1.1); }
 .share-cheers .card-heart.is-new{ animation: cheer-pop .45s cubic-bezier(.2,1.4,.4,1); }
 @keyframes cheer-pop{ from{ transform: rotate(8deg) scale(.3); opacity: 0; } 60%{ transform: rotate(8deg) scale(1.2); } to{ transform: rotate(8deg) scale(1); opacity: 1; } }
+/* 🙋‍♂️ Member 판 (혼자 방 전용 · 2026-10-01) — 본방 접속자 목록 */
+.member-empty{ padding: 18px 12px; text-align: center; color: var(--muted, #8A7B68); font-size: 13px; }
+.member-head{ padding: 8px 12px 6px; font-size: 12px; color: var(--muted, #8A7B68); border-bottom: 1px dashed rgba(0,0,0,.12); }
+.member-head b{ color: var(--text, #2B2620); }
+.member-when{ float: right; opacity: .8; }
+.member-list{ list-style: none; margin: 0; padding: 4px 8px 8px; }
+.member-row{ display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(0,0,0,.06); }
+.member-row:last-child{ border-bottom: 0; }
+.member-nick{ flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-state{ flex: 0 0 auto; font-size: 10px; padding: 2px 7px; }
+.member-wh{ flex: 0 0 62px; text-align: right; font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
+
 /* 💘 "오늘 이미 보냈어요" 토스트 — 하트·화공 응원이 함께 씁니다 (2026-09-30) */
 .card-heart-toast{
   position: fixed;
