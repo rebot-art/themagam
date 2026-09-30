@@ -42,6 +42,11 @@
   let _on   = {};                   // { 받는닉: true }       ← 공개
   let _mine = {};                   // { 쏜닉: n }            ← 내 것만
   let _pop = null;
+  /* 오늘 이미 하트를 붙여 본 닉 — 카드가 다시 그려질 때 또 "퐁" 하지 않게.
+     ★ [2026-09-30 콩 제보 "간헐적으로 깜빡인다"] 카드는 15초마다 오는
+       하트비트로 다시 그려지고, 그때 하트도 새로 태어나서 등장 애니가
+       매번 다시 돌았습니다. 처음 붙을 때만 퐁, 그 뒤엔 조용히. */
+  const _shown = new Set();
 
   const el = (id) => document.getElementById(id);
   function esc(s) { return window.escapeHtml ? window.escapeHtml(s) : String(s == null ? "" : s); }
@@ -72,6 +77,7 @@
     try { _onRef && _onRef.off(); } catch (e) {}
     try { _mineRef && _mineRef.off(); } catch (e) {}
     _onRef = _mineRef = null; _on = {}; _mine = {};
+    if (_day !== day) _shown.clear();     // 새 날 — 다시 퐁 해도 됩니다
     if (!window.db) return;
     _day = day;
     _onRef = db.ref(`${NODE_ON}/${day}`);
@@ -134,7 +140,9 @@
   }
 
   /* ---------------------------------------------------------------
-     카드에 붙이기 — 프사 오른쪽 위
+     카드에 붙이기 — **카드** 오른쪽 위 모서리, 바깥으로 살짝
+       ([2026-09-30 콩] 프사 모서리 → 카드 모서리. 상태 스티커처럼
+        카드 밖으로 튀어나오게. 그래서 프사 칸이 아니라 카드에 답니다)
        남의 카드: 하트만 (숫자 없음 · 눌러도 아무 일 없음)
        내 카드:   하트 + 둘 이상이면 숫자 · 누르면 누가 쐈나
      --------------------------------------------------------------- */
@@ -143,17 +151,16 @@
     if (!list) return;
     list.querySelectorAll(".user-card[data-card-nick]").forEach(card => {
       const nick = card.getAttribute("data-card-nick");
-      const wrap = card.querySelector(".card-avatar-wrap");
-      if (!wrap) return;
       const mine = nick === me();
-      let b = wrap.querySelector(".card-heart");
-      if (!hasHeart(nick)) { if (b) b.remove(); return; }
+      let b = card.querySelector(":scope > .card-heart");
+      if (!hasHeart(nick)) { if (b) b.remove(); _shown.delete(nick); return; }
       if (!b) {
         b = document.createElement(mine ? "button" : "span");
         if (mine) { b.type = "button"; b.setAttribute("data-heart-open", nick); }
-        b.className = "card-heart" + (mine ? " is-mine" : "");
+        b.className = "card-heart" + (mine ? " is-mine" : "") + (_shown.has(nick) ? "" : " is-new");
         b.innerHTML = HEART_SVG + (mine ? `<span class="card-heart-n"></span>` : "");
-        wrap.appendChild(b);
+        card.appendChild(b);
+        _shown.add(nick);
       }
       if (mine) {
         const n = myHeartCount();
