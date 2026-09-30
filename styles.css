@@ -7544,6 +7544,59 @@ html[data-theme-style="studio"] .user-card{
 .card-heart-pop-f{ margin-top: 8px; color: #999; font-size: 11px; }
 @media (prefers-reduced-motion: reduce){ .card-heart, .card-heart-fly{ animation: none; } }
 
+/* 🔥 화공 카드 응원 (2026-09-30 — 콩) — 카드 **윗변**에 나란히.
+   프로필 하트와 같은 스티커(.card-heart · 40×38 · 숫자 딱지 .card-heart-n)를
+   그대로 쓰되, 자리만 다릅니다: 프사 칸이 아니라 카드 위에 한 줄(.share-cheers).
+   오른쪽 끝이 카드 폭의 70% 지점(+스티커 반 개)에 서고, 종류가 늘면 왼쪽으로
+   자랍니다 — 넷 다 붙어도 카드 안에 들어와요 (160px < 214px).
+   ★ .share-card 는 overflow:hidden 이었는데(그림을 액자에 가두려고), 그러면
+     윗변 밖으로 나온 스티커가 잘립니다. 가두는 일은 .share-shot 이 이미
+     하고 있어서(border-radius:inherit + overflow:hidden) 카드 쪽은 풉니다.
+   ★ 이 규칙은 .share-card{ overflow:hidden } 보다 **앞**에 있습니다 (8400행쯤).
+     그래서 선택자를 .user-card.share-card 로 한 단계 세게 — 순서가 아니라
+     무게로 이깁니다. (검사가 처음에 이걸 잡았어요 — 그냥 .share-card 였으면
+     스티커가 윗변에서 잘렸을 겁니다) */
+.user-card.share-card{ overflow: visible; }
+.share-cheers{
+  position: absolute;
+  top: -14px;
+  right: calc(30% - 20px);
+  z-index: 4;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  line-height: 0;
+}
+.share-cheers .card-heart{
+  position: relative;          /* 줄 안에서 흐름대로 */
+  right: auto; top: auto;
+  transform: rotate(8deg);
+  margin-left: -2px;           /* 살짝 겹쳐 붙은 스티커 뭉치 */
+}
+.share-cheers .card-heart:hover{ transform: rotate(8deg) scale(1.1); }
+.share-cheers .card-heart.is-new{ animation: cheer-pop .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes cheer-pop{ from{ transform: rotate(8deg) scale(.3); opacity: 0; } 60%{ transform: rotate(8deg) scale(1.2); } to{ transform: rotate(8deg) scale(1); opacity: 1; } }
+/* 고르기 판 — 더블클릭한 자리 위에 넷 */
+.share-cheer-picker{
+  position: fixed;
+  z-index: 1200;
+  background: #fff;
+  color: #222;
+  border-radius: 14px;
+  padding: 8px 10px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.share-cheer-picker-h{ font-size: 11px; font-weight: 700; color: #7d7469; margin: 0 0 6px 2px; white-space: nowrap; }
+.share-cheer-picker-row{ display: flex; gap: 4px; }
+.share-cheer-picker-row button{
+  width: 46px; height: 44px; padding: 0; border: 0; border-radius: 10px;
+  background: rgba(0,0,0,.05); cursor: pointer; display: grid; place-items: center; line-height: 0;
+  transition: transform .12s, background .12s;
+}
+.share-cheer-picker-row button:hover{ background: rgba(0,0,0,.1); transform: scale(1.15); }
+.share-cheer-picker-row button svg{ width: 34px; height: 32px; }
+@media (prefers-reduced-motion: reduce){ .share-cheers .card-heart.is-new{ animation: none; } }
+
 .user-card .card-foot{ position: relative; }
 /* [2026-09-07] 쪽지 자리가 프사로 옮겨 가서, 내 카드 이름 줄도 남들과 같게
    (예전엔 [쪽지][닉] 을 오른쪽에 붙이느라 flex-end 였습니다) */
