@@ -19,9 +19,12 @@
    어제 가지는 방장이 들어올 때 조용히 치웁니다 (script_heart.js 와 같은 수).
 
    [손가락]
-     남의 화공 카드   더블클릭 (아무 데나)  → 고르기 판
+     화공 카드        더블클릭 (아무 데나)  → 고르기 판
+       ★ **내 화공 카드에도** 붙일 수 있습니다 (2026-09-30 콩 — 화공하는
+         사람이 적어서, 스스로 붙여 두면 화공 홍보가 됩니다). 프로필
+         하트(나에겐 못 쏨)와 다른 점이에요.
      내 화공 카드     off 단추 · "○○의 화면" · 빨간 불은 제 손이 있으니
-                      비켜 주고, 나머지는 더블클릭해도 아무 일 없음 (나에겐 못 쏨)
+                      그 위에서만 비켜 줍니다
      내 카드의 스티커  한 번 클릭 → 누가 쐈나
    화공 카드는 프사도 네임 박스도 없어서 하트처럼 가릴 자리가 없어요.
 
@@ -195,7 +198,7 @@
   async function sendCheer(to, kind, card) {
     const from = me();
     to = String(to || "").trim();
-    if (!from || !to || to === from || !window.db || !KINDS.includes(kind)) return;
+    if (!from || !to || !window.db || !KINDS.includes(kind)) return;   // 나에게도 됩니다
     if (_busy) return;
     _busy = true;
     fly(card, kind);
@@ -223,7 +226,7 @@
     const p = document.createElement("div");
     p.className = "share-cheer-picker";
     p.setAttribute("role", "dialog");
-    p.innerHTML = `<div class="share-cheer-picker-h">${esc(nick)} 님 화면에 응원</div>
+    p.innerHTML = `<div class="share-cheer-picker-h">${nick === me() ? "내 화면에 붙이기" : esc(nick) + " 님 화면에 응원"}</div>
       <div class="share-cheer-picker-row">${KINDS.map(k =>
         `<button type="button" data-cheer-pick="${k}" title="${KIND_LABEL[k]}" aria-label="${KIND_LABEL[k]}">${SVG[k]}</button>`).join("")}</div>`;
     document.body.appendChild(p);
@@ -299,7 +302,7 @@
         if (!card) return;
         if (e.target.closest("[data-share-stop], [data-share-switch], [data-blur-open], [data-cheer-open], .share-cheers")) return;
         const nick = card.getAttribute("data-share-nick");
-        if (!nick || nick === me()) return;
+        if (!nick) return;                    // 내 카드도 됩니다 (화공 홍보)
         e.preventDefault(); e.stopPropagation();
         try { window.getSelection()?.removeAllRanges(); } catch (x) {}
         openPicker(nick, card, e.clientX, e.clientY);
