@@ -7547,8 +7547,9 @@ html[data-theme-style="studio"] .user-card{
 /* 🔥 화공 카드 응원 (2026-09-30 — 콩) — 카드 **윗변**에 나란히.
    프로필 하트와 같은 스티커(.card-heart · 40×38 · 숫자 딱지 .card-heart-n)를
    그대로 쓰되, 자리만 다릅니다: 프사 칸이 아니라 카드 위에 한 줄(.share-cheers).
-   오른쪽 끝이 카드 폭의 70% 지점(+스티커 반 개)에 서고, 종류가 늘면 왼쪽으로
+   오른쪽 끝이 카드 폭의 90% 지점(+스티커 반 개)에 서고, 종류가 늘면 왼쪽으로
    자랍니다 — 넷 다 붙어도 카드 안에 들어와요 (160px < 214px).
+   ([2026-09-30 콩] 70% → 90% 로 오른쪽으로.)
    ★ .share-card 는 overflow:hidden 이었는데(그림을 액자에 가두려고), 그러면
      윗변 밖으로 나온 스티커가 잘립니다. 가두는 일은 .share-shot 이 이미
      하고 있어서(border-radius:inherit + overflow:hidden) 카드 쪽은 풉니다.
@@ -7560,7 +7561,7 @@ html[data-theme-style="studio"] .user-card{
 .share-cheers{
   position: absolute;
   top: -14px;
-  right: calc(30% - 20px);
+  right: calc(10% - 20px);
   z-index: 4;
   display: flex;
   flex-direction: row;
