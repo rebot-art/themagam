@@ -317,5 +317,21 @@
       window.leaveRoom = wrapped;
     }
     bindHeartClicks();
+    watchCards();
   })();
+
+  /* [2026-09-30 저녁] 카드 마당을 지켜봅니다 — 화공 응원(script_cheer.js)과
+     같은 이유. 카드를 다시 그리는 길이 window.renderUserCards 를 안 거칠 수도
+     있어서, 카드가 새로 태어나면 하트를 다시 붙입니다. */
+  let _watchTimer = null;
+  function watchCards() {
+    const list = el("user-cards");
+    if (!list || list.__heartWatched || typeof MutationObserver !== "function") return;
+    list.__heartWatched = true;
+    new MutationObserver(muts => {
+      if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && n.classList?.contains("user-card") && !n.classList.contains("share-card")))) return;
+      clearTimeout(_watchTimer);
+      _watchTimer = setTimeout(() => { try { renderHeartBadges(); } catch (e) {} }, 30);
+    }).observe(list, { childList: true });
+  }
 })();

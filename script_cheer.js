@@ -338,7 +338,18 @@
   window.CHEER_KINDS  = KINDS;
 
   (function installCheerHooks() {
-    /* 화공 카드는 renderShareCards 가 통째로 다시 그립니다 — 그 뒤에 다시 붙입니다 */
+    /* 화공 카드는 renderShareCards 가 통째로 다시 그립니다 — 그 뒤에 다시 붙입니다.
+       ★★ [고침 2026-09-30 저녁 — 콩 제보 "화공을 껐다 켜면, 또 갑자기 스티커가
+          사라진다"] 아래처럼 window.renderShareCards 를 감싸는 것만으로는
+          모자랐습니다. script_share.js 는 **자기 안에서** renderShareCards() 를
+          직접 부르거든요 (화면 사진이 새로 올 때마다, 켜고 끌 때마다). 그 길은
+          window 를 거치지 않아서 감싼 옷이 안 걸리고, 카드가 새로 태어난 뒤
+          스티커를 다시 붙이는 사람이 없었어요. 저장은 멀쩡했습니다 — 다음
+          데이터가 올 때까지 안 보였을 뿐.
+          그래서 카드 마당(#user-cards)을 **지켜보다가** 카드가 갈아 끼워지면
+          다시 붙입니다 (MutationObserver). 누가 어떤 길로 다시 그리든 걸려요.
+          감싼 옷은 그대로 둡니다 — 둘 다 걸려도 두 번 붙이지 않아요
+          (이미 있는 스티커는 그대로 두니까). */
     const _renderShare = window.renderShareCards;
     if (typeof _renderShare === "function" && !_renderShare.__cheerPatched) {
       const wrapped = function () {
@@ -359,5 +370,21 @@
       window.leaveRoom = wrapped;
     }
     bindCheerClicks();
+    watchCards();
   })();
+
+  /* 카드 마당을 지켜봅니다 — 카드가 새로 태어나면 스티커를 다시 붙입니다.
+     한 번에 여러 장이 바뀌어도 한 번만 (다음 프레임에 몰아서). */
+  let _watchTimer = null;
+  function watchCards() {
+    const list = el("user-cards");
+    if (!list || list.__cheerWatched || typeof MutationObserver !== "function") return;
+    list.__cheerWatched = true;
+    new MutationObserver(muts => {
+      /* 내가 붙인 스티커 줄 때문에 또 도는 건 걸러냅니다 */
+      if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && n.classList?.contains("share-card")))) return;
+      clearTimeout(_watchTimer);
+      _watchTimer = setTimeout(() => { try { renderCheers(); } catch (e) {} }, 30);
+    }).observe(list, { childList: true });
+  }
 })();
