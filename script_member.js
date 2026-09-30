@@ -44,6 +44,29 @@
 
   let _timer = null, _rows = null, _err = "";
 
+  /* 프사 — users/{닉}/profile 은 누구나 읽을 수 있어서 REST 로 한 사람씩.
+     한 번 읽은 건 이 창이 살아 있는 동안 다시 안 읽습니다 (옛 글자 사진은
+     수백 KB 라 매번 읽으면 아까워요). 사진 고르는 법은 본편 photoSrcOf 그대로. */
+  const _photo = {};          // { 닉: 주소 | "" }
+  const _photoBusy = new Set();
+  async function loadPhoto(nick) {
+    if (nick in _photo || _photoBusy.has(nick)) return;
+    _photoBusy.add(nick);
+    try {
+      const r = await fetch(`${DB_URL}/users/${encodeURIComponent(nick)}/profile.json`, { cache: "no-store" });
+      const prof = r.ok ? ((await r.json()) || {}) : {};
+      _photo[nick] = window.photoSrcOf ? window.photoSrcOf(prof) : "";
+    } catch (e) { _photo[nick] = ""; }
+    _photoBusy.delete(nick);
+    render();
+  }
+  /* 사진 없는 사람 — 닉 첫 글자 동그라미 (본편 눈사람 대신 가볍게) */
+  function avatarHtml(nick) {
+    const src = _photo[nick];
+    if (src) return `<img class="member-ava" src="${src}" alt="" decoding="async">`;
+    return `<span class="member-ava member-ava-txt">${esc(String(nick).slice(0, 1))}</span>`;
+  }
+
   async function fetchStatus() {
     try {
       const r = await fetch(`${DB_URL}/status.json`, { cache: "no-store" });
@@ -55,6 +78,7 @@
         .filter(x => (typeof window.isOnline === "function") ? window.isOnline(x.row, now) : true)
         .sort((a, b) => Number(b.row.workMs || 0) - Number(a.row.workMs || 0) || a.nick.localeCompare(b.nick, "ko"));
       _err = "";
+      _rows.forEach(x => loadPhoto(x.nick));
     } catch (e) {
       _err = "본방을 못 읽었어요 — " + (e.message || e);
     }
@@ -72,6 +96,7 @@
       <ul class="member-list">${_rows.map(({ nick, row }) => {
         const st = row.status || "idle";
         return `<li class="member-row">
+          ${avatarHtml(nick)}
           <span class="member-nick">${esc(nick)}</span>
           <span class="card-state ${CLS[st] || "status-rest"} member-state">${esc(row.statusLabel || LABEL[st] || "휴식")}</span>
           <span class="member-wh">⏱ ${whText(row.workMs)}</span>
