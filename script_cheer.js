@@ -383,8 +383,11 @@
     new MutationObserver(muts => {
       /* 내가 붙인 스티커 줄 때문에 또 도는 건 걸러냅니다 */
       if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && n.classList?.contains("share-card")))) return;
-      clearTimeout(_watchTimer);
-      _watchTimer = setTimeout(() => { try { renderCheers(); } catch (e) {} }, 30);
+      /* ★ 미루지 않습니다 — MutationObserver 는 화면을 그리기 **전**에 불리므로
+         여기서 바로 붙이면 스티커가 한 프레임도 안 비어요. setTimeout 으로
+         미뤘더니 그 사이 한 번 그려져서 스티커가 깜빡였습니다 (2026-09-30). */
+      clearTimeout(_watchTimer); _watchTimer = null;
+      try { renderCheers(); } catch (e) {}
     }).observe(list, { childList: true });
   }
 })();

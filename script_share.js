@@ -1321,7 +1321,21 @@
        (다시 그리면 <img> 가 새 요소가 되어 그림이 깜빡입니다) */
     if (html === _lastShareHtml && present === !!html) { tickShare(); return; }
 
-    list.querySelectorAll(".share-card").forEach(el => el.remove());
+    /* ★★ [2026-09-30 콩 제보 "화공 카드가 간헐적으로 깜빡인다"] ──────────────
+       예전엔 여기서 공유 카드를 **전부 떼고 새로** 붙였습니다. 새 사진이
+       올 때마다(사람마다 5초에 한 장) 그랬으니, <img> 가 매번 새 요소가
+       되어 그림이 잠깐 비었다 차고, 위에 붙은 응원 스티커도 같이 떨어졌다
+       도로 붙었어요 — 그게 깜빡임입니다. 프로필 카드가 2026-08-13 에 겪은
+       것과 같은 병(사파리 전원 점멸)이에요.
+       이제 **같은 사람 카드가 이미 있으면 그 자리에서 사진만 바꿉니다.**
+       카드가 새로 태어나는 건 사람이 늘거나 줄 때뿐. 스티커는 카드에
+       매달려 있으니 건드릴 일이 없고, 그림은 src 만 바뀌어 부드럽게 넘어가요.
+       ★ 사진이 같으면 src 도 안 건드립니다 — 같은 값을 다시 넣어도 브라우저는
+         다시 디코딩하거든요. */
+    const 남길닉 = new Set(rows.map(r => r.nick));
+    list.querySelectorAll(".share-card[data-share-nick]").forEach(el => {
+      if (!남길닉.has(el.getAttribute("data-share-nick"))) el.remove();
+    });
 
     /* [고침 2026-08-06] 공유 카드를 그 사람의 프로필 카드 바로 뒤에 끼웁니다.
        예전에는 목록 맨 끝에 몰아 붙여서, 누구 화면인지 눈으로 잇기 어려웠어요.
@@ -1335,6 +1349,18 @@
          바뀐 것처럼" 보였습니다 (실제 제보 — 놀라게 해서 미안합니다).
          주인이 돌아오면 다음 그림에 다시 붙으니 잃는 것도 없어요. */
       if (!own) return;
+      const had = list.querySelector(`.share-card[data-share-nick="${CSS.escape(row.nick)}"]`);
+      if (had) {
+        /* 제자리 갱신 — 사진·맞춤·시각만 */
+        const im = had.querySelector(".share-img");
+        if (im) {
+          if (im.getAttribute("src") !== row.img) im.setAttribute("src", row.img);
+          const fitCls = row.fit === "contain" ? "is-contain" : "is-cover";
+          if (!im.classList.contains(fitCls)) { im.classList.remove("is-cover", "is-contain"); im.classList.add(fitCls); }
+        }
+        had.setAttribute("data-share-at", String(row.at));
+        return;
+      }
       own.insertAdjacentHTML("afterend", shareCardHtml(row));
     });
     _lastShareHtml = html;

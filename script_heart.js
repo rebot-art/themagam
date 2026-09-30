@@ -330,8 +330,9 @@
     list.__heartWatched = true;
     new MutationObserver(muts => {
       if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && n.classList?.contains("user-card") && !n.classList.contains("share-card")))) return;
-      clearTimeout(_watchTimer);
-      _watchTimer = setTimeout(() => { try { renderHeartBadges(); } catch (e) {} }, 30);
+      /* 미루지 않습니다 — 그리기 전에 바로 (script_cheer.js 와 같은 이유) */
+      clearTimeout(_watchTimer); _watchTimer = null;
+      try { renderHeartBadges(); } catch (e) {}
     }).observe(list, { childList: true });
   }
 })();
