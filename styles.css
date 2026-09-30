@@ -7577,6 +7577,24 @@ html[data-theme-style="studio"] .user-card{
 .share-cheers .card-heart:hover{ transform: rotate(8deg) scale(1.1); }
 .share-cheers .card-heart.is-new{ animation: cheer-pop .45s cubic-bezier(.2,1.4,.4,1); }
 @keyframes cheer-pop{ from{ transform: rotate(8deg) scale(.3); opacity: 0; } 60%{ transform: rotate(8deg) scale(1.2); } to{ transform: rotate(8deg) scale(1); opacity: 1; } }
+/* 💘 "오늘 이미 보냈어요" 토스트 — 하트·화공 응원이 함께 씁니다 (2026-09-30) */
+.card-heart-toast{
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(8px);
+  z-index: 1300;
+  padding: 8px 14px;
+  border-radius: 99px;
+  background: rgba(42,38,34,.92);
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+.card-heart-toast.on{ opacity: 1; transform: translateX(-50%) translateY(0); }
 /* 고르기 판 — 더블클릭한 자리 위에 넷 */
 .share-cheer-picker{
   position: fixed;

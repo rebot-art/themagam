@@ -34,13 +34,18 @@
    새 날짜로 갈아 끼웁니다.
    ===================================================================== */
 (function () {
-  const NODE    = "cardHearts";     // 받는 사람만 읽는 자리 — 누가 · 몇 개
+  const NODE    = "cardHearts";     // 받는 사람만 읽는 자리 — 누가
   const NODE_ON = "cardHeartsOn";   // 모두가 읽는 자리 — 받았다/안 받았다
-  const MAX_PER_DAY = 99;           // 한 사람이 한 사람에게 하루에 — 보안규칙과 같은 값
+  const NODE_BY = "cardHeartsBy";   // 쏜 사람만 읽는 자리 — 오늘 내가 누구에게 쐈나
+  /* ★ [2026-09-30 콩] **하루에 한 사람당 한 번.** 두 번째 더블클릭엔 토스트만.
+     보안규칙도 !data.exists() 로 잠가서 두 번째 쓰기는 서버가 거절합니다.
+     그래서 이제 숫자 딱지는 "몇 번"이 아니라 **몇 명**이에요. */
+  const MAX_PER_DAY = 1;
 
-  let _day = "", _onRef = null, _mineRef = null;
+  let _day = "", _onRef = null, _mineRef = null, _byRef = null;
   let _on   = {};                   // { 받는닉: true }       ← 공개
-  let _mine = {};                   // { 쏜닉: n }            ← 내 것만
+  let _mine = {};                   // { 쏜닉: 1 }            ← 내 것만
+  let _by   = {};                   // { 받는닉: true }       ← 내가 오늘 쏜 사람들
   let _pop = null;
   /* 오늘 이미 하트를 붙여 본 닉 — 카드가 다시 그려질 때 또 "퐁" 하지 않게.
      ★ [2026-09-30 콩 제보 "간헐적으로 깜빡인다"] 카드는 15초마다 오는
@@ -62,13 +67,23 @@
     return `${d.getFullYear()}-${m}-${dd}`;
   }
 
-  /* 💘 꽉 찬 하트 + 흰 테두리 스티커 (콩 선택 5번 · 2026-09-30) */
-  const HEART_SVG = `<svg viewBox="0 0 64 62" width="40" height="38" aria-hidden="true">
-      <path d="M32 57 C14 44 3 32 5 19 C7 8 20 4 32 15 C44 4 57 8 59 19 C61 32 50 44 32 57Z"
-            fill="#e6323c" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
-      <path d="M32 57 C14 44 3 32 5 19 C7 8 20 4 32 15 C44 4 57 8 59 19 C61 32 50 44 32 57Z" fill="#e6323c"/>
+  /* 💘 꽉 찬 하트 + 흰 테두리 스티커 (콩 선택 5번 · 2026-09-30)
+     ★ [2026-09-30 밤 — 콩, 하트색_내것구분 C안] 색이 둘입니다.
+         남이 쏜 카드  → 코랄 #f4866a  ("누가 쐈네, 나도 쏠까")
+         내가 쏜 카드  → 진빨강 #c0121e ("아, 내가 쐈지")
+       남도 쐈고 나도 쐈으면 내 색이 이겨요 — "내가 했나?"가 궁금한 거니까.
+       내 카드에 붙는 건 남이 쏜 것뿐이라 코랄. */
+  const COLOR_OTHER = "#f4866a";
+  const COLOR_MINE  = "#c0121e";
+  const HEART_PATH = "M32 57 C14 44 3 32 5 19 C7 8 20 4 32 15 C44 4 57 8 59 19 C61 32 50 44 32 57Z";
+  function heartSvg(color) {
+    return `<svg viewBox="0 0 64 62" width="40" height="38" aria-hidden="true">
+      <path d="${HEART_PATH}" fill="${color}" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+      <path d="${HEART_PATH}" fill="${color}"/>
       <path d="M14 20 C16 14 21 12 25 13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
     </svg>`;
+  }
+  const HEART_SVG = heartSvg(COLOR_OTHER);
 
   /* ---------------------------------------------------------------
      듣기 — 공개 가지 하나 + 내 가지 하나
@@ -76,7 +91,8 @@
   function subscribe(day) {
     try { _onRef && _onRef.off(); } catch (e) {}
     try { _mineRef && _mineRef.off(); } catch (e) {}
-    _onRef = _mineRef = null; _on = {}; _mine = {};
+    try { _byRef && _byRef.off(); } catch (e) {}
+    _onRef = _mineRef = _byRef = null; _on = {}; _mine = {}; _by = {};
     if (_day !== day) _shown.clear();     // 새 날 — 다시 퐁 해도 됩니다
     if (!window.db) return;
     _day = day;
@@ -92,6 +108,12 @@
         renderHeartBadges();
         if (_pop) refreshPop();
       });
+      /* 내가 오늘 누구에게 쐈나 — 색을 가르고, 두 번째를 막는 데 씁니다 */
+      _byRef = db.ref(`${NODE_BY}/${day}/${me()}`);
+      _byRef.on("value", snap => {
+        _by = snap.val() || {};
+        renderHeartBadges();
+      });
     }
   }
   function listenHearts() {
@@ -102,7 +124,8 @@
   function detachHearts() {
     try { _onRef && _onRef.off(); } catch (e) {}
     try { _mineRef && _mineRef.off(); } catch (e) {}
-    _onRef = _mineRef = null; _on = {}; _mine = {}; _day = "";
+    try { _byRef && _byRef.off(); } catch (e) {}
+    _onRef = _mineRef = _byRef = null; _on = {}; _mine = {}; _by = {}; _day = "";
     closePop();
   }
   /* 자정을 넘겨 켜 둔 창 — 새 날짜 가지로 갈아 끼웁니다 (하트가 싹 사라져요) */
@@ -115,7 +138,7 @@
     try {
       if (!window.canAdmin?.() || !window.db) return;
       const today = dayKey();
-      for (const node of [NODE_ON, NODE]) {
+      for (const node of [NODE_ON, NODE, NODE_BY]) {
         const snap = await db.ref(node).once("value");
         const all = snap.val() || {};
         const upd = {};
@@ -131,13 +154,14 @@
   function myHearts() {                // { 쏜닉: n }
     return (_mine && typeof _mine === "object") ? _mine : {};
   }
-  function myHeartCount() {
-    return Object.values(myHearts()).reduce((s, n) => s + (Number(n) || 0), 0);
+  function myHeartCount() {            // 몇 명이 쐈나 (하루 한 번이라 = 몇 개)
+    return Object.values(myHearts()).filter(n => Number(n) > 0).length;
   }
   function hasHeart(nick) {            // 모두가 아는 것 — 오늘 받았나
     if (nick === me()) return myHeartCount() > 0 || _on[nick] === true;
-    return _on[nick] === true;
+    return _on[nick] === true || _by[nick] === true;
   }
+  function sentTo(nick) { return _by[nick] === true; }   // 오늘 내가 이 사람에게 쐈나
 
   /* ---------------------------------------------------------------
      카드에 붙이기 — 프사 **오른쪽 변, 위에서 60% 쯤**, 카드 밖으로 살짝
@@ -157,44 +181,72 @@
       if (!wrap) return;
       let b = wrap.querySelector(".card-heart");
       if (!hasHeart(nick)) { if (b) b.remove(); _shown.delete(nick); return; }
+      /* 색 — 내가 쏜 카드면 진빨강, 아니면 코랄 (내 카드는 늘 코랄) */
+      const color = (!mine && sentTo(nick)) ? COLOR_MINE : COLOR_OTHER;
       if (!b) {
         b = document.createElement(mine ? "button" : "span");
         if (mine) { b.type = "button"; b.setAttribute("data-heart-open", nick); }
         b.className = "card-heart" + (mine ? " is-mine" : "") + (_shown.has(nick) ? "" : " is-new");
-        b.innerHTML = HEART_SVG + (mine ? `<span class="card-heart-n"></span>` : "");
+        b.innerHTML = heartSvg(color) + (mine ? `<span class="card-heart-n"></span>` : "");
+        b.setAttribute("data-heart-color", color);
         wrap.appendChild(b);
         _shown.add(nick);
+      } else if (b.getAttribute("data-heart-color") !== color) {
+        /* 남이 쏜 코랄 → 내가 쏘면 진빨강으로 바뀝니다 (svg 만 갈아 끼움) */
+        const old = b.querySelector("svg");
+        if (old) old.outerHTML = heartSvg(color);
+        b.setAttribute("data-heart-color", color);
       }
       if (mine) {
         const n = myHeartCount();
         const nEl = b.querySelector(".card-heart-n");
         if (nEl) nEl.textContent = n > 1 ? String(n) : "";
-        b.title = `오늘 받은 하트 ${n} — 눌러서 누가 쐈는지 봐요`;
+        b.title = `오늘 ${n}명이 하트를 쐈어요 — 눌러서 누가인지 봐요`;
       } else {
-        b.title = `${nick} 님이 오늘 하트를 받았어요`;
+        b.title = sentTo(nick) ? `${nick} 님에게 오늘 하트를 쐈어요` : `${nick} 님이 오늘 하트를 받았어요`;
       }
       b.setAttribute("aria-label", b.title);
     });
   }
 
   /* ---------------------------------------------------------------
-     쏘기 — 내 칸에 +1, 공개 가지에 true
+     쏘기 — 하루 한 번. 세 자리에 한꺼번에 (받는이 칸 · 공개 · 내 보낸 목록)
      --------------------------------------------------------------- */
   let _busy = false;
   async function sendHeart(to, card) {
     const from = me();
     to = String(to || "").trim();
     if (!from || !to || to === from || !window.db) return;
+    if (sentTo(to)) { toast("오늘 이미 보냈어요 💘"); return; }   // ★ 하루 한 번
     if (_busy) return;
     _busy = true;
     fly(card);
+    const day = dayKey();
     try {
-      await db.ref(`${NODE}/${dayKey()}/${to}/${from}`)
-        .transaction(n => Math.min(MAX_PER_DAY, (Number(n) || 0) + 1));
-      await db.ref(`${NODE_ON}/${dayKey()}/${to}`).set(true);
-    } catch (e) { console.warn("[heart]", e); }
+      /* 한 번에 세 자리 — 셋이 어긋나지 않게 (multi-path update) */
+      await db.ref().update({
+        [`${NODE}/${day}/${to}/${from}`]: MAX_PER_DAY,
+        [`${NODE_ON}/${day}/${to}`]:       true,
+        [`${NODE_BY}/${day}/${from}/${to}`]: true
+      });
+    } catch (e) {
+      /* 서버가 거절 = 이미 쐈다 (다른 창에서 쐈다든지). 화면만 맞춰 줍니다 */
+      console.warn("[heart]", e);
+      toast("오늘 이미 보냈어요 💘");
+    }
     _busy = false;
   }
+  /* 작은 안내 — 화면 아래 가운데, 1.4초 */
+  let _toastT = null;
+  function toast(msg) {
+    let t = document.getElementById("card-heart-toast");
+    if (!t) { t = document.createElement("div"); t.id = "card-heart-toast"; t.className = "card-heart-toast"; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add("on");
+    clearTimeout(_toastT);
+    _toastT = setTimeout(() => t.classList.remove("on"), 1400);
+  }
+  window.heartToast = toast;
   /* 카드에서 ❤️ 가 퐁 떠오릅니다 — 눌렸다는 손맛 */
   function fly(card) {
     if (!card) return;

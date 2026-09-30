@@ -37,7 +37,10 @@
 (function () {
   const NODE    = "shareCheers";
   const NODE_ON = "shareCheersOn";
-  const MAX_PER_DAY = 99;
+  const NODE_BY = "shareCheersBy";   // 붙인 사람만 읽는 자리 — 오늘 내가 누구 화면에 뭘 붙였나
+  /* ★ [2026-09-30 콩] 하루에 한 사람 화면에 **종류마다 한 번**. 두 번째는 토스트만.
+     보안규칙도 !data.exists() 로 잠급니다. 색은 하트와 달리 따로 안 바꿉니다(콩). */
+  const MAX_PER_DAY = 1;
 
   /* 종류 — 순서가 곧 윗줄에 늘어서는 순서 (왼쪽 → 오른쪽) */
   const KINDS = ["fire", "thumb", "star", "heart"];
@@ -67,9 +70,10 @@
   };
   const COLOR = { fire: "#f0642b", thumb: "#1f6fd1", star: "#f2a51c", heart: "#e6323c" };
 
-  let _day = "", _onRef = null, _mineRef = null;
+  let _day = "", _onRef = null, _mineRef = null, _byRef = null;
   let _on   = {};        // { 받는닉: { 종류: true } }
-  let _mine = {};        // { 종류: { 쏜닉: n } }
+  let _mine = {};        // { 종류: { 쏜닉: 1 } }
+  let _by   = {};        // { 받는닉: { 종류: true } }  ← 내가 오늘 붙인 것
   let _pop = null, _picker = null;
   const _shown = new Set();   // "닉|종류" — 처음 붙을 때만 퐁
 
@@ -92,7 +96,8 @@
   function subscribe(day) {
     try { _onRef && _onRef.off(); } catch (e) {}
     try { _mineRef && _mineRef.off(); } catch (e) {}
-    _onRef = _mineRef = null; _on = {}; _mine = {};
+    try { _byRef && _byRef.off(); } catch (e) {}
+    _onRef = _mineRef = _byRef = null; _on = {}; _mine = {}; _by = {};
     if (_day !== day) _shown.clear();
     if (!window.db) return;
     _day = day;
@@ -101,6 +106,8 @@
     if (me()) {
       _mineRef = db.ref(`${NODE}/${day}/${me()}`);
       _mineRef.on("value", snap => { _mine = snap.val() || {}; renderCheers(); if (_pop) refreshPop(); });
+      _byRef = db.ref(`${NODE_BY}/${day}/${me()}`);
+      _byRef.on("value", snap => { _by = snap.val() || {}; });
     }
   }
   function listenCheers() {
@@ -111,7 +118,8 @@
   function detachCheers() {
     try { _onRef && _onRef.off(); } catch (e) {}
     try { _mineRef && _mineRef.off(); } catch (e) {}
-    _onRef = _mineRef = null; _on = {}; _mine = {}; _day = "";
+    try { _byRef && _byRef.off(); } catch (e) {}
+    _onRef = _mineRef = _byRef = null; _on = {}; _mine = {}; _by = {}; _day = "";
     closePop(); closePicker();
   }
   setInterval(() => {
@@ -122,7 +130,7 @@
     try {
       if (!window.canAdmin?.() || !window.db) return;
       const today = dayKey();
-      for (const node of [NODE_ON, NODE]) {
+      for (const node of [NODE_ON, NODE, NODE_BY]) {
         const snap = await db.ref(node).once("value");
         const all = snap.val() || {};
         const upd = {};
@@ -139,9 +147,10 @@
     const v = _mine && _mine[kind];
     return (v && typeof v === "object") ? v : {};
   }
-  function myCount(kind) {
-    return Object.values(mineOf(kind)).reduce((s, n) => s + (Number(n) || 0), 0);
+  function myCount(kind) {             // 몇 명이 붙였나 (하루 한 번이라 = 몇 개)
+    return Object.values(mineOf(kind)).filter(n => Number(n) > 0).length;
   }
+  function sentTo(nick, kind) { const v = _by && _by[nick]; return !!(v && v[kind] === true); }
   function hasCheer(nick, kind) {
     if (nick === me() && myCount(kind) > 0) return true;
     const v = _on && _on[nick];
@@ -187,7 +196,7 @@
           const n = myCount(kind);
           const nEl = b.querySelector(".card-heart-n");
           if (nEl) nEl.textContent = n > 1 ? String(n) : "";
-          b.title = `${KIND_LABEL[kind]} ${n} — 눌러서 누가 보냈는지 봐요`;
+          b.title = `${KIND_LABEL[kind]} ${n}명 — 눌러서 누가 보냈는지 봐요`;
         } else {
           b.title = `${nick} 님 화면에 ${KIND_LABEL[kind]} 응원`;
         }
@@ -204,14 +213,18 @@
     const from = me();
     to = String(to || "").trim();
     if (!from || !to || !window.db || !KINDS.includes(kind)) return;   // 나에게도 됩니다
+    if (sentTo(to, kind)) { window.heartToast?.(`오늘 이미 ${KIND_LABEL[kind]} 붙였어요`); return; }   // ★ 하루 한 번
     if (_busy) return;
     _busy = true;
     fly(card, kind);
+    const day = dayKey();
     try {
-      await db.ref(`${NODE}/${dayKey()}/${to}/${kind}/${from}`)
-        .transaction(n => Math.min(MAX_PER_DAY, (Number(n) || 0) + 1));
-      await db.ref(`${NODE_ON}/${dayKey()}/${to}/${kind}`).set(true);
-    } catch (e) { console.warn("[cheer]", e); }
+      await db.ref().update({
+        [`${NODE}/${day}/${to}/${kind}/${from}`]: MAX_PER_DAY,
+        [`${NODE_ON}/${day}/${to}/${kind}`]:      true,
+        [`${NODE_BY}/${day}/${from}/${to}/${kind}`]: true
+      });
+    } catch (e) { console.warn("[cheer]", e); window.heartToast?.(`오늘 이미 ${KIND_LABEL[kind]} 붙였어요`); }
     _busy = false;
   }
   function fly(card, kind) {
