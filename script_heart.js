@@ -140,9 +140,10 @@
   }
 
   /* ---------------------------------------------------------------
-     카드에 붙이기 — **카드** 오른쪽 위 모서리, 바깥으로 살짝
-       ([2026-09-30 콩] 프사 모서리 → 카드 모서리. 상태 스티커처럼
-        카드 밖으로 튀어나오게. 그래서 프사 칸이 아니라 카드에 답니다)
+     카드에 붙이기 — 프사 **오른쪽 변, 위에서 60% 쯤**, 카드 밖으로 살짝
+       ([2026-09-30 콩, 세 번째 자리] 프사 귀퉁이 → 카드 모서리 → 여기.
+        방장 딱지(프사 오른쪽 아래 모서리)보다 조금 위. 프사를 따라가야
+        하니 프사 칸(.card-avatar-wrap)에 답니다 — 자리는 CSS 가 정해요)
        남의 카드: 하트만 (숫자 없음 · 눌러도 아무 일 없음)
        내 카드:   하트 + 둘 이상이면 숫자 · 누르면 누가 쐈나
      --------------------------------------------------------------- */
@@ -152,14 +153,16 @@
     list.querySelectorAll(".user-card[data-card-nick]").forEach(card => {
       const nick = card.getAttribute("data-card-nick");
       const mine = nick === me();
-      let b = card.querySelector(":scope > .card-heart");
+      const wrap = card.querySelector(".card-avatar-wrap");
+      if (!wrap) return;
+      let b = wrap.querySelector(".card-heart");
       if (!hasHeart(nick)) { if (b) b.remove(); _shown.delete(nick); return; }
       if (!b) {
         b = document.createElement(mine ? "button" : "span");
         if (mine) { b.type = "button"; b.setAttribute("data-heart-open", nick); }
         b.className = "card-heart" + (mine ? " is-mine" : "") + (_shown.has(nick) ? "" : " is-new");
         b.innerHTML = HEART_SVG + (mine ? `<span class="card-heart-n"></span>` : "");
-        card.appendChild(b);
+        wrap.appendChild(b);
         _shown.add(nick);
       }
       if (mine) {

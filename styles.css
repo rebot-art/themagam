@@ -7464,20 +7464,22 @@ html[data-theme-style="studio"] .user-card{
 @keyframes note-pop{ from{ transform: rotate(-8deg) scale(.5); opacity: 0; } to{ transform: rotate(-8deg) scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce){ .card-note{ animation: none; } }
 
-/* 💘 받은 하트 — **카드** 오른쪽 위 모서리, 바깥으로 살짝 (2026-09-30 — 콩).
-   처음엔 프사 귀퉁이였는데 "상태 스티커처럼 카드 모서리에 붙은 느낌"으로
-   — 카드(.user-card)에 직접 답니다. 📮 쪽지 리본(프사 왼쪽 위)과 마주
-   봅니다. 하트가 있을 때만 붙고, 자정에 사라져요. 꽉 찬 빨강 + 흰 테두리
-   (하트모양_고르기 5번).
-   ★ 스티커 A 의 기본 자리(top 14px · right -8px)와 가까운데, 스티커는
-     pointer-events:none 이라 하트 누르기는 막히지 않습니다. z-index 로
-     하트를 위에 둡니다.
+/* 💘 받은 하트 — 프사 **오른쪽 변, 위에서 60% 쯤**, 카드 밖으로 살짝
+   (2026-09-30 — 콩, 세 번째 자리). 프사 귀퉁이 → 카드 모서리 → 여기.
+   방장 딱지(.card-admin-stamp: 프사 오른쪽 아래, bottom -8px)보다 조금 위,
+   같은 오른쪽 변에 나란히. 프사 칸(.card-avatar-wrap)에 붙어 프사를
+   따라갑니다. 프사 오른쪽에 카드 안쪽 여백이 8px 뿐이라 right -22px 면
+   카드 밖으로 14px 쯤 튀어나와요 — 상태 스티커 느낌.
+   📮 쪽지 리본(프사 왼쪽 위)과 마주 봅니다. 하트가 있을 때만 붙고, 자정에
+   사라져요. 꽉 찬 빨강 + 흰 테두리 (하트모양_고르기 5번).
+   ★ 스티커 A(카드 오른쪽 위 top 14px)와는 높이가 달라 안 부딪히고, 스티커는
+     pointer-events:none 이라 하트 누르기는 막히지 않습니다.
    ★ 등장 애니(퐁)는 .is-new 일 때만 — 카드가 다시 그려질 때마다 퐁 하면
      깜빡이는 것처럼 보였습니다 (콩 제보). */
 .card-heart{
   position: absolute;
-  right: -13px;
-  top: -13px;
+  right: -22px;
+  top: 46%;                /* 38px 짜리 하트의 한가운데가 프사 높이의 60% 쯤 */
   z-index: 4;
   padding: 0;
   border: 0;
