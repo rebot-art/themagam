@@ -188,35 +188,7 @@
 #onepage b{ font-weight:600; }
 #onepage .foot{ text-align:center; font-size:12px; color:#8A7B68; margin-top:14px; }
 #onepage .paper{ margin:0 auto; box-shadow:none; }
-/* ═══ [통합 2026-08-12] 접속 유지 (옛 접속유지_가이드.html) — #alive 안에서만 ═══ */
-#alive .paper{ background:#FAF6EC;
-    background-image:repeating-linear-gradient(90deg,transparent 0 23px,rgba(163,88,70,.12) 23px 24px),repeating-linear-gradient(0deg,transparent 0 23px,rgba(163,88,70,.12) 23px 24px);
-    border-radius:16px; padding:22px 20px; max-width:640px; width:100%; }
-#alive .head{ text-align:center; margin-bottom:16px; }
-#alive .eyebrow{ font-size:11px; color:#B3372B; letter-spacing:2px; font-weight:500; }
-#alive .title{ font-family:'Noto Serif KR',serif; font-size:20px; font-weight:700; color:#2B2620; margin-top:2px; }
-#alive .sub{ font-size:12px; color:#6B5F52; margin-top:4px; }
-/* [2026-08-22 — 콩] 방법 셋을 **가로로 나란히**. 세로로 쌓으면 이 칸
-   하나가 화면 하나를 다 먹어서, 정작 아래 [방 안에는] 까지 못 갑니다.
-   셋을 나란히 두면 "이 중 하나만 하면 되는구나" 가 한눈에 읽히기도 해요. */
-#alive .ways{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start; }
-#alive .card{ background:rgba(255,253,246,.96); border-radius:12px; padding:16px; margin-bottom:0; }
-#alive .card.red{ border:1.5px solid #B3372B; }
-#alive .card.plain{ border:1px solid rgba(150,120,80,.45); }
-#alive .card-t{ font-size:14px; font-weight:500; margin-bottom:10px; }
-#alive .card.red .card-t{ color:#B3372B; }
-#alive .badge{ font-size:11px; color:#FFFDF6; background:#B3372B; border-radius:99px; padding:2px 8px; vertical-align:1px; }
-#alive .step{ display:flex; gap:10px; margin-bottom:8px; }
-#alive .num{ flex:0 0 22px; height:22px; border-radius:50%; color:#FFFDF6; font-size:12px; display:flex; align-items:center; justify-content:center; }
-#alive .red .num{ background:#B3372B; }
-#alive .plain .num{ background:#6B5F52; }
-#alive .step div:last-child{ font-size:13px; color:#2B2620; line-height:1.55; }
-#alive code{ font-family:ui-monospace,Menlo,monospace; background:#F4EEDF; border-radius:4px; padding:1px 6px; font-size:12px; color:#7A2A1E; }
-#alive .domain{ display:inline-block; margin-top:5px; font-family:ui-monospace,Menlo,monospace; background:#2B2620; color:#F5EFDF; border-radius:6px; padding:5px 12px; font-size:13px; letter-spacing:.3px; }
-#alive .hint{ font-size:12px; color:#8A7B68; }
-#alive .foot{ text-align:center; font-size:12px; color:#8A7B68; }
-#alive b{ font-weight:500; }
-#alive .paper{ margin:0 auto; max-width:none; box-shadow:none; background:transparent; border:none; padding:0; }
+/* [2026-09-30] 접속 유지 절 CSS 는 절과 함께 뺐습니다 */
 
 </style>
 </head>
@@ -381,49 +353,8 @@
      길이 새로 생겼고, 할 일은 메모 탭의 슬래시 명령으로 갈라졌습니다. -->
 </div><!-- /.duo -->
 
-<!-- ═══════════ [통합 2026-08-12] 접속 유지 — 옛 접속유지_가이드.html ═══════════ -->
-<section class="wrap" id="alive">
-  <h2 class="h2">접속 유지 — 탭이 잠들지 않게</h2>
-  <p class="lead">다른 창을 오래 보면 브라우저가 탭을 재워 접속이 끊겨요. 셋 중 하나만 해두면 됩니다.</p>
-  <div class="paper">
-  <div class="head">
-    <div class="eyebrow">— TheMagam 접속 유지 가이드 —</div>
-    <div class="title">탭이 잠들지 않게 하는 법</div>
-    <div class="sub">다른 창을 오래 보면 브라우저가 더마감 탭을 재워서 접속이 끊겨요. 아래 셋 중 하나만 해두면 돼요.</div>
-  </div>
-
-  <div class="ways">
-  <div class="card red">
-    <div class="card-t">방법 1 · 🔌 접속유지 켜기 <span class="badge">가장 간단</span></div>
-    <div class="step"><div class="num">1</div><div>작업방 <b>맨 위 오른쪽의 [🔌 접속유지 OFF]</b> 버튼을 눌러 <b>ON</b> 으로 바꾸면 끝이에요.</div></div>
-    <div class="step"><div class="num">2</div><div>들리지 않을 만큼 <b>아주 작은 소리(무음)</b>를 계속 흘려서 탭을 붙잡아 둡니다.
-      브라우저는 소리가 나는 탭을 재우지 않거든요. <b>아무것도 안 들립니다</b> — 헤드폰을 껴도요.</div></div>
-    <div class="step" style="margin-bottom:0;"><div class="num">3</div><div>탭에 <b>🔊 스피커 표시</b>가 뜨는데 정상이에요. 그게 떠야 켜진 겁니다.<br>
-      <span class="hint">한 번 켜두면 다음부터 저절로 켜져요. 이 기기에만 기억하니 다른 컴퓨터에서는 다시 켜야 합니다.
-      크롬뿐 아니라 <b>사파리·파이어폭스에서도</b> 됩니다. 다만 <b>폰에서는 음악이 끊길 수 있어</b> 권하지 않아요.
-      끄는 것도 같은 버튼입니다.</span></div></div>
-  </div>
-
-  <div class="card plain">
-    <div class="card-t">방법 2 · 더마감만 예외 등록 <span class="badge">크롬 전용</span></div>
-    <div class="step"><div class="num">1</div><div>크롬 주소창에 <code>chrome://settings/performance</code> 입력 후 이동</div></div>
-    <div class="step"><div class="num">2</div><div>"메모리 절약 모드" 아래 <b>항상 활성 상태로 유지할 사이트</b> 옆의 [추가] 클릭</div></div>
-    <div class="step" style="margin-bottom:0;"><div class="num">3</div><div>아래 도메인을 입력하고 [추가] — 끝!<br>
-      <span class="domain">rebot-art.github.io</span><br>
-      <span class="hint">https:// 와 /themagam/ 은 빼고 도메인만 적어요. 다른 탭은 그대로 절약되고 더마감만 안 잠들어요.</span></div></div>
-  </div>
-
-  <div class="card plain">
-    <div class="card-t">방법 3 · 앱으로 설치해서 쓰기</div>
-    <div class="step"><div class="num">1</div><div><code>https://rebot-art.github.io/themagam/</code> 을 연 상태에서 주소창 <b>오른쪽 끝의 설치 아이콘(모니터+↓)</b> 클릭<br>
-      <span class="hint">안 보이면: 크롬 메뉴(⋮) → 저장 및 공유 → 페이지를 앱으로 설치</span></div></div>
-    <div class="step" style="margin-bottom:0;"><div class="num">2</div><div>[설치] 누르면 독립 창으로 열려요 — 일반 탭보다 훨씬 안 잠들고, 바탕화면 아이콘으로 바로 입장</div></div>
-  </div>
-  </div>
-
-  <div class="foot">💡 끊겨도 안테나가 붉어졌다 초록으로 돌아오면 자동 복구된 거예요. 나갈 땐 꼭 [나가기] 버튼!</div>
-</div>
-</section>
+<!-- [2026-09-30 콩] 접속 유지 절은 뺐습니다 — 입장하면 무조건 켜져서(script_alive.js)
+     멤버가 할 일이 없어졌어요. 옛 주소 접속유지_가이드.html 은 가이드 맨 위로 옵니다. -->
 
 <!-- ═══════════ 기능 그리드 ═══════════
      [넓힘 2026-08-22 — 콩] 한 줄에 다섯 칸. 빠져 있던 넷을 채웠습니다 —
@@ -593,7 +524,6 @@
       <span class="tool">📁 자료실</span>
       <span class="tool">🎋 대숲</span>
       <span class="tool">🖥️ 화면 공유<span class="num" style="top:-10px; right:-8px;">6</span></span>
-      <span class="tool">🔌 접속유지</span>
       <span class="tool">🖱️ 자동감지<span class="num" style="top:-10px; right:-8px;">5</span></span>
       <span class="tool">⚙️ 설정</span>
       <span class="tool">📘 가이드</span>
@@ -672,8 +602,8 @@
 
     <div class="item"><div class="dnum">2</div><div>
       <h4>머리말 — 늘 있는 것들</h4>
-      <p>왼쪽부터 <b>방 이름 · 지금 몇 명 · 오늘 날짜와 시계</b>, 오른쪽에 열 개의 단추가 있어요 —
-      <b>📢 공지 · 📁 자료실 · 🎋 대숲 · 🖥️ 화면 공유 · 🔌 접속유지 · 🖱️ 자동감지 · ⚙️ 설정 · 📘 가이드 · 🔍 크기 · ↩ 나가기</b>.</p>
+      <p>왼쪽부터 <b>방 이름 · 지금 몇 명 · 오늘 날짜와 시계</b>, 오른쪽에 아홉 개의 단추가 있어요 —
+      <b>📢 공지 · 📁 자료실 · 🎋 대숲 · 🖥️ 화면 공유 · 🖱️ 자동감지 · ⚙️ 설정 · 📘 가이드 · 🔍 크기 · ↩ 나가기</b>.</p>
       <p class="tip"><b>📢 공지</b>에 안 읽은 게 있으면 붉은 점이 붙어요 ·
       <b>📁 자료실</b>은 한 개 2MB까지, 90일 뒤 자동 삭제 ·
       머리말 단추와 시계는 <b>화면을 줄여도 작아지지 않아요</b>.</p>
@@ -747,7 +677,7 @@
       <h4>↩ 나가기 — 퇴장할 땐 꼭!</h4>
       <p>창을 그냥 닫지 말고 <b>[나가기]</b>를 눌러주세요. 작업 시간과 출석 기록이 그 시각으로 정확히 닫혀요.
       깜빡하고 닫아도 시간이 증발하진 않지만, 기록이 훨씬 깔끔해져요.</p>
-      <p class="tip">다른 창을 오래 보면 브라우저가 탭을 재워 접속이 끊길 수 있어요 — 위 <b>[접속 유지]</b> 칸을 참고하세요.</p>
+      <p class="tip">다른 창을 오래 봐도 괜찮아요 — 입장하면 탭이 잠들지 않게 붙잡아 두는 장치가 저절로 켜져요 (탭에 🔊 표시가 뜨는 건 그 때문이고, 소리는 안 납니다).</p>
     </div></div>
   </div>
 

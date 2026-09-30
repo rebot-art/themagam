@@ -668,7 +668,7 @@
        것은, 혼자 방은 이 뒤에 알약 몇 개를 걷어내므로 그때 판이 다시
        그려질 수 있어서예요 — 두 번 불러도 탈이 없게 만들어 뒀습니다. */
     window.mountPanelZoomCtl?.();
-    ["dock-pill-pub", "alive-btn"].forEach(id => {
+    ["dock-pill-pub"].forEach(id => {   /* [2026-09-30] alive-btn 은 본편에서도 사라짐 */
       const el = document.getElementById(id);
       if (el) el.remove();
     });

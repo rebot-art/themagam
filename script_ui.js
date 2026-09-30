@@ -665,7 +665,6 @@
     if (name === "theme") { renderThemePalette(); window.bindRoomBgUI?.(); }
     if (name === "pomo") { renderPomodoroSoundMini(); applyPomoShape(loadPomoShape()); }
     if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotMap?.(); }
-    if (name === "alive") window.renderAliveButton?.();   // 스위치를 지금 상태에 맞춥니다
     if (name === "privacy") {
       window.bindAdminEasterEgg?.();
       window.refreshAdminUiVisibility?.();

@@ -2793,8 +2793,8 @@
       <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b>
         <span style="font-weight:400; opacity:.7;">— 상태를 안 가린 자리 지킨 시간이에요</span></div>
       <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
-        <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분께
-        <b>접속 유지 가이드</b>(크롬 탭 안 재우기)를 안내해 주세요.</div>`;
+        <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분 브라우저나
+        회선 쪽을 의심해 보세요 (접속 유지는 입장하면 저절로 켜져요).</div>`;
   }
 
   function stayText(ms) {

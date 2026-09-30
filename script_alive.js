@@ -27,11 +27,16 @@
        크로미움 판정선보다 약 4.9 dB 위입니다.
    크롬 1시간 3분 · 사파리 36분 연속으로 확인했습니다.
 
-   [기기별로 기억합니다 — 닉네임별이 아니라]
-   폰에서는 이 소리가 음악 앱을 끊거나 볼륨을 눌러 버립니다.
-   그래서 "노트북에서 켠 것이 폰까지 따라가는" 일이 없어야 해요.
-   localStorage 에 두면 기기마다 따로 놀고, 새 기기는 저절로 꺼진
-   상태에서 시작합니다.
+   [★ 입장하면 무조건 ON — 2026-09-30 콩 결정]
+   예전엔 기기별 저장값(localStorage)이 "켜도 됨"일 때만 입장 때 켰고,
+   새 기기·새 브라우저는 꺼진 채 시작했습니다. 그래서 멤버마다 버튼을
+   찾아 눌러야 했고, 방장이 일일이 설명해야 했어요.
+   이제 **입장 = 동의**로 봅니다. 입장 버튼 클릭이 브라우저의 "소리
+   허락"이기도 하니, 그 클릭에 얹어 바로 켭니다. 한 번 껐던 사람도
+   다음 입장엔 다시 ON — 끄기는 그 접속 동안만 유효합니다.
+   폰도 같습니다 (폰 접속자가 거의 없어서 — 콩). 켤 때 묻지도 않아요.
+   localStorage 저장은 남겨 두지만 이제 읽지 않습니다 — 지우면 옛
+   검사(★ 켬/끔을 이 기기에만 저장한다)가 흔들려서요.
 
    [브라우저를 가리지 않습니다]
    바로 옆의 자동감지(IdleDetector)는 크롬·엣지 전용이지만, 이건
@@ -61,6 +66,7 @@
   let _osc     = null;
   let _gain    = null;
   let _armed   = false;   // "다음 클릭에 다시 시도" 보험이 걸려 있나
+  let _userOff = false;   // 이 접속에서 손으로 껐나 — 보험이 도로 켜지 않게
 
   function _supported() {
     return typeof (window.AudioContext || window.webkitAudioContext) === "function";
@@ -152,7 +158,7 @@
       _armed = false;
       document.removeEventListener("pointerdown", go, true);
       document.removeEventListener("keydown", go, true);
-      if (!_loadPref()) return;              // 그새 껐으면 그만
+      if (_userOff) return;                  // 그새 손으로 껐으면 그만
       const ok = await _startTone();
       if (!ok) _armFirstClick();             // 아직도 안 되면 다음 클릭에 또
     };
@@ -191,20 +197,14 @@
 
     if (_on) {
       _stopTone();
+      _userOff = true;                       // 이 접속 동안은 다시 안 켭니다
       _savePref(false);
       return;
     }
+    _userOff = false;
 
-    /* 폰에서 켤 때만 한 번 묻습니다 — 여기서 부작용이 제일 큽니다.
-       (기기별 저장이라 폰은 원래 꺼진 채로 시작합니다) */
-    if (window.isMobile) {
-      const go = confirm(
-        "폰에서는 이 기능이 음악 앱을 끊거나 볼륨을 눌러 버릴 수 있어요.\n"
-        + "그래도 켤까요?"
-      );
-      if (!go) { _renderAll(); return; }
-    }
-
+    /* [2026-09-30] 폰에서 묻던 확인창을 뺐습니다 — 입장 때 이미 켜져 있고,
+       버튼은 "다시 켜기"일 뿐이라 물을 이유가 없어요. */
     const ok = await _startTone();
     if (!ok) {
       alert("소리를 시작하지 못했어요. 화면을 한 번 클릭한 뒤 다시 눌러 주세요.");
@@ -229,9 +229,12 @@
      --------------------------------------------------------------- */
   window.afterJoinInitAlive = async function () {
     if (!_supported()) { _renderAll(); return; }
-    if (!_loadPref()) { _renderAll(); return; }
+    /* ★ [2026-09-30 콩] 저장값을 보지 않습니다 — 입장하면 무조건 켭니다.
+       (예전엔 저장값이 꺼짐이면 여기서 그냥 돌아갔음 — 새 기기는 꺼진 채 시작) */
+    _userOff = false;
     const ok = await _startTone();
     if (!ok) _armFirstClick();
+    _savePref(true);
     _renderAll();
   };
 })();
