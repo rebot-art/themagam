@@ -532,6 +532,8 @@ window.AppSession = AppSession;
       // ✅ 3-2-A) 👋 입장 인사 — 방장이 걸어 둔 문구가 있으면 가운데 카드로.
       //           알약 줄이 다 선 뒤에 불러야 [확인] 이 챗창을 열 수 있어요.
       setTimeout(() => { try { window.showHelloOnce?.(); } catch(e){} }, 600);
+      // ✅ 3-2-B) 📢 새 공지 팝업 — 입장 인사가 닫힌 뒤에 (script_notice.js 가 기다렸다 띄움)
+      setTimeout(() => { try { window.showNoticePopOnce?.(); } catch(e){} }, 900);
 
       // ✅ 3-2-0) 📊 오늘 접속 띠 — 켜 둔 기기에서만 구독을 겁니다
       //           (꺼 둔 사람은 읽지도 않아요)

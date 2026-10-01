@@ -163,13 +163,54 @@
 
   /* =====================================================================
      읽음 표시
+     ---------------------------------------------------------------------
+     ★ [2026-10-01 콩] **닉별**로 바뀌었습니다. 예전엔 이 기기(AppStore)에만
+       적어서 PC 에서 읽어도 폰에선 다시 "안 읽음" 이었어요. 이제
+       users/{닉}/noticeSeenAt 에 숫자 하나(마지막으로 읽은 공지 시각)를
+       적습니다. 어느 기기든 한 번 읽으면 끝. 통신량은 숫자 하나.
+       기기 값도 계속 적어 둡니다 — 서버 값이 늦게 오는 동안의 버팀목.
+     ★ 처음 한 번(서버 값이 없을 때)은 **지금 있는 공지를 전부 읽은 것으로**
+       칩니다 — 안 그러면 옛 공지가 몽땅 "새 공지" 로 떠요 (콩: 이전 공지는
+       해당 없음). 그 뒤에 올라오는 것만 셉니다.
      ===================================================================== */
+  let _seenServer = null;     // null = 아직 안 읽어 옴
+  let _seenLoaded = false;
   function seenAt() {
-    return Number(window.AppStore?.getItem(SEEN_KEY) || 0);
+    const local = Number(window.AppStore?.getItem(SEEN_KEY) || 0);
+    return Math.max(local, Number(_seenServer || 0));
+  }
+  function _me() { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } }
+  async function loadSeen() {
+    const nick = _me();
+    if (!nick || !window.db) { _seenLoaded = true; return; }
+    try {
+      const v = (await window.db.ref(`users/${nick}/noticeSeenAt`).once("value")).val();
+      _seenServer = v == null ? null : Number(v) || 0;
+    } catch (e) { _seenServer = null; }
+    _seenLoaded = true;
+    paintDot();
+  }
+  /* 서버에 값이 없으면(닉별로 처음) — 지금 있는 것은 다 읽은 셈으로 */
+  function seedSeenIfNew() {
+    if (!_seenLoaded || _seenServer != null || !_list.length) return;
+    const newest = Number(_list[0].at || 0);
+    const base = Math.max(newest, seenAt());
+    _seenServer = base;
+    const nick = _me();
+    if (nick && window.db && base) { try { window.db.ref(`users/${nick}/noticeSeenAt`).set(base); } catch (e) {} }
+    try { if (base) window.AppStore?.setItem(SEEN_KEY, String(base)); } catch (e) {}
+    paintDot();
   }
   function markSeen() {
     const newest = _list.length ? Number(_list[0].at || 0) : 0;
-    if (newest) window.AppStore?.setItem(SEEN_KEY, String(newest));
+    if (newest) {
+      try { window.AppStore?.setItem(SEEN_KEY, String(newest)); } catch (e) {}
+      if (newest > Number(_seenServer || 0)) {
+        _seenServer = newest;
+        const nick = _me();
+        if (nick && window.db) { try { window.db.ref(`users/${nick}/noticeSeenAt`).set(newest); } catch (e) {} }
+      }
+    }
     paintDot();
   }
   function unreadCount() {
@@ -204,10 +245,69 @@
           imgs:  Math.max(0, Math.min(MAX_IMGS, Number(raw[id]?.imgs || 0)))
         }))
         .sort((a, b) => b.at - a.at);        // 최신이 위로
+      _listLoaded = true;
+      seedSeenIfNew();
       paintDot();
       if (el("notice-modal")?.style.display === "flex") render();
     }, err => console.warn("[공지] 목록을 못 받아왔어요", err));
+    loadSeen().then(seedSeenIfNew);
   }
+  let _listLoaded = false;
+
+  /* =====================================================================
+     📢 입장 팝업 — 안 읽은 공지가 있으면 (2026-10-01 콩)
+     ---------------------------------------------------------------------
+     👋 입장 인사 카드가 **닫힌 뒤에** 뜹니다 (겹치지 않게). [공지 보기] 를
+     누르면 공지판이 열리고 → 읽음. [나중에] 는 이번 접속에서만 닫고,
+     다음 입장 때 또 떠요. 잣대는 붉은 점과 같습니다 (unreadCount).
+     모양은 입장 인사 카드(.hello-veil / .hello-card)를 그대로 빌려요.
+     ===================================================================== */
+  let _popShown = false;
+  async function showNoticePopOnce() {
+    if (_popShown || !window.db || window.SOLO) return;
+    /* 목록·읽음 값이 둘 다 올 때까지 (최대 6초) */
+    for (let i = 0; i < 30 && !(_listLoaded && _seenLoaded); i++) await new Promise(r => setTimeout(r, 200));
+    /* 👋 입장 인사가 떠 있으면 닫힐 때까지 (최대 2분) */
+    for (let i = 0; i < 600 && document.querySelector(".hello-veil"); i++) await new Promise(r => setTimeout(r, 200));
+    if (_popShown) return;
+    const fresh = _list.filter(n => Number(n.at || 0) > seenAt());
+    if (!fresh.length) return;
+    _popShown = true;
+
+    const tagOf = (id) => (TAGS.find(t => t.id === id) || TAGS[2]).label;
+    const when = (at) => {
+      const d = new Date(at), n = new Date();
+      if (d.toDateString() === n.toDateString()) return "오늘";
+      const y = new Date(n); y.setDate(y.getDate() - 1);
+      if (d.toDateString() === y.toDateString()) return "어제";
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+    const rows = fresh.slice(0, 3).map(n => `
+      <li class="npop-row"><span class="npop-tag is-${esc(n.tag)}">${esc(tagOf(n.tag))}</span>
+        <span class="npop-t">${esc(n.title)}</span><span class="npop-when">${when(n.at)}</span></li>`).join("");
+    const more = fresh.length > 3 ? `<li class="npop-more">외 ${fresh.length - 3}개</li>` : "";
+
+    const veil = document.createElement("div");
+    veil.className = "hello-veil npop-veil";
+    veil.innerHTML = `
+      <div class="hello-card npop-card" role="dialog" aria-modal="true" aria-label="새 공지">
+        <div class="hello-ic">📢</div>
+        <p class="npop-h">새 공지가 있어요 <span class="npop-n">${fresh.length}</span></p>
+        <ul class="npop-list">${rows}${more}</ul>
+        <div class="npop-btns">
+          <button type="button" class="npop-later">나중에</button>
+          <button type="button" class="hello-ok npop-open">공지 보기</button>
+        </div>
+        <p class="npop-hint">확인하기 전까진 들어올 때마다 떠요</p>
+      </div>`;
+    document.body.appendChild(veil);
+    requestAnimationFrame(() => veil.classList.add("on"));
+    const 닫기 = () => { veil.classList.remove("on"); setTimeout(() => veil.remove(), 300); };
+    veil.querySelector(".npop-later").addEventListener("click", 닫기);
+    veil.querySelector(".npop-open").addEventListener("click", () => { 닫기(); openNoticeBoard(); });
+    setTimeout(() => veil.querySelector(".npop-open")?.focus(), 340);
+  }
+  window.showNoticePopOnce = showNoticePopOnce;
 
   /** 그 공지의 사진을 받아옵니다 (한 번 받으면 기억해 둡니다) */
   async function loadImgs(id) {

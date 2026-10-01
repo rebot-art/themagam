@@ -7577,6 +7577,27 @@ html[data-theme-style="studio"] .user-card{
 .share-cheers .card-heart:hover{ transform: rotate(8deg) scale(1.1); }
 .share-cheers .card-heart.is-new{ animation: cheer-pop .45s cubic-bezier(.2,1.4,.4,1); }
 @keyframes cheer-pop{ from{ transform: rotate(8deg) scale(.3); opacity: 0; } 60%{ transform: rotate(8deg) scale(1.2); } to{ transform: rotate(8deg) scale(1); opacity: 1; } }
+/* 📢 새 공지 팝업 (2026-10-01 — 콩) — 입장 인사 카드를 빌려 씁니다 */
+.npop-card{ text-align: left; padding: 24px 22px 18px; }
+.npop-card .hello-ic{ text-align: center; }
+.npop-h{ margin: 10px 0 10px; text-align: center; font-family: "Noto Serif KR", "Nanum Myeongjo", serif; font-size: var(--fs-lg, 17px); font-weight: 700; color: var(--text-1); }
+.npop-n{ display: inline-block; min-width: 18px; padding: 0 6px; border-radius: 99px; background: #B3372B; color: #fff; font-size: 11px; font-weight: 800; margin-left: 4px; vertical-align: 3px; font-family: inherit; }
+.npop-list{ list-style: none; margin: 0 0 14px; padding: 0; }
+.npop-row{ display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-top: 1px dashed rgba(0,0,0,.12); font-size: var(--fs-sm, 13px); }
+.npop-row:first-child{ border-top: 0; }
+/* 딱지는 불투명(.9) + 흰 글씨 — 다크 테마에서도 안 묻히게 */
+.npop-tag{ flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 6px; background: rgba(90,140,200,.9); color: #fff; font-weight: 700; }
+.npop-tag.is-fix{ background: rgba(224,120,90,.9); }
+.npop-tag.is-info{ background: rgba(140,125,105,.9); }
+.npop-t{ flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.npop-when{ flex: 0 0 auto; font-size: 11px; color: var(--muted); }
+.npop-more{ font-size: 11px; color: var(--muted); padding: 4px 0 0; text-align: right; }
+.npop-btns{ display: flex; gap: 8px; }
+.npop-btns .hello-ok{ margin-top: 0; flex: 1 1 auto; }
+.npop-later{ flex: 0 0 auto; min-width: 88px; border: 0; border-radius: 9px; padding: 12px; background: rgba(0,0,0,.06); color: var(--muted); font: inherit; font-size: var(--fs-md); cursor: pointer; }
+.npop-later:hover{ background: rgba(0,0,0,.1); }
+.npop-hint{ margin: 10px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
+
 /* 📅 디데이 (2026-10-01 — 콩) ─────────────────────────────────────
    ① 나의 작업 할 일 탭 맨 위 칸  ② 달력 🚩  ③ 카드 접속 점 옆 딱지
    색: 멀면 파랑 · D-7 안 주황 · D-3 안 붉게 · D-DAY 붉게(깜빡임 없음 — 콩) · 지난 건 회색 */
