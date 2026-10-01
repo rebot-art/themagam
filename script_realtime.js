@@ -1132,6 +1132,16 @@
   let _lastCardsHtml = null;
   let _lastCardParts = null;   // { nicks:[…], parts:[…] } — 바뀐 카드만 갈아 끼우기용
 
+  /* ⏱ [2026-10-01 콩] 작업 시간 **01:04 · 11:44** — 시:분 두 자리 고정, 초 없음.
+     (한때 2:13.07 로 초를 화면에서 흘리는 안도 했지만, 글자가 칸 밖으로
+      튀어나갈 걱정에 콩이 이 꼴로 정했습니다. 항상 5자라 폭이 안 변해요.)
+     서버는 예전처럼 분이 바뀔 때만 보내므로 통신량 변화 0, 1초 틱도 없습니다. */
+  function whFmt(ms) {
+    const mins = Math.max(0, Math.floor(ms / 60000));
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+
   function renderUserCards(data) {
       const list = document.getElementById("user-cards");
       if (!list) return;
@@ -1307,14 +1317,12 @@
              큰 숫자로. WRITE·JOB 중에는 1분마다 값이 갱신돼 타이머처럼
              보입니다. 투두 진척은 카드 팝업에서 봅니다. */
           const _whMs = Math.max(0, Number(row.workMs || 0));
-          const _whM = Math.round(_whMs / 60000);
-          /* ★ [2026-09-07 — 콩] 숫자와 단위(h·m)를 갈라 감쌉니다 — 가로형
-             카드에서 **숫자만** 키우고 단위는 작고 옅게 두기 위해서예요
-             (styles.css 의 .wh-u). 세로형에서는 둘이 같은 크기라 티가
-             안 납니다. */
-          const _u = (t) => t.replace(/([hm])/g, '<i class="wh-u">$1</i>');
-          const whTxt = _u(_whM < 60 ? `${_whM}m`
-            : `${Math.floor(_whM / 60)}h${_whM % 60 ? " " + (_whM % 60) + "m" : ""}`);
+          /* ★ [2026-10-01 콩] 표기는 **HH:MM** (01:04 · 11:44) — whFmt().
+               예전 2h 13m 은 10시간이 넘으면 "11h44m" 이 칸 밖으로 삐져나갔어요.
+               두 자리 고정이면 항상 5자라 절대 안 넘칩니다. */
+          const whTxt = whFmt(_whMs);
+          /* 옛 h·m 꼴 — 세로형·검사용으로 남겨 둡니다 (안 씁니다) */
+          const _u = (t) => t.replace(/([hm])/g, '<i class="wh-u">$1</i>'); void _u;
           void tDone; void tTotal; void pct;
           /* [2026-08-06] 지금 뽀모를 돌리는 중이면 🍅 이 살짝 뜁니다.
              타이머는 각자 것이라 남은 시간은 모릅니다 — "달리는 중"만 보여요.
