@@ -1052,6 +1052,23 @@
       _statusCache = data;
       window._statusCache = data;   // ✅ 전역 노출
 
+      /* ★★ [2026-10-01 콩 제보 "랑랑 님이 접속 순서에서 계속 맨 뒤로"] ──────
+         내 줄이 서버에서 **통째로 지워진 뒤**(다른 탭을 닫아 나가기 신호가
+         갔다든지, 방장 정리라든지) 이 탭이 살아 있으면, 다음 하트비트가
+         "달라진 칸만" update() 로 보내서 줄이 **반쪽으로** 되살아납니다 —
+         joinedAt · 이모지 · 목표 글 같은 "안 달라진" 칸은 영영 빠진 채로요.
+         joinedAt 이 없으면 접속 순서 정렬이 Infinity 로 쳐서 맨 뒤에 섭니다.
+         여기서 내 줄을 들여다보다가 비었거나 joinedAt 이 빠졌으면 손에 든
+         "보낸 값"을 버리고 한 번 통째로 다시 보냅니다 (30초에 한 번만). */
+      try {
+        const mine = myNick && data ? data[myNick] : null;
+        if (myNick && _lastSentObj && (!mine || mine.joinedAt == null) && Date.now() - _selfHealAt > 30000) {
+          _selfHealAt = Date.now();
+          _lastSentObj = null;
+          setTimeout(() => { try { updateStatus(true); } catch (e) {} }, 300);
+        }
+      } catch (e) {}
+
       detectJoins(data);
       updateChatHeader();
       renderUserCards(data);
@@ -1618,6 +1635,7 @@
   /* 🥗 마지막으로 보낸 **칸별 값** — 달라진 칸만 보내려고 (2026-08-21).
      null 이면 "서버에 뭐가 있는지 모른다" 는 뜻이라 통째로 다시 씁니다. */
   let _lastSentObj = null;
+  let _selfHealAt = 0;          // 내 줄이 반쪽으로 되살아났을 때 통째로 다시 보낸 시각
   const STATUS_KEEPALIVE_MS = 5 * 60 * 1000;   // 아무것도 안 변해도 5분에 한 번은
 
   /** 기억해 둔 지문을 지웁니다 — 다시 이어졌을 때처럼 "서버에 뭐가 남아
