@@ -1411,6 +1411,7 @@
                       title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}">
                   <i></i><i></i><i></i><i></i>
                 </span>
+                ${ddChipHtml(row)}
                 ${/* [2026-08-17] 📱 폰 접속 표시 — 접속 점 바로 옆 (A안, 콩 선택).
                      폰인 사람에게만 붙습니다. PC 가 다수라 PC 에 다 붙이면
                      시끄럽기만 해요. 값은 status 의 onPhone (updateStatus 참고). */
@@ -1571,6 +1572,17 @@
      화면에 보이는 이름만 바꿨습니다. 기존 데이터가 그대로 살아납니다.
        writing → WORK      focus → 🔥초집중🔥
        rest    → 휴식      away  → 자리비움 */
+  /* 📅 [2026-10-01 콩] 카드의 디데이 딱지 — 접속 점 옆, 상태 알약처럼 네모지게.
+     status 의 ddN(개수)·ddD(남은 날)만 봅니다. 이름은 안 나와요.
+     둘 이상이면 개수를 작게 덧붙입니다: 🚩 D-3 ·3  */
+  function ddChipHtml(row) {
+    const n = Number(row?.ddN), d = Number(row?.ddD);
+    if (!(n > 0) || !Number.isFinite(d) || d < 0) return "";
+    const cls = d === 0 ? " is-day" : d <= 3 ? " is-hot" : d <= 7 ? " is-warm" : "";
+    const txt = d === 0 ? "D-DAY" : `D-${d}`;
+    return `<span class="card-dday${cls}" title="디데이 ${n}개 — 가장 가까운 것까지 ${d === 0 ? "오늘" : d + "일"}">🚩 ${txt}${n > 1 ? `<i>·${n}</i>` : ""}</span>`;
+  }
+
   function statusLabel(code) {
     /* [2026-08-03] 상태는 Work · Break 둘뿐입니다. 저장값은 그대로
        (writing/rest), 옛 데이터의 focus/away 도 두 이름으로 접힙니다. */
@@ -1691,6 +1703,10 @@
          그 자리에서 다시 '원고'로 바뀌어 나갑니다. 실제로 그랬어요 —
          떼도 안 떼지고 원고가 붙었습니다. 없으면 없는 채로 보냅니다. */
       tag: (typeof window.myWorkTag === "function") ? window.myWorkTag() : "",
+      /* 📅 [2026-10-01 콩] 디데이 요약 — 개수와 가장 가까운 것까지 남은 날.
+         항목 이름은 안 나갑니다. 없으면 null 로 보내 칸을 지웁니다 (script_dday.js). */
+      ddN: (window.myDday?.() || null)?.n ?? null,
+      ddD: (window.myDday?.() || null)?.days ?? null,
       /* 펫 요약 — 남들 카드에도 보이게 */
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,

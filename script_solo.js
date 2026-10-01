@@ -613,7 +613,7 @@
          listenStatus 를 붙여야 첫 그림에 유령들이 다 들어옵니다. */
     ["listenStatus", "listenMessages", "loadPersonalData",
      "listenPomodoro",           // 🍅 내 카드의 토마토
-     "listenNotes", "listenHearts", "listenCheers", "listenRoomTodo", "loadGoalHours",
+     "listenNotes", "listenHearts", "listenCheers", "listenDday", "listenRoomTodo", "loadGoalHours",
      "afterJoinLoadProfile",     // 프꾸 값 읽기
      "startTimelog",             // 작업 시간 쌓기
      "startWordcount",           // ✍️ 글자수 말풍선

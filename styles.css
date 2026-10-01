@@ -7577,6 +7577,52 @@ html[data-theme-style="studio"] .user-card{
 .share-cheers .card-heart:hover{ transform: rotate(8deg) scale(1.1); }
 .share-cheers .card-heart.is-new{ animation: cheer-pop .45s cubic-bezier(.2,1.4,.4,1); }
 @keyframes cheer-pop{ from{ transform: rotate(8deg) scale(.3); opacity: 0; } 60%{ transform: rotate(8deg) scale(1.2); } to{ transform: rotate(8deg) scale(1); opacity: 1; } }
+/* 📅 디데이 (2026-10-01 — 콩) ─────────────────────────────────────
+   ① 나의 작업 할 일 탭 맨 위 칸  ② 달력 🚩  ③ 카드 접속 점 옆 딱지
+   색: 멀면 파랑 · D-7 안 주황 · D-3 안 붉게 · D-DAY 붉게(깜빡임 없음 — 콩) · 지난 건 회색 */
+.dd-block{ background: rgba(143,184,224,.10); border: 1px solid rgba(143,184,224,.5); border-radius: 12px; padding: 8px 10px 6px; margin-bottom: var(--sp-3, 12px); }
+.dd-list{ list-style: none; margin: 0 0 6px; padding: 0; }
+.dd-row{ display: flex; align-items: center; gap: 8px; padding: 5px 2px; border-bottom: 1px dashed rgba(0,0,0,.08); font-size: var(--fs-sm, 13px); }
+.dd-row:last-child{ border-bottom: 0; }
+.dd-row.is-past{ opacity: .55; }
+.dd-badge{ flex: 0 0 auto; min-width: 46px; text-align: center; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 8px; background: #8FB8E0; color: #fff; font-variant-numeric: tabular-nums; }
+.dd-badge.is-warm{ background: #F0997B; }
+.dd-badge.is-hot, .dd-badge.is-day{ background: #B3372B; }
+.dd-badge.is-past{ background: #C9BCA8; }
+.dd-t{ flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-when{ flex: 0 0 auto; font-size: 11px; color: var(--muted, #8A7B68); }
+.dd-x{ flex: 0 0 auto; border: 0; background: transparent; color: #B9AC98; font-size: 12px; cursor: pointer; padding: 2px 4px; }
+.dd-x:hover{ color: #B3372B; }
+.dd-add .dd-date{ flex: 0 0 128px; }
+.dd-flag{ position: absolute; right: 1px; top: -2px; font-size: 9px; font-style: normal; line-height: 1; pointer-events: none; }
+#mywork-cal .att-day{ position: relative; }
+/* 카드 — 접속 점 바로 오른쪽. 상태 알약과 같은 네모(8px). */
+.card-dday{
+  position: absolute;
+  left: 22px;
+  top: 5px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  padding: 1.5px 6px;
+  border-radius: 8px;
+  background: rgba(143,184,224,.75);
+  border: 1px solid rgba(143,184,224,.9);
+  color: #fff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px rgba(0,0,0,.15);
+}
+.card-dday.is-warm{ background: rgba(240,153,123,.85); border-color: rgba(240,153,123,1); }
+.card-dday.is-hot, .card-dday.is-day{ background: rgba(179,55,43,.85); border-color: rgba(179,55,43,1); }
+.card-dday i{ font-style: normal; font-weight: 700; font-size: 9px; opacity: .9; }
+/* 딱지가 있으면 이름 줄 왼쪽을 비워 둡니다 — 긴 닉은 … 로 더 잘립니다 (콩) */
+.card-foot:has(.card-dday) .card-name{ padding-left: 78px; }
+
 /* 🙋‍♂️ Member 판 (혼자 방 전용 · 2026-10-01) — 본방 접속자 목록
    [2026-10-01 콩] 폭은 기본 판(460px)의 80% = 368px · 글씨 키움 · 프사 붙임 */
 #dock-panel-member{ width: min(368px, calc(100vw - 24px)); }
