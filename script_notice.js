@@ -175,6 +175,12 @@
      ===================================================================== */
   let _seenServer = null;     // null = 아직 안 읽어 옴
   let _seenLoaded = false;
+  /* ★ [2026-10-01 콩, 두 번째 결정] 공지판을 **열기만** 해선 읽음이 아닙니다.
+       **그 공지를 눌러 펼쳐야** 읽음이에요. 그래서 "어느 시각까지 읽음"
+       (noticeSeenAt — 옛 공지 기준선)에 더해, 펼친 공지의 id 를 하나씩
+       users/{닉}/noticeRead/{id} = true 로 적습니다.
+       안 읽음 = 기준선보다 새것 **이면서** 아직 안 펼친 것. */
+  let _read = {};             // { id: true } — 펼쳐 본 공지
   function seenAt() {
     const local = Number(window.AppStore?.getItem(SEEN_KEY) || 0);
     return Math.max(local, Number(_seenServer || 0));
@@ -186,6 +192,8 @@
     try {
       const v = (await window.db.ref(`users/${nick}/noticeSeenAt`).once("value")).val();
       _seenServer = v == null ? null : Number(v) || 0;
+      const r = (await window.db.ref(`users/${nick}/noticeRead`).once("value")).val();
+      _read = (r && typeof r === "object") ? r : {};
     } catch (e) { _seenServer = null; }
     _seenLoaded = true;
     paintDot();
@@ -201,6 +209,19 @@
     try { if (base) window.AppStore?.setItem(SEEN_KEY, String(base)); } catch (e) {}
     paintDot();
   }
+  /* 공지 하나를 읽음으로 — 펼칠 때 */
+  function isUnread(n) { return Number(n.at || 0) > seenAt() && !_read[n.id]; }
+  function markRead(id) {
+    const n = _list.find(x => x.id === id);
+    if (!n || !isUnread(n)) return;
+    _read[id] = true;
+    const nick = _me();
+    if (nick && window.db) { try { window.db.ref(`users/${nick}/noticeRead/${id}`).set(true); } catch (e) {} }
+    paintDot();
+    /* 전부 읽었으면 기준선을 올리고 id 목록은 비웁니다 — 안 쌓이게 */
+    if (!_list.some(isUnread)) markSeen();
+  }
+  /* 전부 읽음 — 기준선을 맨 위로 (방장이 공지를 올렸을 때, 또는 다 펼쳤을 때) */
   function markSeen() {
     const newest = _list.length ? Number(_list[0].at || 0) : 0;
     if (newest) {
@@ -210,12 +231,17 @@
         const nick = _me();
         if (nick && window.db) { try { window.db.ref(`users/${nick}/noticeSeenAt`).set(newest); } catch (e) {} }
       }
+      /* 기준선 아래로 들어간 id 는 더 들고 있을 이유가 없어요 */
+      if (Object.keys(_read).length) {
+        _read = {};
+        const nick = _me();
+        if (nick && window.db) { try { window.db.ref(`users/${nick}/noticeRead`).remove(); } catch (e) {} }
+      }
     }
     paintDot();
   }
   function unreadCount() {
-    const s = seenAt();
-    return _list.filter(n => Number(n.at || 0) > s).length;
+    return _list.filter(isUnread).length;
   }
   /* [2026-08-21] 공지 단추가 둘이 됐습니다 — 채팅 머리말과 방 머리말.
      안 읽은 글 표시는 **둘 다** 켜 줘야 해요. 한쪽만 켜면 챗을 접어 둔
@@ -270,7 +296,7 @@
     /* 👋 입장 인사가 떠 있으면 닫힐 때까지 (최대 2분) */
     for (let i = 0; i < 600 && document.querySelector(".hello-veil"); i++) await new Promise(r => setTimeout(r, 200));
     if (_popShown) return;
-    const fresh = _list.filter(n => Number(n.at || 0) > seenAt());
+    const fresh = _list.filter(isUnread);
     if (!fresh.length) return;
     _popShown = true;
 
@@ -326,7 +352,7 @@
   function noticeHtml(n) {
     const isOpen = _open === n.id;
     const imgs   = _imgCache[n.id] || [];
-    const fresh  = Number(n.at || 0) > seenAt();
+    const fresh  = isUnread(n);
 
     /* 접었을 때는 두 줄까지만 — CSS 가 자릅니다 */
     const bodyHtml = esc(n.body).replace(/\n/g, "<br>");
@@ -466,6 +492,8 @@
 
       if (act === "toggle") {
         _open = (_open === id) ? null : id;
+        /* ★ 펼치는 순간이 읽음 (콩: 열기만 해선 안 됨). 딱지는 다음 그리기부터 빠집니다 */
+        if (_open === id) markRead(id);
         render();
         /* 펼쳤고 사진이 있는데 아직 못 받아왔으면 지금 받아옵니다 */
         const n = _list.find(x => x.id === _open);
@@ -685,9 +713,9 @@
     _editId  = null;
     modal.style.display = "flex";
     render();
-    /* 읽음은 **연 뒤에** 표시합니다 — 먼저 표시하면 "새 공지" 딱지가
-       열자마자 사라져서 무엇이 새것인지 못 봅니다. */
-    setTimeout(markSeen, 1200);
+    /* [2026-10-01 콩] 공지판을 열기만 해선 읽음이 아닙니다 — 공지를
+       **눌러 펼쳐야** 읽음 (toggle 에서 markRead). 그래서 여기서는 아무것도
+       표시하지 않아요. 예전엔 1.2초 뒤 전부 읽음이었습니다. */
   }
 
   function closeNoticeBoard() {
