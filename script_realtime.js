@@ -1417,7 +1417,11 @@
                카드마다 그것이 되풀이돼요 — 글을 쓰는 방에서 그건 소음입니다.
                ★ 여기에 animation 을 다시 얹지 마세요. 움직임은 머리말 한
                  곳에 모아 두는 것이 이 방의 규칙이 됐습니다.
-             ★ 그림 대신 **이모지 🖥️** 를 씁니다 (콩이 고름).
+             ★ [2026-10-02 콩] 다시 **그림(SVG)** 으로 — 검은 네모 말풍선 + 빨간 ▶,
+               꼬리는 닉네임 쪽(오른쪽). 윈도에서 이모지가 딴판으로 보여서
+               돌아왔습니다. 색은 CSS 변수(--bub·--play)라 다크 테마에서는
+               말풍선만 밝게 뒤집습니다 (styles.css .card-share).
+             ★ (옛 기록) 2026-09-28 에는 이모지 🖥️ 를 썼습니다 (콩이 고름).
                한때 SVG 로 직접 그렸었는데, 콩이 알고 고른 쪽입니다 —
                  얻는 것 : 컬러라 눈에 잘 띄고, 코드가 짧고, 글꼴을 따라
                            저절로 늘고 줍니다
@@ -1430,7 +1434,7 @@
              ★ 자리와 크기는 앞서 쓰던 그림과 **같게** 맞췄습니다 (콩 지정).
              ★ 통신량은 그대로 0 입니다 — 이미 온 shareOn 을 그릴 뿐이에요. */
           const shareChip = row.shareOn === true
-            ? `<span class="card-share" title="화면 공유 중이에요" role="img" aria-label="화면 공유 중">🖥️</span>`
+            ? `<span class="card-share" title="화면 공유 중이에요" role="img" aria-label="화면 공유 중"><svg viewBox="0 0 26 20" aria-hidden="true"><path class="bub" d="M4 1h15a3 3 0 0 1 3 3v4.2l3.6 2.3L22 12.8V15a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"/><path class="play" d="M9 5.6v8.8l7.2-4.4z"/></svg></span>`
             : "";
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
