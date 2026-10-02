@@ -3137,7 +3137,7 @@
         ["🎨 카드 색·무늬", 셈(n => !!(잔[n].prof.cardBg || 잔[n].prof.cardPattern)), ""],
         ["🎨 테마 바꾸기", 셈(n => !!잔[n].prefs.themeName), "기본 테마면 안 잡힘"],
         ["🎯 목표 시간 정하기", 셈(n => Number(잔[n].prefs.goalHours) > 0), ""],
-        ["🖱 자리비움 자동감지", 셈(n => 잔[n].idle?.enabled === true), "크롬·엣지만 됨"],
+        ["🖱 자리비움 자동감지", 셈(n => 잔[n].idle?.enabled === true), "크롬·엣지·웨일만 됨"],
         ["🚪 들어올 때 상태 고르기", 셈(n => !!잔[n].start), "8/23에 생긴 것"],
         ["🍅 뽀모 참가", 셈(n => 잔[n].pomoP?.participating === true), ""],
         ["♪ 나의 BGM 리스트", 셈(n => Object.keys(잔[n].mine).length > 0), ""],

@@ -146,7 +146,8 @@
     if (btn && !btn.dataset.imgupOn) {
       btn.dataset.imgupOn = "1";
       btn.addEventListener("click", () => {
-        const f = document.createElement("input");
+        /* 단추가 사는 문서에 만듭니다 — ↗ 따로 창이면 그 창의 클릭이 열어야 해요 */
+        const f = btn.ownerDocument.createElement("input");
         f.type = "file"; f.accept = "image/*"; f.multiple = false;
         f.addEventListener("change", () => { if (f.files[0]) 올리기(f.files[0], 곳); });
         f.click();
@@ -159,9 +160,12 @@
     /* Ctrl+V — 글칸에 focus 가 있을 때만 받습니다.
        ★ 이게 없으면 챗과 비밀방이 열려 있을 때 한 번 붙여넣기에 두 장이
          올라갑니다 (두 곳이 같은 paste 를 듣게 되니까요). */
+    /* ★ 비밀방이 ↗ 따로 창(script_srpop.js)에 가 있으면 글칸은 그 창의
+         문서에 있습니다 — 그 창의 paste 는 srpop 이 이쪽으로 넘겨 줍니다.
+         글칸의 "제 문서" 기준으로 focus 를 봅니다 (2026-10-02 콩). */
     document.addEventListener("paste", (e) => {
-      const 글칸 = document.getElementById(곳.inputId);
-      if (!글칸 || document.activeElement !== 글칸) return;
+      const 글칸 = document.getElementById(곳.inputId) || window.srpopDoc?.()?.getElementById(곳.inputId);
+      if (!글칸 || 글칸.ownerDocument.activeElement !== 글칸) return;
       const it = [...(e.clipboardData?.items || [])].find(i => /^image\//.test(i.type));
       if (!it) return;
       e.preventDefault();

@@ -188,6 +188,8 @@
         hc.textContent = `${online.length}명 집필 중`;
         hc.title = online.join(", ");
       }
+      /* 👀 접속자 명단이 열려 있으면 같이 갱신 (새로 읽는 것 없음) */
+      if (_olistOpen) drawOnlineList();
       /* 📊 오늘 접속 띠 — 지금 인원을 이 시간대 기록에 남깁니다 */
       기록해두기(online.length);
     }
@@ -665,7 +667,56 @@
     _출석다시그리기 = setTimeout(() => { _출석다시그리기 = null; drawBoard(); }, 250);
   }
 
+  /* =====================================================================
+     🧘 혼자 방 — 배경판의 📊 오늘 접속 현황을 **본방 것**으로 (2026-10-02 콩)
+     ---------------------------------------------------------------------
+     혼자 방은 firebase.database() 가 가짜(localStorage)라 roomStat 도
+     attendance 도 비어 있어요 — 그래서 막대가 늘 0 이었습니다. 콩은
+     "바탕화면 접속 현황을 본방과 동일하게" 보고 싶어 해서, Member 판과
+     같은 수법(REST fetch)으로 본방 값을 가져와 **같은 그림 함수**에
+     흘려 넣습니다. 그리는 쪽(막대띠·출석글·drawBoard)은 하나도 안 고쳐요.
+
+     [얼마나 읽나]
+       roomStat/{오늘}.json          숫자 24개, 200바이트 안팎
+       attendance/{오늘}.json?shallow 열쇠(닉)만 — 사람당 20바이트쯤
+       nickOwner.json?shallow         총원, 방을 연 뒤 **한 번만**
+     1분마다. 혼자 방 탭이 **열려 있는 동안만**(닫으면 끝) — 콩 결정.
+     한 시간이면 60번 × 1KB 남짓 ≈ 60KB. 보안규칙상 셋 다 누구나 읽어서
+     로그인 없이도 됩니다.
+     ===================================================================== */
+  const SOLO_DB_URL  = "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app";
+  const SOLO_TICK_MS = 60 * 1000;
+  let _soloPulseOn = false;
+
+  async function 본방현황읽기() {
+    const 날 = ymd(Date.now());
+    try {
+      const r = await fetch(`${SOLO_DB_URL}/roomStat/${날}.json`, { cache: "no-store" });
+      _pulse = r.ok ? ((await r.json()) || {}) : {};
+      _pulseDay = 날;
+    } catch (e) {}
+    try {
+      const r = await fetch(`${SOLO_DB_URL}/attendance/${날}.json?shallow=true`, { cache: "no-store" });
+      if (r.ok) _오늘출석 = Object.keys((await r.json()) || {}).length;
+    } catch (e) {}
+    if (!_총원읽음) {
+      try {
+        const r = await fetch(`${SOLO_DB_URL}/nickOwner.json?shallow=true`, { cache: "no-store" });
+        if (r.ok) { _총원 = Object.keys((await r.json()) || {}).length; _총원읽음 = true; }
+      } catch (e) {}
+    }
+    drawBoard();
+  }
+  function 본방현황시작() {
+    if (_soloPulseOn) return;
+    _soloPulseOn = true;
+    본방현황읽기();
+    setInterval(본방현황읽기, SOLO_TICK_MS);
+  }
+
   function 출석듣기() {
+    /* 🧘 혼자 방은 가짜 서버 대신 본방을 REST 로 — 위 설명 */
+    if (window.SOLO) { 본방현황시작(); return; }
     const 날 = ymd(Date.now());
     if (날 !== _출석날) {
       if (_출석듣는곳) {
@@ -2814,17 +2865,118 @@
   }
   window.openAdminPage = openAdminPage;
 
+  /* =====================================================================
+     [옮김 2026-10-02 — 콩] 숨은 문은 이제 **왼쪽 "TheMagam" 제목**입니다.
+     ---------------------------------------------------------------------
+     "n명 집필 중" 박스는 아래 👀 접속자 명단의 문이 되어서(한 번 클릭),
+     거기에 더블클릭까지 얹으면 명단이 열렸다 관리자 PIN 이 뜨는 일이
+     생깁니다. 제목은 누를 일이 없는 자리라 더 조용해요.
+     ★ 제목의 겉모습(cursor·title)은 그대로 — 문이 있다는 티를 안 냅니다.
+     ===================================================================== */
   function bindHeadCountDoor() {
-    const hc = document.getElementById("head-count");
-    if (!hc || hc._doorBound) return;
-    hc._doorBound = true;
-    /* 겉모습은 그대로 둡니다 — cursor·title 을 손대면 티가 나니까요 */
-    hc.addEventListener("dblclick", () => {
-      if (!canAdmin()) return;   // 방장·운영진이 아니면 무반응
-      openAdminPage();
-    });
+    const title = document.querySelector(".brand-title");
+    if (title && !title._doorBound) {
+      title._doorBound = true;
+      title.addEventListener("dblclick", () => {
+        if (!canAdmin()) return;   // 방장·운영진이 아니면 무반응
+        openAdminPage();
+      });
+    }
+    bindOnlineList();
   }
   window.bindHeadCountDoor = bindHeadCountDoor;
+
+  /* =====================================================================
+     👀 접속자 명단 (2026-10-02 — 콩)
+     ---------------------------------------------------------------------
+     "n명 집필 중" 을 **한 번** 누르면 바로 아래에 [접속점 · 닉네임] 줄만
+     쭉 뜨는 작은 창. 카드의 접속점이 스티커에 가려지는 일이 잦아서,
+     방장이 접속 상태를 한눈에 훑을 자리가 필요했어요 (콩).
+
+     [통신량 0] 새로 읽지 않습니다. "n명" 을 세려고 이미 받아 둔
+     _statusCache 를 그대로 그려요 — 서버 쓰기 0, 읽기 0 추가.
+     접속점 모양도 카드와 **같은 조각**(.card-conn)을 씁니다 — 끊긴 사람은
+     카드에서처럼 흐려져요(.off). 열어 둔 동안 상태가 바뀌면 같이 바뀝니다
+     (updateChatHeader 가 그릴 때마다 이 창도 다시 그립니다).
+     ===================================================================== */
+  let _olistOpen = false;
+
+  function onlineListRows() {
+    const now = serverNow();
+    const rows = [];
+    for (const nick in (_statusCache || {})) {
+      const row = _statusCache[nick];
+      if (!isOnline(row, now)) continue;
+      rows.push({ nick, ok: !Number(row.disconnectedAt || 0), phone: row.onPhone === true });
+    }
+    /* 끊긴 사람을 위로 — 살펴보려는 게 바로 그 사람들이라서 */
+    rows.sort((a, b) => (a.ok - b.ok) || a.nick.localeCompare(b.nick, "ko"));
+    return rows;
+  }
+
+  function drawOnlineList() {
+    const box = document.getElementById("online-list");
+    if (!box) return;
+    const rows = onlineListRows();
+    const 끊김 = rows.filter(r => !r.ok).length;
+    box.innerHTML = `
+      <div class="olist-head">접속 <b>${rows.length}명</b>${끊김 ? ` · 끊김 <b class="olist-off">${끊김}</b>` : ""}</div>
+      ${rows.length ? rows.map(r => `
+        <div class="olist-row${r.ok ? "" : " is-off"}">
+          <span class="card-conn olist-conn${r.ok ? "" : " off"}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="olist-nick">${escapeHtml(r.nick)}</span>${r.phone ? `<span class="olist-phone" title="폰">📱</span>` : ""}
+        </div>`).join("")
+      : `<div class="olist-empty">아무도 없어요 🌙</div>`}`;
+  }
+
+  function closeOnlineList() {
+    _olistOpen = false;
+    document.getElementById("online-list")?.remove();
+    document.getElementById("head-count")?.setAttribute("aria-expanded", "false");
+    document.removeEventListener("click", _olistOutside, true);
+    document.removeEventListener("keydown", _olistKey, true);
+  }
+  function _olistOutside(e) {
+    if (e.target.closest("#online-list") || e.target.closest("#head-count")) return;
+    closeOnlineList();
+  }
+  function _olistKey(e) { if (e.key === "Escape") closeOnlineList(); }
+
+  function openOnlineList() {
+    const hc = document.getElementById("head-count");
+    if (!hc) return;
+    const box = document.createElement("div");
+    box.id = "online-list";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "지금 접속 중인 사람");
+    document.body.appendChild(box);
+    _olistOpen = true;
+    hc.setAttribute("aria-expanded", "true");
+    drawOnlineList();
+    /* 박스 바로 아래, 왼쪽 맞춤 — 화면 밖으로 나가면 안쪽으로 */
+    const r = hc.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8));
+    box.style.left = left + "px";
+    box.style.top  = (r.bottom + 6) + "px";
+    document.addEventListener("click", _olistOutside, true);
+    document.addEventListener("keydown", _olistKey, true);
+  }
+
+  function bindOnlineList() {
+    const hc = document.getElementById("head-count");
+    if (!hc || hc._olistBound) return;
+    hc._olistBound = true;
+    hc.classList.add("is-clickable");
+    hc.setAttribute("role", "button");
+    hc.setAttribute("tabindex", "0");
+    hc.setAttribute("aria-haspopup", "dialog");
+    hc.addEventListener("click", () => { _olistOpen ? closeOnlineList() : openOnlineList(); });
+    hc.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hc.click(); }
+    });
+  }
+  window.openOnlineList = openOnlineList;
+  window.closeOnlineList = closeOnlineList;
 
   function _closeAttendanceModal() {
     document.getElementById("attendance-modal")?.remove();

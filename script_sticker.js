@@ -983,13 +983,20 @@
      답장인지 아닌지까지 기존 흐름이 알아서 판단해요.
      ===================================================================== */
   let _pop = null;
+  let _popDoc = null;     // 판을 띄운 문서 — 비밀방이 ↗ 따로 창에 있으면 그쪽
+
+  /* ↗ 비밀방 따로 창(script_srpop.js) — 글칸·단추가 다른 문서에 있을 수
+     있어서, 아이디는 이 문서 다음에 그 창의 문서도 봅니다 (2026-10-02 콩) */
+  const 찾기 = (id) => document.getElementById(id) || window.srpopDoc?.()?.getElementById(id) || null;
 
   function close() {
     if (!_pop) return;
     _pop.remove();
     _pop = null;
-    document.removeEventListener("click", onDoc, true);
-    document.removeEventListener("keydown", onKey, true);
+    [document, _popDoc].forEach(d => {
+      try { d?.removeEventListener("click", onDoc, true); d?.removeEventListener("keydown", onKey, true); } catch (e) {}
+    });
+    _popDoc = null;
   }
   function onDoc(e) {
     if (_pop && !_pop.contains(e.target) && !e.target.closest("#" + _곳.btnId)) close();
@@ -1006,7 +1013,7 @@
   let _곳 = { btnId: "sticker-btn", inputId: "message", send: () => window.send?.() };
 
   function pick(id) {
-    const el = document.getElementById(_곳.inputId);
+    const el = document.getElementById(_곳.inputId) || 찾기(_곳.inputId);
     if (!el) return;
     el.value = `[[스티커:${id}]]`;
     close();
@@ -1046,11 +1053,14 @@
     /* 어디서 부른 것인지 — 안 주면 챗입니다 (예전 그대로) */
     _곳 = Object.assign({ btnId: "sticker-btn", inputId: "message",
                           send: () => window.send?.() }, 곳 || {});
-    const btn = document.getElementById(_곳.btnId);
+    const btn = 찾기(_곳.btnId);
     if (!btn) return;
     ensureFilter();
 
-    const pop = document.createElement("div");
+    /* 단추가 사는 문서에 띄웁니다 — 따로 창이면 그 창 안에 */
+    const doc = btn.ownerDocument;
+    const view = doc.defaultView || window;
+    const pop = doc.createElement("div");
     pop.className = "sticker-pop";
     pop.setAttribute("role", "menu");
     pop.setAttribute("aria-label", "스티커 고르기");
@@ -1058,12 +1068,13 @@
       <button type="button" class="sticker-opt" data-sticker="${s.id}"
               title="${s.label} (/${s.cmd})" aria-label="${s.label}"
       >${window.stickerHtml(`[[스티커:${s.id}]]`, 58)}</button>`).join("");
-    document.body.appendChild(pop);
+    doc.body.appendChild(pop);
 
     const r = btn.getBoundingClientRect();
-    /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1) */
-    const _z = (window.uiZoom?.() || 1);
-    const VW = innerWidth / _z, VH = innerHeight / _z;
+    /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1)
+       ★ 따로 창에는 확대가 없습니다 — 그 창의 크기로 잽니다 */
+    const _z = (doc === document) ? (window.uiZoom?.() || 1) : 1;
+    const VW = view.innerWidth / _z, VH = view.innerHeight / _z;
     const w = pop.offsetWidth, h = pop.offsetHeight;
 
     /* ★★★ 화면 안에 가두기 (2026-09-12 — 콩 "아래쪽이 잘려 보인대")
@@ -1092,9 +1103,12 @@
     });
 
     _pop = pop;
+    _popDoc = doc;
     setTimeout(() => {
-      document.addEventListener("click", onDoc, true);
-      document.addEventListener("keydown", onKey, true);
+      [document, doc].forEach(d => {
+        d.addEventListener("click", onDoc, true);
+        d.addEventListener("keydown", onKey, true);
+      });
     }, 0);
   };
 

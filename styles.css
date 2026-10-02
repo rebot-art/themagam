@@ -12170,3 +12170,68 @@ html[data-lite] .pr-flash{ animation:none; }
   font-weight: var(--fw-bold);
   padding: 1px 6px;
 }
+
+/* =====================================================================
+   👀 접속자 명단 (2026-10-02 — 콩) — "n명 집필 중" 을 누르면 그 아래
+   [접속점 · 닉네임] 줄만. script_realtime.js openOnlineList 가 띄웁니다.
+   접속점은 카드와 같은 조각(.card-conn)을 쓰되 자리만 흐름 속으로.
+   ===================================================================== */
+#head-count.is-clickable{ cursor: pointer; }
+#head-count.is-clickable:hover{ filter: brightness(1.08); }
+#online-list{
+  position: fixed;
+  z-index: 9000;
+  min-width: 168px;
+  max-width: 260px;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 6px 0 8px;
+  background: var(--panel);
+  backdrop-filter: blur(7px) saturate(1.06);
+  -webkit-backdrop-filter: blur(7px) saturate(1.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.olist-head{
+  padding: 4px 12px 6px;
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 4px;
+}
+.olist-head b{ color: var(--text); }
+.olist-head .olist-off{ color: #C0392B; }
+.olist-row{
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+.olist-row.is-off .olist-nick{ opacity: .55; }
+.olist-conn{ position: static; flex: 0 0 auto; }
+.olist-nick{ overflow: hidden; text-overflow: ellipsis; }
+.olist-phone{ font-size: 11px; opacity: .8; }
+.olist-empty{ padding: 10px 12px; color: var(--muted); text-align: center; }
+
+/* ↗ 비밀방 따로 창 (2026-10-02 콩 · script_srpop.js) */
+.dock-pop{
+  width: 26px; height: 26px; margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--muted);
+  font-size: var(--fs-sm); border-radius: var(--r-sm); cursor: pointer;
+}
+.dock-pop + .dock-x{ margin-left: 0; }
+.dock-pop:hover{ background: var(--fill-2); color: var(--text); }
+/* 따로 보는 동안 본 탭의 판은 머리말 + 한 줄만 */
+.dock-panel.is-popped{ height: auto !important; min-height: 0; }
+.dock-panel.is-popped .dock-grip{ display: none; }
+.dock-popped-note{
+  padding: 4px var(--sp-3) 12px; font-size: var(--fs-2xs); color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.dock-popped-note button{
+  border: 1px solid var(--border); background: var(--fill-1, transparent); color: var(--text);
+  font-size: var(--fs-2xs); padding: 2px 8px; border-radius: var(--r-full); cursor: pointer;
+}

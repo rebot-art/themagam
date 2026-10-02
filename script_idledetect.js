@@ -5,6 +5,8 @@
    크롬의 Idle Detection API(IdleDetector)로 "시스템 전체" 무입력을
    감지합니다. 탭 밖에서 다른 프로그램을 쓰고 있어도 키보드·마우스가
    움직이는 한 '활동 중'으로 봅니다.
+   ★ 크롬 계열이면 다 됩니다 — 엣지, 그리고 **네이버 웨일**도
+     (2026-10-02 멤버가 직접 확인, 콩). 안내 문구에 웨일을 같이 적어요.
 
    하는 일 두 가지.
      ① 무입력 20분 → 내 상태를 💤AWAY 로 자동 강등.
@@ -270,7 +272,7 @@
       /* 미지원 브라우저 — 흐리게. 누르면 toggleIdleDetect 가 안내를 냅니다 */
       btn.classList.add("dim");
       btn.style.opacity = ".45";
-      btn.title = "자리비움 자동 감지 — 크롬·엣지 전용";
+      btn.title = "자리비움 자동 감지 — 크롬·엣지·웨일 전용";
     }
     const label = btn.querySelector(".icon-btn-label");
     if (label) label.textContent = _idleEnabled ? "자동감지 ON" : "자동감지 OFF";
@@ -282,7 +284,7 @@
      --------------------------------------------------------------- */
   async function toggleIdleDetect() {
     if (!_supported()) {
-      alert("자리비움 자동 감지는 크롬·엣지에서만 쓸 수 있어요.");
+      alert("자리비움 자동 감지는 크롬·엣지·네이버 웨일에서만 쓸 수 있어요.");
       return;
     }
     if (!myNick) return;

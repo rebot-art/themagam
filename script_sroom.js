@@ -86,7 +86,10 @@
   let _srReact = {};               // { 글키: { 반응id: { 닉: true } } }
   let _sr답할것 = null;            // { key, user, msg } — 지금 답글 다는 대상
 
-  const el = (id) => document.getElementById(id);
+  /* ↗ 따로 창(script_srpop.js)으로 판을 옮겨 두면 이 문서에는 없습니다 —
+     그 창의 문서도 함께 봅니다. 옮기는 것이지 새로 그리는 게 아니라서
+     글칸·손가락은 그대로예요 (2026-10-02 콩). */
+  const el = (id) => document.getElementById(id) || window.srpopDoc?.()?.getElementById(id) || null;
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
 
   /* ★ script_core.js 의 myNick 은 최상위 let 이라 window 에 안 붙습니다.
