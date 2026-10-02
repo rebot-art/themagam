@@ -63,7 +63,9 @@
        ★ 크기는 챗과 같은 1.2 — 하는 일이 같으니 몸집도 같아야 손에 익습니다.
        ★ 붉은 점(NEW_BOARDS)에 **안 넣습니다.** newmark 는 모두가 읽을 수
          있어서, 점 하나로 "저 방에서 지금 얘기 중" 이 새 나갑니다. */
-    { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, move: null, drag: true, resize: true },
+    /* ⚙️ minRatio: 0.6 — [2026-10-03 콩] 기본 키(516px)의 60%(≈310px)까지 줄일 수 있게.
+       기본으로 열리는 키는 그대로이고, 손잡이로 **내릴 수 있는 바닥**만 낮춥니다. */
+    { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, minRatio: 0.6, move: null, drag: true, resize: true },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -537,7 +539,8 @@
     /* 바닥 — 보통은 기본 키 아래로 못 줄입니다(내용이 뭉개져서).
        ♪ BGM 만 예외: 영상만 남기고 줄여 두는 쓰임(작업 중 리스트가
        거슬림)이 있어서 150px 까지 내려갑니다 (2026-08-14 콩 요청) */
-    const lo = pid === "music" ? 150 : baseH(pid);
+    const d = DOCK.find(x => x.id === pid);
+    const lo = pid === "music" ? 150 : Math.round(baseH(pid) * ((d && d.minRatio) || 1));
     const v = Math.round(Math.max(lo, Math.min(maxH(), h)));
     p.style.setProperty("--dock-h", v + "px");
     return v;

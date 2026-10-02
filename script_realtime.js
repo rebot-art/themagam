@@ -1183,6 +1183,40 @@
   let _lastCardsHtml = null;
   let _lastCardParts = null;   // { nicks:[…], parts:[…] } — 바뀐 카드만 갈아 끼우기용
 
+  /* =====================================================================
+     🖼 프사 깜빡임 (2026-10-03 — 콩 "프로필 사진이 여기저기 간헐적으로 깜빡여")
+     ---------------------------------------------------------------------
+     [무슨 일이었나]
+     카드는 글(HTML)로 지어서, 바뀐 카드만 outerHTML 로 갈아 끼웁니다.
+     그런데 outerHTML 은 그 카드의 <img> 를 **새로 태어나게** 해요.
+     프사가 data: 주소(사진이 글 안에 들어 있음)이던 시절엔 decoding=sync
+     로 빈 칸 없이 그려졌는데, 2026-09-21 에 사진을 **창고(Storage) 주소**로
+     옮기면서 새 <img> 는 캐시에서라도 사진을 *다시 가져와 푸는* 한 박자가
+     생겼습니다 — 그 한 박자가 빈 칸 = 깜빡임이에요.
+     카드마다 ⏱ 작업시간이 **1분에 한 번씩 제각각** 바뀌니, 화면 여기저기서
+     간헐적으로 하나씩 깜빡이는 것으로 보였습니다.
+
+     [어떻게 고치나] 새 카드를 짓되, **사진 주소가 같으면 옛 <img> 를 그대로
+     옮겨 심습니다.** 이미 풀려 있는 그림이라 빈 박자가 없어요. 주소가
+     달라졌으면(프사를 바꿈) 새 <img> 를 씁니다 — 그때 한 번은 깜빡여도 됩니다.
+     ★ 통신량 0 — 그리는 쪽만 손봤습니다.
+     ===================================================================== */
+  function 프사옮겨심기(옛img, 새카드) {
+    if (!옛img || !새카드) return;
+    const 새img = 새카드.querySelector(".card-avatar > img");
+    if (!새img) return;
+    if (새img.getAttribute("src") !== 옛img.getAttribute("src")) return;
+    새img.replaceWith(옛img);
+  }
+  function 카드갈아끼우기(옛카드, html) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html.trim();
+    const 새카드 = tpl.content.firstElementChild;
+    if (!새카드) { 옛카드.outerHTML = html; return; }
+    프사옮겨심기(옛카드.querySelector(".card-avatar > img"), 새카드);
+    옛카드.replaceWith(새카드);
+  }
+
   /* ⏱ [2026-10-01 콩] 작업 시간 **01:04 · 11:44** — 시:분 두 자리 고정, 초 없음.
      (한때 2:13.07 로 초를 화면에서 흘리는 안도 했지만, 글자가 칸 밖으로
       튀어나갈 걱정에 콩이 이 꼴로 정했습니다. 항상 5자라 폭이 안 변해요.)
@@ -1525,12 +1559,22 @@
           ? list.querySelectorAll(":scope > .user-card:not(.share-card)") : null;
         if (same && domCards.length === parts.length) {
           parts.forEach((p, i) => {
-            if (p !== prev.parts[i]) domCards[i].outerHTML = p;
+            if (p !== prev.parts[i]) 카드갈아끼우기(domCards[i], p);
           });
         } else {
           /* 들어오거나 나가서 구성이 달라졌을 때만 통째로.
-             [2026-08-10] 이때는 공유 카드도 함께 지워지므로 다시 끼웁니다 */
+             [2026-08-10] 이때는 공유 카드도 함께 지워지므로 다시 끼웁니다
+             [2026-10-03] 통째로 갈 때도 프사 <img> 는 옮겨 심습니다 (아래 참고) */
+          const 옛프사 = {};
+          list.querySelectorAll(":scope > .user-card:not(.share-card)").forEach(c => {
+            const img = c.querySelector(".card-avatar > img");
+            const n = c.dataset.cardNick;
+            if (img && n) 옛프사[n] = img;
+          });
           list.innerHTML = html;
+          list.querySelectorAll(":scope > .user-card:not(.share-card)").forEach(c => {
+            프사옮겨심기(옛프사[c.dataset.cardNick], c);
+          });
           window.renderShareCards?.();
         }
         _lastCardsHtml = html;

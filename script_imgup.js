@@ -83,7 +83,9 @@
   /** 한 장 올리고, 주소를 글칸에 넣어 원래 보내기로 흘려보냅니다 */
   async function 올리기(file, 곳) {
     const st = 창고();
-    const 글칸 = document.getElementById(곳.inputId);
+    /* ↗ 비밀방 따로 창이면 글칸이 그 창의 문서에 있습니다 (2026-10-03 콩
+       "팝업에서 그림이 안 가" — 올리기는 됐는데 글칸을 못 찾아 안 보냈어요) */
+    const 글칸 = document.getElementById(곳.inputId) || window.srpopDoc?.()?.getElementById(곳.inputId) || null;
     if (!st) { 알림(글칸, "그림 보내기를 쓸 수 없어요 (창고 연결 안 됨)"); return; }
     if (!file || !/^image\//.test(file.type || "")) {
       알림(글칸, "그림만 보낼 수 있어요");

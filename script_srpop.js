@@ -105,6 +105,27 @@
   }
 
   /* ---------------------------------------------------------------
+     스크롤 자리 지키기 (2026-10-03 콩 "켤 때·되돌릴 때 채팅이 맨 위로 올라가")
+     ---------------------------------------------------------------
+     요소를 다른 문서로 옮기면 브라우저가 scrollTop 을 0 으로 되돌립니다.
+     옮기기 전에 "바닥을 보고 있었나 / 어디까지 내렸나" 를 적어 두고,
+     옮긴 뒤(레이아웃이 한 박자 뒤에 잡혀서 두 번) 되돌립니다. */
+  function 스크롤기억(body) {
+    const log = body?.querySelector?.(".sr-log");
+    if (!log) return null;
+    const 바닥 = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+    return { 바닥, top: log.scrollTop };
+  }
+  function 스크롤되살리기(body, 기억) {
+    const log = body?.querySelector?.(".sr-log");
+    if (!log || !기억) return;
+    const 놓기 = () => { log.scrollTop = 기억.바닥 ? log.scrollHeight : 기억.top; };
+    놓기();
+    requestAnimationFrame(놓기);
+    setTimeout(놓기, 120);
+  }
+
+  /* ---------------------------------------------------------------
      열기 / 되돌리기
      --------------------------------------------------------------- */
   async function open() {
@@ -141,7 +162,9 @@
     const host = _doc.createElement("div");
     host.id = "srpop-host";
     _doc.body.appendChild(host);
+    const 스크롤 = 스크롤기억(body);
     host.appendChild(body);               // ★ 옮깁니다 — 손가락·구독이 따라와요
+    스크롤되살리기(body, 스크롤);
 
     /* 본 탭의 판은 "따로 보는 중" 한 줄만 남깁니다 */
     const panel = document.getElementById("dock-panel-sroom");
@@ -185,7 +208,9 @@
     try {
       const body = (_doc && _doc.getElementById("dock-body-sroom")) || null;
       const panel = document.getElementById("dock-panel-sroom");
+      const 스크롤 = 스크롤기억(body);
       if (body && panel) panel.insertBefore(body, panel.querySelector(".dock-popped-note"));
+      스크롤되살리기(body, 스크롤);
       panel?.querySelector(".dock-popped-note")?.remove();
       panel?.classList.remove("is-popped");
       try { _mo?.disconnect(); } catch (e) {}
