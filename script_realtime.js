@@ -1201,17 +1201,30 @@
      달라졌으면(프사를 바꿈) 새 <img> 를 씁니다 — 그때 한 번은 깜빡여도 됩니다.
      ★ 통신량 0 — 그리는 쪽만 손봤습니다.
      ===================================================================== */
+  /* 새 카드의 프사는 src 대신 data-src 로 지어 둡니다 — src 가 붙은 <img> 는
+     문서에 끼우기도 전에(innerHTML 로 만드는 순간) 사진을 받기 시작하거든요.
+     옛 <img> 가 있고 주소가 같으면 옛 것을 옮겨 심고, 아니면 그때 src 를 켭니다. */
+  /* (글자를 쪼개 적은 까닭: build-single.py 가 img 의 주소 속성 꼴을 "밖에 둔 파일" 로 오해해서) */
+  const _프사태그 = new RegExp('(<div class="card-avatar has-photo"><img )' + 's' + 'rc="', "g");
+  const 프사src끄기 = (html) => html.replace(_프사태그, '$1data-' + 's' + 'rc="');
   function 프사옮겨심기(옛img, 새카드) {
-    if (!옛img || !새카드) return;
-    const 새img = 새카드.querySelector(".card-avatar > img");
+    const 새img = 새카드?.querySelector?.(".card-avatar > img");
     if (!새img) return;
-    if (새img.getAttribute("src") !== 옛img.getAttribute("src")) return;
-    새img.replaceWith(옛img);
+    const 주소 = 새img.dataset.src;
+    if (주소 === undefined) return;                       // 이미 src 가 켜진 그림
+    if (옛img && 옛img.getAttribute("src") === 주소) { 새img.replaceWith(옛img); return; }
+    새img.removeAttribute("data-src");
+    새img.src = 주소;                                      // 새 사진 — 이때 한 번은 받습니다
   }
   function 카드갈아끼우기(옛카드, html) {
-    const tpl = document.createElement("template");
-    tpl.innerHTML = html.trim();
-    const 새카드 = tpl.content.firstElementChild;
+    /* ★★ <template> 을 쓰면 안 됩니다 — template 의 속은 **다른 문서**라서,
+       옛 <img> 를 그리로 옮기는 순간 크로미움이 "문서가 바뀌었다" 며 사진을
+       버리고 다시 받아요 (ImageLoader::ElementDidMoveToNewDocument). 그러면
+       옮겨 심은 보람이 없이 또 깜빡입니다. 그래서 **같은 문서의** div 안에
+       짓습니다 — 거기로 옮기는 건 같은 문서 안의 이사라 사진이 그대로예요. */
+    const 틀 = document.createElement("div");
+    틀.innerHTML = 프사src끄기(html.trim());
+    const 새카드 = 틀.firstElementChild;
     if (!새카드) { 옛카드.outerHTML = html; return; }
     프사옮겨심기(옛카드.querySelector(".card-avatar > img"), 새카드);
     옛카드.replaceWith(새카드);
@@ -1226,7 +1239,6 @@
     const h = Math.floor(mins / 60), m = mins % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
-
   function renderUserCards(data) {
       const list = document.getElementById("user-cards");
       if (!list) return;
@@ -1571,7 +1583,7 @@
             const n = c.dataset.cardNick;
             if (img && n) 옛프사[n] = img;
           });
-          list.innerHTML = html;
+          list.innerHTML = 프사src끄기(html);
           list.querySelectorAll(":scope > .user-card:not(.share-card)").forEach(c => {
             프사옮겨심기(옛프사[c.dataset.cardNick], c);
           });
