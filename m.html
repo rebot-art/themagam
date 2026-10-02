@@ -344,6 +344,7 @@
     if (disc > 0 && now - disc >= DISCONNECT_GRACE_MS) return false;
     const seen = Number(row.lastSeen || 0);
     if (seen > 0 && now - seen >= ONLINE_STALE_MS) return false;
+    if (!(seen > 0)) return false;   // [2026-10-03] 퇴근 뒤 끊김 예약이 남긴 토막 — 작업방과 같은 잣대
     return true;
   }
   function dayKey(d){

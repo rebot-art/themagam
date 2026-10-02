@@ -399,7 +399,7 @@ window.AppSession = AppSession;
       try { paintConnBadge(up); } catch (e) {}
 
       if (!up) return;               // 끊김 — 서버가 알아서 표시해 줍니다
-      if (!myNick) return;
+      if (!myNick || window.__leaving) return;   // 나가는 중이면 되살리지 않습니다 (2026-10-03)
 
       // 재연결됨 → 끊김 표시를 지우고 즉시 현재 상태를 다시 기록
       _presenceDisconnectArmed = false;
@@ -647,6 +647,16 @@ window.AppSession = AppSession;
   async function leaveRoom() {
     if (!myNick) return;
 
+    /* ★★★ [2026-10-03 콩 — "나가기 누르고 퇴근한 여럿의 카드가 휴식으로 남아"]
+       진짜 원인: 아래에서 status 를 지우면 status 구독이 "내 줄이 사라졌네" 를
+       보고 **자가 복구**(script_realtime.js, 2026-10-01 에 넣은 것)를 걸어
+       300ms 뒤 updateStatus(true) 로 줄을 통째로 되살렸습니다. 그 사이 myNick
+       은 아직 살아 있고(마감·출석·퇴장 글을 기다리는 중), 상태는 방금 ☕휴식
+       으로 바꿔 둔 참이라 **휴식 카드**가 서고, 끊김 예약은 이미 취소돼
+       컴을 꺼도 안 지워졌어요 (12시간 고아 정리까지 버팀).
+       → 나가는 중 표시를 먼저 켜서, 나가는 동안은 누구도 status 를 쓰지 않게. */
+    window.__leaving = true;
+
     /* [2026-08-03] 나가기 전 마무리 —
        ① 열려 있는 작업 구간을 지금까지로 저장 (워크 타임이 날아가지 않게)
        ② users/{닉}/timeCur 를 지워서 묵은 구간이 남지 않게
@@ -672,12 +682,34 @@ window.AppSession = AppSession;
       if (sel && sel.value !== "repair") sel.value = "rest";
       window.savePersonalData?.();
     } catch (e) {}
-    try { await window.finalizeTimelogOnLeave?.(); } catch (e) {}
-    try { await window.recordLeaveAttendance?.(); } catch (e) {}
 
-    await cancelPresenceOnDisconnect();
-    await db.ref("status/" + myNick).remove();
-    await _writeLeaveSystemMessageOnce();
+    /* =================================================================
+       ★★★ [2026-10-03 콩] 유령 카드 — "퇴근 누르고 컴을 껐는데 휴식 상태로
+       초록 접속점을 단 채 남아 있다"
+       -----------------------------------------------------------------
+       예전 차례: 작업시간 마감 → 출석 기록 → **끊김 예약 취소** → status 삭제.
+       ① 취소는 서버에 닿았는데 삭제가 닿기 전에 컴이 꺼지면, 서버에는
+          "끊기면 disconnectedAt 을 찍어라" 는 예약도 없고 status 도 남아
+          있습니다 → 접속점 초록 + 휴식 상태로 **12시간**(고아 정리 기준)
+          동안 서 있어요. 바로 그 유령입니다.
+       ② 앞의 마감·출석 쓰기가 네트워크가 흔들려 안 끝나면 그 뒤가
+          영영 안 돕니다 (await 가 안 풀려서).
+       ③ 취소 한 줄만 try 밖이라 거기서 터지면 삭제까지 건너뜁니다.
+
+       [고친 차례] **status 삭제가 맨 먼저**, 그 다음 예약 취소(try),
+       그 다음 마감·출석. 어느 하나가 늦어도 3초 안에 다음으로 넘어갑니다
+       (잠깐만). 삭제가 서버에 닿기 전에 꺼지면 예약이 아직 살아 있어
+       disconnectedAt 이 찍히고 5분 뒤 사라집니다. 삭제는 닿고 취소가 못
+       닿으면 예약이 status/{닉} = {disconnectedAt} 만 남은 토막을 만드는데,
+       isOnline 이 lastSeen 없는 줄을 접속으로 안 봅니다 (script_realtime.js).
+       ★ 어느 순서로 꺼져도 유령이 서 있지 않게 — 그게 이 차례의 뜻입니다.
+       ================================================================= */
+    const 잠깐만 = (p, ms) => Promise.race([Promise.resolve(p), new Promise(r => setTimeout(r, ms))]);
+    try { await 잠깐만(db.ref("status/" + myNick).remove(), 3000); } catch (e) {}
+    try { await 잠깐만(cancelPresenceOnDisconnect(), 3000); } catch (e) {}
+    try { await 잠깐만(window.finalizeTimelogOnLeave?.(), 3000); } catch (e) {}
+    try { await 잠깐만(window.recordLeaveAttendance?.(), 3000); } catch (e) {}
+    try { await 잠깐만(_writeLeaveSystemMessageOnce(), 3000); } catch (e) {}
 
     window.resetPomoUserScopedUI?.();
     // ✅ 수동 퇴장 시 beforeunload 리스너 제거 (중복 방지)
@@ -689,6 +721,7 @@ window.AppSession = AppSession;
     myEmoji = "";
     _presenceDisconnectArmed = false;
     _myJoinTs = 0;
+    window.__leaving = false;   // 다 나갔으니 끕니다 (다시 들어오면 평소처럼)
     _clearSessionId();
 
     try { AppSession.removeItem("adminPinOk"); } catch(e) {}
@@ -724,7 +757,7 @@ window.AppSession = AppSession;
        끊길 수 있습니다. 깨어나는 순간 끊김 표시를 지우고 다시 등록해서
        다른 분들 화면에 즉시 되돌아오게 합니다. */
     const revive = () => {
-      if (!myNick) return;
+      if (!myNick || window.__leaving) return;
       _presenceDisconnectArmed = false;
       try { armPresenceOnDisconnect(); } catch (e) {}
       try { db.ref(`status/${myNick}/disconnectedAt`).remove(); } catch (e) {}

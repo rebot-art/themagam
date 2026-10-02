@@ -99,6 +99,11 @@
     // 고아 기록만 걷어냅니다 (하루 지난 기록 등)
     const seen = Number(row.lastSeen || 0);
     if (seen > 0 && now - seen >= ONLINE_STALE_MS) return false;
+    /* [2026-10-03] lastSeen 이 **아예 없는** 줄은 사람이 아닙니다 — 퇴근으로
+       status 를 지운 뒤 끊김 예약(onDisconnect)만 뒤늦게 돌아 남긴
+       { disconnectedAt } 토막이에요 (script_core.js leaveRoom 참고).
+       updateStatus 는 늘 lastSeen 을 함께 쓰므로 진짜 줄에는 반드시 있습니다. */
+    if (!(seen > 0)) return false;
 
     return true;
   }
@@ -1113,10 +1118,10 @@
          "보낸 값"을 버리고 한 번 통째로 다시 보냅니다 (30초에 한 번만). */
       try {
         const mine = myNick && data ? data[myNick] : null;
-        if (myNick && _lastSentObj && (!mine || mine.joinedAt == null) && Date.now() - _selfHealAt > 30000) {
+        if (myNick && !window.__leaving && _lastSentObj && (!mine || mine.joinedAt == null) && Date.now() - _selfHealAt > 30000) {
           _selfHealAt = Date.now();
           _lastSentObj = null;
-          setTimeout(() => { try { updateStatus(true); } catch (e) {} }, 300);
+          setTimeout(() => { try { if (!window.__leaving) updateStatus(true); } catch (e) {} }, 300);
         }
       } catch (e) {}
 
@@ -1767,6 +1772,9 @@
 
   function updateStatus(force = false) {
     if (!myNick) return;
+    /* ★★★ 나가는 중에는 쓰지 않습니다 — 지운 줄을 되살려 휴식 유령을 만들었어요
+       (2026-10-03, script_core.js leaveRoom 머리말 참고) */
+    if (window.__leaving) return;
 
     const goalText = document.getElementById("db-today-goal-text")?.value || "";
     const done = document.getElementById("db-today-done")?.value || "";
