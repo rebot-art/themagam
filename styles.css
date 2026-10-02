@@ -5767,9 +5767,11 @@ html[data-theme-style="night"] .pomo-bar-time{
 /* [2026-08-16] 양쪽 여백을 80% 로 (0.8 → 0.64).
    카드 마당과 눈금을 맞추려고 카드 폭에 기대어 잡은 값입니다 —
    숫자를 그냥 px 로 바꾸면 카드 폭이 달라질 때 어긋나니 비율은 그대로. */
+/* [2026-10-02 콩] 다시 70% 로 (0.64 → 0.448). 생각보다 좁은 화면으로
+   보는 멤버가 많아서 — 단추가 줄 끝에서 접히기 전에 숨 자리를 내줍니다. */
 .app-head{
-  padding-left: calc(var(--card-w) * 0.64);
-  padding-right: calc(var(--card-w) * 0.64);
+  padding-left: calc(var(--card-w) * 0.448);
+  padding-right: calc(var(--card-w) * 0.448);
 }
 @media (max-width: 1100px){
   .app-head{ padding-left: 16px; padding-right: 16px; }
