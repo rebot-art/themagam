@@ -3,7 +3,7 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 쉰일곱 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 쉰여덟 개. 채팅과 수다방 양쪽에서 씁니다.
    (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나)
 
    [왜 그림 파일이 아니라 코드로 그리나]
@@ -870,6 +870,28 @@
             <path d="M13 24l3 3M59 24l-3 3M13 42l3-3M59 42l-3-3" stroke="#8FB8E0" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#B07D12"
     },
+    {
+      /* [2026-10-02 콩] 당근 — 작가 커뮤에서 "소식 전할 때 당근을 흔든다"
+         그 당근. 당근 하나가 좌우로 흔들리는 그림(흔들선 둘 + 반짝).
+         미리보기 셋(당근만 / 손이 흔듦 / 당근+!!) 중 콩이 A 「당근만」을 골랐어요
+         — 58px 에서 제일 또렷하고 단순해서. */
+      id: "carrot", cmd: "당근", label: "당근 흔들어요", fs: 15, lines: ["당근", "흔들어요"],
+      /* ★ 여섯 자라 한 줄로는 72칸 폭에 안 들어갑니다 (11.5px 까지 줄여야 해서
+           이웃의 반 크기). 그래서 **두 줄**로 — lines 가 있으면 stickerHtml 이
+           y=62·79 두 줄로 찍어요 (글씨체·색은 한 줄과 똑같이). 콩이 미리보기
+           셋(11.5px / 14px / 두 줄) 중 두 줄을 골랐어요. */
+      cmdRe: /^\/(당근|당근흔들|당근흔들어요|소식)$/,
+      svg: `<g transform="rotate(-14 36 32) translate(0 -4)">
+              <path d="M27 22h18l-7 30a2.2 2.2 0 0 1-4 0z" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M31 30h9M32.5 37h6M34 44h3" stroke="#D8824A" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M36 22q-3-9-11-9q5 3 7 9zM36 22q0-10 6-13q1 7-2 13zM36 22q6-7 13-5q-6 2-9 6z"
+                    fill="#C0DD97" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            </g>
+            <path d="M13 22q-5 6 0 12M59 22q5 6 0 12" stroke="#8FB8E0" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+            <path d="M9 28h-4M67 28h-4" stroke="#8FB8E0" stroke-width="2.3" stroke-linecap="round"/>
+            <path d="M14 12l3 3M60 10l-3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
         {
       /* 웃음·울음은 짝으로 둡니다. 얼굴 크기와 눈 위치를 맞춰서
          나란히 놓았을 때 한 세트로 보이게 했어요. */
@@ -971,7 +993,10 @@
       <text x="36" y="72" text-anchor="middle" font-size="${s.fs || 22}"
             font-family="'Gamja Flower', cursive" fill="${s.textColor}"
             stroke="${s.textColor}" stroke-width="0.5" paint-order="stroke"
-      >${s.label}</text>
+      >${/* [2026-10-02] lines 가 있으면 두 줄 — 긴 이름(당근 흔들어요)용. 글씨체는 같은 <text> 라 그대로 */
+         Array.isArray(s.lines)
+           ? `<tspan x="36" y="62">${s.lines[0]}</tspan><tspan x="36" y="79">${s.lines[1]}</tspan>`
+           : s.label}</text>
     </svg>`;
   };
 
