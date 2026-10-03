@@ -12462,8 +12462,8 @@ html[data-lite] .stk-clone .card-avatar-wrap > .card-heart svg{ width:32px; heig
 .lite-card .lite-sub{ font-size: 11.2px; gap: 3px; }
 .lite-card .lite-sub .card-pomo-count,
 .lite-card .lite-sub .card-proom{ font-size: 11.2px; padding: 1px 5px; }
-.lite-card .lite-sub .card-proom{ order: 1; }
-.lite-card .lite-sub .card-pomo-count{ order: 2; }
+.lite-card .lite-sub .card-pomo-count{ order: 1; }
+.lite-card .lite-sub .card-proom{ order: 2; }
 /* 📚 꾸미기 미리보기 카드는 가볍게 보기에서도 낱장 두 장을 그대로 (2026-10-03 콩) */
 html[data-lite] .user-card.stk-clone{
   box-shadow:
@@ -12488,3 +12488,11 @@ html[data-lite] .user-card.share-card,
 .lite-card.is-vice .lite-in::after{ border-radius: 0 6px 6px 0; }
 .lite-card .lite-ph .card-avatar{ border-top-left-radius: 0; }
 .lite-card .lite-st{ border-bottom-left-radius: 0; }
+/* 🎖️ 가볍게 보기 배지 — 카드 아랫변 가운데, 반은 낱장에 걸치게 (2026-10-03 콩) */
+.lite-card .lite-in{ position: relative; }
+.lite-card .lite-in > .card-badges{
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%);
+  z-index: 5; font-size: 20px;
+}
+/* 🏷 작업 상태 스티커를 살짝 아래로 — 윗줄 카드 배지와 덜 겹치게 */
+.lite-card .lite-tm .card-tag-slot{ top: -5px; }

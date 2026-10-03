@@ -1548,6 +1548,8 @@
                 <div class="lite-gl"${isMine
                   ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"` : ""
                   } title="${escapeHtml(row.todayGoalText || "")}">🎯 ${goalText}</div>
+                <!-- 🎖️ 지난 달 배지 — 꾸민 카드처럼 카드 아랫변에서 낱장에 걸치게 (2026-10-03 콩) -->
+                ${배지HTML(u)}
               </div>
             </div>`);
           }
