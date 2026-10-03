@@ -85,7 +85,17 @@
     requestAnimationFrame(() => veil.classList.add("on"));
     const 닫기 = () => { veil.classList.remove("on"); setTimeout(() => veil.remove(), 300); 떠있음 = false; };
     veil.querySelector(".npop-later").addEventListener("click", () => { 닫은날 = 오늘; 닫기(); });
-    veil.querySelector(".nday-go").addEventListener("click", () => { location.reload(); });
+    veil.querySelector(".nday-go").addEventListener("click", () => {
+      /* 시험 꼬리(&newdaytest=1)는 떼고 들어갑니다 — 안 떼면 새로고침할 때마다
+         또 "어제 창" 으로 쳐서 팝업이 계속 떠요 (2026-10-04 콩 시험 중 발견) */
+      if (TEST) {
+        const u = new URL(location.href);
+        u.searchParams.delete("newdaytest");
+        location.replace(u.toString());
+      } else {
+        location.reload();
+      }
+    });
     setTimeout(() => veil.querySelector(".nday-go")?.focus(), 340);
   }
 
