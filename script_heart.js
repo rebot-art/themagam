@@ -177,7 +177,8 @@
     list.querySelectorAll(".user-card[data-card-nick]").forEach(card => {
       const nick = card.getAttribute("data-card-nick");
       const mine = nick === me();
-      const wrap = card.querySelector(".card-avatar-wrap");
+      /* 🪶 단순 카드는 작업시간 칸 오른쪽 아래에 작게 (2026-10-04 콩) */
+      const wrap = card.querySelector(".card-avatar-wrap") || card.querySelector(".lite-tm");
       if (!wrap) return;
       let b = wrap.querySelector(".card-heart");
       if (!hasHeart(nick)) { if (b) b.remove(); _shown.delete(nick); return; }
@@ -321,6 +322,8 @@
         const card = e.target.closest(".user-card[data-card-nick]");
         if (!card) return;
         if (e.target.closest(".card-avatar-wrap, .card-foot, .card-state, [data-pick-worktag], .share-card, [data-heart-open], button, a")) return;
+        /* 🪶 단순 카드는 **작업시간 칸**만 (2026-10-04 콩) — 닉 칸은 쪽지, 프사는 업적 */
+        if (card.classList.contains("lite-card") && !e.target.closest(".lite-tm")) return;
         const nick = card.getAttribute("data-card-nick");
         if (!nick || nick === me()) return;
         e.preventDefault();

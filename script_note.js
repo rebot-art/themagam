@@ -246,7 +246,7 @@
     if (!myNick) return;
     const card = document.querySelector(`.user-card[data-card-nick="${CSS.escape(myNick)}"]`);
     if (!card) return;
-    const wrap = card.querySelector(".card-avatar-wrap");
+    const wrap = card.querySelector(".card-avatar-wrap") || card.querySelector(".lite-ph");   // 🪶 단순 카드는 프사 칸에
     if (!wrap) return;
     /* 옛 자리(이름 줄)에 남은 것이 있으면 치웁니다 — 카드가 새로 그려지면
        어차피 없어지지만, 그 사이에도 둘이 함께 보이지 않게 */
@@ -326,7 +326,8 @@
                프사      → 업적
                네임 박스 → 쪽지
                바탕(더블) → 하트 */
-        if (!e.target.closest(".card-foot")) return;
+        /* 🪶 단순 카드는 닉네임 칸(.lite-nk)이 네임 박스입니다 (2026-10-04 콩) */
+        if (!e.target.closest(".card-foot, .lite-nk")) return;
         openNoteTo(nick);
       });
     }

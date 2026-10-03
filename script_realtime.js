@@ -1531,8 +1531,14 @@
               <div class="lite-in">
                 <div class="lite-ph${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0" title="프로필 설정"' : ""}>${avatar}</div>
-                <div class="lite-tm"><b>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
-                <div class="lite-nk"><span title="${escapeHtml(u)}">${shareChip}${escapeHtml(u)}</span></div>
+                <div class="lite-tm">
+                  <!-- 접속점 — 시간 칸 오른쪽 위 (2026-10-04 콩) -->
+                  <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
+                        title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}"><i></i><i></i><i></i><i></i></span>
+                  <b>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
+                <!-- 닉 칸: 🚩 디데이는 왼쪽 끝, 화공 말풍선은 닉 바로 왼편 (꾸민 카드와 같은 차례).
+                     한 번 누르면 📮 쪽지 (script_note.js) -->
+                <div class="lite-nk">${ddChipHtml(row)}<span class="lite-nm" title="${escapeHtml(u)}">${shareChip}<span>${escapeHtml(u)}</span></span></div>
                 <div class="lite-st ${cls}${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-pick-status="1" role="button" tabindex="0" title="상태 바꾸기"' : ""}>${상태글}</div>
                 <div class="lite-gl"${isMine
