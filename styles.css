@@ -12411,3 +12411,6 @@ html[data-lite] .share-card .share-foot{
 .status-pop.is-lite .status-rest   { color: #3F8F63 !important; }
 .status-pop.is-lite .status-away   { color: var(--muted) !important; }
 .status-pop.is-lite .status-repair { color: #B07D12 !important; }
+
+/* 🪶 닉네임 칸에도 상태 칸과 같은 옅은 바탕 (2026-10-04 콩) — 위(시간)·아래(목표)와 자연스럽게 갈라지게 */
+.lite-card .lite-nk{ background: var(--fill-1); }
