@@ -12479,3 +12479,12 @@ html[data-lite] .user-card.stk-clone .card-foot{
   -webkit-backdrop-filter: blur(2px) !important;
   backdrop-filter: blur(2px) !important;
 }
+/* 📚 가볍게 보기도 책 모양 — 왼쪽 두 모서리는 직각, 오른쪽만 둥글게 (2026-10-03 콩) */
+html[data-lite] .user-card.lite-card,
+html[data-lite] .user-card.share-card,
+.lite-card .lite-in,
+.lite-card.is-me .lite-in::after,
+.lite-card.is-owner .lite-in::after,
+.lite-card.is-vice .lite-in::after{ border-radius: 0 6px 6px 0; }
+.lite-card .lite-ph .card-avatar{ border-top-left-radius: 0; }
+.lite-card .lite-st{ border-bottom-left-radius: 0; }
