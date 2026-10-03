@@ -2192,6 +2192,9 @@ function bindProfilePanel() {
        무슨 모양이든 여기서는 탭이 정합니다. */
     _stkCard.classList.toggle("card-wide", _stkShape === "wide");
     _stkCard.appendChild(clone);
+    /* 🪶 가볍게 보기일 때는 꾸민 카드 HTML 을 날것으로 꺼내 온 거라
+       가로형 줄 세우기를 안 거쳤어요 — 여기서 똑같이 한 번 세워 줍니다. */
+    if (src !== src0) window.cardWideArrange?.(_stkShape === "wide", [clone]);
 
     /* 스티커는 복제본 것을 버리고 **탭 모양의 자리**로 새로 붙입니다 —
        복제된 카드는 "내가 보는 모양"의 자리로 그려져 있어, 딴 모양 탭을

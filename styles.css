@@ -12452,3 +12452,9 @@ html[data-lite] .share-cheers{ zoom: .8; top: -15px; }
    ===================================================================== */
 html:not([data-lite]) .card-avatar-wrap > .card-heart svg,
 html:not([data-lite]) .share-cheers .card-heart svg{ width: 32px; height: 30px; }
+
+/* 🪶 가볍게 보기에서도 프로필 꾸미기 미리보기 카드는 기본 카드 그대로 (2026-10-03) */
+html[data-lite] .stk-clone .card-avatar-wrap > .card-heart svg{ width:32px; height:30px; }
+/* ⏱ 시간 앞 시계 · 뽀모방 ⏱️ 딱지 — 꾸민 카드와 같은 모양 (2026-10-03 콩) */
+.lite-card .lite-tm > b .lite-clk{ font-size: var(--fs-2xs); font-weight: var(--fw-bold); color: var(--muted); margin-right: 3px; vertical-align: 1px; }
+.lite-card .lite-sub .card-proom{ background: color-mix(in srgb, var(--accent) 14%, transparent); padding: 1px 5px; font-size: 80%; }

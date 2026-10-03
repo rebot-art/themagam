@@ -459,8 +459,9 @@
        값을 같이 들고 옵니다 — 안 그러면 프로필에서 고른 색이 풀립니다.
      ★ 원래는 🧘 혼자 방(script_solo.js)에만 있던 손인데, 가로형이 본방
        기본이 되면서 이리로 옮겼습니다. */
-  function 가로재배치(넣기) {
-    document.querySelectorAll("#user-cards > .user-card:not(.share-card)").forEach(card => {
+  function 가로재배치(넣기, 카드들) {
+    /* 카드들: 따로 줄 세울 카드 묶음(프로필 꾸미기 미리보기용) — 없으면 방의 카드 전부 */
+    (카드들 || document.querySelectorAll("#user-cards > .user-card:not(.share-card)")).forEach(card => {
       const wh = card.querySelector(".card-wh");
       if (!wh) return;
       const wht = card.querySelector(".card-wh-t");
@@ -1538,7 +1539,7 @@
                   <!-- 접속점 — 시간 칸 오른쪽 위 (2026-10-04 콩) -->
                   <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
                         title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}"><i></i><i></i><i></i><i></i></span>
-                  <b>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
+                  <b><small class="lite-clk">⏱</small>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
                 <!-- 닉 칸: 🚩 디데이는 왼쪽 끝, 화공 말풍선은 닉 바로 왼편 (꾸민 카드와 같은 차례).
                      한 번 누르면 📮 쪽지 (script_note.js) -->
                 <div class="lite-nk">${ddChipHtml(row)}<span class="lite-nm" title="${escapeHtml(u)}">${shareChip}<span>${escapeHtml(u)}</span></span></div>
