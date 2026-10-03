@@ -24,7 +24,7 @@
    붙이면 "어제 들어온 창" 으로 치고 5초 뒤에 바로 띄웁니다.
    ===================================================================== */
 (function () {
-  const MAIN_ON = false;                     // ★ 혼자 방에서 확인되면 true 로
+  const MAIN_ON = true;                      // [2026-10-04 콩] 혼자 방 시험 통과 → 본방 ON
   const TEST = /[?&]newdaytest=1/.test(location.search);
   const DAWN_MIN = 2 * 60 + 30;              // 새벽 2:30
   const SLEEP_GAP_MS = 3 * 60 * 1000;        // 타이머가 이만큼 멈췄으면 잠들었던 것
