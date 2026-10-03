@@ -12284,9 +12284,12 @@ html[data-lite] .user-card.lite-card{
 .lite-card.is-me .lite-in{ border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* 프사 — 정사각 칸을 꽉 채웁니다 (위 두 칸 54+32 = 86) */
-.lite-card .lite-ph{ grid-row: 1 / 3; border-right: 1px solid var(--border); overflow: hidden; border-top-left-radius: 5px; position: relative; }
+/* ★ [2026-10-04 콩] 칸은 열어 두고(overflow 없음) 사진만 자릅니다 — 📮 쪽지 리본은
+     "온 게 있다" 는 표시라 꾸민 카드처럼 카드 밖으로 넘어가도 보여야 해서요. */
+.lite-card .lite-ph{ grid-row: 1 / 3; border-right: 1px solid var(--border); position: relative; }
 .lite-card .lite-ph .card-avatar{
   width: 100%; height: 100%; border: 0; border-radius: 0; margin: 0; aspect-ratio: auto;
+  overflow: hidden; border-top-left-radius: 5px;
 }
 .lite-card .lite-ph .card-avatar > img,
 .lite-card .lite-ph .card-avatar > svg{ width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -12364,3 +12367,7 @@ html[data-lite] .share-card .share-foot{
   backdrop-filter: none; -webkit-backdrop-filter: none;
   justify-content: flex-end; padding: 6px 8px;
 }
+
+/* 🏷 작업 스티커 — 단순 카드에선 시간 칸 왼쪽 위에, 꾸민 카드처럼 카드 윗변 밖으로
+   삐죽 (2026-10-04 콩: 프사를 살짝 가려도 됨). 모양은 꾸민 카드의 .card-tag 그대로. */
+.lite-card .lite-tm .card-tag-slot{ top: -9px; left: -14px; z-index: 4; }

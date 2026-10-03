@@ -1532,6 +1532,8 @@
                 <div class="lite-ph${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0" title="프로필 설정"' : ""}>${avatar}</div>
                 <div class="lite-tm">
+                  <!-- 🏷 작업 스티커 — 시간 칸 왼쪽 위, 꾸민 카드처럼 위로 삐죽 (프사를 살짝 가려도 됨 — 콩) -->
+                  ${window.workTagChipHtml?.(row, isMine) || ""}
                   <!-- 접속점 — 시간 칸 오른쪽 위 (2026-10-04 콩) -->
                   <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
                         title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}"><i></i><i></i><i></i><i></i></span>
