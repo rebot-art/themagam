@@ -12371,3 +12371,43 @@ html[data-lite] .share-card .share-foot{
 /* 🏷 작업 스티커 — 단순 카드에선 시간 칸 왼쪽 위에, 꾸민 카드처럼 카드 윗변 밖으로
    삐죽 (2026-10-04 콩: 프사를 살짝 가려도 됨). 모양은 꾸민 카드의 .card-tag 그대로. */
 .lite-card .lite-tm .card-tag-slot{ top: -9px; left: -14px; z-index: 4; }
+
+/* =====================================================================
+   🪶 단순 카드 — 안쪽 칸 선 없애기 (2026-10-04 콩, 미리보기 B안)
+   선 대신 상태 칸에만 아주 옅은 바탕을 깔아 "프사 아래 상태" 가 한
+   덩어리로 읽히게. 바깥 테두리·책 모양은 그대로.
+   ★ 다시 선을 보고 싶으면 이 블록만 지우면 앞의 칸 선이 돌아옵니다.
+   ===================================================================== */
+.lite-card .lite-in{ grid-template-rows: 54px 32px 30px; }
+.lite-card .lite-ph{ border-right: 0; }
+.lite-card .lite-nk,
+.lite-card .lite-gl{ border-top: 0; }
+.lite-card .lite-st{ border-top: 0; border-right: 0; background: var(--fill-1); border-bottom-left-radius: 5px; }
+.lite-card .lite-gl{ line-height: 30px; }
+
+/* 🏷 작업 스티커 80% — 꾸밈이 빠진 카드에선 혼자 너무 도드라져서 (콩) */
+.lite-card .lite-tm .card-tag-slot{ zoom: .8; top: -11px; left: -17px; }
+
+/* 🪶 상태 고르기 판 — 단순 카드일 때 (2026-10-04 콩, 미리보기 그대로)
+   색 바탕·이모지 없이 색 글자만. 지금 고른 것은 글자 앞 점(●) 하나. */
+.status-pop.is-lite{
+  gap: 0; padding: 4px 0; min-width: 118px;
+  border-radius: 6px; background: linear-gradient(var(--panel), var(--panel)), var(--bg);
+  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+}
+.status-pop.is-lite .status-pop-item{
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border: 0; border-radius: 0;
+  background: none !important; font-size: 12px; font-weight: 800; letter-spacing: .3px;
+}
+.status-pop.is-lite .status-pop-item:hover{ background: var(--fill-2) !important; }
+.status-pop.is-lite .status-pop-item::before{
+  content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: transparent;
+}
+.status-pop.is-lite .status-pop-item.on::before{ background: currentColor; }
+.status-pop.is-lite .status-writing{ color: #C2552A !important; }
+.status-pop.is-lite .status-focus  { color: #3A6FB0 !important; }
+.status-pop.is-lite .status-multi  { color: #7A55B0 !important; }
+.status-pop.is-lite .status-rest   { color: #3F8F63 !important; }
+.status-pop.is-lite .status-away   { color: var(--muted) !important; }
+.status-pop.is-lite .status-repair { color: #B07D12 !important; }

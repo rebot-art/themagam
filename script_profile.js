@@ -2738,12 +2738,17 @@ window.rerenderUserCards = function () {
     if (!anchor) return;
 
     const cur = document.getElementById("db-status")?.value || "";
+    /* 🪶 [2026-10-04 콩] 단순 카드로 보는 중이면 판도 단순하게 —
+       이모지·색 바탕 없이 색 글자만, 지금 고른 것은 앞의 점 하나로.
+       카드의 상태 칸과 같은 말투예요 (styles.css .status-pop.is-lite). */
+    const 단순 = !!window.isLiteCards?.();
+    const 글자만 = (l) => String(l).replace(/[^A-Za-z]/g, "");
     const pop = document.createElement("div");
-    pop.className = "status-pop";
+    pop.className = "status-pop" + (단순 ? " is-lite" : "");
     pop.setAttribute("role", "menu");
     pop.innerHTML = CHOICES.filter(고를수있나).map(c => `
       <button type="button" class="status-pop-item ${c.cls}${c.v === cur ? " on" : ""}"
-              role="menuitem" data-status-val="${c.v}">${c.label}</button>`).join("");
+              role="menuitem" data-status-val="${c.v}">${단순 ? 글자만(c.label) : c.label}</button>`).join("");
 
     document.body.appendChild(pop);
 
