@@ -317,7 +317,7 @@
        ★ 주석은 "같은 규칙이어야 한다"고 맞는 말을 하고 있었는데 값만
          안 따라갔습니다. 그래서 checks.js 가 **두 값을 직접 견주게** 했어요. */
   const DISCONNECT_GRACE_MS = 5 * 60 * 1000;
-  const ONLINE_STALE_MS     = 12 * 60 * 60 * 1000;
+  const ONLINE_STALE_MS     = 30 * 60 * 1000;   // [2026-10-04] 작업방과 같게 (12시간 → 30분)
   const STATUSES = [
     { v:"writing", cls:"st-writing", label:"🔥WRITE🔥" },
     { v:"focus",   cls:"st-focus",   label:"💻JOB💻" },
