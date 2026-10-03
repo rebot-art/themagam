@@ -12280,7 +12280,7 @@ html[data-lite] .user-card.lite-card{
   color: var(--text);
   /* overflow 는 열어 둡니다 — 💘 하트 숫자 딱지가 카드 밖으로 살짝 나가도 되게 (콩) */
 }
-.lite-card .lite-in > :not(.lite-ph):not(.lite-tm):not(.lite-nk):not(.lite-st):not(.lite-gl){ display: none !important; }
+.lite-card .lite-in > :not(.lite-ph):not(.lite-tm):not(.lite-nk):not(.lite-st):not(.lite-gl):not(.card-badges){ display: none !important; }
 .lite-card.is-me .lite-in{ border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* 프사 — 정사각 칸을 꽉 채웁니다 (위 두 칸 54+32 = 86) */
