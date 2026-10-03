@@ -154,6 +154,18 @@
   .nchip:hover{ color:var(--sub); }
   .nchip.on{ background:rgba(179,55,43,.13); border-color:rgba(179,55,43,.45);
              color:var(--deep); font-weight:700; }
+  /* 📢 공지 읽음 탭 (2026-10-03 — 콩) */
+  .nt{ padding:12px 14px; border-bottom:1px dashed var(--line); }
+  .nt-h{ display:flex; align-items:baseline; gap:8px; cursor:pointer; }
+  .nt-h b{ font-size:13px; color:var(--ink); }
+  .nt-h .d{ font-size:11px; color:var(--dim); }
+  .nt-h .c{ margin-left:auto; font-size:12px; font-weight:700; color:var(--deep);
+            font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .nt-b{ display:none; margin-top:9px; font-size:12px; line-height:1.9; }
+  .nt.open .nt-b{ display:block; }
+  .nt-b .lb{ font-weight:700; color:var(--sub); margin-right:6px; }
+  .nt-b .no{ color:var(--deep); }
+  .nt-b .gray{ color:var(--dim); }
   .pick-hr{ border:0; border-top:1px dashed var(--line); margin:13px 0 0; }
 
   /* 📊 그래프 넷 — **한 줄에 하나씩, 넉 줄** (콩 2026-08-30 2차).
@@ -198,6 +210,8 @@
       <!-- 👥 고른 사람만 (2026-09-09 — 콩 "모임 두 개를 겹쳐 운영해서,
            고른 멤버만 따로 출석을 보고 싶어") -->
       <button type="button" class="tab" data-tab="pick" role="tab">👥 고른 사람</button>
+      <!-- 📢 공지 읽음 (2026-10-03 — 콩) — 방장만 보입니다 -->
+      <button type="button" class="tab" data-tab="nt" role="tab" id="tab-nt" style="display:none">📢 공지 읽음</button>
     </div>
     <div class="bar">
       <button id="prev" type="button">‹ 지난주</button>
@@ -226,6 +240,11 @@
       고른 사람만 모아 봅니다 — <b>이 기기에만</b> 기억해요(서버에 안 올라갑니다).
       다른 사람 화면에는 그대로 전체가 보여요.<br>
       ● 은 그날 나온 날 · 칸에 손을 얹으면 첫 입장 시각 · 이름을 다시 누르면 뺍니다
+    </p>
+    <p class="foot" id="foot-nt" style="display:none">
+      공지를 <b>눌러 펼친 사람</b>만 읽음이에요 (공지판을 열기만 한 건 안 쳐요) · 제목을 누르면 명단이 열립니다.<br>
+      ⚠️ 10월 1일 이후 <b>처음 들어온 순간</b>에 이미 올라가 있던 공지는 펼치지 않아도 읽음으로 잡혀요.<br>
+      "기록 없음" = 10월 1일 이후 아직 한 번도 안 들어온 사람 · 이 탭은 주를 넘겨도 똑같아요
     </p>
     <p class="foot" id="foot-ch" style="display:none">
       이 주 이레만 잘라 그린 그래프예요 · 옅은 세로 띠는 주말<br>
@@ -318,6 +337,9 @@
       el("gate").style.display = "none";
       el("board").style.display = "block";
       el("who").textContent = nick + " 님으로 보는 중";
+      /* 📢 공지 읽음 탭은 방장만 — 남의 읽음 기록은 규칙상 방장만 읽을 수 있어요 */
+      const 방장 = firebase.auth().currentUser && firebase.auth().currentUser.uid === "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+      el("tab-nt").style.display = 방장 ? "" : "none";
       그리기();
     } catch (e) {
       const c = e && e.code;
@@ -393,9 +415,12 @@
   async function 그리기() {
     document.querySelectorAll(".tab").forEach((b) =>
       b.classList.toggle("on", b.dataset.tab === _탭));
-    ["wc", "att", "wt", "ch", "pick"].forEach((k) => {
+    ["wc", "att", "wt", "ch", "pick", "nt"].forEach((k) => {
       el("foot-" + k).style.display = _탭 === k ? "block" : "none";
     });
+    /* 📢 공지 읽음은 주와 상관없어서 주 넘기기 줄을 숨깁니다 */
+    document.querySelector(".bar").style.visibility = _탭 === "nt" ? "hidden" : "";
+    if (_탭 === "nt") return 공지읽음그리기();
     const 날들 = 주간틀();
     try {
       await 주간읽기(날들);
@@ -911,6 +936,61 @@
         ${꺾은선("✍️ 글자수", 날들, 글자, (v) => fmt(Math.round(v)), 잉크.선)}
         ${시간대막대(날들)}
       </div>`;
+  }
+
+  /* ── 📢 공지 읽음 탭 (2026-10-03 — 콩) ─────────────────
+     읽음 = users/{닉}/noticeRead/{id} 가 있거나(펼침),
+            users/{닉}/noticeSeenAt 이 그 공지 시각보다 같거나 뒤(다 읽음 기준선).
+     ★ 통신량: 탭을 처음 누를 때 닉마다 숫자 하나 + 작은 목록 하나만 받고,
+       손에 들고 있습니다. 새로 보려면 [다시 불러오기]. 공지 이미지는 안 받아요. */
+  let _공지자료 = null;
+  async function 공지읽음그리기(새로) {
+    const box = el("scroll");
+    if (!_공지자료 || 새로) {
+      box.innerHTML = `<p class="empty">읽음 기록을 모으는 중…</p>`;
+      try {
+        const db = firebase.database();
+        const 목록 = (await db.ref("notice/list").once("value")).val() || {};
+        const 명단 = await 명단읽기();
+        const 사람 = await Promise.all(명단.map(async (닉) => {
+          const [a, b] = await Promise.all([
+            db.ref(`users/${닉}/noticeSeenAt`).once("value").catch(() => null),
+            db.ref(`users/${닉}/noticeRead`).once("value").catch(() => null)]);
+          return { 닉, seen: a ? a.val() : null, read: (b && b.val()) || {} };
+        }));
+        const 공지 = Object.entries(목록).map(([id, n]) => ({ id, ...n }))
+          .sort((x, y) => Number(y.at || 0) - Number(x.at || 0));
+        _공지자료 = { 공지, 사람 };
+      } catch (e) {
+        box.innerHTML = `<p class="empty">읽음 기록을 가져오지 못했어요.<br>잠시 뒤 다시 눌러 주세요.</p>`;
+        return;
+      }
+    }
+    const { 공지, 사람 } = _공지자료;
+    if (!공지.length) { box.innerHTML = `<p class="empty">올라간 공지가 없어요.</p>`; return; }
+    const 날 = (t) => { const d = new Date(Number(t || 0)); return `${d.getMonth() + 1}/${d.getDate()}`; };
+    const 줄 = 공지.map((n) => {
+      const 읽음 = [], 안읽음 = [], 기록없음 = [];
+      사람.forEach((p) => {
+        if (p.seen == null && !Object.keys(p.read).length) 기록없음.push(p.닉);
+        else if (p.read[n.id] || Number(p.seen || 0) >= Number(n.at || 0)) 읽음.push(p.닉);
+        else 안읽음.push(p.닉);
+      });
+      const 칸 = (arr) => arr.length ? arr.map(esc).join(", ") : "—";
+      return `<div class="nt" data-nt="${esc(n.id)}">
+        <div class="nt-h"><b>${esc(n.title || "(제목 없음)")}</b><span class="d">${날(n.at)}</span>
+          <span class="c">👀 ${읽음.length} · 안 읽음 ${안읽음.length}</span></div>
+        <div class="nt-b">
+          <div><span class="lb">✔ 읽음 ${읽음.length}</span>${칸(읽음)}</div>
+          <div class="no"><span class="lb">✕ 안 읽음 ${안읽음.length}</span>${칸(안읽음)}</div>
+          <div class="gray"><span class="lb">… 기록 없음 ${기록없음.length}</span>${칸(기록없음)}</div>
+        </div></div>`;
+    }).join("");
+    box.innerHTML = `<div class="pick-box" style="padding-bottom:4px"><div class="pick-h"><b>공지 ${공지.length}개</b><span class="sp"></span>
+      <button type="button" class="mini" id="nt-re">↻ 다시 불러오기</button></div></div>${줄}`;
+    el("nt-re").addEventListener("click", () => 공지읽음그리기(true));
+    box.querySelectorAll(".nt-h").forEach((h) =>
+      h.addEventListener("click", () => h.parentElement.classList.toggle("open")));
   }
 
   function 옮기기(주) {
