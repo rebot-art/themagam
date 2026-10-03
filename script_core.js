@@ -819,6 +819,11 @@ window.AppSession = AppSession;
 
   function _handleBeforeUnload() {
     if (!myNick || _leaveBeaconSent) return;
+    /* [2026-10-04 콩 "창을 그냥 닫으면?"] 아래에서 status 를 지우면, 탭이
+       완전히 닫히기 전 그 짧은 틈에 자가 복구가 줄을 되살리려 듭니다
+       (나가기 버튼의 휴식 유령과 같은 길). 닫는 중에도 쓰지 않게 막습니다.
+       ★ 얼렸다 돌아오면(bfcache) 아래 pageshow 가 다시 끕니다. */
+    window.__leaving = true;
     if (조용히드나드나()) { _leaveBeaconSent = true; return; }
     _leaveBeaconSent = true;
 
@@ -899,6 +904,7 @@ window.AppSession = AppSession;
     if (!myNick) return;        // 입장 전이면 무시
 
     _leaveBeaconSent = false;
+    window.__leaving = false;   // 닫는 줄 알았는데 돌아왔습니다 — 다시 써도 됩니다
     _myJoinTs = Date.now();
     _presenceDisconnectArmed = false;
 
