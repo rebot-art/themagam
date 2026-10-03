@@ -12472,3 +12472,10 @@ html[data-lite] .user-card.stk-clone{
     0 1px 2px rgba(40,30,20,.06),
     0 4px 16px rgba(40,30,20,.10);
 }
+/* 🏷 꾸미기 미리보기 카드의 닉네임 상자 바탕도 기본 카드 그대로 (2026-10-03 콩) */
+html[data-lite] .user-card.stk-clone .card-foot{
+  background: none;
+  background-color: var(--foot-veil);
+  -webkit-backdrop-filter: blur(2px) !important;
+  backdrop-filter: blur(2px) !important;
+}
