@@ -12491,7 +12491,8 @@ html[data-lite] .user-card.share-card,
 /* 🎖️ 가볍게 보기 배지 — 카드 아랫변 가운데, 반은 낱장에 걸치게 (2026-10-03 콩) */
 .lite-card .lite-in{ position: relative; }
 .lite-card .lite-in > .card-badges{
-  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%);
+  /* [2026-10-04 콩] 조금 더 아래로 — 목표 줄과 틈이 생기게 (낱장 밖으로 나가도 됨) */
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, calc(50% + 6px));
   z-index: 5; font-size: 16.25px;   /* 꾸민 카드 25px 의 65% (콩) */
 }
 /* 🏷 작업 상태 스티커를 살짝 아래로 — 윗줄 카드 배지와 덜 겹치게 */
