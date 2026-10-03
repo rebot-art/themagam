@@ -2164,9 +2164,18 @@ function bindProfilePanel() {
   function renderStkEditor() {
     if (!_stkCard) return;
     _stkCard.innerHTML = "";
-    const src = Array.from(
+    const src0 = Array.from(
       document.querySelectorAll("#user-cards > .user-card:not(.share-card)"))
       .find(el => el.getAttribute("data-card-nick") === profileTargetNick());
+    /* 🪶 [2026-10-04] 단순 카드로 보는 중이면 방에 놓인 내 카드엔 꾸밈이 없습니다.
+       그리는 쪽이 맡겨 둔 **꾸민 카드**로 미리보기를 지어요 (script_realtime.js). */
+    let src = src0;
+    const 꾸민 = window._fullCardHtml?.[profileTargetNick()];
+    if (src && src.classList.contains("lite-card") && 꾸민) {
+      const 틀 = document.createElement("div");
+      틀.innerHTML = 꾸민.trim();
+      src = 틀.firstElementChild || src;
+    }
     if (!src) {
       _stkCard.innerHTML = `<p class="hint" style="padding:22px 8px;text-align:center;">
         카드를 준비하는 중이에요… 잠시 뒤 다시 열어 주세요.</p>`;

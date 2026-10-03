@@ -328,16 +328,33 @@
        (접속 유지·화면 공유 보기와 같은 결. 서버에 안 보냅니다.)
      ★ 실제로 무엇이 꺼지는지는 styles.css 의 `html[data-lite]` 를 보세요.
      ===================================================================== */
+  /* [2026-10-04 콩] "꾸밈을 줄이기" → **"꾸밈 없이 보기"** 로 뜻을 넓혔습니다.
+     켜지면 카드가 프사·작업시간·상태·닉·목표만 있는 단순 카드로 그려집니다
+     (script_realtime.js 의 단순카드HTML). 그리고 **창 폭이 1100px 보다 좁으면**
+     설정과 상관없이 저절로 켜집니다 — 머리말 여백이 접히는 바로 그 폭.
+     ★ 체크칸은 "내가 고른 값" 만 보여 줍니다. 좁아서 저절로 켜진 건 체크
+       안 된 채로 둬요 — 넓히면 원래대로 돌아가야 하니까요. */
   const LITE_KEY = "liteMode";
+  const LITE_NARROW = 1100;
   function isLiteMode() {
     try { return window.AppStore?.getItem(LITE_KEY) === "1"; } catch (e) { return false; }
   }
+  function liteNow() { return isLiteMode() || (window.innerWidth || 9999) < LITE_NARROW; }
+  window.isLiteCards = liteNow;
+  let _liteWas = null;
   function applyLiteMode() {
-    const on = isLiteMode();
+    const on = liteNow();
     document.documentElement.toggleAttribute("data-lite", on);
     const box = document.getElementById("set-lite");
-    if (box) box.checked = on;
+    if (box) box.checked = isLiteMode();
+    /* 바뀌었으면 카드를 다시 그립니다 (처음 한 번은 카드가 아직 없어 그냥 넘어가요) */
+    if (_liteWas !== null && _liteWas !== on) {
+      try { window.rerenderUserCards?.(); } catch (e) {}
+    }
+    _liteWas = on;
   }
+  /* 창 크기를 바꾸면 1100px 을 넘나들 때만 다시 그립니다 (리사이즈마다 그리지 않게) */
+  window.addEventListener("resize", () => { if (liteNow() !== _liteWas) applyLiteMode(); });
   window.setLiteMode = function (on) {
     try { window.AppStore?.setItem(LITE_KEY, on ? "1" : "0"); } catch (e) {}
     applyLiteMode();
@@ -610,7 +627,7 @@
     /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
     const csort = document.getElementById("set-card-sort");
     if (csort) {
-      csort.value = AppStore.getItem("cardSort") || "abc";
+      csort.value = AppStore.getItem("cardSort") || "join";   /* [2026-10-04 콩] 기본 = 접속 순서 */
       csort.onchange = () => {
         AppStore.setItem("cardSort", csort.value);
         window.rerenderUserCards?.();

@@ -1275,7 +1275,8 @@
            가나다순(기본) — 서버가 주는 순서 그대로 (키가 이름순이라 가나다)
            접속 순서     — 먼저 들어온 사람이 앞 (joinedAt 오름차순) */
       const orderedNicks = Object.keys(data);
-      const sortPref = (window.AppStore?.getItem("cardSort")) || "abc";
+      /* [2026-10-04 콩] 기본을 가나다 → **접속 순서**로. 직접 고른 사람은 고른 그대로. */
+      const sortPref = (window.AppStore?.getItem("cardSort")) || "join";
       if (sortPref === "join") {
         orderedNicks.sort((a, b) =>
           (Number(data[a]?.joinedAt) || Infinity) -
@@ -1501,6 +1502,46 @@
              남의 누적 시간을 매번 계산하면 무거워지므로, 각자 자기 값을
              status 에 적어 보냅니다. */
 
+          /* =================================================================
+             🪶 단순 카드 (2026-10-04 — 콩) — 가볍게 보기 · 좁은 화면(1100px 아래)
+             -----------------------------------------------------------------
+             꾸밈을 **하나도 안 그립니다** — 무늬·배경색·스티커·하트·배지·디데이·
+             작업 딱지·꾸미기 전부. 남는 건 다섯 가지뿐:
+                 ┌────────┬──────────────┐
+                 │        │ 06:17  🍅 6  │   ← 뽀모가 없으면 시간만 가운데
+                 │  프사  ├──────────────┤
+                 │ (정사각)│      링가링🍄 │
+                 ├────────┼──────────────┤
+                 │ WRITE  │ 🎯 목표 …    │   ← 목표는 한 줄, 넘치면 …
+                 └────────┴──────────────┘
+             겉은 책 모양(뒤에 낱장 두 장) 그대로 — styles.css 의 .lite-card.
+             ★ 키가 늘 같아서, 화면 공유 카드도 syncShareHeights 가 재는 그대로
+               같은 키가 됩니다 (줄이 들쭉날쭉하지 않음).
+             ★ 프사 <img> 는 .card-avatar > img 꼴 그대로 — 깜빡임 막는
+               옮겨 심기(프사옮겨심기)가 그대로 먹습니다.
+             ★ 내 카드의 문 셋(프사·상태·목표)도 그대로 답니다. */
+          let 단순 = "";
+          if (window.isLiteCards?.()) {
+            const 상태글 = ({ idle: "BREAK", rest: "BREAK", writing: "WRITE", focus: "JOB",
+                             multi: "multiT", away: "AWAY", repair: "REPAIR" })[st] || "BREAK";
+            const 곁 = `${proomChip}${pomoChip}`.trim();
+            단순 = (`
+            <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}"
+                 data-card-nick="${escapeHtml(u)}">
+              <div class="lite-in">
+                <div class="lite-ph${isMine ? " is-clickable" : ""}"${
+                  isMine ? ' data-edit-profile="1" role="button" tabindex="0" title="프로필 설정"' : ""}>${avatar}</div>
+                <div class="lite-tm"><b>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
+                <div class="lite-nk"><span title="${escapeHtml(u)}">${shareChip}${escapeHtml(u)}</span></div>
+                <div class="lite-st ${cls}${isMine ? " is-clickable" : ""}"${
+                  isMine ? ' data-pick-status="1" role="button" tabindex="0" title="상태 바꾸기"' : ""}>${상태글}</div>
+                <div class="lite-gl"${isMine
+                  ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"` : ""
+                  } title="${escapeHtml(row.todayGoalText || "")}">🎯 ${goalText}</div>
+              </div>
+            </div>`);
+          }
+
           parts.push(`
             <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"
                  data-card-nick="${escapeHtml(u)}"${cardStyle}>
@@ -1555,6 +1596,14 @@
               </div>
             </div>
           `);
+          /* 🪶 단순 카드로 보는 중이면 방금 지은 꾸민 카드를 단순 카드로 바꿔 끼웁니다.
+             ★ 꾸민 카드는 버리지 않고 맡겨 둡니다 — 프로필 꾸미기 창의 미리보기가
+               "꾸민 모습" 을 보여 줘야 하니까요 (script_profile.js 가 씁니다). */
+          if (단순) {
+            const 꾸민 = parts.pop();
+            (window._fullCardHtml = window._fullCardHtml || {})[u] = 꾸민;   // 🧘 혼자 방은 유령 카드도 꾸미니 닉별로
+            parts.push(단순);
+          }
         }
       }
 
