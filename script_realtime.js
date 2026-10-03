@@ -1526,7 +1526,8 @@
                              multi: "multiT", away: "AWAY", repair: "REPAIR" })[st] || "BREAK";
             const 곁 = `${proomChip}${pomoChip}`.trim();
             단순 = (`
-            <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}"
+            <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}${
+                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}"
                  data-card-nick="${escapeHtml(u)}">
               <div class="lite-in">
                 <div class="lite-ph${isMine ? " is-clickable" : ""}"${

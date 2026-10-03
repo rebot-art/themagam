@@ -12414,3 +12414,29 @@ html[data-lite] .share-card .share-foot{
 
 /* 🪶 닉네임 칸에도 상태 칸과 같은 옅은 바탕 (2026-10-04 콩) — 위(시간)·아래(목표)와 자연스럽게 갈라지게 */
 .lite-card .lite-nk{ background: var(--fill-1); }
+
+/* =====================================================================
+   🪶 단순 카드 테두리 — 내 카드 · 방장 · 부방장 (2026-10-04 콩)
+   ---------------------------------------------------------------------
+   [고친 것] 내 카드 테두리가 프사 쪽만 얇았습니다 — 안쪽 그림자(inset)로
+   두께를 더했는데 **프사가 그 위를 덮어서** 왼쪽만 1px 로 보였어요.
+   이제 카드 맨 위에 테두리만 있는 막을 한 장 얹습니다(::after). 프사보다
+   위라 네 변이 똑같은 두께로 보이고, 클릭은 그대로 통과합니다.
+   [색] 내 카드 = 둘째 포인트(--accent) · 방장·부방장 = 첫 포인트(--me) (콩이 바꿈).
+     내 카드와 운영진 카드가 늘 다른 색이라 섞이지 않아요.
+     (방장 본인 카드는 "내 카드" 가 우선 — 내 색으로 보입니다)
+   ===================================================================== */
+.lite-card .lite-in{ position: relative; }
+.lite-card.is-me .lite-in{ border-color: var(--border); box-shadow: none; }
+.lite-card.is-me .lite-in::after,
+.lite-card.is-owner .lite-in::after,
+.lite-card.is-vice .lite-in::after{
+  content: ""; position: absolute; inset: -1px; z-index: 3;
+  border: 2.5px solid var(--me); border-radius: 6px; pointer-events: none;
+}
+/* [2026-10-04 콩 — 거꾸로] 내 카드 = 둘째 포인트(--accent), 방장·부방장 = 첫 포인트(--me) */
+.lite-card.is-me .lite-in::after{ border-color: var(--accent); }
+
+/* 🔥 화공 응원 스티커 — 가볍게 보기일 때만 80% (2026-10-04 콩, 작업 스티커와 같은 비율).
+   꾸민 카드에선 원래 크기 그대로. 줄어든 만큼 윗변에 걸치는 자리도 맞춥니다. */
+html[data-lite] .share-cheers{ zoom: .8; top: -15px; }
