@@ -12456,5 +12456,19 @@ html:not([data-lite]) .share-cheers .card-heart svg{ width: 32px; height: 30px; 
 /* 🪶 가볍게 보기에서도 프로필 꾸미기 미리보기 카드는 기본 카드 그대로 (2026-10-03) */
 html[data-lite] .stk-clone .card-avatar-wrap > .card-heart svg{ width:32px; height:30px; }
 /* ⏱ 시간 앞 시계 · 뽀모방 ⏱️ 딱지 — 꾸민 카드와 같은 모양 (2026-10-03 콩) */
-.lite-card .lite-tm > b .lite-clk{ font-size: var(--fs-2xs); font-weight: var(--fw-bold); color: var(--muted); margin-right: 3px; vertical-align: 1px; }
-.lite-card .lite-sub .card-proom{ background: color-mix(in srgb, var(--accent) 14%, transparent); padding: 1px 5px; font-size: 80%; }
+.lite-card .lite-tm > b .lite-clk{ font-size: .87em; font-weight: var(--fw-bold); color: var(--muted); margin-right: 3px; vertical-align: 0; }
+.lite-card .lite-sub .card-proom{ background: color-mix(in srgb, var(--accent) 14%, transparent); }
+/* 꾸민 카드와 같은 비율 — 칩은 숫자(20px)의 약 .7, 차례는 [🍅 / ⏱️] (2026-10-03 콩) */
+.lite-card .lite-sub{ font-size: 14px; gap: 3px; }
+.lite-card .lite-sub .card-pomo-count,
+.lite-card .lite-sub .card-proom{ font-size: 14px; padding: 1px 6px; }
+.lite-card .lite-sub .card-pomo-count{ order: 1; }
+.lite-card .lite-sub .card-proom{ order: 2; }
+/* 📚 꾸미기 미리보기 카드는 가볍게 보기에서도 낱장 두 장을 그대로 (2026-10-03 콩) */
+html[data-lite] .user-card.stk-clone{
+  box-shadow:
+    4px 4px 0 -1px var(--pg1), 4px 4px 0 0 var(--pg1-line),
+    8px 8px 0 -1px var(--pg2), 8px 8px 0 0 var(--pg2-line),
+    0 1px 2px rgba(40,30,20,.06),
+    0 4px 16px rgba(40,30,20,.10);
+}

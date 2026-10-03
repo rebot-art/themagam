@@ -543,7 +543,10 @@
   function applyCardShape(shape) {
     if (shape === "wide" || shape === "tall") currentCardShape = shape;
     const narrow = window.innerWidth <= (window.NARROW_W || 833);
-    const wide = currentCardShape === "wide" && !narrow;
+    /* [2026-10-03 콩] 🃏 세로형 걷어냄 — 1100px 아래는 🪶 가볍게 보기가 자동으로
+       켜져서 좁은 화면에서도 꾸민 세로형 카드가 나올 일이 없어요. 늘 가로형. */
+    void narrow;
+    const wide = true;
     /* ★ 클래스는 body 가 아니라 **카드 마당**에 — 스티커 배치 편집기가
        세로형/가로형 탭으로 딴 모양을 미리 볼 수 있어야 해서요
        (편집기 액자는 script_profile.js 가 따로 붙입니다). */
