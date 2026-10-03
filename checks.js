@@ -18,6 +18,39 @@ const CSS=fs.readFileSync(DIR+"styles.css","utf8");
 const HTML=fs.readFileSync(DIR+"index.html","utf8");
 
 let pass=0,fail=0;const fails=[];
+
+/* ★★★ [고침 2026-08-28] 보안규칙 읽기 — **주석을 지우지 않습니다.**
+   ---------------------------------------------------------------------
+   [무슨 일이 있었나] 네 곳에서 // 주석을 지운 뒤 JSON.parse 를 했습니다.
+   그런데 보안규칙.json 은 **주석이 없는 진짜 JSON** 이고, 그 정규식은
+   문자열 **안**의 // 까지 지웁니다. 자료실 링크 규칙에
+   beginsWith('https://') 를 넣자마자 거기서부터 줄 끝까지가 통째로 잘려,
+   검사가 "Bad control character" 로 죽었어요.
+   ★ 교훈: **지우개는 자기가 무엇을 지우는지 모릅니다.** 문자열 안까지
+     훑는 정규식을 파서 앞에 세우지 말 것. */
+/* ★★ [2026-08-29] 판 폭 재는 자 — **글자가 아니라 값**을 봅니다.
+   ---------------------------------------------------------------------
+   예전엔 `#dock-panel-chat{ width: min(352px` 처럼 글자를 통째로 못 박았어요.
+   그런데 ⚙️ 비밀방을 챗과 **한 규칙으로 묶자**(선택자를 나란히 붙이자)
+   그 정규식이 전부 깨졌습니다. 화면은 멀쩡한데 검사만 죽은 거예요.
+   ★ 이 방에서 되풀이되는 교훈 그대로입니다 — m.html 의 유예 시간도,
+     BGM 판 크기도 같은 실수였어요. **값을 못 박지 말고 뜻을 못 박을 것.** */
+function 판폭(css, id) {
+  for (const 덩이 of css.split("}")) {
+    const i = 덩이.lastIndexOf("{");
+    if (i < 0) continue;
+    const 고른것 = 덩이.slice(0, i).replace(/\n/g, " ");
+    const 속 = 덩이.slice(i + 1);
+    if (!new RegExp("(^|[\\s,])#" + id + "\\s*(,|$)").test(고른것)) continue;
+    const w = /width:\s*min\((\d+)px/.exec(속);
+    if (w) return Number(w[1]);
+  }
+  return null;
+}
+
+function 규칙읽기() {
+  return JSON.parse(fs.readFileSync(DIR + "보안규칙.json", "utf8")).rules;
+}
 const ok=(c,n)=>{ c?pass++:(fail++,fails.push(n)); };
 /* 어느 검사 블록이 실제로 돌았는지 — finish() 에서 셉니다 */
 const ran={};
@@ -265,9 +298,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     const i = chat.indexOf("function renderChatMessage");
     const j = chat.indexOf("window.noteNarrowChatUnread");
     ok(i > 0 && j > i, "세는 코드가 renderChatMessage 안에 있다");
-    /* [고침 2026-08-06] 수다방 메시지를 세지 않으려고 조건이 하나 늘었습니다.
-       (!isMe && !window._chattySuppressCount) — 문장을 통째로 외우는 대신
-       "isMe 가 아닐 때만"이라는 뜻만 확인합니다. */
+    /* [2026-08-30] 수다방을 접어 조건이 다시 "isMe 가 아닐 때만" 하나로
+       돌아왔습니다. 문장을 통째로 외우지 않고 그 뜻만 확인합니다. */
     ok(/if \(!isMe[^)]*\) \{ try \{ window\.noteNarrowChatUnread/.test(chat),
        "내 메시지는 세지 않는다");
     ok(!/noteNarrowChatUnread/.test(prof), "감싸개 쪽 중복 호출이 없다");
@@ -356,9 +388,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   }
   {
     const i = prof.indexOf("const CHOICES = [");
-    const seg = prof.slice(i, i + 500);
+    const seg = prof.slice(i, i + 1400);
     const vals = (seg.match(/v: "(\w+)"/g) || []).map(x => x.slice(4, -1));
-    ok(vals.join(",") === "writing,focus,rest,away", "상태 네 가지가 맞다 ("+vals.join(",")+")");
+    ok(vals.join(",") === "writing,focus,multi,rest,away,repair",
+       "상태 다섯 + 방장 전용 하나 ("+vals.join(",")+")");
+    ok(/💻multiT📓/.test(seg) && /status-multi/.test(seg),
+       "★ 📓multiT 가 고르기 판에 있다 (2026-08-23 콩)");
     ok(/🔥WRITE🔥/.test(seg) && /💻JOB💻/.test(seg), "이름이 WRITE · JOB 이다");
   }
   {
@@ -742,9 +777,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     const AH = fs.readFileSync(DIR + "admin.html", "utf8");
 
     ok(/let _firstSeen = null;/.test(AD), "사람마다 처음 나타난 날을 기억해 둔다");
-    ok(/if \(_firstSeen\) return _firstSeen;/.test(AD),
-       "★ 한 번만 읽는다 (달을 옮길 때마다 방 전체를 내려받지 않게)");
-    ok(/return null;\s*\/\/ 못 읽으면/.test(AD),
+    /* [고침 2026-09-21] 입장일을 서버에 적어 두게 되면서 모양이 바뀌었습니다.
+       보려던 뜻은 그대로예요 — ① 판을 여는 동안 두 번 읽지 않는다
+       ② 못 읽으면 빗금을 아예 안 그린다(틀리게 칠하느니). */
+    ok(/if \(_firstSeen && !다시\) return _firstSeen;/.test(AD),
+       "★ 한 번만 읽는다 (달을 옮길 때마다 다시 읽지 않게)");
+    ok(/catch \(e\) \{ console\.warn\("\[adm firstSeen\]", e\); return null; \}/.test(AD),
        "★ 못 읽으면 표시를 아예 안 한다 (틀리게 칠하느니)");
     /* [옮김 2026-08-15] 이 계산이 머리글(그날 총원)에서도 필요해져서
        위쪽 bornOf 로 한 번에 구하도록 모았습니다 — 같은 값을 두 군데서
@@ -829,11 +867,94 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        "★ 반올림으로 맞춘다 (올림이면 늦게 온 사람에게 하루가 더 붙는다)");
     ok(/Math\.max\(0, member - vacInMonth\)/.test(AD2),
        "★ 휴가 낸 날은 셈에서 통째로 뺀다 (기준이 낮아진다)");
-    ok(/if \(vacs\[dk\] !== true\) daysLeft\+\+;/.test(AD2),
-       "★ 앞으로 낼 휴가는 '남은 날' 에서도 뺀다 (두 번 봐주지 않게)");
-    ok(/const isThisMonth = \(monthOffset === 0\);/.test(AD2) &&
+    ok(/if \(vacs\[dk\] !== true && leaves\[dk\] !== true\) daysLeft\+\+;/.test(AD2),
+       "★ 앞으로 낼 휴가·개인사정은 '남은 날' 에서도 뺀다 (두 번 봐주지 않게)");
+
+    /* =====================================================================
+       🖥️ 화면 공유 — 바뀐 사람 것만 받는다 (2026-09-14 — 콩)
+       ---------------------------------------------------------------------
+       screens 를 통째로 `.on("value")` 로 들으면, **누구 한 사람의 화면이
+       바뀔 때마다 공유 중인 전원의 그림**(한 장 최대 40KB)이 다시 옵니다.
+       동시에 공유하는 사람이 넷이면 받는 양이 네 배예요.
+
+       ★★★ 이 방에서 다운로드를 가장 많이 쓰는 자리입니다. 여기를 다시
+         `.on("value")` 로 되돌리면 그날로 통신량이 배로 뜁니다.
+       ===================================================================== */
+    {
+      const SH = fs.readFileSync(DIR + "script_share.js", "utf8");
+      const 구독 = (SH.match(/function listenScreens\(\) \{[\s\S]*?\n  \}/) || [""])[0];
+
+      ok(!!구독 && !/\.on\("value"/.test(구독),
+         "★★★ 화면 공유가 screens 를 **통째로** 듣지 않는다 (여기를 value 로 되돌리면 통신량이 배로 뜁니다)");
+      ok(/_screensRef\.on\("child_added",/.test(구독) &&
+         /_screensRef\.on\("child_changed",/.test(구독) &&
+         /_screensRef\.on\("child_removed",/.test(구독),
+         "★★★ 바뀐 한 칸만 받는다 (added·changed·removed 셋 다 — 하나라도 빠지면 카드가 안 사라지거나 안 뜹니다)");
+      ok(/_screensCache\[snap\.key\] = snap\.val\(\);/.test(SH) &&
+         /delete _screensCache\[snap\.key\]/.test(SH),
+         "★★ 손에 든 목록을 한 칸씩 고쳐 간다 (화면에 보이는 것은 예전과 똑같아야 합니다)");
+      /* 손잡이 없이 off() 를 부르면 남이 같은 자리에 붙여 둔 구독까지
+         떨어집니다 — 공유를 껐다 켜면 남의 카드가 안 오는 식으로 터져요. */
+      ok(/_screensRef\.off\("child_added",   _screensH\.added\);/.test(SH) &&
+         /let _screensH = null;/.test(SH),
+         "★★★ 뗄 때는 **내가 붙인 손잡이만** 뗀다 (맨손 off 는 남의 구독까지 떨어뜨립니다)");
+      ok(/const SHARE_INTERVAL_MS = 15000;/.test(SH) &&
+         /const SHARE_MAX_BYTES   = 40 \* 1024;/.test(SH),
+         "★★ 15초에 한 장 · 한 장 40KB 상한 (이 둘이 공유 통신량의 크기를 정합니다)");
+
+      /* =====================================================================
+         🚦 사람이 많을수록 뜸하게 (2026-09-19 — 콩 "6명이 쓰는 중")
+         ---------------------------------------------------------------------
+         화면 공유는 사람 수의 **제곱**으로 무거워집니다(n 명이 보내고
+         n 명이 받으니까요). 여섯이면 5.63MB/분까지 갑니다.
+           1~3명 15초 (예전 그대로) · 4~6명 30초 · 7명부터 45초
+         ★ 평소(한둘)에는 아무것도 안 바뀌는 것이 이 고침의 조건이었어요. */
+      ok(/const SHARE_CROWD_STEP   = 3;/.test(SH) &&
+         /const SHARE_INTERVAL_MAX = 45000;/.test(SH),
+         "★★ 세 명마다 한 칸씩 늦추고, 아무리 많아도 45초까지만");
+      ok(/function 보낼주기\(\)/.test(SH) &&
+         /SHARE_INTERVAL_MS \* Math\.ceil\(n \/ SHARE_CROWD_STEP\)/.test(SH),
+         "★★★ 보낼 주기를 **사람 수로** 정한다");
+      ok(/if \(_마지막보냄 && Date\.now\(\) - _마지막보냄 < 보낼주기\(\) - 900\) return;/.test(SH),
+         "★★★ 주기가 안 됐으면 **모자이크를 뜨기 전에** 돌아간다 (그림 만드는 품도 같이 아낌)");
+      ok(/_timer    = setInterval\(pushFrame, SHARE_INTERVAL_MS\);/.test(SH),
+         "★★ 타이머 자체는 15초 그대로 — 사람이 줄어 주기가 짧아지면 바로 따라갑니다");
+      ok(/_공유인원 = Math\.max\(1, Object\.keys\(_screensCache \|\| \{\}\)\.length\)/.test(SH),
+         "★★ 사람 수는 이미 받고 있는 목록에서 센다 (새로 읽는 자료 0)");
+
+      /* ── 🙈 딴 창을 보는 동안에는 안 받기 ── */
+      ok(/const HIDE_PAUSE_MS = 60 \* 1000;/.test(SH) &&
+         /document\.addEventListener\("visibilitychange"/.test(SH),
+         "★★★ 탭이 1분 넘게 가려지면 받기를 멈춘다 (공유 켜 놓고 한글로 넘어가는 그 시간)");
+      ok(/if \(_받기멈춤\) return;/.test(SH),
+         "★★ 멈춰 둔 동안에는 다른 길로도 다시 안 붙는다");
+      ok(/_받기멈춤 = false;[\s\S]{0,120}?listenScreens\(\);/.test(SH),
+         "★★ 돌아오면 다시 받는다");
+      {
+        /* ★★★ 보내는 것까지 멈추면 **남들 화면에서 내가 사라집니다.**
+           받기만 멈춰야 해요. */
+        const 숨김 = (SH.match(/visibilitychange[\s\S]*?\n  \}\);/) || [""])[0];
+        ok(!!숨김 && !/_sharing = false|clearInterval\(_timer\)|stopScreenShare/.test(숨김),
+           "★★★ 받기만 멈추고 **보내기는 안 멈춘다** (내 화면은 남들이 봐야 합니다)");
+        ok(!/(_screensCache = null)/.test(숨김),
+           "★★ 멈춘 동안에도 마지막 그림은 남겨 둔다 (돌아왔을 때 허전하지 않게)");
+      }
+      ok(/if \(지문 && !많이바뀌었나\(_지문, 지문\)\) \{ _건너뛴\+\+; return; \}/.test(SH),
+         "★★ 화면이 안 바뀌었으면 아예 안 보낸다 (글쓰기는 멈춰 있는 시간이 깁니다)");
+      ok(/if \(!watchOn\(\)\) \{ detachScreens\(\); return; \}/.test(SH),
+         "★★ 안 보기로 한 사람은 아예 안 붙는다 (받는 양 0)");
+    }
+    /* ★★★ [2026-09-13 — 콩이 곰미·자몽에이드 줄에서 잡아냄]
+       오늘은 아직 안 끝난 날입니다. 오늘을 빼고 세니 "지금 들어오면
+       채울 수 있는" 사람에게 🔴 불가가 떴어요. */
+    ok(/for \(let d = Math\.max\(1, todayD\); d <= daysInMonth; d\+\+\)/.test(AD2) &&
+       /if \(d === todayD && attMonth\[dk\]\?\.\[n\]\) continue;/.test(AD2),
+       "★★★ 오늘도 '남은 날' 에 센다 — 단, 오늘 이미 출석했으면 안 센다 (두 번 세지 않게)");
+    ok(!/!명절집합\.has\(dk\)\) daysLeft/.test(AD2),
+       "★★★ 연휴는 '남은 날' 에서 빼지 않는다 — 기준에서 뺀 건 **의무**, 여기서 세는 건 **기회**. 연휴에 나오면 그대로 출석입니다");
+    ok(/const isThisMonth = 앞달 \|\| \(monthOffset === 0\);/.test(AD2) &&
        /if \(isThisMonth\) \{/.test(AD2),
-       "★ 지난 달에는 남은 날이 없다 (0)");
+       "★ 지난 달에는 남은 날이 없다 (0) — 앞달은 반대로 그 달 전부가 남은 날");
 
     /* ── 📏 나의 작업 달력 아래에도 같은 규칙 (2026-08-13) ──
        멤버 본인이 보는 숫자와 관리자가 보는 숫자가 다르면 그날로 분쟁입니다.
@@ -844,15 +965,115 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/Math\.round\(\(eff \/ daysInMonth\) \* RULE_DAYS\)/.test(MW2) &&
          /Math\.round\(\(eff \/ daysInMonth\) \* RULE_DAYS\)/.test(AD2),
          "★★★ 관리자와 나의 작업이 글자까지 같은 식을 쓴다 — 다르면 분쟁");
-      ok(/Math\.max\(0, member - vacCount\)/.test(MW2),
-         "휴가가 기준을 내리는 것도 같다");
-      ok(/if \(k > today && _vacs\[k\] !== true\) daysLeft\+\+;/.test(MW2),
-         "남은 날에서 앞으로 낼 휴가를 빼는 것도 같다");
+      ok(/Math\.max\(0, member - vacCount - 명절수\)/.test(MW2),
+         "휴가와 명절 연휴가 기준을 내리는 것도 같다");
+      ok(/if \(k === today && _days\[k\]\) continue;/.test(MW2) &&
+         /if \(_vacs\[k\] === true\) continue;/.test(MW2) &&
+         !/!명절집합\.has\(k\)/.test(MW2),
+         "★★★ 남은 날 셈이 관리자와 같다 — 오늘도 세고, 연휴는 안 뺀다");
       ok(/\$\{ruleHtml\(y, m, attended, vacCount\)\}/.test(MW2),
          "★ 달력 바로 아래에 실제로 붙는다 (휴가를 찍으면 그 자리에서 다시 계산)");
       ok(/달이 며칠이든 같아요/.test(MW2), "★ '28일이든 31일이든 18일' 을 글로도 적어 둔다");
       ok(/휴가를 찍으면 그만큼 자동으로 내려가요/.test(MW2), "휴가 자동 반영 설명이 있다");
       ok(/이달첫날 > today\) return null;/.test(MW2), "다음 달에는 안 그린다 (셀 것이 없다)");
+
+      /* =====================================================================
+         🎑 명절 연휴는 의무 출석일에서 뺍니다 (2026-09-13 — 콩)
+         ---------------------------------------------------------------------
+         "이번 달은 추석이 있어서 계산을 좀 다르게 해야 할 거 같아."
+
+         [셈법 — 콩이 고른 쪽]
+         연휴를 **없는 날**로 치고 남은 날에 같은 비율을 매깁니다.
+           30일 달 · 연휴 4일 → (30−4) ÷ 30 × 18 = 15.6 → 16일
+         18−4=14 로 하면 남은 26일 중 14일 = 54% 가 되어, 평범한 달의
+         60% 보다 **기준이 헐거워집니다**. 그래서 비율 쪽입니다.
+
+         ★★★ 이 묶음에서 제일 중요한 건 **두 번 빼지 않는 것**입니다.
+           연휴에 휴가까지 찍힌 날을 양쪽에서 빼면 기준이 실제보다 더
+           내려가요. 부르는 쪽에서 걸러 넣는지 봅니다.
+         ===================================================================== */
+      {
+        const HD = fs.readFileSync(DIR + "script_holiday.js", "utf8");
+
+        ok(/window\.holidayDays\s*=/.test(HD) && /window\.holidayName\s*=/.test(HD),
+           "★★ 명절 표가 바깥에 내주는 문이 둘 다 있다 (날짜 세기·이름)");
+        ok(/name: "추석", from: "2026-09-24", to: "2026-09-27"/.test(HD),
+           "★★ 2026 추석 나흘(9/24~27)이 들어 있다 — 콩이 확인한 범위");
+        ok(!/const HOLIDAYS/.test(AD2) && !/const HOLIDAYS/.test(MW2),
+           "★★★ 명절 표는 **script_holiday.js 한 곳에만** 있다 (두 벌로 적으면 언젠가 어긋납니다)");
+
+        /* ★★★ 두 번 빼지 않기 — 양쪽 파일 모두 */
+        ok(/\.filter\(dk => vacs\[dk\] !== true && leaves\[dk\] !== true\)/.test(AD2),
+           "★★★ 관리자: 휴가·개인사정으로 이미 찍힌 날은 연휴로 또 빼지 않는다");
+        ok(/\.filter\(k => _vacs\[k\] !== true\)/.test(MW2),
+           "★★★ 나의 작업: 휴가로 이미 찍힌 날은 연휴로 또 빼지 않는다");
+        /* 입장 전 날은 beforeN 이 이미 뺐습니다 — 또 빼면 늦게 들어온
+           사람의 기준만 유난히 낮아집니다 */
+        ok(/\.filter\(dk => Number\(dk\.slice\(8\)\) > beforeN\)/.test(AD2) &&
+           /\.filter\(k => Number\(k\.slice\(8\)\) > beforeN\)/.test(MW2),
+           "★★★ 입장 전에 지나간 연휴는 세지 않는다 (beforeN 이 이미 뺀 날들)");
+
+        ok(/th\.d\.holi\{/.test(AH2) && /명절 \? " holi" : ""/.test(AD2),
+           "★ 출근부 머리글에 연휴 날이 표시된다 (기준이 왜 내려갔는지 표에서 읽히게)");
+        /* ★★★ [2026-09-13 — 콩 "추석 연휴 1일? 4일 아니었어?"]
+           연휴 나흘 중 사흘에 휴가가 찍힌 사람 화면에 "연휴 1일" 이
+           떴습니다. **보여 주는 수**와 **셈에 쓰는 수**를 섞어 쓴 탓이에요.
+             명절전체 : 화면용 — 방 전체의 이야기라 내 휴가에 안 흔들림
+             명절수   : 셈용   — 휴가로 찍힌 날은 빼야 두 번 안 빠짐 */
+        ok(/const 명절전체 = 명절날\.length;/.test(MW2) &&
+           /const 명절수 = 명절날\.filter\(k => _vacs\[k\] !== true\)\.length;/.test(MW2),
+           "★★★ 연휴 일수가 **보여 줄 것**과 **셈할 것**으로 나뉘어 있다 (섞으면 화면에 1일이 뜹니다)");
+        ok(/\$\{r\.명절이름 \|\| "명절"\} 연휴 \$\{r\.명절전체\}일/.test(MW2),
+           "★★★ 안내 줄은 **연휴 일수 그대로**를 말한다 (내 휴가에 따라 4일이 1일이 되지 않는다)");
+        ok(/Math\.max\(0, member - 명절전체\)/.test(MW2),
+           "★★ 안내 줄의 '→ 16일' 도 같은 잣대(연휴 전체)로 센다");
+        ok(!/조각\.push\(`🎑/.test(MW2),
+           "★★ 아래 셈에는 연휴를 또 적지 않는다 (같은 말이 두 번, 게다가 다른 숫자로 보였습니다 — 콩)");
+        ok(/r\.vacCount \? ` <span class="mw-rule-vacnote">\(휴가 적용\)<\/span>` : ""/.test(MW2) &&
+           /\.mw-rule-vacnote\{/.test(CSS),
+           "★★ 휴가를 찍은 사람에게만 '(휴가 적용)' 이 붙는다 (안 찍었으면 안 뜬다)");
+
+        /* ── 진행바 바로 아래 한 줄 (2026-09-13 — 콩 "한눈에 보이게") ──
+           아래 셈 조각은 작은 회색 글씨라 잘 안 읽힙니다. "이번 달만
+           다르다" 는 이야기는 눈에 먼저 들어와야 해요. */
+        ok(/mw-rule-bar[\s\S]{0,120}?\$\{명절줄\}/.test(MW2),
+           "★★★ 연휴 안내가 **진행바 바로 아래**에 온다 (설명 문단 속에 묻히지 않게)");
+        ok(/const 명절줄 = r\.명절전체\s*\n?\s*\?/.test(MW2),
+           "★★ 연휴가 없는 달에는 줄 자체가 안 나온다 (늘 떠 있으면 안 읽힙니다)");
+        /* ★ [고침 2026-09-13 — 콩] 휴가를 섞으면 사람마다 16→14, 15→13 …
+           으로 제각각이라 "이번 달은 18일이 16일이 됐다" 는 **방 전체의
+           이야기**가 안 보입니다. 안내 줄은 휴가를 뺀 기본 기준으로. */
+        ok(/\$\{r\.연휴전기본\}일 → \$\{r\.연휴후기본\}일/.test(MW2),
+           "★★★ '18일 → 16일' 처럼 **얼마에서 얼마로** 내려갔는지 보여 준다");
+        ok(/const 연휴전기본 = Math\.round\(\(member \/ daysInMonth\) \* RULE_DAYS\);/.test(MW2),
+           "★★★ 안내 줄의 숫자는 **휴가를 안 찍었을 때의 기본 기준** (내 휴가가 섞인 진짜 내 기준은 위 큰 숫자에 있습니다)");
+        ok(/\.mw-rule-holi\{/.test(CSS) && /:root\[data-is-dark="true"\] \.mw-rule-holi\{/.test(CSS),
+           "★★ 연휴 줄의 차림새가 밝은 테마·다크 둘 다 있다");
+        ok(/border: 1px solid #E8C48F/.test(CSS) && /th\.d\.holi\{ background: #F2D7B0/.test(AH2),
+           "★ 멤버 화면 연휴 줄과 출근부 연휴 칸이 같은 주황 계열 (같은 색 = 같은 뜻)");
+        ok(/src="script_holiday\.js/.test(AH2) && /src="script_holiday\.js/.test(fs.readFileSync(DIR+"index.html","utf8")),
+           "★★★ 멤버 화면과 관리자 페이지가 **둘 다** 명절 표를 싣는다 (한쪽만 실으면 두 화면이 다른 숫자를 말합니다)");
+        ok(/"script_holiday\.js"/.test(fs.readFileSync(DIR+"build-single.py","utf8")),
+           "★★ 단일파일에도 실린다");
+
+        /* ── 실제 숫자로 — 2026년 9월(30일) 추석 나흘 ── */
+        {
+          const need = (daysInMonth, beforeN, vac, holi) => {
+            const member = daysInMonth - beforeN;
+            const eff = Math.max(0, member - vac - holi);
+            return Math.round((eff / daysInMonth) * 18);
+          };
+          ok(need(30, 0, 0, 4) === 16,
+             "★★★ 2026년 9월: 30일 중 추석 4일이 빠져 의무 출석 **16일** (콩이 고른 비율 셈)");
+          ok(need(30, 0, 0, 0) === 18,
+             "★ 명절이 없는 30일 달은 그대로 18일 (평소가 안 바뀐다)");
+          ok(need(30, 0, 3, 4) === 14,
+             "★★ 휴가 3일까지 낸 사람은 14일 (휴가와 연휴가 나란히 빠진다)");
+          /* 16일 입장 → 멤버였던 날 15일, 그중 연휴 4일 → 11일 × 60% = 6.6 → 7일 */
+          ok(need(30, 15, 0, 4) === 7,
+             "★ 16일에 들어온 사람은 7일 (늦게 온 만큼 비율로 — 연휴도 함께)");
+        }
+      }
 
       /* ── 실제 숫자로 — 콩의 질문 그대로: 28·30·31일 달에서 다 18인가 ── */
       {
@@ -971,12 +1192,165 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        "누르면 그날 구간 내역이 뜬다");
     ok(/s\.a - prevEnd >= GAP_MS/.test(AD2) && /끊김<\/b>/.test(AD2),
        "★★ 구간 사이 빈 자리를 '끊김' 줄로 보여준다 — 시간이 사라진 자리가 바로 이곳");
-    ok(/접속 유지 가이드/.test(AD2),
-       "★ 끊김이 잦으면 접속 유지 가이드로 안내하라고 적어 둔다");
+    ok(/접속 유지는 입장하면 저절로 켜져요/.test(AD2),
+       "★ 끊김 힌트가 옛 가이드(2026-09-30 에 뺌) 대신 회선 쪽을 보라고 적혀 있다");
     ok(/이 날 기록된 구간이 없어요/.test(AD2),
        "구간이 하나도 없는 날도 말이 되게 설명한다");
     ok(/\.adm-dig-card\{/.test(AH2) && /cursor: zoom-in/.test(AH2),
        "돋보기 차림새가 admin.html 에 있다");
+
+    /* ── 🌿 방장이 남의 개인사정(병가) 고치기 ────────────────────────
+       (2026-08-28 🏖️ 휴가로 시작 → 2026-08-30 개인사정으로 갈아탐 — 콩)
+       ★★★ 여기서 가장 무서운 고장은 "운영진에게 새는 것" 입니다.
+          보안규칙상 users 쓰기는 방장뿐이라 서버가 막긴 하지만, 화면에
+          단추가 보이면 운영진은 눌러 보고 영문 에러를 봅니다. */
+    ok(/async function toggleLeaveAdmin\(nick, dk\)/.test(AD2),
+       "★★ 방장이 남의 개인사정을 켜고 끄는 함수가 있다");
+    ok(!/async function toggleVacAdmin/.test(AD2),
+       "★ 옛 휴가 토글은 남겨 두지 않는다 (두 손놀림이 같은 칸에 겹치면 어느 쪽이 찍혔는지 알 수 없다)");
+    ok(/if \(!ownerOnly\("남의 개인사정을 고치는 것"\)\) return;/.test(AD2),
+       "★★★ 방장만 — 운영진이 부르면 사람 말로 막는다");
+    ok(/const lv = isOwner \? ` data-leave-nick=/.test(AD2),
+       "★★★ 운영진 화면에는 data-leave-* 를 아예 안 단다 (보안규칙상 users 쓰기는 방장뿐)");
+    ok(/data-leave-day="\$\{dk\}"/.test(AD2) && !/inAt \? ` data-leave-nick/.test(AD2),
+       "★★ 출석 안 한 날에도 찍을 수 있다 (안 나온 날을 채워 주는 게 본뜻)");
+    ok(/users\/\$\{nick\}\/leaves\/\$\{dk\}/.test(AD2),
+       "★★ 휴가(vacations)가 아니라 leaves 에 쓴다 — 본인이 쓰는 휴가 상한을 방장이 대신 갉아먹으면 안 된다");
+    ok(!/셈\.days \+ 1 > 셈\.cap/.test(AD2.slice(AD2.indexOf("async function toggleLeaveAdmin"))),
+       "★ 개인사정에는 상한 확인창이 없다 (상한 자체가 없어서 — 물어볼 것이 없다)");
+
+    /* 한 칸에 손가락 둘 — 미루기가 없으면 더블 클릭 때 돋보기가 먼저 뜬다 */
+    ok(/const DBL_MS = 280;/.test(AD2) && /_digTimer = setTimeout\(\(\) => \{ openDig\(nick, day\); \}, DBL_MS\);/.test(AD2),
+       "★★★ 돋보기를 DBL_MS 만큼 미룬다 (안 미루면 더블 클릭이 돋보기를 먼저 엽니다 — 더블은 click 을 두 번 흘리니까요)");
+    ok(/host\.addEventListener\("dblclick"/.test(AD2) && /clearTimeout\(_digTimer\);\s*\/\/ 돋보기가 뜨려던 것을 거둡니다/.test(AD2),
+       "★★ 더블 클릭이 오면 뜨려던 돋보기를 거둔다");
+    ok(/const DBL_MS = 280/.test(AD2) && /const DBL_MS = 280/.test(fs.readFileSync(DIR+"script_mywork.js","utf8")),
+       "★ 방(나의 작업 달력)과 같은 문턱을 쓴다 — 방장이 두 곳에서 다른 손놀림을 외울 이유가 없다");
+
+    ok(/const 지금 = \(await ref\.once\("value"\)\)\.val\(\) === true;/.test(AD2),
+       "★★ 켤지 끌지는 화면이 아니라 **서버 값**을 보고 정한다 (표를 그린 뒤 다른 창에서 바뀌었을 수 있다)");
+
+    /* 하루가 바뀌면 기준·남은날·born·순위·개근이 줄줄이 달라짐 */
+    ok(/await loadAttendance\(_attOffset\);\s*\n\s*msg\("adm-att-msg", 개인사정한줄\(/.test(AD2),
+       "★★★ 고친 뒤 표를 통째로 다시 그린다 (하루로 기준·남은날·입장일·출석률 순위·개근 명단이 전부 달라집니다)");
+
+    /* ── 찍은 뒤 한 줄 (2026-08-30 콩 신고: "순위에 빠졌단 말이 있네 ㅋㅋ") ──
+       원래는 아무 때나 똑같이 "순위에서는 빠집니다" 였습니다. 할인 전
+       기준을 채운 사람에게도, 순위가 아직 없는 앞달에도 그렇게 말했어요. */
+    ok(/function 개인사정한줄\(\{ nick, dk, 뺀건가, 전, 후 \}\)/.test(AD2),
+       "★★ 알림 문구를 만드는 자리가 따로 있다");
+    /* [넓힘 2026-09-22] 쥐고 있는 자료를 고치는 몇 줄이 사이에 들어왔습니다.
+       보는 것은 그대로예요 — `전` 을 **다시 그리기보다 먼저** 쥐는가. */
+    ok(/const 전 = _순위셈\[nick\] \|\| null;[\s\S]{0,600}?await loadAttendance/.test(AD2),
+       "★★★ 고치기 **전** 값을 다시 그리기 전에 손에 쥔다 — 안 그러면 `기준 18→9일` 의 왼쪽이 사라진다");
+    ok(/_순위셈\[n\] = \{ 쉰날: leaveDays, 기준: r\.need, 원래: 원래\.need, out: 할인덕 \};/.test(AD2),
+       "★★ 재료는 표가 이미 센 값 그대로 (_vac셈 과 같은 수법 — 서버를 한 번도 더 안 읽는다)");
+    ok(/_순위셈 = \{\};/.test(AD2),
+       "★★ 표를 다시 그릴 때 창고를 비운다 (안 비우면 지운 멤버의 옛 값이 남아 엉뚱한 기준을 말한다)");
+    ok(/후\.out \? "순위 제외" : "순위 유지"/.test(AD2),
+       "★★★ 순위 칸은 **out(할인 덕)** 을 보고 말한다 — 할인 전 기준을 채운 사람에게 '빠집니다' 는 거짓말이다");
+    ok(/if \(_attOffset < 0\)/.test(AD2) && /순위는 \$\{b\.getMonth\(\) \+ 1\}월에/.test(AD2),
+       "★★★ 앞달에는 '순위 제외/유지' 를 말하지 않는다 — 그 달 순위는 아직 없다 (콩이 9월에 찍었을 때 나온 바로 그 거짓말)");
+    ok(/쉰날 > 0 \? `\$\{쉰날\}일 간 개인사정` : "개인사정 없음"/.test(AD2),
+       "★★ 가운데 칸은 **이 달 통틀어 며칠** — 방금 찍은 하루가 아니라 (방장이 궁금한 건 '이 사람 이번 달 얼마나 쉬지')");
+    ok(/전 && 전\.기준 !== 후\.기준[\s\S]{0,90}?기준 \$\{후\.기준\}일/.test(AD2),
+       "★ 기준이 안 달라졌으면 화살표 없이 하나만 적는다 (18→18 은 읽는 사람을 멈칫하게 한다)");
+    ok(/const 날 = String\(dk\)\.slice\(5\);/.test(AD2),
+       "★ 첫 칸 날짜는 **개인사정을 찍은 날**(누른 칸) 이지 오늘이 아니다 — 앞달에 찍을 때 이게 다르다");
+
+    /* ── 셈에 실제로 얹히는가 ── */
+    ok(/vacInMonth: vacDays \+ leaveDays \+ 명절수/.test(AD2),
+       "★★★ 개인사정 날수가 기준(need)을 깎는다 — 나올 수 없었던 날을 기준에 세면 아픈 사람에게 벌을 주는 셈");
+    ok(/const r = ruleOf\(\{ daysInMonth, beforeN, vacInMonth: vacDays \+ leaveDays \+ 명절수/.test(AD2),
+       "★★★ ruleOf 의 **식**은 안 건드리고 넣는 값만 바꾼다 (script_mywork.js 와 글자까지 같아야 하는 약속)");
+    ok(/if \(vacs\[dk\] !== true && leaves\[dk\] !== true\) daysLeft\+\+;/.test(AD2),
+       "★★ 남은 날에서도 개인사정을 뺀다 (기준에서 빼 놓고 나올 수 있는 날로도 세면 두 번 봐주는 셈)");
+    ok(/if \(isLeave\) leaveDays\+\+;\s*\n\s*else if \(isVac\) vacDays\+\+;/.test(AD2),
+       "★★ 한 날이 두 번 세지지 않는다 — 개인사정이 앞서고, 그날은 휴가 상한을 안 깎는다");
+    /* ── 🌿 순위: "쉰 사람" 이 아니라 "할인 덕을 본 사람" 을 뺀다 ──
+       (2026-08-30 콩이 짚음 — "이미 100%인 사람은 억울하지 않을까?")
+       ★★★ 이 묶음의 핵심은 **기준을 두 번 낸다**는 것입니다.
+          r      = 할인 후 (그 사람의 실제 의무 — 표의 규칙 칸이 씀)
+          원래   = 할인 전 (순위의 잣대 — 개인사정을 안 뺀 기준)
+       할인 전 기준을 넘었으면 할인 덕을 본 게 없으니 순위에 그대로 둡니다. */
+    /* [넓힘 2026-09-13] 명절은 **모두에게 똑같이** 적용되는 것이라 '할인 덕'
+       이 아닙니다. 그래서 할인 전 기준에도 연휴는 그대로 빠져 있어야 해요. */
+    ok(/const 원래 = leaveDays\s*\n?\s*\? ruleOf\(\{ daysInMonth, beforeN, vacInMonth: vacDays \+ 명절수,/.test(AD2),
+       "★★★ 개인사정을 **안 뺀** 기준을 한 번 더 낸다 (ruleOf 를 한 번 더 부를 뿐 — 순수 산수, 서버 요청 0)");
+    ok(/const 할인덕 = leaveDays > 0 && 원래\.state === "bad";/.test(AD2),
+       "★★★ 문턱은 '지금 못 채웠다' 가 아니라 '남은 날을 다 나와도 못 채운다' — 달 중간엔 att < need 가 모두에게 참이라, 거기서 자르면 쉰 사람만 달 내내 순위 밖에 있게 된다");
+    ok(/need: 원래\.need,/.test(AD2) && /state: 원래\.state,/.test(AD2),
+       "★★★ 등수는 **할인 전 기준**으로 매긴다 — 할인 후로 매기면 15일 쉬고 18일 나온 사람이 200%로 1등을 독차지해, 안 쉰 사람이 이길 방법이 없어진다");
+    ok(/leave: leaveDays > 0,/.test(AD2) && /out: 할인덕/.test(AD2),
+       "★★ 🌿 표식(leave)과 순위에서 빠지는가(out)는 **다른 값**이다 — 처음 이 둘을 하나로 묶은 것이 이번 고침의 원인");
+    ok(/const rows = rateRows\.filter\(r => !r\.out\)\.map/.test(AD2),
+       "★★★ 순위에서 빼는 것은 out(할인 덕) 이지 leave(쉼) 가 아니다");
+    ok(/rateRows\.filter\(r => r\.out\)/.test(AD2) && /사정으로 쉬는 중/.test(AD2),
+       "★★ 빼되 지우지는 않는다 — 아래에 한 줄로 조용히 적는다");
+    ok(/r\.leave \? `<span class="lv-n"/.test(AD2),
+       "★ 순위에 남은 사람 이름 옆엔 🌿 만 작게 (쉬었다는 사실은 지우지 않되, 등수는 남들과 같은 잣대로)");
+    ok(/r\.state === "ok" && r\.need > 0 && !r\.out/.test(AD2),
+       "★★ 개근 명단(honors)도 같은 잣대 — 쉬었어도 할인 전 기준을 채웠으면 개근이 맞다");
+    ok(/leaveByNick\[n\] = \(await db\.ref\(`users\/\$\{n\}\/leaves`\)/.test(AD2),
+       "표를 그릴 때 leaves 를 실제로 읽어 온다");
+    ok(/const ls = leaveByNick\[n\] \|\| \{\};/.test(AD2),
+       "★ 입장일(born)을 셀 때도 개인사정을 본다 (쉬는 중인 사람이 통째로 '입장 전' 잿빛이 되면 안 된다)");
+
+    ok(/더블 클릭<\/b> — 🌿 개인사정 켜고 끄기\(방장만\)/.test(AH2),
+       "★ 화면에 손놀림을 적어 둔다 (숨은 기능은 없는 기능이다)");
+    ok(/\.adm-att-table td\.leave-able/.test(AH2) && /td\.cell\.leave\{/.test(AH2),
+       "개인사정 칸의 차림새가 있다");
+    ok(/#DCE9D6/.test(AH2) && /#F5E3B8/.test(AH2),
+       "★ 🌿 와 🏖️ 의 바탕색이 서로 다르다 (같으면 표에서 구분이 안 됩니다)");
+
+    /* 보안규칙 — 읽기는 방장+운영진, 쓰기는 방장만 */
+    {
+      const L = 규칙읽기().users.$nick.leaves;
+      ok(!!L, "★★ 보안규칙에 users/$nick/leaves 자리가 있다");
+      ok(/staff/.test(L[".read"]) && /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(L[".read"]),
+         "★★ 읽기는 방장 + 운영진 (휴가와 같은 범위)");
+      ok(!/staff/.test(L[".write"]) && /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(L[".write"]),
+         "★★★ 쓰기는 방장만 — 운영진이 남의 출석 기준을 깎을 수 있으면 안 된다");
+      ok(/isBoolean/.test(L.$day[".validate"]),
+         "★ 날짜 칸에는 참/거짓만 들어간다");
+    }
+
+    /* ── 📅 출석부를 앞달로도 넘기기 (2026-08-30 — 콩) ────────────────
+       개인사정은 미리 알려집니다 — "다음 달에 수술이라 보름 못 나와요".
+       출석부가 지난 달로만 넘어가면 그때 가서야 찍을 수 있었어요. */
+    ok(/const 앞달한도 = 2;/.test(AD2),
+       "★★ 앞달한도가 있다 — 무한정 열면 2027년에 병가를 찍어 놓고 못 찾는다");
+    ok(/el\("adm-att-next"\)\.disabled = monthOffset <= -앞달한도;/.test(AD2),
+       "★★ 앞달한도에 닿으면 › 가 멈춘다");
+    ok(/loadAttendance\(Math\.max\(-앞달한도, _attOffset - 1\)\)/.test(AD2),
+       "★★★ › 단추가 0 에서 안 막힌다 (여길 안 고치면 한도만 늘리고 문은 잠긴 채)");
+    ok(/const 앞달 = monthOffset < 0;/.test(AD2),
+       "앞달인지 한 곳에서 정한다");
+    ok(/const todayD = 앞달 \? 0 : new Date\(\)\.getDate\(\);/.test(AD2) &&
+       /const isThisMonth = 앞달 \|\| \(monthOffset === 0\);/.test(AD2),
+       "★★★ 앞달을 **'오늘이 0일인 이번 달'** 로 셈한다 — 새 if 를 여기저기 심으면 언젠가 한 군데를 빠뜨린다 (남은날·앞날칸·그래프 넷이 전부 이 두 값만 본다)");
+    ok(/const 앞날 = isThisMonth && d > todayD;/.test(AD2),
+       "★★ 그래서 앞달은 총원 줄이 통째로 비워진다 (0일 다음날부터 앞날)");
+    /* [고침 2026-09-13] 오늘도 세게 되면서 todayD 부터 돕니다. 앞달은
+       todayD 가 0 이라 Math.max(1, …) 가 1일부터로 되돌려 줍니다. */
+    ok(/for \(let d = Math\.max\(1, todayD\); d <= daysInMonth; d\+\+\)/.test(AD2),
+       "★★ 그래서 앞달의 '남은 날' 은 1일부터 말일까지 — 전원 🔴 위험으로 보이지 않는다");
+    {
+      /* 그래프 넷은 끝날 < 1 이면 스스로 접습니다 — 앞달이면 끝날이 0/-1 */
+      const 접힘 = (AD2.match(/if \(끝날 < 1\)/g) || []).length;
+      ok(접힘 >= 4, "★★ 그래프 넷이 모두 '그릴 날이 없으면 접는다' 를 갖고 있다 (앞달에 빈 축만 그리지 않게)");
+    }
+    ok(/출석률순위\(rateRows, 앞달\);/.test(AD2),
+       "★ 순위 판도 앞달인지 안다");
+    ok(/아직 오지 않은 달이에요/.test(AD2),
+       "★★★ 앞달에는 순위를 접고 말로 알린다 (아무도 안 나온 달을 전원 0% 🔴 로 줄 세우면 읽는 사람이 놀란다)");
+    ok(/미리 적어 둔 개인사정/.test(AD2),
+       "★★ 대신 미리 찍어 둔 🌿 를 보여 준다 — 앞달 출석부를 여는 바로 그 이유");
+    ok(/monthOffset < 0 \? " \(앞으로\)" : ""/.test(AD2),
+       "★ 달 이름 옆에 (앞으로) 를 적는다 — 표가 텅 빈 게 고장이 아니라는 뜻");
+    ok(/다음 달·다다음 달<\/b>까지 넘길 수 있어요/.test(AH2),
+       "★ 화면에도 적어 둔다 (숨은 기능은 없는 기능이다)");
+
     /* 별채에도 캐시 도장 (2026-08-13) — 본채만 찍고 여길 잊어서,
        고친 돋보기를 올려도 관리자 브라우저가 옛것을 재활용했습니다 */
     ok(/script_admin\.js\?v=\d{12}/.test(AH2),
@@ -1096,7 +1470,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      넓히고, 날짜 칸을 34 → 30px 로 줄여 그만큼을 돌려받았습니다.
      ===================================================================== */
   {
-    const AH3 = fs.readFileSync(DIR + "admin.html", "utf8");
+  const AH3 = fs.readFileSync(DIR + "admin.html", "utf8");
 
     ok(/<div class="adm-card full" id="adm-att-card">/.test(AH3),
        "출석부 카드만 넓힘 표를 달고 있다");
@@ -1146,68 +1520,47 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   }
 
   /* =====================================================================
-     ☕ 수다방 [나가기] — 접속자 줄 오른쪽 끝으로 (2026-08-12)
+     ☕ 수다방을 접었습니다 (2026-08-30 — 콩) — 정말 사라졌는가
      ---------------------------------------------------------------------
-     머리말 탭 줄에 있던 것을 "누가 있는지" 를 보여주는 줄로 옮겼습니다.
-     탭 줄이 길어져 ☕ 수다방 이름이 밀렸고, 무엇보다 **누가 있는지**와
-     **나갈지**는 같은 줄에서 보는 게 자연스러워요.
+     뽀모방이 생기면서 수다방은 쓰임이 겹쳤습니다. 수다는 ⏱️ 뽀모방과
+     ⚙️ 비밀방이 맡기로 하고 방을 접었어요.
 
-     ★ 여기까지 검사가 하나도 없던 자리입니다. 옮기면서 붙입니다.
+     ★★★ 이 검사는 **없어졌는지**를 봅니다 (펫을 걷을 때 쓴 방식).
+        기능을 지울 때 제일 흔한 사고가 "반쯤 남기"예요 — 화면에서만
+        지우고 코드가 남으면, 나중에 그 코드를 보고 "왜 안 되지" 하고
+        되살리려다 부서집니다.
+     ★★ 이 정리로 **펜 이사(moveInput)가 함께 사라졌습니다** — 글칸
+        하나를 두 방이 나눠 쓰던 그 자리가 2026-08-13 한글 자소 분리
+        사고의 현장이었어요. 방이 하나면 옮길 일이 없습니다.
      ===================================================================== */
   {
     const H6 = fs.readFileSync(DIR+"index.html","utf8");
-    const CH6 = fs.readFileSync(DIR+"script_chatty.js","utf8");
-
-    /* 자리 — 접속자 줄 **안**, 이름 뒤 */
-    const 줄 = H6.slice(H6.indexOf('id="chatty-online-bar"'),
-                        H6.indexOf('id="chat-box"'));
-    ok(/id="chatty-leave-btn"/.test(줄), "★ [나가기] 가 접속자 줄 안에 있다");
-    ok(줄.indexOf('id="chatty-who"') < 줄.indexOf('id="chatty-leave-btn"'),
-       "이름들 뒤(오른쪽)에 선다");
-    ok(!/mini-row[\s\S]{0,240}chatty-leave-btn/.test(H6),
-       "★ 머리말 탭 줄에는 더 이상 없다");
-
-    /* 아이콘만 — 옆에 이름이 늘어서는 줄이라 글자를 얹으면 이름처럼 읽힙니다 */
-    const 단추 = H6.slice(H6.indexOf('id="chatty-leave-btn"'),
-                          H6.indexOf("</button>", H6.indexOf('id="chatty-leave-btn"')));
-    ok(/<svg/.test(단추), "★ 아이콘으로 그린다");
-    /* ★ ">나가기<" 만 보면 모자랍니다 — 사이에 줄바꿈이 끼면 그냥 통과해요.
-       (실제로 그렇게 넣어 보고 통과하는 걸 확인했습니다)
-       속성값을 뺀 **본문**에 한글이 있는지로 봅니다. */
-    ok(!/[가-힣]/.test(단추.replace(/"[^"]*"/g, "")),
-       "★ 단추 안에 글자가 없다 (아이콘만 — 옆에 이름이 늘어서는 줄이라)");
-    ok(/aria-label="수다방 나가기"/.test(단추), "읽어 주는 프로그램에는 이름을 남긴다");
-
-    /* 색 — 이름과 달라야 합니다 */
-    const 이름색 = (CSS.match(/#chatty-online-bar\{[\s\S]*?color: var\((--[\w-]+)\)/) || [])[1];
-    const 단추색 = (CSS.match(/\.chatty-leave-btn\{[\s\S]*?color: var\((--[\w-]+)\)/) || [])[1];
-    ok(이름색 && 단추색 && 이름색 !== 단추색,
-       `★ 단추 색이 이름 색과 다르다 (이름 ${이름색} / 단추 ${단추색})`);
-
-    /* ★★ 줄 접기는 **이름 쪽에만** 걸려야 합니다.
-       줄 전체에 걸면 단추까지 접기 대상이 되어, 이름이 길어지는 순간
-       단추가 잘려 사라집니다. 사람이 많을수록 못 나가게 되는 셈이에요. */
-    ok(/#chatty-online-bar\{[^}]*display: flex/.test(CSS),
-       "줄이 [이름들][단추] 두 칸으로 나뉜다");
-    ok(!/#chatty-online-bar\{[^}]*-webkit-line-clamp/.test(CSS),
-       "★ 줄 전체에는 접기를 걸지 않는다 (단추까지 잘린다)");
-    ok(/\.chatty-who\{[^}]*-webkit-line-clamp: 3/.test(CSS),
-       "★ 접기는 이름 쪽에만 (사람이 많아도 세 줄까지)");
-    ok(/\.chatty-who\{[^}]*min-width: 0/.test(CSS),
-       "이름이 길어도 단추를 밀어내지 않는다");
-    ok(/\.chatty-leave-btn\{[^}]*flex: 0 0 auto/.test(CSS), "단추는 안 줄어든다");
-
-    /* ★ 이름을 다시 그릴 때 단추가 지워지면 안 됩니다 */
-    ok(/const who = document\.getElementById\("chatty-who"\)/.test(CH6),
-       "★ 이름은 안쪽 칸에만 쓴다");
-    ok(!/document\.getElementById\("chatty-online-bar"\)[\s\S]{0,120}innerHTML =/.test(CH6),
-       "★ 줄 전체를 덮어쓰지 않는다 (덮어쓰면 단추가 지워진다)");
-    /* 보이고 감추는 장치는 그대로여야 합니다 */
-    ok(/function _renderChattyLeaveBtn/.test(CH6) &&
-       /id="chatty-leave-btn"/.test(H6) && /class="chatty-leave-btn hidden"/.test(H6),
-       "참여 전에는 감춰져 있다");
-    ok(/\.chatty-leave-btn\.hidden\{ display: none; \}/.test(CSS),
-       "★ 감출 때 실제로 사라진다 (flex 칸이라 display 를 못 박아야 합니다)");
+    ok(!fs.existsSync(DIR+"script_chatty.js"), "★★★ script_chatty.js 가 없다");
+    ok(!/chatty/i.test(H6), "★★★ index.html 에 수다방 흔적이 없다 (탭·상자·싣기·자가진단)");
+    ok(!/chatty/i.test(CSS), "★★ 차림새도 함께 걷었다");
+    ok(!/chatty/i.test(fs.readFileSync(DIR+"script_dock.js","utf8")),
+       "★★★ 알약 줄에서 사라졌다 (배열·배지·탭·펜 이사까지)");
+    ok(!/db\.ref\(["'`]messages2/.test(fs.readFileSync(DIR+"script_chat.js","utf8")) &&
+       /function _activeMsgRef\(\) \{ return db\.ref\("messages"\); \}/.test(fs.readFileSync(DIR+"script_chat.js","utf8")),
+       "★★★ 챗이 messages 로만 보낸다 (보내는 곳을 가르던 갈림길이 없어졌습니다)");
+    ok(!규칙읽기().messages2, "★★ 보안규칙에서도 messages2 를 뺐다");
+    /* ★ 펜 이사가 정말 사라졌는가 — 이 방의 가장 아팠던 자리라 따로 못 박습니다 */
+    {
+      const DK6 = fs.readFileSync(DIR+"script_dock.js","utf8");
+      ok(!/function moveInput/.test(DK6),
+         "★★★ 펜 이사(moveInput)가 없다 — 2026-08-13 한글 자소 분리 사고의 자리였습니다");
+      ok(/function 펜앉히기/.test(DK6),
+         "★★ 대신 챗 판에 한 번 앉히고 끝낸다");
+    }
+    /* ★★ 딴 배지는 그대로 둡니다 — 이미 딴 것을 도로 뺏지 않는 것이
+       이 방의 방침이에요 (펫을 걷을 때도 지켰습니다). */
+    {
+      const AC6 = fs.readFileSync(DIR+"script_achv.js","utf8");
+      ok(/id: "chatty30"/.test(AC6) && /id: "chatty100"/.test(AC6),
+         "★★★ 수다방 배지는 **안 지운다** — 이미 딴 분들의 배지가 사라집니다");
+      ok(/문을 닫은 방이에요/.test(AC6),
+         "★ 더는 오르지 않는다고 설명에 적어 뒀다");
+    }
   }
 
   /* =====================================================================
@@ -1273,8 +1626,13 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     }
 
     /* ── 옮긴 것들이 옛 자리로 안내되고 있지 않은가 ── */
-    ok(/접속자 명단 맨 아래 왼쪽/.test(MAN),
-       "★ [📓 Letters 전체 기록] 의 새 자리를 알려준다");
+    /* [2026-10-01] 📓 Letters 전체 기록 단추는 2026-08-21 에 빠졌고 이름도 Work Log 로 바뀐 지 오래 —
+       설명서에 Letters 가 남아 있으면 안 됩니다 (콩 제보) */
+    ok(!/Letters/.test(MAN), "★★ 설명서에 옛 이름 Letters 가 남아 있지 않다 (Work Log)");
+    ok(!/☕ 수다방 옆|Chat 과 ☕ 수다방/.test(MAN), "★ 설명서에 접은 수다방 안내가 남아 있지 않다");
+    /* ★★★ [2026-10-01 콩] ⚙️ 비밀 대화방은 설명서·가이드에 **적지 않는다** — 명단 밖 사람이 알 이유가 없어요 */
+    ok(!/⚙️ · 💬|· ⚙️ ·|Q&amp;A · ⚙️|비밀 대화방|비밀방/.test(MAN), "★★★ 설명서에 ⚙️ 비밀방 언급이 없다");
+    ok(!/<span class="tool">⚙️<\/span>|⚙️ · 💬 Chat|비밀 대화방|비밀방/.test(fs.readFileSync(DIR+"guide.html","utf8")), "★★★ 가이드에 ⚙️ 비밀방 언급이 없다");
     ok(!/\[오늘\] \[내 기록\] 옆 <b>\[전체 기록\]/.test(MAN),
        "옛 자리(글자수 창 탭 옆) 안내가 남아 있지 않다");
     /* [오늘 하기] — 동작이 바뀌었습니다 */
@@ -1286,7 +1644,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        새로 오신 분은 가이드를 먼저 봅니다. 화면이 통째로 바뀌었는데
        설명서가 세 칸 시절 그대로면, 그분에게는 그게 사실이 됩니다. */
     ok(/아래 알약 줄/.test(MAN), "★ 알약 줄 배치를 설명한다");
-    ["📢 공지", "💬 Chat", "☕ 수다방", "🏅 업적", "🍅 Pomodoro", "✍️ Letters"].forEach(n =>
+    ["💬 Chat", "⏱️ 뽀모방", "🏅 업적", "🍅 Pomodoro", "✍️ Work Log", "🤔 Q&amp;A"].forEach(n =>
       ok(MAN.includes(n), `${n} 알약을 알려준다`));
     ok(/머리말을 잡고 끌어서/.test(MAN), "★ 자리 옮기기를 알려준다");
     ok(/두 번 누르면/.test(MAN), "제자리로 돌리는 법도");
@@ -1323,12 +1681,13 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          manual.html 은 옛 주소를 살리는 이정표(redirect)만 남았어요. */
       const M1 = fs.readFileSync(DIR+"guide.html","utf8");
       ok(/<section class="wrap" id="onepage">/.test(M1), "★ 한 장 설명이 가이드 안에 있다");
-      ok(/id="alive"/.test(M1) && /chrome:\/\/settings\/performance/.test(M1),
-         "★ 접속 유지 안내도 가이드 안에 있다");
+      /* [2026-09-30 콩] 접속 유지 절은 가이드에서 뺐습니다 — 입장하면 저절로 켜져서 */
+      ok(!/id="alive"/.test(M1) && !/chrome:\/\/settings\/performance/.test(M1),
+         "★ 접속 유지 안내는 가이드에 없다 (저절로 켜지니 설명할 게 없다)");
       {
         const R1 = fs.readFileSync(DIR+"manual.html","utf8");
         const R2 = fs.readFileSync(DIR+"접속유지_가이드.html","utf8");
-        ok(/url=guide\.html#onepage/.test(R1) && /url=guide\.html#alive/.test(R2),
+        ok(/url=guide\.html#onepage/.test(R1) && /url=guide\.html"/.test(R2),
            "★★ 옛 주소는 이정표로 남는다 (카톡에 뿌려 둔 링크가 죽으면 안 된다)");
         ok(R1.length < 2000 && R2.length < 2000,
            "이정표에 알맹이가 남아 있지 않다 (두 벌이면 언젠가 어긋난다)");
@@ -1518,7 +1877,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        "★ #dock 이 없으면 첫 줄에서 나간다 (예전 배치로 되돌려도 안전)");
     ok(/id="dock"/.test(H2), "★ 지금 화면에 알약 줄이 있다");
     ok(/<body class="dock-mode">/.test(H2), "알약 줄 표식이 붙어 있다");
-    ok(/\.dock\{/.test(CSS) && /#dock-panel-chatty\{/.test(CSS), "꾸밈이 들어 있다");
+    ok(/\.dock\{/.test(CSS) && /#dock-panel-proom\{/.test(CSS), "꾸밈이 들어 있다");
 
     /* ── 배치 파일 대신 알약 파일 ── */
     ok(/src="script_dock\.js/.test(H2) && !/src="script_layout\.js/.test(H2),
@@ -1549,20 +1908,27 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          · 📢 공지 · 📁 자료실 → **머리말로** 올라갔습니다 (아래 반대 검사).
          · 📓 Letters 전체 기록 → 뺐습니다. 알약 줄 위 📊 띠에서 각자
            골라 볼 수 있어서요 (openWcAll 자체는 살아 있습니다). */
-    ok(목록.length === 9, `알약이 아홉 개다 (${목록.length}개)`);
-    ["chat", "chatty", "pub", "music", "todo", "help", "achv", "pomo", "wc"].forEach(id =>
+    /* [늘어남 2026-08-28] 🤔 Q&A 가 📓 표현 공부 **바로 오른쪽**에.
+       둘 다 "묻고 답하는" 자리라 나란히 있어야 갈래가 읽힙니다.
+       [늘어남 2026-08-29] ⚙️ 비밀 대화방이 **맨 앞**(챗 왼쪽)에 — 콩 지정. */
+    /* [늘어남 2026-08-29] ⏱️ 뽀모방이 ⚙️ 바로 오른쪽에 — 둘 다 "방" 이라 나란히. */
+    /* [늘어남 2026-10-01 — 콩] 🙋‍♂️Member — **혼자 방 전용** (solo:true). 본방엔 안 만들어집니다. */
+    ok(목록.length === 12, `알약이 열두 개다 (${목록.length}개) — 열한 개 + 혼자 방 전용 Member`);
+    ok(/\{ id: "member", label: "🙋‍♂️Member",[^\n]*solo: true/.test(DK), "★ Member 알약에 solo:true 가 붙어 있다");
+    ok(/if \(d\.solo && !window\.SOLO\) return;/.test(DK), "★★ solo 알약은 본방에서 아예 안 만든다");
+    ["sroom", "chat", "proom", "pub", "music", "todo", "help", "qna", "achv", "pomo", "wc"].forEach(id =>
       ok(목록.some(x => x.id === id), `${id} 알약이 있다`));
-    ["notice", "files", "wcall"].forEach(id =>
+    ["notice", "files", "wcall", "chatty"].forEach(id =>
       ok(!목록.some(x => x.id === id),
-         `★ ${id} 알약은 **없다** (2026-08-21 머리말로 옮김/뺌 — 되살리지 말 것)`));
+         `★ ${id} 알약은 **없다** (머리말로 옮김/뺌 · chatty 는 2026-08-30 접음 — 되살리지 말 것)`));
     /* 콩이 정한 차례 그대로 (2026-08-13 개편 — 오늘 할 일이 소통/기록의 기준선) */
-    ok(목록.map(x => x.id).join(",") === "chat,chatty,pub,music,todo,help,achv,pomo,wc",
-       "★ 알약 차례가 정한 대로다 — 챗·수다방·품평·BGM | 오늘할일 | 표현공부·업적·뽀모·Work Log");
+    ok(목록.map(x => x.id).join(",") === "sroom,chat,proom,pub,music,todo,help,qna,achv,pomo,wc,member",
+       "★ 알약 차례가 정한 대로다 — ⚙️·챗·⏱️·품평·BGM | 오늘할일 | 표현공부·Q&A·업적·뽀모·Work Log (·Member 는 혼자 방만)");
 
     /* ── 여닫는 규칙이 둘로 갈립니다 ── */
     const stay = {};
     [...DK.matchAll(/id: "(\w+)",[^\n]*stay: (true|false)/g)].forEach(m => { stay[m[1]] = m[2] === "true"; });
-    ["chat", "chatty", "pomo", "wc"].forEach(id =>
+    ["chat", "pomo", "wc"].forEach(id =>
       ok(stay[id] === true, `★ ${id} 는 바깥을 눌러도 안 닫힌다 (쓰던 글이 날아가지 않게)`));
     ok(stay.achv === false, "업적은 스쳐 보는 판이라 바깥을 누르면 닫힌다");
     /* 📌 오늘 할 일은 **판이 없습니다** — 방 전체 진척을 한 줄로 보여줄 뿐이라
@@ -1577,7 +1943,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        뽀모와 글자수를 같이 켜 두고 작업하고, 챗과 수다방도 함께 봅니다. */
     ok(/const _open = new Set\(\);/.test(DK), "★ 열린 판을 여럿으로 센다");
     ok(/function closeGlances/.test(DK), "바깥을 누르면 스쳐 보는 판만 닫는다");
-    ok(/close\(x\.dataset\.dockClose\)/.test(DK), "★ ✕ 는 그 판만 닫는다 (전부가 아니라)");
+    ok(/close\(x\.dataset\.dockClose, true\)/.test(DK), "★ ✕ 는 그 판만 닫는다 (전부가 아니라 — true 는 뽀모방 나가기 표시)");
     /* [고침 2026-08-12] 처음에는 flex 로 나란히 세웠는데, 판 높이가 제각각이라
        **윗줄이 맞고 아래가 들쭉날쭉**했습니다. 이제 각 판이 제 자리(left)를
        갖고 바닥(bottom:0)을 맞춰 서요 — 막대그래프처럼. */
@@ -1606,11 +1972,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     /* 알약 차례가 곧 좌우 규칙입니다 — 차례가 바뀌면 규칙도 깨집니다 */
     {
       const 차례 = 목록.map(x => x.id);
-      const 왼쪽 = ["notice", "chat", "chatty"].map(id => 차례.indexOf(id));
+      const 왼쪽 = ["notice", "chat"].map(id => 차례.indexOf(id));
       const 오른쪽 = ["pomo", "wc"].map(id => 차례.indexOf(id));
       const 가운데 = 차례.indexOf("todo");
       ok(Math.max(...왼쪽) < 가운데,
-         "★ 공지·챗·수다방이 [오늘 할 일]보다 왼쪽 → 판도 왼쪽에서 뜬다");
+         "★ 공지·챗이 [오늘 할 일]보다 왼쪽 → 판도 왼쪽에서 뜬다");
       ok(Math.min(...오른쪽) > 가운데,
          "★ 뽀모·글자수가 [오늘 할 일]보다 오른쪽 → 판도 오른쪽에서 뜬다");
       ok(차례.indexOf("achv") > 가운데 && 차례.indexOf("achv") < Math.min(...오른쪽),
@@ -1619,9 +1985,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
     /* 옮길 수 있는 판은 넷 */
     const 옮김 = [...DK.matchAll(/id: "(\w+)",[^\n]*drag: true/g)].map(m => m[1]);
-    /* ☕ 수다방은 이제 챗 판을 같이 씁니다 — 판이 하나라 끌기도 하나입니다 */
-    ok(옮김.sort().join(",") === "chat,chatty,help,music,pomo,pub,wc",
-       `★ 챗·수다방·품평·BGM·뽀모·글자수·Help 판을 옮길 수 있다 (${옮김.join(",")})`);
+    ok(옮김.sort().join(",") === "chat,help,member,music,pomo,proom,pub,qna,sroom,wc",
+       `★ ⚙️·챗·품평·BGM·뽀모·글자수·표현공부·Q&A·Member 판을 옮길 수 있다 (${옮김.join(",")})`);
     ok(/if \(!d \|\| !d\.drag\) return;/.test(DK), "그 규칙이 손잡이에도 걸려 있다");
     ok(/e\.target\.closest\("\[data-dock-close\]"\)\) return;/.test(DK),
        "★ ✕ 위에서는 안 잡힌다 (닫으려다 끌려가면 안 되니까)");
@@ -1702,8 +2067,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     /* =================================================================
        안 읽음 표시 (2026-08-12)
        -----------------------------------------------------------------
-       📢 공지는 붉은 점, 💬 챗·☕ 수다방은 숫자 배지.
-       ★ 세는 일은 원래 하던 곳(script_chatty.js·script_notice.js)이
+       📢 공지는 붉은 점, 💬 챗은 숫자 배지.
+       ★ 세는 일은 원래 하던 곳(script_chat.js·script_notice.js)이
          그대로 맡습니다. 여기서 다시 세면 **두 벌이 되어 언젠가
          어긋나요.** 그쪽이 만든 표시를 지켜보다 옮겨 적을 뿐입니다.
        ================================================================= */
@@ -1711,11 +2076,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(/function dot/.test(DK) && /window\.dockDot/.test(DK), "붉은 점을 붙일 창구가 있다");
     ok(/function syncBadges/.test(DK) && /function watchBadges/.test(DK),
        "★ 원래 표시를 지켜보다 옮겨 적는다 (두 벌로 세지 않는다)");
-    ["chat-tab-badge-main", "chat-tab-badge-chatty", "notice-dot"].forEach(id =>
+    ["chat-tab-badge-main", "notice-dot"].forEach(id =>
       ok(DK.includes(id), `${id} 를 지켜본다`));
     ok(!/_unread\s*[+]{2}|let _count/.test(DK), "★ 알약 줄이 따로 세지 않는다");
-    ok(/badge\("chat",\s*_open\.has\("chat"\)\s*\? 0 :/.test(DK) &&
-       /badge\("chatty",\s*_open\.has\("chatty"\)\s*\? 0 :/.test(DK),
+    ok(/badge\("chat",\s*_open\.has\("chat"\)\s*\? 0 :/.test(DK),
        "★ 판이 떠 있으면 숫자를 지운다 (대화가 보이니 곧 읽은 것)");
     ok(/setTimeout\(syncBadges, 0\)/.test(DK), "닫으면 다시 쌓이기 시작한다");
 
@@ -1766,84 +2130,58 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     }
 
     /* =====================================================================
-       🩹 챗·수다방 배지가 **한 번도 안 뜨던 것** (2026-08-12)
+       🩹 챗 배지가 **한 번도 안 뜨던 것** (2026-08-12 · 정리 2026-08-30)
        ---------------------------------------------------------------------
        세는 조건이 줄곧 "저쪽 탭이 켜져 있나" 였습니다. 칸이 하나뿐이던
-       시절엔 그게 곧 "안 보인다" 였지만, 판이 갈라진 지금은
-         · 챗을 보는 중 → "챗이 활성이니 메인은 세지 마라"
-         · 수다방으로 펜을 옮기면 → "수다방이 활성이니 수다방은 세지 마라"
-       가 되어 **양쪽 다 영영 안 올라갔습니다.** 이제 "판이 열려 있나" 를
-       화면 배치에 물어봅니다.
+       시절엔 그게 곧 "안 보인다" 였지만, 판이 갈라진 뒤로는 챗을 보는
+       중이면 "챗이 활성이니 세지 마라" 가 되어 **영영 안 올라갔어요.**
+       이제 "판이 열려 있나" 를 화면 배치에 물어봅니다.
+       ★ [2026-08-30] 수다방을 접어 물어볼 방이 챗 하나가 됐습니다 —
+         두 방을 견주던 흉내 내기 시험은 함께 걷었습니다.
        ===================================================================== */
-    {
-      const CH = fs.readFileSync(DIR+"script_chatty.js","utf8");
-      ok(/function _seeing\(room\)/.test(CH), "★ '이 방이 보이나' 를 한 곳에서 판단한다");
-      ok(/if \(typeof window\.dockSeeing === "function"\) return !!window\.dockSeeing\(r\);/.test(CH),
-         "★★ 화면 배치가 있으면 배치에게 물어본다");
-      ok(/return _activeChatTab === r\s*\n\s*&& !document\.body\.classList\.contains\("chat-collapsed"\);/.test(CH),
-         "★ 예전 세 칸 배치에서도 그대로 돈다 (되돌리기가 살아 있어야 한다)");
-      ok(/window\.dockSeeing = \(room\) => _open\.has\(room === "chatty" \? "chatty" : "chat"\);/.test(DK),
-         "★★ 알약 줄의 답은 '그 판이 열려 있나'");
-
-      /* 옛 조건이 남아 있으면 안 됩니다 */
-      ok(/if \(_seeing\("chatty"\)\) \{/.test(CH), "수다방 새 글은 _seeing 으로 가른다");
-      ok(/&& !_seeing\("main"\)/.test(CH), "메인 새 글도 마찬가지");
-      ok(!/_activeChatTab === "chatty"\s*\n\s*&& !document\.body\.classList\.contains\("chat-collapsed"\)/.test(CH),
-         "★ 옛 조건(활성 탭 + 접힘)이 세는 자리에 남아 있지 않다");
-
-      /* 판을 열면 저쪽이 든 숫자까지 털어야 합니다 */
-      ok(/function markChatRead\(room\)/.test(CH) && /window\.markChatRead = markChatRead;/.test(CH),
-         "★ '읽었다' 를 알려 줄 창구가 있다");
-      ok(/window\.markChatRead\?\.\("main"\)/.test(DK) && /window\.markChatRead\?\.\("chatty"\)/.test(DK),
-         "★★ 판을 열면 실제로 부른다 (알약 배지만 지우면 닫을 때 도로 올라온다)");
-      ok(/if \(_seeing\(_activeChatTab\)\) _tabUnread\[_activeChatTab\] = 0;/.test(CH),
-         "★ 판이 닫힌 채 글칸만 옮긴 것은 '읽음' 이 아니다");
-
-      /* ── 실제로 세어 봅니다 ──
-         script_chatty.js 의 판단을 그대로 옮겨 놓고, 판 상태를 바꿔 가며
-         새 글을 흘려 봅니다. */
-      {
-        let 열림 = new Set(), 활성 = "main", 접힘 = false;
-        const unread = { main: 0, chatty: 0 };
-        let 알약줄 = true;
-        const _seeing = (room) => {
-          const r = room === "chatty" ? "chatty" : "main";
-          if (알약줄) return 열림.has(r === "chatty" ? "chatty" : "chat");
-          return 활성 === r && !접힘;
-        };
-        const 새글 = (room, mine) => {              // 남이 보낸 보통 글
-          if (mine) return;
-          if (!_seeing(room)) unread[room] += 1;
-        };
-        const 열기 = (pid) => { 열림.add(pid); unread[pid === "chatty" ? "chatty" : "main"] = 0; };
-        const 닫기 = (pid) => 열림.delete(pid);
-
-        열기("chat");
-        새글("main");   ok(unread.main === 0, "챗 판이 열려 있으면 메인은 안 쌓인다");
-        새글("chatty"); ok(unread.chatty === 1,
-          "★★ 수다방 판이 닫혀 있으면 쌓인다 — 예전엔 여기가 0 이었다");
-        활성 = "chatty";   // 펜만 수다방으로 옮김 (판은 여전히 닫힘)
-        새글("chatty"); ok(unread.chatty === 2,
-          "★★ 글칸만 옮겨도 판이 닫혔으면 계속 쌓인다");
-        새글("main");   ok(unread.main === 0, "그동안 챗 판은 열려 있으니 메인은 그대로 0");
-        닫기("chat");
-        새글("main");   ok(unread.main === 1, "★ 챗 판을 닫으면 메인도 쌓이기 시작한다");
-        새글("main", true); ok(unread.main === 1, "내가 보낸 것은 안 센다");
-        열기("chatty"); ok(unread.chatty === 0, "★ 판을 열면 쌓인 숫자가 사라진다");
-        닫기("chatty");
-        새글("chatty"); ok(unread.chatty === 1, "닫으면 다시 쌓인다");
-
-        /* 예전 세 칸 배치에서도 그대로여야 합니다 */
-        알약줄 = false; 활성 = "main"; 접힘 = false;
-        unread.main = unread.chatty = 0;
-        새글("chatty"); ok(unread.chatty === 1, "세 칸 배치 — 딴 탭을 보는 중이면 쌓인다");
-        새글("main");   ok(unread.main === 0, "보고 있는 탭은 안 쌓인다");
-        접힘 = true;
-        새글("main");   ok(unread.main === 1, "★ 접혀 있으면 아무것도 안 보이니 메인도 쌓인다");
-      }
-    }
+    ok(/window\.dockSeeing = \(\) => _open\.has\("chat"\);/.test(DK),
+       "★★ '그 방이 보이나' 는 알약 줄이 답한다 (세는 일은 저쪽이 그대로 맡습니다)");
+    ok(/window\.markChatRead\?\.\("main"\)/.test(DK),
+       "★ 판을 열면 쌓인 숫자를 털어 낸다");
     ok(/new MutationObserver\(syncBadges\)/.test(DK), "바뀌는 순간 따라간다");
     ok(/setInterval\(syncBadges, 3000\)/.test(DK), "지켜보기가 안 되는 경우의 예비도 있다");
+
+    /* =====================================================================
+       🩹🩹 배지가 실제로는 **한 번도 안 켜지던 것** (2026-09-01 — 콩 신고
+       "chat 새 메시지 알림 배지가 사라졌어")
+       ---------------------------------------------------------------------
+       위 검사들은 "부르는 자리"만 봤습니다 — window.markChatRead?.("main")
+       이라는 문장이 dock.js 에 있는지만요. 그런데 **받는 이가 없었습니다.**
+       수다방을 걷을 때 script_chatty.js 를 통째로 지웠는데, 그 안에
+       #chat-tab-badge-main 을 실제로 채우고 지우던 손이 같이 사라졌어요.
+       markChatRead 도, 배지에 숫자를 쓰는 코드도 아무 파일에도 안 남아서,
+       ?.() 가 조용히 허공에 대고 불렀습니다. 검사도 그걸 못 잡았고요.
+       그래서 이번엔 **정의하는 쪽**을 직접 봅니다. */
+    {
+      const CH6 = fs.readFileSync(DIR+"script_chat.js","utf8");
+      ok(/window\.markChatRead = function/.test(CH6),
+         "★★★ markChatRead 를 실제로 정의한다 (부르기만 하고 받는 이가 없으면 도로 조용해진다)");
+      ok(/function renderChatTabBadge\(\)/.test(CH6) &&
+         /getElementById\("chat-tab-badge-main"\)/.test(CH6),
+         "챗 배지에 직접 글씨를 쓰는 함수가 있다");
+      ok(/if \(!isMe && !window\.dockSeeing\?\.\(\)\) \{\s*pillUnread \+= 1;\s*renderChatTabBadge\(\);/.test(CH6),
+         "★★ 챗 판이 안 보일 때만, 남의 글일 때만 센다");
+      ok(/window\.markChatRead = function[\s\S]{0,120}pillUnread = 0;\s*renderChatTabBadge\(\);/.test(CH6),
+         "판을 열면 실제로 0으로 지우고 배지도 다시 그린다");
+      /* ★★★★ [2026-09-08 — 콩 신고 "배지가 제대로 안 뜬다"] 알약 배지와
+         새 메시지 플로팅 버튼이 **같은 top-level 변수**(unreadCount)를 쓰고
+         있었습니다. 이 방의 파일들은 모듈이 아니라 한 광장을 함께 써서,
+         script_realtime.js 의 새 메시지 손이 맨 아래를 보고 있을 때마다
+         그 값을 0으로 되돌려 알약 배지를 지워 버렸어요. 세는 뜻이 서로
+         다르므로 변수가 갈라져 있어야 합니다. */
+      ok(/let pillUnread = 0;/.test(CH6) &&
+         !/pillUnread/.test(fs.readFileSync(DIR+"script_realtime.js","utf8")),
+         "★★★★ 알약 배지 셈(pillUnread)은 이 파일만의 것 — 플로팅 버튼 셈(unreadCount)과 갈라져 있다");
+      ok(/const n = Math\.max\(0, pillUnread\);/.test(CH6),
+         "★★ 배지에 쓰는 숫자도 갈라진 그 값이다");
+      ok(/if \(window\.dockSeeing\?\.\(\)\) \{ pillUnread = 0; renderChatTabBadge\(\); \}/.test(CH6),
+         "★★★ 스크롤을 맨 아래로 내려도 **판이 열려 있을 때만** 배지를 지운다 (판을 닫아 둔 채 스크롤만 움직였다고 지우면 안 됨)");
+    }
 
     /* ★★ 배지가 떠도 알약 줄이 흔들리면 안 됩니다 */
     ok(/\.dock-badge\{[^}]*position: absolute/.test(CSS),
@@ -1900,11 +2238,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     const 크기 = {};
     [...DK.matchAll(/id: "(\w+)",[^\n]*size: ([\d.]+)/g)].forEach(m => { 크기[m[1]] = Number(m[2]); });
     ok(크기.chat === 1.2, `★ 챗은 업적 판의 120% (${크기.chat})`);
-    ok(크기.chatty > 크기.chat,
-       `★ 수다방이 챗보다 크다 (${크기.chatty} > ${크기.chat}) — 대화가 제일 많은 곳이라`);
     /* ★ 글자수만 유독 높아서 카드 맨 윗줄까지 올라왔습니다. 1.45 → 1.23 */
     ok(크기.wc === 1.23, `✍️ Letters 1.23 (${크기.wc})`);
-    ok(크기.wc < 크기.chatty, "가장 높은 판은 수다방이다 (글자수가 아니라)");
+    ok(크기.pub === 1.35 && 크기.help === 1.35 && 크기.qna === 1.35,
+       "★ 가장 높은 판은 품평·표현공부·Q&A 다 (글이 길게 이어지는 자리라)");
     {
       const 화면 = 900, 알약줄 = 60;
       const 넘침 = Object.keys(크기).filter(k => 크기[k] > 0 &&
@@ -1913,13 +2250,13 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 세로 900px 화면에서도 판이 안 넘친다" + (넘침.length ? " → " + 넘침.join(", ") : ""));
     }
     /* ── 폭 (실제로 써 보고 정한 값) ── */
-    const 폭 = (id) => Number((CSS.match(
-      new RegExp("#dock-panel-" + id + "\\{ width: min\\((\\d+)px")) || [])[1]);
+    /* ★ [2026-08-29] 위 판폭() 을 씁니다 — 선택자를 묶어 두어도 재집니다.
+       (⚙️ 를 챗과 한 규칙으로 묶자 옛 정규식이 통째로 깨졌어요) */
+    const 폭 = (id) => 판폭(CSS, "dock-panel-" + id);
     ok(폭("notice") === 356, `📢 공지 356px — 글이 짧아 오른쪽이 휑했다 (${폭("notice")})`);
     ok(폭("chat") === 352, `💬 챗 352px — 2026-08-13 콩 요청으로 10% 줄임 (${폭("chat")})`);
-    ok(new Set(["notice", "chat", "chatty", "wc", "pomo", "achv"].map(폭)).size >= 5,
+    ok(new Set(["notice", "chat", "pub", "wc", "pomo", "achv"].map(폭)).size >= 5,
        "판마다 제 폭을 갖는다 (한 값으로 뭉뚱그리지 않았다)");
-    ok(폭("chatty") === 374, `☕ 수다방 374px — 2026-08-13 콩 요청으로 10% 줄임 (${폭("chatty")})`);
     ok(폭("wc") === 352, `✍️ 글자수 352px (${폭("wc")})`);
     ok(/\.dock-body \.wc-minirow \.ghost-btn\{[^}]*white-space: nowrap/.test(CSS),
        "★ 글자수 폭을 줄여도 [기준][초기화][새 편] 이 한 줄로 남는다");
@@ -2057,66 +2394,37 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       }
     }
 
-    /* ③ ☕ 수다방 — 창은 둘, 펜은 하나
+    /* ③ ✍️ 펜은 챗에 붙박이 (2026-08-30 — ☕ 수다방을 접으면서)
        ---------------------------------------------------------------
-       처음엔 한 판의 두 탭으로 묶었는데, 챗을 열어 둔 채 수다방을 누르면
-       **같은 판이 키만 커지면서** 수다방이 됐습니다. 둘이 따로 놀지도
-       않고 돌아갈 길도 없었어요. 이제 판은 갈라 놓고 **글칸만** 오갑니다. */
+       예전에는 **창은 둘, 펜은 하나** 였습니다 — #message 를 두 방이
+       나눠 쓰느라 판을 누를 때마다 통째로 옮겨 다녔어요(moveInput).
+
+       ★★★ 그 이사가 **2026-08-13 한글 자소 분리 사고의 자리**입니다.
+          요소를 appendChild 로 옮기면 초점이 조용히 떨어지고, 조합 중이면
+          IME 가 깨져 자모가 흩어졌습니다. 미루기·되살리기 장치로 막아
+          뒀지만 **위험 자체는 남아 있었어요.**
+          방이 하나가 된 지금, 그 길이 통째로 사라졌습니다.
+       ★ 여기 있던 검사 열댓 개(이사 미루기·초점 되살리기·빈 자리 표시·
+         탭 전환)도 함께 걷었습니다 — 지킬 것이 없어졌으니까요. */
     {
-      const CH = fs.readFileSync(DIR+"script_chatty.js","utf8");
-      ok(/_chattyBox\(\)\?\.classList\.toggle\("hidden", !onChatty\)/.test(CH),
-         "#chat-box2 는 탭을 켜야 보인다 (이게 전제다)");
-      ok(/function chattySend\(\)[\s\S]{0,200}document\.getElementById\("message"\)/.test(CH),
-         "★★ 수다방도 **같은 글칸**(#message)을 쓴다 — 이게 이 설계의 이유다");
-
-      ok(/id: "chatty"[^\n]*drag: true, tab: "chatty", resize: true/.test(DK),
-         "★★ 수다방은 제 판을 갖는다 (옮길 수도, 키울 수도 있다)");
-      ok(/id: "chat"[^\n]*tab: "main", resize: true/.test(DK), "챗도 마찬가지");
-      ok(!/panel: "chat"/.test(DK), "★ 한 판을 나눠 쓰던 흔적이 남아 있지 않다");
-
-      /* 두 대화 상자가 **동시에** 보여야 합니다 */
-      ok(/dock-body-chatty[\s\S]{0,200}chatty-online-bar", "chat-box2"/.test(DK),
-         "★ 접속자 줄과 대화 상자를 수다방 판으로 떼어 온다");
-      ok(/\.dock-mode #dock-body-chat #chat-box\.hidden\{ display: flex !important; \}/.test(CSS) &&
-         /\.dock-mode #dock-body-chatty #chat-box2\.hidden\{ display: flex !important; \}/.test(CSS),
-         "★★ 두 대화 상자가 동시에 보인다 (switchChatTab 이 붙이는 .hidden 을 되돌린다)");
-      ok(/\.dock-mode #dock-body-chatty #chatty-online-bar\.hidden\{ display: flex !important; \}/.test(CSS),
-         "수다방 접속자 줄도 계속 보인다 (나가기 단추가 거기 있다)");
-
-      /* ✍️ 글칸 옮기기 */
-      ok(/function moveInput\(tab\)/.test(DK), "★ 글칸을 옮기는 손이 있다");
-      /* 이사가 한글을 깨뜨리던 것 (2026-08-13) — 초점째 옮기면 조용히
-         떨어지고, 조합 중에 옮기면 IME 가 끼어 자모가 풀려 나온다 */
-      ok(/if \(_composing\) \{[\s\S]{0,120}compositionend[\s\S]{0,80}\{ once: true \}/.test(DK),
-         "★★ 한글 조합 중에는 이사를 미룬다 (끝나는 순간 한 번만)");
-      ok(/const 초점있던 = ta && document\.activeElement === ta;/.test(DK) &&
-         /ta\.focus\(\{ preventScroll: true \}\)/.test(DK) &&
-         /ta\.setSelectionRange\(s, e2\)/.test(DK),
-         "★★ 초점이 있었으면 이사 직후 초점과 커서를 되살린다");
-      ok(/e\.target\?\.id === "message"\) _composing = true/.test(DK),
-         "조합 상태를 글칸에서 직접 지켜본다");
-      /* [갱신 2026-08-13] 펜 목록에 멘션 드롭다운이 합류 — 정확한 목록은
-         아래 "@멘션 드롭다운도 펜과 함께 이사" 검사가 봅니다 */
+      ok(!/function moveInput/.test(DK),
+         "★★★ 글칸을 옮기는 손이 없다 (2026-08-13 사고의 자리가 사라졌습니다)");
+      ok(!/_composing/.test(DK),
+         "★★ 조합 중 이사를 미루던 장치도 함께 걷었다 (미룰 이사가 없다)");
+      ok(/function 펜앉히기\(\)/.test(DK) && /펜앉히기\(\);/.test(DK),
+         "★★ 대신 챗 판에 한 번 앉히고 끝낸다");
       ok(/const 펜 = \["reply-preview-bar", "mention-dropdown"\]/.test(DK),
-         "답장 미리보기도 글칸을 따라간다 (혼자 남으면 딴 방에 뜬다)");
+         "답장 미리보기·멘션 드롭다운도 글칸과 같은 자리에 앉는다");
       ok(/document\.querySelector\("\.input-area"\)[\s\S]{0,80}host\.appendChild\(ia\)/.test(DK),
          "글칸 자체를 옮긴다 (새로 그리지 않는다 — 손가락이 다 붙어 있다)");
-      ok(/function setTab\(tab\)[\s\S]{0,220}window\.switchChatTab\?\.\(t\);[\s\S]{0,60}moveInput\(t\);/.test(DK),
-         "★ 방을 바꾸면 탭 전환과 글칸 이사가 **함께** 일어난다");
-      ok(/dock-write-chat", "✍️ 여기에 쓰기"/.test(DK) &&
-         /dock-write-chatty", "✍️ 수다방에 쓰기"/.test(DK),
-         "★ 비어 있는 쪽에 '여기에 쓰기' 줄이 남는다 (돌아갈 길)");
-      ok(/\.dock-write\[data-empty\]::before\{ content: attr\(data-hint\); \}/.test(CSS),
-         "그 줄이 실제로 그려진다");
-      ok(!/:empty::before/.test(CSS.slice(CSS.indexOf(".dock-write"), CSS.indexOf(".dock-write") + 600)),
-         "★ :empty 로 판단하지 않는다 — 답장 미리보기가 늘 붙어 있어서 못 쓴다");
-      ok(/#dock-panel-chat, #dock-panel-chatty"\)/.test(DK),
-         "★★ 판을 누르면 그 방이 쓰는 방이 된다 (창 두 개를 오가는 방법)");
-      ok(/if \(pid === "chatty" && _tab === "chatty"\) setTab\("main"\);/.test(DK),
-         "★★ 펜이 놓인 판을 닫으면 펜을 딴 방으로 옮긴다 (안 그러면 아무 데도 못 쓴다)");
-      ok(/if \(d\.tab && _tab !== d\.tab\) \{ setTab\(d\.tab\); raise\(pid\); return; \}/.test(DK),
-         "★ 열려 있는 판의 알약을 누르면 먼저 펜을 데려온다 (한 번 더 눌러야 닫힘)");
+      ok(/id: "chat"[^\n]*resize: true/.test(DK), "챗 판은 키울 수 있다");
+      ok(!/panel: "chat"/.test(DK), "★ 한 판을 나눠 쓰던 흔적이 남아 있지 않다");
+      ok(/\.dock-mode #dock-body-chat #chat-box\.hidden\{ display: flex !important; \}/.test(CSS),
+         "★ 챗 상자는 판 안에서 늘 보인다");
+      ok(/dock-write-chat", "✍️ 여기에 쓰기"/.test(DK),
+         "★ 글칸이 앉을 자리가 챗 판에 있다");
     }
+
 
     /* ③-2 판 키우기 — 챗과 수다방만, 지금 높이보다 작아지지 않게 */
     {
@@ -2124,8 +2432,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       /* [갱신 2026-08-14] ♪ BGM 만 예외 — 150px 까지 줄일 수 있습니다
          (영상만 남기는 쓰임). 나머지 판은 여전히 기본 키가 바닥입니다 */
       ok(/Math\.max\(lo, Math\.min\(maxH\(\), h\)\)/.test(DK) &&
-         /const lo = pid === "music" \? 150 : baseH\(pid\)/.test(DK),
-         "★★ 기본 키가 바닥이다 (BGM 만 150px 까지 줄어든다)");
+         /const lo = pid === "music" \? 150 : Math\.round\(baseH\(pid\) \* \(\(d && d\.minRatio\) \|\| 1\)\)/.test(DK),
+         "★★ 기본 키가 바닥이다 (BGM 만 150px · minRatio 를 둔 판(⚙️ 0.6)만 그 비율까지)");
       ok(/return Math\.round\(BASE_H \* \(d \? d\.size : 1\)\);/.test(DK),
          "그 최소값이 곧 원래 크기다");
       /* [넓힘 2026-08-15] 끌어올린 거리를 배율로 나누게 되면서 뒤에
@@ -2138,15 +2446,36 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         const 키움 = [...DK.matchAll(/id: "(\w+)",[^\n]*resize: true/g)].map(m => m[1]);
         /* [넓힘 2026-08-16] ✍️ Work Log 가 들어왔습니다 — 메모와 할 일이
            흐르면서 일지가 길어져, 챗처럼 키울 수 있어야 했어요. */
-        ok(키움.sort().join(",") === "chat,chatty,help,music,pub,wc",
-           `★ 키울 수 있는 판은 챗·수다방·품평·BGM·Work Log·Help 여섯 (${키움.join(",")})`);
+        ok(키움.sort().join(",") === "chat,help,member,music,proom,pub,qna,sroom,wc",
+           `★ 키울 수 있는 판은 챗·품평·BGM·Work Log·표현공부·Q&A·⚙️·⏱️·Member 아홉 (${키움.join(",")})`);
+        /* 🙋‍♂️ Member (2026-10-01) — 혼자 방에서 본방 접속자 보기 */
+        {
+          const MB = fs.readFileSync(DIR+"script_member.js","utf8");
+          ok(/if \(!window\.SOLO\) return;/.test(MB), "★★ Member 는 본방에서 아무것도 안 한다");
+          ok(/fetch\(`\$\{DB_URL\}\/status\.json`/.test(MB) && !/db\.ref\(/.test(MB),
+             "★★ 진짜 status 는 REST 로 읽는다 (혼자 방의 firebase.database 는 가짜라서) · 쓰지 않는다");
+          ok(/themagam-ec0e4-default-rtdb/.test(MB), "★ 주소가 본방 파이어베이스(themagam-ec0e4)다");
+          ok(/if \(!isOpen\(\)\) return;/.test(MB) && /TICK_MS = 30 \* 1000/.test(MB), "★ 판이 열려 있을 때만 30초마다 읽는다");
+          ok(/window\.isOnline\(x\.row, now\)/.test(MB), "★ 온라인 판정은 본편의 isOnline 을 그대로 쓴다");
+          ok(/member-nick/.test(MB) && /member-state/.test(MB) && /member-wh/.test(MB), "닉·상태·시간 세 칸");
+          ok(/\.member-row\{/.test(CSS), "판 CSS 가 있다");
+          /* [2026-10-01 콩] 폭 80% · 글씨 키움 · 프사 */
+          ok(/#dock-panel-member\{ width: min\(368px/.test(CSS), "★ 폭은 기본 판의 80% (368px)");
+          ok(/users\/\$\{encodeURIComponent\(nick\)\}\/profile\.json/.test(MB) && /if \(nick in _photo \|\| _photoBusy\.has\(nick\)\) return;/.test(MB),
+             "★ 프사는 users/{닉}/profile 을 한 사람 한 번만 읽는다");
+          ok(/window\.photoSrcOf \? window\.photoSrcOf\(prof\)/.test(MB), "★ 사진 고르기는 본편 photoSrcOf 그대로 (창고 먼저, 옛 글자 사진 다음)");
+          ok(/\.member-nick\{[^}]*font-size: 15px/.test(CSS), "닉 글씨 15px");
+        }
       }
       ok(/\.dock-grip\{[^}]*cursor: ns-resize/.test(DK + CSS), "손잡이에 세로 화살표 커서");
       ok(/\.dock-grip\{[^}]*touch-action: none/.test(CSS),
          "★ 손가락으로 끌 때 화면이 같이 스크롤되지 않는다");
       {
         /* CSS 의 천장과 JS 의 천장이 어긋나면 어중간한 데서 멎습니다 */
-        const cssMax = Number((CSS.match(/\.dock-panel\{[\s\S]*?max-height: calc\(100vh - (\d+)px\)/) || [])[1]);
+        /* ★ [고침 2026-09-12] [\s\S]*? 로 찾으면 **다른 규칙의 max-height**
+           까지 넘어가서 집어 옵니다 (스티커 판에 max-height 가 생기자
+           그 값 16 을 물어 왔어요). 한 규칙 안({ 부터 } 전까지)만 봅니다. */
+        const cssMax = Number((CSS.match(/\.dock-panel\{[^}]*max-height: calc\(100vh - (\d+)px\)/) || [])[1]);
         const jsMax  = Number((DK.match(/\(window\.innerHeight \|\| 800\) - (\d+)/) || [])[1]);
         ok(cssMax === jsMax, `★★ 천장이 CSS 와 JS 에서 같다 (css ${cssMax} / js ${jsMax})`);
       }
@@ -2509,15 +2838,17 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     /* =====================================================================
        ⑤ 실제로 눌러 봅니다 — 알약을 순서대로
        ---------------------------------------------------------------------
-       ★ 여기 규칙은 script_dock.js 의 open/close/setTab 을 그대로 옮긴
-         것입니다. 저쪽을 고치면 여기도 함께 고쳐야 해요 — 안 그러면
-         이 검사는 **옛 규칙을 지키며 통과**하는 허수아비가 됩니다.
+       ★ 여기 규칙은 script_dock.js 의 open/close 를 그대로 옮긴 것입니다.
+         저쪽을 고치면 여기도 함께 고쳐야 해요 — 안 그러면 이 검사는
+         **옛 규칙을 지키며 통과**하는 허수아비가 됩니다.
+       ★ [2026-08-30] 수다방을 접으면서 탭·펜 이사가 사라져, 눌러 보는
+         규칙이 훨씬 단순해졌습니다 (setTab·펜 자리 시험을 걷었습니다).
        ===================================================================== */
     {
-      /* [2026-08-21] 공지·자료실·전체기록이 빠진 뒤의 모습입니다 */
       const DOCK2 = [
-        { id:"chat", stay:true, drag:true, tab:"main", resize:true },
-        { id:"chatty", stay:true, drag:true, tab:"chatty", resize:true },
+        { id:"chat", stay:true, drag:true, resize:true },
+        { id:"sroom", stay:true, drag:true, resize:true },
+        { id:"proom", stay:true, drag:true, resize:true },
         { id:"pub", stay:true, drag:true, resize:true },
         { id:"music", stay:true, drag:true, resize:true },
         { id:"todo", inline:true },
@@ -2526,52 +2857,23 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         { id:"wc", stay:true, drag:true, resize:true }
       ];
       const _open = new Set();
-      let _tab = "main", 펜 = "chat", 좁게 = false;
+      let 좁게 = false;
 
-      function setTab(t0){
-        const t = t0 === "chatty" ? "chatty" : "main";
-        if (_tab === t) return;
-        _tab = t;
-        펜 = t === "chatty" ? "chatty" : "chat";   // moveInput()
-      }
-      function close(id){
-        _open.delete(id);
-        if (id === "chatty" && _tab === "chatty") setTab("main");
-        if (id === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
-      }
+      function close(id){ _open.delete(id); }
       function open(id){
         const d = DOCK2.find(x => x.id === id); if (!d) return;
-        if (d.modal) return;                       // 가운데 창
-        if (_open.has(id)) {
-          if (d.tab && _tab !== d.tab) { setTab(d.tab); return; }
-          close(id); return;
-        }
+        if (d.modal) return;
+        if (_open.has(id)) { close(id); return; }
         if (좁게) [..._open].forEach(o => { if (o !== id) close(o); });
-        if (d.tab) setTab(d.tab);
         _open.add(id);
       }
 
       open("chat");
-      ok(_open.has("chat") && 펜 === "chat", "챗을 열면 글칸도 챗에");
-      open("chatty");
-      ok(_open.size === 2 && _open.has("chat") && _open.has("chatty"),
-         "★★ 수다방을 열면 **판이 둘** — 챗이 닫히지 않는다");
-      ok(펜 === "chatty", "글칸은 방금 연 수다방으로 간다");
-
+      ok(_open.has("chat"), "챗이 열린다");
       open("chat");
-      ok(_open.size === 2 && 펜 === "chat",
-         "★★ 열려 있는 챗 알약을 누르면 **닫지 않고 글칸만** 데려온다 (오가는 방법)");
-      open("chat");
-      ok(!_open.has("chat") && _open.has("chatty"), "한 번 더 누르면 그때 닫힌다");
-      ok(펜 === "chatty",
-         "★★ 글칸이 있던 판을 닫으면 글칸은 남은 방으로 — 아무 데도 못 쓰는 일이 없다");
+      ok(!_open.has("chat"), "★ 같은 알약을 다시 누르면 닫힌다 (탭이 없어져 곧장 닫힙니다)");
 
-      open("chat");
-      open("chatty"); open("chatty");
-      ok(_open.size === 1 && _open.has("chat") && 펜 === "chat",
-         "수다방을 닫으면 글칸이 챗으로 돌아온다");
-
-      open("pomo"); open("wc");
+      open("chat"); open("proom"); open("wc");
       ok(_open.size === 3, "넓은 화면에서는 여럿이 함께 열린다");
 
       /* 좁은 화면 — 한 번에 하나 */
@@ -2580,28 +2882,22 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(_open.size === 1 && _open.has("pub"),
          "★★ 좁으면 새로 여는 순간 나머지가 접힌다 (한 번에 하나)");
       open("chat");
-      ok(_open.size === 1 && _open.has("chat") && 펜 === "chat", "챗도 하나만");
-      open("chatty");
-      ok(_open.size === 1 && _open.has("chatty") && 펜 === "chatty",
-         "★ 좁은 화면에서는 수다방을 열면 챗이 접힌다 — 글칸도 함께 넘어간다");
-      ok(!_open.has("chat"), "그리고 글칸이 닫힌 판에 갇히지 않는다");
+      ok(_open.size === 1 && _open.has("chat"), "챗도 하나만");
 
       /* 판 키우기 — 최소는 원래 크기 */
       {
         const BASE_H = 430, 천장 = 900 - 190;
-        const size = { chat: 1.2, chatty: 1.35 };
+        const size = { chat: 1.2, sroom: 1.2 };
         const baseH = (id) => Math.round(BASE_H * size[id]);
         const setH  = (id, h) => Math.round(Math.max(baseH(id), Math.min(천장, h)));
         ok(setH("chat", 100) === baseH("chat"),
            `★★ 작게 끌어도 원래 높이에서 멈춘다 (${setH("chat",100)} = ${baseH("chat")})`);
-        ok(setH("chatty", 100) === baseH("chatty"),
-           "수다방도 제 원래 높이가 바닥 — 둘의 최소가 서로 다르다");
-        ok(baseH("chat") !== baseH("chatty"), "★ 두 판의 최소가 각자 다르다");
         ok(setH("chat", 700) === 700, "키우는 건 된다");
         ok(setH("chat", 99999) === 천장, "★ 화면 밖으로는 못 자란다");
       }
     }
   }
+
 
   /* 🔎 이상해졌을 때 들여다볼 창구 */
   ok(/window\.layoutDiag = function/.test(lay), "배치 진단 창구가 있다");
@@ -2830,8 +3126,19 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "두 화면이 각자 자리를 찾는다");
   ok(/function timePanelHost/.test(tl) && /function wcPanelHost/.test(tl),
      "자리를 찾는 함수가 따로 있다");
-  ok(/function exportBlock/.test(tl) && (tl.match(/exportBlock\(backWeeks, wcBack\)/g) || []).length >= 2,
+  ok(/function exportBlock/.test(tl) && (tl.match(/\$\{exportBlock\(\)\}/g) || []).length >= 2,
      "내보내기 버튼은 두 탭 아래에 똑같이 붙는다 (한 파일에 둘 다 담기므로)");
+  /* [2026-08-22] 주 → 달. 넘겨보기 값을 다시 받기 시작하면 여기서 걸립니다 —
+     달 그림은 ‹ › 로 넘겨볼 수 없어서, 받아 봐야 거짓말이 됩니다. */
+  ok(!/exportMyRecord\(\$\{/.test(tl) && /onclick="exportMyRecord\(\)"/.test(tl),
+     "★ 내보내기는 넘겨보기 값을 받지 않는다 (늘 이번 달)");
+  {
+    const 몸 = tl.slice(tl.indexOf("window.exportMyRecord"), tl.indexOf("window.exportMyRecord") + 2600);
+    ok(/loadSummary\(myNick, 오늘, 0\)/.test(몸),
+       "★ 작업 시간은 이달 1일부터 오늘까지를 훑는다");
+    ok(/db\.ref\("wordlog"\)[\s\S]{0,120}orderByKey/.test(몸) && !/for \(let i = 6/.test(몸),
+       "★ 글자수는 달을 한 번에 읽는다 (하루씩 서른한 번 읽지 않는다)");
+  }
   ok(/renderMyRecordPanel/.test(mw), "두 탭 모두 그 함수를 쓴다");
   ok(/window\.renderMyRecordPanel/.test(tl), "그리는 함수가 밖에서 불린다");
   ok(!/data-tab="record"/.test(HTML), "설정의 📊 나의 작업 탭이 빠졌다");
@@ -2917,6 +3224,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ["text","color","x","y","rot","at","hearts"].forEach(k =>
       ok(keys.includes(k), `쪽지에 ${k} 가 있다`));
     ok(keys.length === 7, `쪽지에 그 일곱 가지 말고는 아무것도 없다 (${keys.join(",")})`);
+    /* [2026-09-18] 여기에 pg(판 번호) 한 칸이 밖에서 더 붙습니다.
+       ★ 판 번호는 **몇 번째 판인가**일 뿐 글쓴이와 아무 상관이 없습니다 —
+         익명은 그대로예요. 다만 "서버에 무엇이 적히는가" 를 세는 자리라
+         여기에 적어 둡니다 (모르고 지나가면 안 되는 값이라서요). */
+    ok(/note\.pg = /.test(FR) && !/nick|uid/.test((FR.match(/note\.pg = [^;]*;/) || [""])[0]),
+       "★★ 판 번호(pg)만 밖에서 한 칸 더 붙는다 — 글쓴이 단서는 여전히 없다");
   }
   ok(/window\.db\.ref\("forest"\)\.push\(\)/.test(FR), "자동 키(push)로 붙인다 — 순서 말고는 아무 단서도 남기지 않게");
   ok(/AppStore/.test(FR), "내가 쓴 쪽지 목록은 이 기기(AppStore)에만 둔다");
@@ -3120,17 +3433,74 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     /* ── ① 안 바뀌면 안 보내기 (2026-08-21 — 콩) ────────────────── */
     ok(/const 보낼비율   = 0\.012;/.test(SH),
        "★ 문턱 1.2% — 한 줄만 더 써도 보내는 자리 (재 보고 정한 값)");
-    ok(/const 강제MS     = 45000;/.test(SH),
-       "★★ 45초에 한 번은 무조건 보낸다");
+    /* ★★★ [뒤엎음 2026-08-22 — 콩] 강제 전송(45초)을 없앴습니다.
+       그 값은 "안 보내면 흐려지니까" 억지로 보내던 것이었어요.
+       흐려짐 자체를 걷어내니 억지로 보낼 이유도 사라졌습니다.
+       ※ 코드에서 뺐는지는 **주석을 걷어내고** 봅니다 — 왜 없앴는지를
+         주석에 적어 뒀거든요(오늘만 세 번째로 밟는 자리). */
+    const SH민낯 = SH.replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(!/강제MS/.test(SH민낯), "★★★ 강제 전송이 없다 — 안 바뀌면 정말로 안 보낸다");
+    ok(/if \(지문 && !많이바뀌었나\(_지문, 지문\)\) \{ _건너뛴\+\+; return; \}/.test(SH),
+       "★★ 안 바뀌면 그냥 돌아선다 (조건이 그것 하나뿐)");
+    ok(!/SHARE_STALE_MS|SHARE_DROP_MS/.test(SH민낯),
+       "★★★ 나이로 흐리게 하거나 지우지 않는다 — onDisconnect 가 사실로 처리한다");
+    /* ★★★ [사고 2026-08-22 · 2차 — 콩 신고] 30분짜리 "청소" 를 남겼다가
+       **멀쩡히 공유 중인 사람을 치웠습니다.** 폰을 만지느라 화면이 30분 넘게
+       안 바뀌면 카드가 사라졌어요. 이름은 청소인데 하는 일은 **판정**이었고,
+       그건 이번 개편에서 걷어내려던 바로 그것이었습니다.
+       → 껍데기인지는 **나이가 아니라 그 사람이 접속해 있는가**로 가릅니다.
+         status 에 각자 shareOn 을 적어 보내고 있어 새로 읽을 것도 없어요.
+       ★ 교훈: "예외 하나만 남기자" 가 원칙을 도로 무너뜨립니다.
+         남길 거면 **그 예외가 원칙과 같은 말을 하는지** 보세요. */
+    ok(!/SHARE_SWEEP_MS/.test(SH민낯),
+       "★★★ 나이로 치우는 청소가 없다 — 화면이 몇 시간 멈춰도 카드가 안 사라진다");
+    ok(/function 껍데기인가\(nick\)/.test(SH)
+       && /if \(!row \|\| row\.shareOn !== true\) return true;/.test(SH),
+       "★★★ 껍데기는 **접속 여부**로 가린다 (status 의 shareOn)");
+    ok(/if \(!cache\) return false;/.test(SH),
+       "★★ 명단을 아직 못 받았으면 아무도 안 치운다 — 모를 때는 안 지우는 게 안전");
+    ok(/if \(window\.SOLO\) return false;/.test(SH),
+       "★ 혼자 방 사진은 늙지 않는다");
+    ok(/if \(껍데기인가\(nick\)\) continue;/.test(SH)
+       && /if \(nick && 껍데기인가\(nick\)\) \{ card\.remove\(\);/.test(SH),
+       "★★ 그리는 곳과 치우는 곳이 **같은 잣대**를 쓴다");
+
+    /* ★★★ [사고 2026-08-22 · 2차] 껐다 켜도 화면이 안 뜨던 것 —
+       지문(마지막으로 보낸 화면의 모양)을 안 비우고 껐기 때문입니다.
+       다시 켜면 첫 판에서 "안 바뀌었네" 하고 건너뛰고, 화면이 실제로
+       바뀔 때까지 **영영 아무것도 안 보냅니다.**
+       콩: "껐다 켜도 안 나오다가, 원고를 좀 쓰니 나오더라". */
     {
-      /* ★★ 강제 전송은 '끊김' 판정보다 반드시 앞서야 합니다 */
-      const 강제 = +(SH.match(/const 강제MS\s+= (\d+)/) || [])[1];
-      const 간격 = +(SH.match(/SHARE_INTERVAL_MS = (\d+)/) || [])[1];
-      ok(강제 < 간격 * 4,
-         `★★ 강제 전송(${강제}ms)이 끊김 판정(${간격*4}ms)보다 짧다 — 안 그러면 멀쩡한 사람이 흐려집니다`);
+      const 끄기 = SH.slice(SH.indexOf("async function stopScreenShare"),
+                            SH.indexOf("async function stopScreenShare") + 2500);
+      ok(/_지문 = null;\s*\n\s*_마지막보냄 = 0;/.test(끄기),
+         "★★★ 끌 때 지문을 비운다 — 다시 켤 때는 늘 한 장부터");
     }
-    ok(/if \(!오래됐나 && 지문 && !많이바뀌었나\(_지문, 지문\)\) \{ _건너뛴\+\+; return; \}/.test(SH),
-       "★ 지문을 못 뜨면 그냥 보낸다 (막히느니 보내는 쪽)");
+    /* ★★★ 나이를 걷어냈으니 onDisconnect 예약이 **유일한 안전망**입니다.
+       예약은 그 연결 하나에만 걸려서, 끊겼다 붙으면 사라져 있어요.
+       → 다시 걸어 주는 손이 반드시 있어야 합니다. */
+    /* ★★★ [사고 2026-09-29 — 콩 "크롬은 되는데 사파리만 안 돼"]
+       켜기 한복판의 `await 끊길때지우기예약()` 이 사파리에서 영영 안 끝나,
+       그 아래 여섯 줄(구독·시계 둘·단추·접속정보·첫 장)이 통째로 안 돌았습니다.
+       화면 줄기는 이미 잡혀 있어 운영체제엔 "찍는 중" 표시가 뜨는데 앱은
+       아무것도 모르는 상태 — 그리고 _sharing 만 참이라 다시 눌러도 막혔어요.
+       ★ 사파리는 창 고르기 판이 떠 있는 동안 연결을 끊는 일이 있고, 그러면
+         파이어베이스가 이 부탁을 다시 붙을 때까지 들고만 있습니다.
+       ★ 이 자리에 다시 await 를 붙이면 같은 사고가 그대로 돌아옵니다. */
+    {
+      const i = SH.indexOf("async function startScreenShare");
+      const 켜기 = i < 0 ? "" : SH.slice(i, i + 3000).replace(/\/\*[\s\S]*?\*\//g, "");
+      ok(i > 0 && /\n\s*끊길때지우기예약\(\);/.test(켜기) && !/await 끊길때지우기예약\(\)/.test(켜기),
+         "★★★ 켤 때 '끊기면 지워 줘' 부탁을 **기다리지 않는다** — 기다리면 사파리에서 켜기가 통째로 멎는다");
+    }
+    ok(/async function 끊길때지우기예약\(\)/.test(SH)
+       && /db\.ref\("screens\/" \+ myNick\)\.onDisconnect\(\)\.remove\(\)/.test(SH),
+       "★★ 끊기면 서버가 지우도록 예약한다");
+    ok(/db\.ref\("\.info\/connected"\)\.on\("value"/.test(SH)
+       && /if \(!_sharing \|\| !myNick\) return;\s*[\s\S]{0,240}?끊길때지우기예약\(\);/.test(SH),
+       "★★★ 다시 붙으면 예약을 **새로** 건다 — 안 하면 한 번 끊긴 뒤엔 안전망이 없다");
+    ok(/_지문 = null;\s*\/\* 지문을 비워/.test(SH) || /끊길때지우기예약\(\);\s*\n\s*_지문 = null;/.test(SH),
+       "★ 다시 붙으면 그림도 한 장 새로 올린다 (끊긴 사이 서버 것이 지워졌으니)");
     ok(SH.indexOf("const 지문 = 지문뜨기();") < SH.indexOf("const img = grabMosaic();"),
        "★ 무거운 일(모자이크)보다 **먼저** 물어본다");
     ok(/console\.warn\("\[화면 공유 — 저장 실패\]", e\);\s*\n\s*_지문 = null;/.test(SH),
@@ -3163,8 +3533,17 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     /* 이 파일이 건드리는 서버 경로는 screens 뿐이어야 합니다 */
     const roots = new Set((SH.match(/db\.ref\(["`]([^"`/+ ]+)/g) || [])
       .map(m => m.replace(/^db\.ref\(["`]/, "")));
-    ok(roots.size === 1 && roots.has("screens"),
-       "이 파일이 쓰는 경로는 screens 하나뿐이다 (" + [...roots].join(",") + ")");
+    /* ★ [넓힘 2026-08-22] `.info/connected` 가 하나 늘었습니다 — 다시 붙었는지
+       듣는 자리예요. 자료가 아니라 **연결 상태**라 개인정보와 무관합니다. */
+    /* ★ [넓힘 2026-09-21] `config` 가 하나 늘었습니다 — 화면 공유 문턱
+       (config/share) 을 **읽기만** 합니다. 누구나 읽는 자리이고 숫자 두어
+       개라 개인정보와 무관해요. 대신 **쓰지는 않는지**를 아래에서 지킵니다. */
+    const 자료경로 = [...roots].filter(r => r !== ".info");
+    const 남는것 = 자료경로.filter(r => r !== "screens" && r !== "config");
+    ok(자료경로.includes("screens") && !남는것.length,
+       "이 파일이 건드리는 자료는 screens(읽고 쓰기) · config(읽기만) 뿐이다 (" + 자료경로.join(",") + ")");
+    ok(!/ref\(["`]config[^"`]*["`]\)\s*\.(set|update|remove|push)\b/.test(SH),
+       "★★★ config 는 **읽기만** 한다 — 멤버 쪽이 자기 문턱을 고칠 수 있으면 안 된다 (규칙도 막지만 코드가 먼저다)");
   }
 
   /* ── 모자이크 강도 — 세 단계에서 연속 조절로 (2026-08-10) ── */
@@ -3264,6 +3643,109 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "접속자 정보가 바뀌면 버튼을 다시 칠한다");
   ok(/window\.updateStatus\?\.\(\)/.test(SH),
      "공유를 켜고 끌 때 그 사실을 남들에게 알린다");
+
+  /* =====================================================================
+     🖥️ 화면 공유 중 딱지 (2026-09-28 — 콩)
+     ---------------------------------------------------------------------
+     공유 그림은 공유하는 사람끼리만 봅니다. 그래서 **안 켠 사람**에게는
+     누가 공유 중인지 보일 길이 없었어요. 카드 딱지가 그 자리를 메웁니다.
+     ★ 이 딱지가 새 구독을 만들면 안 됩니다 — 그 순간 "안 켠 사람은 안
+       받는다" 는 약속이 깨지고, 지금 0인 통신량이 사람 수의 제곱이 돼요.
+     ===================================================================== */
+  ok(/const shareChip = row\.shareOn === true/.test(RT4),
+     "★★★ 딱지는 **이미 온 값**(status 의 shareOn)만 보고 그린다 — 새로 읽지 않는다");
+  {
+    const i = RT4.indexOf("const shareChip = row.shareOn === true");
+    const 딱지 = i < 0 ? "" : RT4.slice(i, i + 400);
+    ok(i > 0 && !/db\.ref\(/.test(딱지) && !/screens/.test(딱지),
+       "★★★ 딱지를 그리는 자리에 서버 읽기·screens 가 없다 (통신량 0 이 지켜진다)");
+  }
+  ok(/<div class="card-name">\$\{shareChip\}<span class="card-nick">/.test(RT4),
+     "★ 딱지는 닉네임 **왼쪽**에 붙는다 (콩이 고른 자리)");
+  /* =====================================================================
+     🔴 3차 (2026-09-28 — 콩 "안테나 점과 빨간 점이 너무 비슷해")
+     ---------------------------------------------------------------------
+     연결 안테나(.card-conn::after)는 **8px 빨간 동그라미가 깜박이는** 것.
+     2차 딱지는 6px 빨간 동그라미가 깜박이는 것이었습니다. 쌍둥이였어요 —
+     하나는 "끊겼다"는 나쁜 소식이고 하나는 "공유 중"이라는 좋은 소식인데.
+     ★ 그래서 **모양**으로 가릅니다(꽉 찬 말풍선 vs 작은 점). 색이 아니라요.
+       말풍선을 작은 원으로 줄이는 순간 이 고침이 통째로 풀립니다.
+     ★ 깜박이는 것의 **색**도 갈라 뒀습니다 — 안테나는 빨강, 딱지는 흰색.
+     ===================================================================== */
+  /* =====================================================================
+     🖥 확정 (2026-09-28 — 콩 "깜빡이는 게 불편하다는 의견이 많네")
+     ---------------------------------------------------------------------
+     닉네임 옆은 **가만히 있는 모니터 그림** 하나로 끝냅니다.
+     ★ 머리말의 「공유 중」이 이미 빨갛게 깜박입니다. 같은 소식을 카드마다
+       (한 화면에 쉰 장 넘게) 또 깜박이면 글 쓰는 방에서는 소음이에요.
+       움직임은 **머리말 한 곳에** 모읍니다.
+     ★ 네모인 까닭: 위로는 안테나(작은 원), 아래로는 🎯 목표 줄.
+       동그라미로 만들면 그 둘과 섞입니다 (콩이 두 번 신고한 자리).
+     ===================================================================== */
+  /* [2026-10-02 콩] 이모지 → 검은 말풍선 + 빨간 ▶ (SVG). 윈도에서 이모지가 딴판이라. */
+  ok(/aria-label="화면 공유 중"><svg viewBox="0 0 26 20"[\s\S]{0,40}<path class="bub"[\s\S]{0,200}<path class="play"/.test(RT4) &&
+     !/>🖥️<\/span>/.test(RT4),
+     "★★ 딱지는 검은 말풍선 + 빨간 ▶ 그림이다 (콩 2026-10-02 — 이모지는 윈도에서 딴판)");
+  ok(/d="M4 1h15a3 3 0 0 1 3 3v4\.2l3\.6 2\.3L22 12\.8/.test(RT4),
+     "★ 꼬리는 오른쪽 옆구리 — 닉네임을 향한다 (미리보기 A)");
+  ok(/html\[data-is-dark="true"\] \.card-share\{ --bub: #F2E8DC; --play: #FF4A3D; \}/.test(CSS),
+     "★ 다크 테마에선 말풍선을 밝게 뒤집고 재생만 빨강 (콩 선택)");
+  ok(/role="img"/.test(RT4),
+     "★ 이모지에는 role=img 와 이름표를 단다 (읽어 주는 기계가 '모니터'로 읽지 않게)");
+  ok(/\.card-share\{[\s\S]{0,80}?font-size: 1\.05em;[\s\S]{0,40}?line-height: 1;/.test(CSS),
+     "★★ 크기는 font-size 로 — 앞서 쓰던 그림과 같은 키라 줄 높이가 안 흔들린다");
+  ok(/\.card-share svg\{ height: 1em; width: auto; display: block; \}/.test(CSS) && !/\.card-share \.mon\{/.test(CSS),
+     "그림은 글자 키(1em)에 맞추고, 옛 모니터(.mon) 규칙은 없다");
+  {
+    const i = CSS.indexOf(".card-share{");
+    const 딱지 = i < 0 ? "" : CSS.slice(i, i + 2600);
+    const 값만 = 딱지.replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(i > 0 && !/animation/.test(값만) && !/@keyframes card-share-live/.test(CSS),
+       "★★★ 딱지는 깜박이지 않는다 — 머리말이 이미 깜박이므로 움직임은 거기 한 곳에 모은다");
+  }
+
+  /* ★★★ [사고 2026-09-28 — 콩 "미리보기는 되는데 실제 화면은 그대로야"]
+     이름 줄(.card-name)은 display:flex 입니다. flex 자식에게 vertical-align 은
+     **아무 일도 하지 않아요.** 그걸 모르고 vertical-align 으로 높이를 맞추려다
+     한 판을 날렸습니다. 올리고 내리는 일은 position:relative + top 으로 합니다.
+     ★ 이 검사는 "다음에 또 vertical-align 을 쓰려 들면" 잡으라고 둔 것입니다. */
+  {
+    const i = CSS.indexOf(".card-share{");
+    const 딱지 = i < 0 ? "" : CSS.slice(i, i + 1600);
+    const 값만 = 딱지.replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(i > 0 && !/vertical-align/.test(값만),
+       "★★★ 딱지 높이를 vertical-align 으로 맞추지 않는다 — 이름 줄이 flex 라 안 먹는다");
+    ok(/position: relative;\s*\n\s*top: -?\d+px;/.test(값만),
+       "★★ 높이는 position:relative + top 으로 맞춘다 (자리는 그대로, 그림만 움직인다)");
+  }
+  {
+    const i = CSS.indexOf(".card-name{\n  /* 🎖️");
+    const 이름줄 = i < 0 ? "" : CSS.slice(i, i + 400);
+    ok(i > 0 && /display: flex;/.test(이름줄),
+       "★★ 이름 줄이 flex 라는 사실 — 위 검사가 서 있는 까닭이다 (바뀌면 같이 볼 것)");
+  }
+  /* ▶ [2026-09-28 — 콩] 공유 카드의 빨간 동그라미 → 검정 네모 + 빨간 재생 표시.
+     이 방에서 **동그란 것은 연결 안테나 자리**가 됐습니다 (같은 날 닉네임 딱지도
+     네모로 갔어요). 공유를 알리는 표시가 동그라면 그것과 결이 섞입니다. */
+  ok(/\.share-live\{[\s\S]{0,700}?border-radius: 2px;/.test(CSS) &&
+     !/\.share-live\{[\s\S]{0,700}?border-radius: 999px;/.test(CSS),
+     "★★ 공유 표시는 네모다 (동그라미는 연결 안테나 자리)");
+  {
+    const i = CSS.indexOf(".share-live i{");
+    const 삼각 = i < 0 ? "" : CSS.slice(i, i + 420);
+    ok(i > 0 && /border-width: 5px 0 5px 8px;/.test(삼각) && !/background: #FF3B30/.test(삼각),
+       "★★ 안은 빨간 재생 삼각형이다 (테두리로 그린다 — 그림 파일이 필요 없다)");
+    ok(/margin-left: 1\.5px;/.test(삼각),
+       "★ 삼각형은 눈속임 보정을 받는다 — 한가운데 두면 왼쪽으로 치우쳐 보인다");
+    ok(!/animation/.test(삼각),
+       "★★★ 공유 표시도 깜박이지 않는다 — 움직임은 머리말 한 곳에 모은다");
+  }
+  {
+    const i = CSS.indexOf(".share-live{");
+    const 상자 = i < 0 ? "" : CSS.slice(i, i + 900);
+    ok(i > 0 && /width: 20px;/.test(상자) && /height: 20px;/.test(상자),
+       "★★ 크기를 width·height 로 못박는다 — 테두리 삼각형은 padding 으로 정사각형이 안 나온다");
+  }
   ok(/\.icon-btn\.share-others\{/.test(CSS), "옅은 붉은색 CSS 규칙이 있다");
   ok(/\.icon-btn\.share-on\{[^}]*background: var\(--danger-soft\)/.test(FLAT3.replace(/ /g, "")) ||
      /\.icon-btn\.share-on\{/.test(CSS),
@@ -3313,18 +3795,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(/\$\{window\.SOLO \? "" : `/.test(SH),
        "★ 혼자 방 팝업에는 그 단추를 아예 안 보여 준다");
   }
-  /* ★★ 이 둘은 **간격을 기준으로** 잡습니다. 간격만 바꾸고 여기를 두면
-     멀쩡히 공유 중인 사람이 흐려지고 사라져요 (10초 간격에 20초 판정이면
-     두 장만 놓쳐도 끊김으로 봅니다). 예전 뜻은 "네 장 · 여섯 장 놓침". */
-  ok(/SHARE_STALE_MS\s+= SHARE_INTERVAL_MS \* 4/.test(sh),
-     "★★ 끊김 판정은 간격의 네 배 — 간격을 바꿔도 같이 따라온다");
-  /* [2026-08-17] ×6 → ×5. 간격이 15초가 되며 ×6이면 끈 사람의 마지막
-     화면이 90초 남아서, 75초로 당겼습니다. 흐려짐(×4)보다는 뒤여야 합니다. */
-  ok(/SHARE_DROP_MS\s+= SHARE_INTERVAL_MS \* 5/.test(sh),
-     "★★ 목록에서 빼는 것은 간격의 다섯 배 (75초) — 흐려짐(×4)보다 뒤");
-  ok(/if \(!window\.SOLO && age > SHARE_DROP_MS\) continue;/.test(SH),
-     "오래된 사람은 아예 그리지 않는다 (혼자 방의 사진은 늙지 않으니 예외)");
-  ok(/classList\.toggle\("is-stale", age > SHARE_STALE_MS\)/.test(SH), "끊긴 카드는 흐려진다");
+  /* [철거 2026-08-22 — 콩] 나이로 흐리게 하고 지우던 검사 넷.
+     그 얼개 자체가 없어졌습니다 (위 "강제 전송이 없다" 참고).
+     ★ 되살리지 마세요 — 가려진 탭의 타이머 늦춤에 다시 걸립니다. */
+  ok(/if \(껍데기인가\(nick\)\) continue;/.test(SH),
+     "★ 껍데기(나갔거나 공유를 끈 사람)만 안 그린다 — 나이로 재지 않는다");
 
   /* ── 서버에서 온 그림을 그대로 믿지 않는가 ── */
   ok(/function sanitizeShot/.test(SH), "받은 그림을 검사하는 함수가 있다");
@@ -3415,8 +3890,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   /* [고침 2026-08-08] [나의 작업] 버튼이 빠져서 이제 [대숲] 앞입니다
      [고침 2026-08-21] 차례가 뒤집혔습니다 — 대숲 → 화면공유 → 접속유지 */
   ok(HTML.indexOf('id="share-btn"') > HTML.indexOf('id="forest-btn"')
-     && HTML.indexOf('id="share-btn"') < HTML.indexOf('id="alive-btn"'),
-     "[화면 공유] 가 [대숲] 과 [접속유지] 사이에 있다");
+     && HTML.indexOf('id="share-btn"') < HTML.indexOf('id="idle-detect-btn"'),
+     "[화면 공유] 가 [대숲] 과 [자동감지] 사이에 있다 (접속유지 버튼은 2026-09-30 에 뺌)");
   ["toggleScreenShare","stopScreenShare","renderShareCards"].forEach(f =>
     ok(new RegExp("window\\."+f+"\\s+=").test(sh), `${f} 를 밖에서 부를 수 있다`));
   ok(/<script src="script_share\.js/.test(HTML), "index.html 이 새 파일을 부른다");
@@ -3437,7 +3912,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     .forEach(c => ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
   ok(/\.share-img\{[^}]*image-rendering: pixelated/.test(FLAT3),
      "작은 그림을 늘릴 때 번지지 않게 그린다 (pixelated)");
-  ok(/\.share-card\.is-stale\{[^}]*opacity/.test(FLAT3), "끊긴 카드가 흐려지는 규칙이 있다");
+  ok(!/\.share-card\.is-stale\{/.test(FLAT3.replace(/\/\*[\s\S]*?\*\//g, "")),
+     "★★ 흐려지는 규칙이 없다 — 안 바뀌는 화면은 흐려질 일이 아니다");
   ok(/\.icon-btn\.share-on\{/.test(FLAT3), "공유 중 버튼 강조 규칙이 있다");
 
   /* ── 보안규칙 ── */
@@ -3830,16 +4306,35 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        "★★ 열쇠가 없으면 평소대로");
   }
 
-  /* 새로고침해도 유지 — 안 그러면 이 기능의 뜻이 없습니다 */
+  /* 새로고침해도 유지 — 안 그러면 이 기능의 뜻이 없습니다.
+     ★ [2026-08-23] "들어올 때 상태" 가 생기면서 _startStatus 가 혼자
+       못 돕니다 (getStartStatus 를 봅니다). 조각을 START_PICKS 부터
+       잘라 오고, 고른 값은 시험마다 갈아 끼웁니다. */
   {
-    const 방2 = {}; vm.createContext(방2);
-    vm.runInContext(DA9.slice(DA9.indexOf("function _startStatus"),
+    const 방2 = { AppStore: { getItem() { return 방2._고름 || ""; },
+                              setItem() {}, removeItem() {} }, _고름: "" };
+    vm.createContext(방2);
+    vm.runInContext(DA9.slice(DA9.indexOf("const START_PICKS"),
                               DA9.indexOf("async function loadPersonalData")), 방2);
-    const 되살 = (v) => vm.runInContext(`_startStatus(${JSON.stringify(v)})`, 방2);
+    const 되살 = (v, 고름) => {
+      방2._고름 = 고름 || "";
+      vm.runInContext("_startPick = \"\";", 방2);
+      return vm.runInContext(`_startStatus(${JSON.stringify(v)})`, 방2);
+    };
     ok(되살("repair") === "repair",
        "★★★ 새로고침해도 REPAIR 가 풀리지 않는다 (풀리면 그때마다 메시지가 뜬다)");
+    ok(되살("repair", "writing") === "repair",
+       "★★★ 고른 기본 상태보다 REPAIR 가 앞선다 (방 고치는 중에 풀리면 안 된다)");
     ok(되살("away") === "focus" && 되살("rest") === "focus",
-       "★ 다른 값은 예전 그대로 (들어왔으면 자리에 있는 것)");
+       "★ 안 고른 사람은 예전 그대로 (들어왔으면 자리에 있는 것)");
+    ok(되살("writing") === "writing",
+       "★ 안 고른 사람이 WRITE 로 나갔으면 WRITE 로 돌아온다 (예전 그대로)");
+    ok(되살("away", "writing") === "writing" &&
+       되살("rest", "multi") === "multi" &&
+       되살("writing", "focus") === "focus",
+       "★★★ 고른 것이 있으면 그것으로 들어온다 (2026-08-23 콩)");
+    ok(되살("away", "rest") === "focus" && 되살("away", "away") === "focus",
+       "★★ ☕BREAK·💤AWAY 는 기본으로 걸 수 없다 (걸리면 시간이 안 쌓인다)");
   }
   ok(/if \(sel && sel\.value !== "repair"\) sel\.value = "rest";/.test(CO9),
      "★★ 나가는 길에 REPAIR 를 rest 로 덮지 않는다");
@@ -4022,6 +4517,239 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "관리자 창에 자리가 있다");
   ok(/로그인 계정 자체는 파이어베이스 콘솔에서만/.test(AH9),
      "★★ 계정(Auth)은 여기서 못 지운다고 화면에 적어 뒀다 — 다 지운 줄 알면 곤란하다");
+}
+
+/* =====================================================================
+   🖥 머리말 공유 단추 — 색 대신 불빛 (2026-08-22 — 콩 · C안)
+   ---------------------------------------------------------------------
+   다크에서 "공유 중" 이 옆 단추와 안 갈렸습니다. 반투명 붉은 바탕이
+   어두운 머리말에 먹혀서요(#15171B 위에서 #3A2325 — 그냥 어두운 벽돌색).
+   오늘 스티커·공지 딱지와 **같은 뿌리**입니다.
+   → 색을 키우는 대신 **작은 점**을 답니다. 머리말은 늘 보이는 자리라
+     시끄러워지면 피곤해요. 점은 조용한데 눈에는 걸립니다.
+       내가 공유 중 → 점이 **깜빡임** / 남이 공유 중 → 점이 **가만히**
+   ===================================================================== */
+{
+  const CSs = fs.readFileSync(DIR + "styles.css", "utf8");
+  ok(/\.icon-btn\.share-on::before,\s*\.icon-btn\.share-others::before\{/.test(CSs),
+     "★★ 두 상태 모두 점을 단다 (콩: '둘 다 C로')");
+  /* ★ currentColor 를 쓰면 테마 여덟 개에 색을 따로 적을 필요가 없습니다.
+     오늘 배운 것 — 뜻 없는 색은 박아 넣지 말고 따라가게 할 것. */
+  ok(/background: currentColor;/.test(CSs),
+     "★★★ 점 색은 글자색을 따라간다 (테마마다 챙길 필요 없음)");
+  ok(/\.icon-btn\.share-on::before\{ animation: share-dot-blink/.test(CSs),
+     "★★★ **내** 공유만 깜빡인다 — 깜빡임 여부로 남의 것과 갈린다");
+  ok(!/\.icon-btn\.share-others::before\{ animation:/.test(CSs),
+     "★★ 남의 공유는 안 깜빡인다 (둘이 같으면 '내가 켠 건가?' 가 돌아온다)");
+  /* ★ index.html 을 안 건드리는 것이 이 답의 값입니다 — 단추를 옮기거나
+     이름을 바꿔도 점이 따라옵니다. */
+  ok(!/share-dot|share-light/.test(fs.readFileSync(DIR + "index.html", "utf8")),
+     "★ 점을 위해 index.html 에 무언가를 더하지 않았다 (::before 로 붙임)");
+  ok(/prefers-reduced-motion: reduce\)\{[\s\S]{0,420}?\.icon-btn\.share-on::before\{ animation: none; \}/.test(CSs),
+     "★★ 움직임이 불편한 분에게는 안 깜빡인다");
+  ok(/\.icon-btn\.share-others::before\{\s*background: transparent;\s*box-shadow: inset 0 0 0 1\.5px currentColor;/.test(CSs),
+     "★★ 그때는 남의 점을 **속 빈 동그라미**로 갈라 둔다 (깜빡임이 없으니 다른 표가 필요)");
+}
+
+/* =====================================================================
+   📘 가이드가 방과 어긋나지 않게 (2026-08-22 — 콩)
+   ---------------------------------------------------------------------
+   가이드는 **코드가 아니라 설명**이라, 방을 고쳐도 조용히 낡습니다.
+   실제로 옛 그림이 2026-08-12 배치인 채 열흘을 넘겼어요 — Letters 가
+   Work Log 로 갈리고 머리말 알약이 열 개가 됐는데도요.
+   그림과 방이 다르면 설명이 아니라 **혼란**입니다.
+
+   ★ 그래서 여기서 **알약 이름을 코드에서 읽어** 가이드와 맞춰 봅니다.
+     알약을 늘리거나 이름을 바꾸면 이 검사가 먼저 걸립니다.
+   ===================================================================== */
+{
+  const G = fs.readFileSync(DIR + "guide.html", "utf8");
+  const DK9 = fs.readFileSync(DIR + "script_dock.js", "utf8");
+
+  /* 아래 알약 줄 — 코드의 label 을 그대로 읽습니다 (빈 것은 뺍니다)
+     ★ [2026-08-28] 가이드는 HTML 이라 & 를 &amp; 로 적습니다. 그걸 안
+       풀고 견주면 "Q&A" 가 "QampA" 가 되어 **적어 뒀는데도 없다고**
+       나와요 (🤔 Q&A 를 넣다가 실제로 걸렸습니다). 먼저 풀고 봅니다. */
+  const 글자만 = (s) => s.replace(/&amp;/g, "&").replace(/[^가-힣A-Za-z]/g, "");
+  /* [2026-10-01 콩] 혼자 방 전용 알약(solo:true)은 가이드에 안 적습니다 —
+     혼자 방은 콩과 지인만 쓰는 곳이라 멤버 가이드에 있을 이유가 없어요. */
+  const 알약 = [...DK9.matchAll(/label: "([^"]+)"(?![^\n]*solo: true)/g)].map(m => m[1]);
+  const 빠진알약 = 알약.filter(l => {
+    const 이름 = 글자만(l);                            // 이모지·기호 빼고 견줌
+    return 이름 && !글자만(G).includes(이름);
+  });
+  ok(빠진알약.length === 0,
+     "★★★ 아래 알약이 모두 가이드에 적혀 있다 — 방에는 있는데 가이드에 없으면 아무도 모르는 기능이 된다"
+     + (빠진알약.length ? ` ← ${빠진알약.join(", ")}` : ""));
+
+  /* 차례 — 콩이 정한 순서 (2026-08-22, 같은 날 한 번 더 손봄)
+     매일 여는 판이 워크 로그라 앞으로, 상태는 한 번 익히면 더 볼 일이
+     없어 뒤로 갔습니다. */
+  const 차례 = [...G.matchAll(/class="h2">([^<]+)</g)].map(m => m[1].trim());
+  ok(JSON.stringify(차례) === JSON.stringify(
+       ["입장하기", "Work Log ✍️", "Pomodoro 🍅", "상태로 말해요",
+        "방 안에는", "안전한가요?", "화면 한 장 설명"]),
+     "★★ 큰 차례가 콩이 정한 그대로다 — " + 차례.join(" › "));
+
+  /* 위 넷은 두 칸 안에 (한 화면에 많이 — 콩) */
+  const duo = G.slice(G.indexOf('<div class="wrap duo">'), G.indexOf("</div><!-- /.duo -->"));
+  ok((duo.match(/<section class="wrap">/g) || []).length === 4,
+     "★★ 입장·상태·워크로그·뽀모 넷이 두 칸 묶음 안에 있다");
+  ok(/minmax\(200px,1fr\)/.test(G) && (G.match(/<div class="feat">/g) || []).length >= 15,
+     "★★ '방 안에는' 이 한 줄에 다섯까지 서고 칸이 열다섯 이상이다");
+  /* [2026-08-22 — 콩] 이모지가 제목 **옆**에 서야 합니다. 세로로 쌓으면
+     칸마다 두 줄을 그림값으로 먹어요(열여섯 칸이면 서른두 줄). */
+  const 머리수 = (G.match(/<div class="head"><span class="ico">/g) || []).length;
+  ok(머리수 === (G.match(/<div class="feat">/g) || []).length,
+     `★★ 기능 칸 전부가 이모지+제목 한 줄이다 (${머리수}개)`);
+  ok(/\.feat \.head\{display:flex;align-items:center;/.test(G),
+     "★ 그 한 줄을 만드는 규칙이 있다");
+  /* [2026-09-30] 접속 유지 절(방법 셋)은 가이드에서 뺐습니다 */
+  ok(!/#alive \.ways\{/.test(G), "★ 접속 유지 절의 CSS 도 남아 있지 않다");
+
+  /* 옛 이름이 남아 있지 않은가 — 개편 때마다 여기가 제일 잘 잊힙니다 */
+  /* ※ "테마 9종" 은 **지금도 맞는 이름**입니다 (위 1258줄 검사가 오히려
+     그 글자를 요구해요). 제가 옛것으로 잘못 넣었다가 걸렸습니다 —
+     검사끼리 서로 부딪히면 이렇게 바로 드러납니다. */
+  const 옛것 = ["Letters 전체 기록", "살려주세요"];
+  const 남은옛것 = 옛것.filter(n => G.includes(n));
+  ok(남은옛것.length === 0,
+     "★★ 바뀐 옛 이름이 안 남아 있다" + (남은옛것.length ? ` ← ${남은옛것.join(", ")}` : ""));
+
+  /* 화면 미니어처의 번호와 설명 번호가 짝이 맞는가 */
+  const 한장 = G.slice(G.indexOf('id="onepage"'));
+  const 그림 = [...한장.slice(0, 한장.indexOf('class="desc"')).matchAll(/class="num"[^>]*>(\d+)</g)]
+    .map(m => m[1]).sort();
+  const 설명 = [...한장.matchAll(/class="dnum">(\d+)</g)].map(m => m[1]).sort();
+  const 설명에만 = 설명.filter(n => !그림.includes(n));
+  ok(설명에만.length === 1 && 설명에만[0] === "1",
+     "★★★ 그림 번호와 설명 번호가 짝이 맞다 — ①(입장 승인)만 그림에 없는 것이 의도"
+     + (설명에만.length !== 1 ? ` ← 설명에만 있는 번호: ${설명에만.join(",")}` : ""));
+  /* ★★ [고침 2026-08-22 — 콩] 카드 위 번호 배지가 **잘려서** 안 보였습니다.
+     카드에 overflow:hidden 이 걸려 있는데 배지는 top:-8px 처럼 카드
+     **밖으로** 나가 앉거든요. 잘린 줄 모르면 "번호가 왜 없지" 가 됩니다.
+     ★ 요소를 모서리 밖에 놓을 때는 그 부모의 overflow 를 꼭 보세요. */
+  ok(/#onepage \.card\{[^}]*overflow:visible/.test(G),
+     "★★★ 카드가 넘치게 둔다 — 안 그러면 번호 배지가 잘린다");
+  ok(/#onepage \.card \.ph\{[^}]*border-radius:5px 5px 0 0/.test(G)
+     && /#onepage \.card \.nm\{ border-radius:0 0 5px 5px; \}/.test(G),
+     "★ 대신 안쪽 조각들이 각자 모서리를 둥글게 한다");
+  /* 그림이 좁아 알약 줄이 두 줄로 접히던 것 — 이 그림은 **한눈에 보는 것**이
+     목적이라 접히면 뜻이 반으로 줄어듭니다. */
+  ok(/#onepage \.paper\{[\s\S]{0,400}?max-width:none/.test(G),
+     "★★ 한 장 보기가 폭을 가득 쓴다 (720px 이면 알약 줄이 접힌다)");
+  ok(/\.desc\{[^}]*columns:2/.test(G) && /#onepage \.desc \.item\{ break-inside:avoid/.test(G),
+     "★★ 설명 목록이 두 칸이고, 항목이 칸을 넘나들며 잘리지 않는다");
+
+  const 그림에만 = 그림.filter(n => !설명.includes(n));
+  ok(그림에만.length === 0,
+     "★★ 그림에만 있고 설명이 없는 번호가 없다" + (그림에만.length ? ` ← ${그림에만.join(",")}` : ""));
+
+  /* 화면 공유 주기는 코드와 같아야 합니다 (5초 → 15초로 바뀐 적 있음) */
+  const SH9 = fs.readFileSync(DIR + "script_share.js", "utf8");
+  const 초 = Number((SH9.match(/SHARE_INTERVAL_MS = (\d+)/) || [])[1] || 0) / 1000;
+  ok(초 > 0 && G.includes(`${초}초에 한 번`),
+     `★★ 가이드의 화면 공유 주기가 코드와 같다 (${초}초)`);
+}
+
+/* =====================================================================
+   🩹 출석 복구 (2026-08-22 — 콩)
+   ---------------------------------------------------------------------
+   2026-08-22 새벽 사고 때 들어온 분들의 출석이 안 남았습니다.
+   ★★★ **복원이 아니라 재구성**입니다 — 원본 백업이 아니라 그날 살아남은
+     다른 자취로 되짚는 것이에요. 그래서 근거를 다 보여주고, **방장이
+     확인한 것만** 넣습니다. 자동으로 넣으면 **없는 출석이 생기고**,
+     출석은 이 방에서 규칙(한 달 18일)의 근거라 그러면 규칙이 무너집니다.
+   ===================================================================== */
+{
+  const AD3 = fs.readFileSync(DIR + "script_admin.js", "utf8");
+  ok(/async function 하루훑기\(날, 명단\)/.test(AD3), "하루치를 훑는 자가 있다");
+  ok(/if \(!닉 \|\| 있는사람\[닉\]\) return;/.test(AD3),
+     "★★ 이미 출석부에 있는 사람은 건드리지 않는다");
+  ok(/if \(시각 && \(!옛\.시각 \|\| 시각 < 옛\.시각\)\) 옛\.시각 = 시각;/.test(AD3),
+     "★★★ 근거가 여럿이면 **가장 이른** 시각을 쓴다 (첫 입장이니까)");
+  ok(/const 있나 = await db\.ref\(`attendance\/\$\{x\.날\}\/\$\{x\.닉\}`\)\.once\("value"\);\s*\n\s*if \(있나\.exists\(\)\) continue;/.test(AD3),
+     "★★★ 넣기 직전에 한 번 더 본다 — 되짚은 값이 **진짜 기록을 밀어내면 안 된다**");
+  ok(/뭉치\[`\$\{x\.날\}\/\$\{x\.닉\}`\] = \{ firstAt: t, at: t, fixed: true \};/.test(AD3),
+     "★★ 되짚어 넣은 줄에는 fixed 표를 남긴다 (나중에 가릴 수 있게)");
+  ok(/const t = x\.시각 \|\| new Date\(x\.날 \+ "T12:00:00"\)\.getTime\(\);/.test(AD3),
+     "★ 시각을 모르면 그날 정오 (새벽·자정이면 하루가 어긋나 보인다)");
+  ok(/findMissingAttendance\(1\)/.test(AD3) && /findMissingAttendance\(7\)/.test(AD3),
+     "★ 하루와 이레, 둘 다 볼 수 있다 (콩 요청)");
+  ok(/\.adm-fix-pick:checked/.test(AD3),
+     "★★★ 고른 것만 넣는다 — 전부 넣기 단추는 두지 않는다");
+
+  /* ★★★ [고침 2026-08-22 — 콩 물음] "손으로 넣어 주세요" 라고 써 놓고
+     **넣을 곳을 안 만들었습니다.** 콩이 "그건 어떻게 하는 거야?" 하고
+     물어봐서 알았어요. 안내는 있는데 길이 없으면 그 안내는 없느니만 못합니다.
+     ★ 무언가를 "손으로 하세요" 라고 적을 때는, 그 손이 닿을 자리가
+       정말 있는지 먼저 보세요. */
+  ok(/async function addAttendanceByHand\(\)/.test(AD3),
+     "★★★ 손으로 넣는 길이 실제로 있다 (안내만 있고 길이 없으면 안 된다)");
+  ok(/const owner = \(await db\.ref\("nickOwner\/" \+ nick\)\.once\("value"\)\)\.val\(\);\s*\n\s*if \(!owner\)/.test(AD3),
+     "★★★ 명단에 없는 닉은 막는다 — 오타로 넣으면 아무도 못 지우는 유령 줄이 생긴다");
+  ok(/if \(있나\.exists\(\)\) \{[\s\S]{0,180}?덮지 않았습니다/.test(AD3),
+     "★★ 이미 있는 기록은 안 덮는다 (되짚기와 같은 규칙)");
+  ok(/firstAt: t, at: t, fixed: true/.test(AD3),
+     "★ 손으로 넣은 줄에도 fixed 표를 남긴다");
+  ok(/if \(!ownerOnly\("출석을 손으로 넣는 것"\)\) return;/.test(AD3),
+     "★★ 방장만 할 수 있다");
+
+  /* ── 가짜 서버에 물려 **되짚기가 정확한지** 돌려 봅니다 ── */
+  {
+    const 조각 = AD3.slice(AD3.indexOf("  const 하루MS = 86400000;"),
+                           AD3.indexOf("  async function findMissingAttendance"));
+    const 날 = "2026-08-22";
+    const T = (h, m) => new Date(`${날}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`).getTime();
+    const 나무 = {
+      [`attendance/${날}`]: { "밤샘": { firstAt: T(9,0), at: T(9,0) } },
+      [`attendlog/${날}`]:  { k1: { n:"커피", t:T(10,30), k:"in" }, k2: { n:"밤샘", t:T(9,0), k:"in" } },
+      [`wordlog/${날}`]:    { "여백": { total:1200 }, "커피": { total:300 } },
+      [`users/각주/timeSegs/${날}`]: { s1:{ s:"writing", a:T(14,20), b:T(15,0) }, s2:{ s:"focus", a:T(13,5), b:T(14,0) } },
+      [`users/커피/timeSegs/${날}`]: { s1:{ s:"writing", a:T(11,10), b:T(12,0) } },
+      [`users/밤샘/timeSegs/${날}`]: { s1:{ s:"writing", a:T(9,10), b:T(10,0) } },
+    };
+    const 스냅 = (v) => ({ val: () => (v === undefined ? null : v), exists: () => v != null });
+    const 방 = { db: { ref: (p) => ({ once: async () => 스냅(나무[p]) }) },
+                 Date, Object, Map, Number, String, Promise, JSON };
+    vm.createContext(방);
+    vm.runInContext(조각 + "\nglobalThis.H = 하루훑기; globalThis.시각글 = 시각글;", 방);
+
+    /* ★ [고침] 결과를 **상자에 담아 두고** 아래에서 봅니다.
+       처음엔 .then() 안에서 _나중에 에 넣었는데, 그러면 finish() 가
+       그 배열을 훑는 시점과 마이크로태스크 차례에 기대게 됩니다 —
+       "지금은 통과하지만 왜 통과하는지는 모르는" 검사가 돼요. */
+    const 상자 = {};
+    _기다릴것.push((async () => {
+      상자.r = await 방.H(날, ["밤샘", "커피", "여백", "각주", "안온사람"]);
+    })());
+    {
+      const 봄 = (n) => (상자.r || []).find(x => x.닉 === n);
+      _나중에.push(() => {
+        ok(Array.isArray(상자.r), "★ 되짚기가 실제로 돌았다");
+        ok(!봄("밤샘"), "★★ 이미 출석부에 있는 사람은 안 나온다");
+        ok(!봄("안온사람"), "★★ 자취가 하나도 없는 사람은 못 찾는다 (그게 정직한 결과)");
+        ok(봄("여백") && 봄("여백").시각 === 0,
+           "★ 글자수만 남은 사람은 '시각 모름' 이다");
+        ok(봄("커피") && 방.시각글(봄("커피").시각) === "10:30",
+           "★★★ 근거가 셋(출입 10:30 · 글자수 · 작업시간 11:10)이면 **가장 이른** 10:30");
+        ok(봄("커피") && 봄("커피").근거.length === 3, "★ 근거를 모두 보여준다");
+        ok(봄("각주") && 방.시각글(봄("각주").시각) === "13:05",
+           "★★ 작업 시간 구간이 여럿이면 **가장 이른** 구간의 시작을 쓴다");
+      });
+    }
+  }
+
+  const AH3 = fs.readFileSync(DIR + "admin.html", "utf8");
+  ok(/id="adm-fix-card"/.test(AH3) && /id="adm-fix-week"/.test(AH3), "관리자 창에 자리가 있다");
+  ok(/id="adm-hand-nick"/.test(AH3) && /id="adm-hand-date"/.test(AH3)
+     && /id="adm-hand-time"/.test(AH3) && /id="adm-hand-add"/.test(AH3),
+     "★★ 손으로 넣는 칸(닉·날짜·시각·단추)이 화면에 있다");
+  ok(/id="adm-hand-nick"/.test(AH3) && /id="adm-hand-date"/.test(AH3)
+     && /id="adm-hand-time"/.test(AH3) && /id="adm-hand-add"/.test(AH3),
+     "★★ 손으로 넣는 칸(닉·날짜·시각·단추)이 화면에 있다");
+  ok(/재구성/.test(AH3),
+     "★★ 화면에 '재구성' 이라고 적어 뒀다 — 완벽한 복원으로 오해하면 안 된다");
 }
 
 /* 입장 알림 */
@@ -4476,8 +5204,9 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         ok(tabs.includes(t), `설명서에 [${t}] 자리가 있다`));
       ok(/id: "board"/.test(MAN) && /id: "idle"/.test(MAN), "새 탭 두 개가 붙어 있다");
 
-      [["수다방", "수다방 설명"],
-       ["참여하기", "수다방 참여 방법"],
+      /* [2026-10-01] 수다방은 2026-08-30 에 접음 — 설명서는 ⏱️ 뽀모방으로 */
+      [["뽀모방", "뽀모방 설명"],
+       ["내리기 ≠ 나가기", "뽀모방 내리기/나가기 구분"],
        ["익명", "대숲 익명성"],
        ["30일", "대숲 30일 자동 삭제"],
        ["뭉갠", "화면 공유 모자이크"],
@@ -4502,7 +5231,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        [GD,  "테마 3종", "guide.html 테마 수"],
        [GD,  "권한을 요구하지 않아요", "guide.html 권한 안내"],
        [GD2, "출석부", "manual.html"],
-       [GD2, "Chatty", "manual.html 옛 방 이름"]
+       [GD2, "Chatty", "manual.html 옛 방 이름 (2026-08-30 접음)"]
       ].forEach(([src, bad, where]) =>
         ok(!src.includes(bad), `${where}에 옛 설명이 남아 있지 않다 — "${bad}"`));
 
@@ -4530,9 +5259,9 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          공지 · 자료실 · 대숲 · 화면공유 · 접속유지 · 자동감지 ·
          설정 · 가이드 · 확대축소 · 나가기 */
       const posH = ["notice-head-btn", "files-head-btn", "forest-btn", "share-btn",
-                    "alive-btn", "idle-detect-btn"].map(id => HTML.indexOf(`id="${id}"`));
+                    "idle-detect-btn"].map(id => HTML.indexOf(`id="${id}"`));
       ok(posH.every((v, i) => v > 0 && (i === 0 || v > posH[i - 1])),
-         "실제 머리말 버튼 순서가 공지 → 자료실 → 대숲 → 화면공유 → 접속유지 → 자동감지 이다");
+         "실제 머리말 버튼 순서가 공지 → 자료실 → 대숲 → 화면공유 → 자동감지 이다 (접속유지 버튼은 2026-09-30 에 뺌)");
       {
         const p설정 = HTML.indexOf('onclick="openSettings()"'),
               p가이드 = HTML.indexOf('onclick="openManual()"'),
@@ -4542,10 +5271,24 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
            && p가이드 < p확대 && p확대 < p나감,
            "그 뒤가 설정 → 가이드 → 확대축소 → 나가기 다");
       }
-      const order = ["자동감지", "화면 공유", "대숲"];
-      const posG = order.map(k => GD2.indexOf(k + "<span"));
-      ok(posG.every((v, i) => v > 0 && (i === 0 || v > posG[i - 1])),
-         "도해의 버튼 순서도 실제와 같다");
+      /* ★ [고침 2026-08-22] 예전엔 ["자동감지","화면 공유","대숲"] 을 **손으로**
+         적어 두었습니다. 2026-08-21 에 머리말 차례가 바뀌었는데 이 줄은
+         그대로라, 가이드를 실제 차례대로 다시 그리자 오히려 검사가
+         빨개졌어요. 손으로 적은 차례는 언젠가 낡습니다.
+         → **index.html 에서 읽어** 견줍니다. 머리말을 또 바꿔도 안 흔들려요. */
+      {
+        const 진짜차례 = [["forest-btn", "대숲"], ["share-btn", "화면 공유"],
+                          ["idle-detect-btn", "자동감지"]]
+          .sort((a, b) => HTML.indexOf(`id="${a[0]}"`) - HTML.indexOf(`id="${b[0]}"`))
+          .map(x => x[1]);
+        /* ★ 예전엔 `이름 + "<span"` 으로 찾았는데, 그건 그 단추에 **번호
+           배지가 붙어 있을 때만** 맞습니다. 배지를 떼면 못 찾아요.
+           도해 안에서 이름만 찾습니다. */
+        const 도해 = GD2.slice(GD2.indexOf('class="topbar"'));
+        const posG = 진짜차례.map(k => 도해.indexOf(k));
+        ok(posG.every((v, i) => v > 0 && (i === 0 || v > posG[i - 1])),
+           `도해의 버튼 순서도 실제와 같다 (${진짜차례.join(" → ")})`);
+      }
 
       /* ── 숨긴 기능을 떠벌리지 않는가 ──
          관리자 페이지와 비밀방은 일부러 감춰 두었습니다. */
@@ -4665,16 +5408,31 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     }
 
     /* =====================================================================
-       🔒 비밀방이 깨끗이 걷혔는가 (2026-08-07)
+       🔒 **옛** 비밀방이 깨끗이 걷혔는가 (2026-08-07 철거)
 
        쓰는 사람이 없는 채로 코드만 남아 있었고, 이름이 부딪혀 파일 하나를
        통째로 죽이는 사고까지 냈습니다. 반쯤 지운 채 두면 같은 일이
        되풀이되므로, 흔적이 남지 않았는지 지켜봅니다.
+
+       ★★★ [2026-08-29] 비밀방이 **다시 생겼습니다** — 다만 완전히 다른
+          물건입니다(script_sroom.js, ⚙️ 알약, 제 판·제 입력칸).
+          그래서 이 검사는 없애지 않고 **옛 설계가 돌아오지 못하게** 두었어요:
+            · script_secret.js 라는 파일 이름 (이름 충돌의 진원지)
+            · messages3 · chat-box3 (챗의 세 번째 탭이라는 옛 얼개)
+          새 비밀방은 이 중 어느 것도 쓰지 않습니다. 아래 ⚙️ 검사 참고.
        ===================================================================== */
     {
       ok(!fs.existsSync(DIR+"script_secret.js"), "script_secret.js 파일이 없다");
+      /* ★★ [2026-08-28] styles.css 를 더했습니다 — **여기가 빠져 있어서**
+         비밀방 CSS 네 덩어리(.chat-tab.icon-only · #secret-tab-label ·
+         #chat-box3)와 "script_secret.js 가 …" 라는 주석이 1년 가까이
+         검사를 통과한 채 살아남았습니다. 받을 DOM 이 없어 하는 일은
+         없었지만, 다음 사람이 "비밀방이 아직 있나" 하고 헷갈릴 자리였어요.
+         ★ 교훈: 역검사는 **기능이 흩어져 있던 파일을 하나도 빠뜨리면
+           안 됩니다.** 하나만 빠져도 그 파일에서 조용히 되살아나요. */
       const files = ["index.html", "script_chat.js", "script_reactions.js",
-                     "build-single.py", "script_admin.js", "admin.html", "보안규칙.json"];
+                     "build-single.py", "script_admin.js", "admin.html",
+                     "styles.css", "보안규칙.json"];
       files.forEach(f => {
         const src = fs.readFileSync(DIR+f, "utf8")
           .replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "")
@@ -4684,6 +5442,926 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json", "utf8"));
       ok(!rules.rules.messages3 && !rules.rules.rooms,
          "보안규칙에서 messages3 · rooms/secret 을 지웠다");
+    }
+
+    /* =====================================================================
+       ⚙️ **새** 비밀 대화방 (2026-08-29 — 콩) — script_sroom.js
+       ---------------------------------------------------------------------
+       옛 비밀방이 죽은 까닭은 둘이었습니다.
+         ① 이름이 부딪혀 파일이 통째로 먹통이 됨 (_secretActive)
+         ② 감춰 둔 기능이라 죽어도 **몇 주 동안 아무도 몰랐음**
+       ②를 막는 것이 바로 이 검사입니다. 조용히 죽으면 여기서 걸려요.
+       ===================================================================== */
+    {
+      const SR = fs.readFileSync(DIR+"script_sroom.js", "utf8");
+      const DKs = fs.readFileSync(DIR+"script_dock.js", "utf8");
+      const R = 규칙읽기();
+      const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+      const 민낯 = SR.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+      /* ── ① 이름 충돌 — 옛 비밀방을 죽인 바로 그것 ── */
+      /* ★ 주석은 걷어내고 봅니다 — 머리말에 "옛 비밀방은 이래서 죽었다"
+         고 적어 둔 기록이 코드로 오해받거든요 (이 방에서 여러 번 겪은 일). */
+      ok(!/_secretActive/.test(민낯),
+         "★★★ _secretActive 를 안 쓴다 (옛 비밀방을 죽인 이름 — script_chat.js 의 것과 부딪혔습니다)");
+      {
+        /* 이 파일이 내는 최상위 이름이 딴 파일과 겹치면 안 됩니다.
+           IIFE 안이라 새지는 않지만, window 에 붙이는 것은 겹칠 수 있어요. */
+        const 내놓는것 = [...SR.matchAll(/window\.(\w+)\s*=/g)].map(m => m[1]);
+        const 남 = ["script_chat.js", "script_ui.js", "script_realtime.js"]
+          .map(f => fs.readFileSync(DIR + f, "utf8")).join("\n");
+        const 겹침 = 내놓는것.filter(n => new RegExp("window\\." + n + "\\s*=").test(남));
+        ok(겹침.length === 0,
+           "★★★ window 에 붙이는 이름이 챗·수다방과 안 겹친다" + (겹침.length ? ` (${겹침.join(", ")})` : ""));
+        ok(내놓는것.every(n => /^(openSroom|closeSroom)$/.test(n)),
+           "★ 밖으로 내는 것은 openSroom·closeSroom 둘뿐이다");
+      }
+
+      /* ── ② 챗의 세 번째 탭이 **아니다** — 펜 이사(moveInput)를 안 씁니다 ── */
+      ok(!/moveInput|#message|chat-box3|messages3/.test(민낯),
+         "★★★ 챗의 글칸(#message)을 건드리지 않는다 — 그 이사가 2026-08-13 한글 자소 분리 사고의 자리였습니다");
+      ok(/<textarea id="sroom-in"/.test(SR),
+         "★★★ 제 입력칸(#sroom-in)을 따로 판다 (콩이 먼저 짚은 대목)");
+      ok(/e\.isComposing \|\| e\.keyCode === 229/.test(SR),
+         "★★ 한글 조합 중 엔터를 무시한다");
+
+      /* ── ③ 명단 밖에는 "준비중입니다." ── */
+      ok(/준비중입니다\./.test(SR) && /_sroomOk === false/.test(SR),
+         "★★ 명단 밖 사람에게는 '준비중입니다.' 만 보인다 (콩 지정 문구 그대로)");
+      ok(/if \(!_sroomOk\) return;\s*\n\s*\/\/ 명단 밖이면|명단 밖이면 서버를 아예 안 건드립니다/.test(SR),
+         "★★★ 명단 밖이면 서버를 아예 안 건드린다 (거부당하는 통신조차 안 만듭니다)");
+
+      /* ── ④ 비밀은 화면이 아니라 규칙이 지킨다 ── */
+      const 든사람 = "auth != null && (auth.uid === '" + ADMIN_UID +
+                     "' || root.child('sallow').child(auth.uid).exists())";
+      ok(R.sroom && R.sroom[".read"] === 든사람,
+         "★★★ sroom 은 명단에 든 사람만 읽는다 (화면을 우회해도 한 글자도 못 봅니다)");
+      ok(R.sroom.$id[".write"] === 든사람,
+         "★★★ 쓰기도 명단에 든 사람만");
+      ok(R.sroom.$id[".validate"].includes("root.child('nickOwner').child(newData.child('user').val()).val() === auth.uid"),
+         "★★ 남의 이름으로 못 쓴다 (닉의 주인만)");
+      ok(R.sallow && R.sallow[".read"] === "auth != null && auth.uid === '" + ADMIN_UID + "'",
+         "★★★ 명단 전체는 방장만 읽는다 (누가 들었는지 서로 몰라도 됩니다)");
+      ok(R.sallow.$uid[".read"] === "auth != null && $uid === auth.uid",
+         "★★ 각자는 제 칸만 읽는다 (내가 들었나 확인용)");
+      ok(R.sallow[".write"] === "auth != null && auth.uid === '" + ADMIN_UID + "'",
+         "★★★ 명단은 방장만 고친다 (운영진도 아님)");
+
+      /* ── ⑤ 알약 — 붉은 점을 일부러 안 답니다 ── */
+      ok(/\{ id: "sroom",  label: "⚙️"/.test(DKs),
+         "★ 알약 이름표가 ⚙️ 하나뿐이다 (콩 지정)");
+      ok(/const NEW_BOARDS = \["pub", "help", "music", "qna"\]/.test(DKs),
+         "★★★ 붉은 점(newmark)에 sroom 을 안 넣는다 — newmark 는 모두가 읽어서, 점 하나로 '저 방에서 지금 얘기 중' 이 새 나갑니다");
+      ok(/if \(pid === "sroom"\) window\.closeSroom\?\.\(\);/.test(DKs),
+         "★★ 판을 닫으면 듣기를 끊는다 (명단에서 빠진 뒤에도 잠깐 들리면 안 됩니다)");
+      ok(/\{ id: "sroom",[^\n]*size: 1\.2,/.test(DKs) && /\{ id: "chat",[^\n]*size: 1\.2,/.test(DKs),
+         "★ 판 높이가 챗과 같다 (콩 지정)");
+      {
+        const CSs = fs.readFileSync(DIR+"styles.css","utf8");
+        /* ── 차림새 (2026-08-29 콩 손봄) ── */
+        /* ★★ 폭을 **베껴 적지 않고** 챗과 한 규칙으로 묶었습니다.
+           베끼면 챗을 고치는 날 둘이 조용히 어긋나요 — 이 방에서
+           m.html 의 DISCONNECT_GRACE_MS 로 똑같이 데인 적이 있습니다
+           ("값을 못 박지 말고 뜻을 못 박을 것"). */
+        ok(판폭(CSs, "dock-panel-sroom") === 판폭(CSs, "dock-panel-chat"),
+           `★★★ 판 폭이 챗과 같다 (콩: 챗 창의 폭과 동일하게) — ⚙️ ${판폭(CSs, "dock-panel-sroom")} / 💬 ${판폭(CSs, "dock-panel-chat")}`);
+        ok(/#dock-panel-chat,\s*\n#dock-panel-sroom,\s*\n#dock-panel-proom\{/.test(CSs),
+           "★★ 값을 베끼지 않고 **한 규칙으로 묶었다** — 베끼면 챗을 고치는 날 둘이 조용히 어긋납니다");
+        /* 💬 [2026-08-30] 카톡 모양으로 바뀌면서 얼개가 한 겹 더 늘었습니다:
+           .sr-row > 프사 + .sr-body(.sr-who + .sr-quote + .sr-line + .sr-reacts) */
+        ok(/\.sr-row\.mine\{ flex-direction: row-reverse; \}/.test(CSs) &&
+           /\.sr-row\.mine \.sr-line\{ flex-direction: row-reverse; \}/.test(CSs),
+           "★★ 내 말은 오른쪽, 남의 말은 왼쪽 (말풍선째 뒤집습니다)");
+        ok(/\.sr-bubble\{/.test(CSs) && /\.sr-row\.mine \.sr-bubble\{/.test(CSs),
+           "★★ 말풍선이 있고, 내 것은 색이 다르다");
+        /* [2026-09-01] 78% → 88% — 콩 "겹침을 더 늘려도 되니까, 한 줄에
+           더 많이 들어가게, 챗처럼".
+           [2026-09-01 2차] "그래도 간격이 커 보여, 지금의 120%로" →
+           88 × 1.2 = 105.6%. 100% 를 넘겨 사실상 상한을 걷어낸 값. */
+        ok(/\.sr-body\{[\s\S]{0,220}?max-width: 105\.6%/.test(CSs),
+           "★ 말풍선 폭 상한을 사실상 걷어냈다 (88%의 120%, 2026-09-01 2차)");
+
+        /* ★★★ 챗 렌더러를 **안 빌립니다** — 그쪽 말풍선에는 공개된
+           reactions 노드를 쓰는 단추가 박혀 있어서, 빌리는 순간
+           비밀방 반응이 방 밖에서 보입니다. 겉모습만 같게 짓습니다. */
+        ok(!/window\.renderChatMessage\s*\(|renderChatMessage\s*\(\s*[^)]*box/.test(SR),
+           "★★★ 챗 렌더러를 **부르지** 않는다 (빌리면 반응이 공개 노드로 돌아갑니다)");
+        ok(/window\.stickerHtml\?\.\(r\.msg\)/.test(SR) &&
+           /window\.chatAvatarHtml\?\.\(/.test(SR),
+           "★★ 그리기만 하는 함수는 빌려 쓴다 (스티커·프사 — 서버를 안 건드립니다)");
+        /* 묶기·날짜줄 */
+        ok(/const 묶음 = !날줄 && 전 && 전\.user === r\.user &&/.test(SR) &&
+           /5 \* 60 \* 1000/.test(SR),
+           "★★ 같은 사람이 5분 안에 이어 말하면 이름·프사를 생략해 묶는다");
+        ok(/날키\(전\.time\) !== 날키\(r\.time\)/.test(SR) && /\.sr-date\{/.test(CSs),
+           "★ 날짜가 바뀌면 가로줄이 선다");
+        ok(/const 묶음 = !날줄/.test(SR),
+           "★★ 날이 바뀌면 묶지 않는다 (줄 아래위로 갈라져야 하니까)");
+        /* 스티커 */
+        ok(/data-sroom-sticker/.test(SR) &&
+           /toggleStickerPicker\?\.\(\{ btnId: "sroom-sticker-btn",[\s\S]{0,90}?inputId: "sroom-in"/.test(SR),
+           "★★ 비밀방 글칸에도 스티커를 놓는다");
+        {
+          const ST = fs.readFileSync(DIR + "script_sticker.js", "utf8");
+          ok(/window\.toggleStickerPicker = function \(곳\)/.test(ST) &&
+             /document\.getElementById\(_곳\.inputId\)/.test(ST),
+             "★★ 고르기 판이 '어느 글칸에 놓을지' 를 받는다");
+          ok(/btnId: "sticker-btn", inputId: "message"/.test(ST),
+             "★ 안 주면 예전처럼 챗이다 (부르던 쪽을 안 고쳐도 됩니다)");
+
+          /* ★★★ [2026-09-01 — 콩 신고 "비밀방에서 스티커 명령어가 안 먹혀"]
+             판(🙂)에서 고르는 건 위에서 이미 확인했으니 되는데, /토닥
+             처럼 **쳐서** 보내는 길은 따로였습니다 — 그건 window.send 를
+             감싸는 손이라, 글칸이 아예 다른 비밀방(sroom보내기)은 그
+             손을 거치질 않았어요. 판단 로직을 window.stickerCmdText 로
+             떼어내 양쪽이 같은 걸 쓰게 고쳤습니다. */
+          ok(/window\.stickerCmdText = function \(raw\)/.test(ST),
+             "★★★ 스티커 슬래시 판정이 챗 send() 감싸기 안에 갇혀 있지 않다 (양쪽이 공유)");
+          ok(/const conv = window\.stickerCmdText\(el\?\.value\);/.test(ST),
+             "챗도 그 공유 함수로 판정한다 (판정을 두 벌로 안 둔다)");
+        }
+        {
+          const SRoom = fs.readFileSync(DIR+"script_sroom.js","utf8");
+          ok(/const t = window\.stickerCmdText\?\.\(raw\) \|\| raw;/.test(SRoom),
+             "★★★ 비밀방 보내기도 /토닥 을 스티커로 바꾼다 (전에는 원문 그대로 나갔다)");
+          ok(/if \(칸\) 칸\.value = raw;/.test(SRoom),
+             "★ 못 보냈을 때는 바뀌기 전 원래 글을 돌려준다 ([[스티커:id]] 글자가 아니라)");
+        }
+        ok(/\.sr-bubble\.sticker, \.sr-bubble\.emoji\{/.test(CSs) &&
+           /\.sr-bubble\.mention\{/.test(CSs),
+           "★ 스티커·큰 이모지는 옷을 벗고, 나를 부른 말은 눈에 걸린다");
+        ok(/\.sr-allow\{[\s\S]{0,120}?flex-wrap: wrap;/.test(CSs),
+           "★★ 승인 명단이 **가로로** 흐른다 — 세로로 쌓으면 사람이 늘 때마다 대화가 밀려 내려갑니다 (콩)");
+
+        /* =================================================================
+           😊 반응 · ↩ 답글 — 수다방에서 옮겨 왔습니다 (2026-08-30 콩)
+           -----------------------------------------------------------------
+           ★★★ 반응을 **`reactions` 에 안 넣습니다.** 챗이 쓰는 그 노드는
+              읽기가 누구에게나 열려 있어, 거기 넣으면 "어느 비밀방 글에
+              반응이 몇 개 붙었나" 가 방 밖에서도 보입니다. 글자는 안 새도
+              **오갔다는 사실**이 새요 — 이 방이 감추려는 바로 그것입니다
+              (붉은 점을 일부러 안 다는 것과 같은 이유).
+           ================================================================= */
+        ok(/sreactions\/\$\{키\}\/\$\{id\}\/\$\{나\}/.test(SR) && !/db\.ref\("reactions/.test(SR),
+           "★★★ 비밀방 반응은 sreactions 에 적는다 — 공개된 reactions 에 넣으면 '오갔다는 사실' 이 샙니다");
+        {
+          const RL = 규칙읽기();
+          const 잠금 = (v) => /sallow'\)\.child\(auth\.uid\)/.test(String(v || ""));
+          ok(잠금(RL.sreactions?.[".read"]) && 잠금(RL.sroom[".read"]),
+             "★★★ sreactions 가 sroom 과 **같은 자물쇠**다 (승인 멤버만)");
+          ok(/nickOwner'\)\.child\(\$nick\)/.test(RL.sreactions.$msg.$rid.$nick[".write"]),
+             "★★ 남의 이름으로는 반응을 못 누른다");
+          ok(RL.sreactions.$msg.$rid.$nick[".validate"] === "newData.isBoolean()",
+             "★ 반응 칸에는 true/false 만 들어간다");
+          ok(/replyTo'\)|hasChild\('replyTo'\)/.test(RL.sroom.$id[".validate"]),
+             "★★ 답글 인용(replyTo)의 칸을 규칙이 못 박는다 (엉뚱한 것이 못 들어오게)");
+        }
+        ok(/function sroom반응줄갱신/.test(SR) &&
+           !/sroom그리기\(\)/.test(SR.slice(SR.indexOf("function sroom반응줄갱신"),
+                                            SR.indexOf("function sroom반응토글"))),
+           "★★★ 반응이 오면 **그 줄만** 갈아 끼운다 — 판을 다시 그리면 쓰던 글과 커서가 날아갑니다");
+        ok(/_srReact\[키\]\[id\]\[나\] = true;[\s\S]{0,80}sroom반응줄갱신\(키\);/.test(SR),
+           "★★ 누른 자리에서 먼저 그리고 서버는 뒤따라온다 (기다리면 굼떠 보입니다)");
+        ok(/글\.replyTo = \{/.test(SR) && /msg: String\(_sr답할것\.msg \|\| ""\)\.slice\(0, 120\)/.test(SR),
+           "★★ 답글은 인용을 **함께 싣는다** — 자정 청소로 원문이 지워져도 대화가 안 끊깁니다");
+        ok(/function sroom답글띠/.test(SR) &&
+           !/sroom틀짓기\(\)/.test(SR.slice(SR.indexOf("function sroom답글띠"),
+                                            SR.indexOf("function sroom답글켜기"))),
+           "★★★ 답글 띠도 틀을 다시 짓지 않는다 (그 자리에서 넣고 뺍니다)");
+        ok(/\.sr-tools\{[\s\S]{0,120}?opacity: 0;/.test(CSs) &&
+           /@media \(hover: none\)\{ \.sr-tools\{ opacity: \.55; \} \}/.test(CSs),
+           "★ ☺↩ 는 줄에 손을 얹어야 보인다 (폰에서는 늘 보임 — 얹을 손가락이 없으니까)");
+        ok(/data-sroom-list="1">👥 승인</.test(SR),
+           "★ 단추 이름이 '승인' 이다 (콩 2026-08-29)");
+        ok(!/들어올 수 있는 사람<\/div>/.test(SR),
+           "★ 좁은 판에서 머리글 한 줄을 뺐다 — 👥 하나로 뜻이 통합니다");
+
+        /* ★★★ [2026-08-29 콩 신고] "엔터 치고 나면 커서가 날아가서
+           연속으로 치기가 어려워" — 글을 보낼 때마다 판을 통째로 다시
+           그려서 <textarea> 가 새로 태어났습니다. 남이 보낼 때도 같았고,
+           그때 한글을 조합 중이면 그것까지 날아갔어요 (자소 분리의 친척).
+           ★ 고침은 "틀은 한 번만, 줄만 갈아 끼우기" 입니다. */
+        ok(/function sroom줄그리기\(\)/.test(SR) && /function sroom틀짓기\(\)/.test(SR),
+           "★★★ 틀 짓기와 줄 그리기가 갈려 있다 (글 하나 올 때마다 글칸을 다시 만들지 않습니다)");
+        ok(/목록칸\.innerHTML = _sroomRows\.map\(\(r, i\) => sroom줄HTML\(r, _sroomRows\[i - 1\]\)\)/.test(SR),
+           "★★★ 줄은 .sr-log 속만 갈아 끼운다 — 글칸은 손대지 않는다");
+        ok(/if \(_sroom틀 !== sroom틀모양\(\) \|\| !box\.querySelector\("\.sr-board"\)\) sroom틀짓기\(\);/.test(SR),
+           "★★ 모양이 달라졌을 때에만 틀을 다시 짓는다");
+        ok(/칸\.value = ""; 칸\.focus\(\);/.test(SR),
+           "★ 보낸 뒤 손이 글칸에 그대로 있다 (연달아 치게)");
+
+        /* 🔤 글씨 크기 — 이 판에서만, 이 기기에서만 */
+        ok(/const SROOM_FS_KEY = "sroomFont"/.test(SR) && /data-sroom-font="1"/.test(SR),
+           "★ 이 판만의 글씨 크기 조절기가 있다 (콩 2026-08-29)");
+        ok(/판\.style\.setProperty\("--sr-fs", v \+ "px"\)/.test(SR) &&
+           !/sroom그리기\(\);\s*\n\s*\}\s*\n\s*\/\* ={10,}\n     ★★★ \[고침 2026-08-29/.test(SR),
+           "★★★ 글씨를 바꿀 때 **다시 그리지 않는다** — 다시 그리면 쓰던 글과 커서가 날아갑니다");
+        ok(/font-size: var\(--sr-fs, 13px\)/.test(CSs),
+           "★★ 대화 줄과 글칸이 그 값을 따라간다");
+        ok(!/db\.ref\("[^"]*"\)[^\n]*sroomFont|sroomFont[^\n]*db\.ref/.test(SR),
+           "★ 글씨 크기는 서버에 안 보낸다 (내 화면만 바뀝니다)");
+      }
+
+      /* ── ⑥ 명단 관리 — 닉으로 넣고, uid 로 적습니다 ── */
+      ok(/db\.ref\("nickOwner\/" \+ 닉\)\.once\("value"\)\)\.val\(\)/.test(SR) &&
+         /db\.ref\("sallow\/" \+ uid\)\.set\(닉\)/.test(SR),
+         "★★ 화면에서는 닉으로 넣고, 규칙이 볼 수 있게 uid 로 적는다");
+      ok(/if \(!window\.isRoomOwner\?\.\(\)\) return;/.test(SR),
+         "★★★ 명단 손대기는 방장만 (canAdmin 이 아니라 isRoomOwner)");
+
+      /* ── ⑦ 싣기 ── */
+      ok(/src="script_sroom\.js/.test(fs.readFileSync(DIR+"index.html","utf8")),
+         "index.html 이 script_sroom.js 를 싣는다");
+      ok(/"script_sroom\.js"/.test(fs.readFileSync(DIR+"build-single.py","utf8")),
+         "★★ 단일파일에도 실린다");
+      ok(/"script_sroom\.js":\s*"openSroom"/.test(fs.readFileSync(DIR+"index.html","utf8")),
+         "★★ 자가진단 목록에 들어 있다 — **조용히 죽으면 여기서 걸립니다** (옛 비밀방이 몇 주 동안 죽어 있던 이유가 이게 없어서였어요)");
+
+    }
+
+    /* =====================================================================
+       ⏱️ 뽀모방 (2026-08-29 — 콩) — script_proom.js
+       ---------------------------------------------------------------------
+       ★★★ 이 판의 가장 무서운 고장은 **커서가 초마다 날아가는 것**입니다.
+          시계가 250ms 마다 도는데, 그 길에 innerHTML 이 한 글자라도 있으면
+          <textarea> 가 초마다 새로 태어나요. 비밀방에서 콩이 신고한 그것보다
+          훨씬 나쁩니다 — 거긴 남이 글을 보낼 때뿐이었거든요.
+       ===================================================================== */
+    {
+      const PR = fs.readFileSync(DIR+"script_proom.js","utf8");
+      const DKp = fs.readFileSync(DIR+"script_dock.js","utf8");
+      const CSp = fs.readFileSync(DIR+"styles.css","utf8");
+      const Rp = 규칙읽기();
+      const IXp = fs.readFileSync(DIR+"index.html","utf8");
+      const 민낯p = PR.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+      /* ── ① 커서 — 시계 길에 innerHTML 이 없어야 합니다 ── */
+      {
+        const 시계 = 민낯p.slice(민낯p.indexOf("function proom시계()"),
+                                민낯p.indexOf("function proom줄HTML"));
+        ok(시계.length > 200, "시계 함수를 찾았다");
+        ok(!/innerHTML/.test(시계),
+           "★★★ 시계가 도는 길에 innerHTML 이 한 글자도 없다 (있으면 글칸이 **초마다** 새로 태어납니다)");
+        ok(/\.textContent =/.test(시계) && /\.style\.width =/.test(시계),
+           "★★ 글자와 줄 길이만 건드린다");
+      }
+      ok(/function proom틀짓기\(\)/.test(PR) && /function proom줄그리기\(\)/.test(PR),
+         "★★★ 틀·시계·줄이 세 층으로 갈려 있다");
+      ok(/<textarea id="proom-in"/.test(PR),
+         "★★★ 제 글칸을 따로 판다 (챗의 글칸을 옮겨 오지 않습니다)");
+      ok(!/moveInput|#message/.test(민낯p),
+         "★★★ 챗의 글칸을 건드리지 않는다 (2026-08-13 자소 분리 사고의 자리)");
+      om = /e\.isComposing \|\| e\.keyCode === 229/.test(PR);
+      ok(om, "★★ 한글 조합 중 엔터를 무시한다");
+      ok(/칸\.value = ""; 칸\.focus\(\);/.test(PR),
+         "★ 보낸 뒤 손이 글칸에 그대로 있다");
+
+      /* ── ② 시계는 서버에 안 적습니다 ── */
+      ok(/const PROOM_바퀴 = PROOM_뽀모 \+ PROOM_휴식;/.test(PR) &&
+         /PROOM_뽀모 = 25 \* 60 \* 1000/.test(PR) && /PROOM_휴식 =  5 \* 60 \* 1000/.test(PR),
+         "★★ 뽀모 25 · 휴식 5 (콩 확정) — 30분이라 정각에 떨어집니다");
+      {
+        const 셈 = 민낯p.slice(민낯p.indexOf("function proom상태"), 민낯p.indexOf("function proom시차맞추기"));
+        ok(!/db\.ref/.test(셈),
+           "★★★ 시계를 셈하는 길에 서버가 없다 (각자 제 시계로 셈해도 답이 같습니다 — 쓰기 0)");
+      }
+      ok(/\.info\/serverTimeOffset/.test(PR),
+         "★★ 기기 시계가 어긋난 사람을 서버 시각으로 보정한다");
+      ok(!/db\.ref\("proom\/[^"]*phase|db\.ref\("proomClock/.test(PR),
+         "★★ 단계를 서버에 적어 두지 않는다");
+
+      /* ── ③ 누구나 · 인원 ── */
+      ok(Rp.proom && Rp.proom[".read"] === "auth != null" && Rp.proom.$id[".write"] === "auth != null",
+         "★★ 대화는 누구나 (명단 없음 — 콩: 누구나 들어갈 수 있고)");
+      ok(Rp.proom.$id[".validate"].includes("root.child('nickOwner').child(newData.child('user').val()).val() === auth.uid"),
+         "★★ 남의 이름으로는 못 쓴다");
+      /* ★★★ [고침 2026-08-30 — 콩 신고 "2명인데 배지는 1"]
+         인원을 **두 군데서** 세다가 어긋났습니다. proomHere 노드는
+         onDisconnect 로 지우게 해뒀는데, 그 예약은 **그 연결 하나에만**
+         걸려서 끊겼다 붙으면 사라져 있어요 — 나간 사람이 명단에 남습니다.
+         (화면 공유에서 똑같이 데인 자리입니다)
+         ★ 고치는 대신 **없앴습니다.** status 쪽은 이미 모두가 듣고 있고
+           isOnline 로 걸러 저절로 청소되며, 알약 배지와 같은 숫자예요. */
+      ok(!/proomHere/.test(민낯p),
+         "★★★ proomHere 노드를 안 쓴다 — 세는 곳이 하나여야 어긋나지 않습니다");
+      ok(!Rp.proomHere, "★★ 보안규칙에서도 그 노드를 걷어냈다");
+      ok(/window\.proomSetCount = function/.test(PR) &&
+         /window\.proomSetCount\?\.\(뽀모방인원\)/.test(fs.readFileSync(DIR+"script_realtime.js","utf8")),
+         "★★★ 판의 'n명' 과 알약 배지가 **같은 숫자**를 쓴다");
+
+      /* ── ④ 🔔 알림 ── */
+      ok(/const PROOM_종키  = "proomBell"/.test(PR) && /data-proom-bell/.test(PR),
+         "★ 🔔 알림 스위치가 있다");
+      ok(/AppStore\?\.setItem\(PROOM_종키/.test(PR) && !/db\.ref[^\n]*proomBell/.test(PR),
+         "★★ 알림은 **기기별**이다 (서버에 안 보냅니다)");
+      ok(/exponentialRampToValueAtTime\(1\.2/.test(PR),
+         "★ 소리 크기가 정해져 있다 (0902 5~6차 — 0.06 → 1.2, 콩이 3배→5배→10배→20배로 네 번 올림)");
+      ok(/const 쌍 = 휴식 \? \[523\.25, 392\.00\] : \[392\.00, 523\.25\];/.test(PR) &&
+         /const 음 = \[\.\.\.쌍, \.\.\.쌍\];/.test(PR),
+         "★★ 알림음이 같은 두 음 쌍을 두 번 반복한다 (0902 6차 — 콩 \"띠딘띠딘 처럼\")");
+
+      /* =================================================================
+         🔊 알림음 볼륨 (2026-09-02 — 콩 "알림음 음량 조절이 되도록")
+         -----------------------------------------------------------------
+         ♪ BGM 볼륨(script_music.js)과 같은 결로, 기기별(AppStore) ·
+         서버 쓰기 0. 🔔 켜짐/꺼짐과는 다른 축 — 🔔 는 "울릴지", 이 값은
+         "울릴 때 얼마나 크게" 입니다. 기본 100 은 [고침 0902 5~6차 —
+         콩이 3배(0.18) → "아직도 작아 5배로"(0.3) → "미안, 10배로"
+         (0.6) → "소리가 짧아서 잘 안 들리네, 음을 두 번 울리고 20배로"
+         (1.2) 네 번에 걸쳐 올려] 0.06 → 1.2 게인으로 최종 20배
+         커졌고, 음 쌍도 두 번 반복됩니다. 1.0 을 넘는 게인이라 파형이
+         눌려(clip) 다소 거칠게 들릴 수 있지만, "더 크게·더 잘 들리게"가
+         목적이라 일단 그대로 둠. 슬라이더로 낮출 수 있으니 상한을
+         낮게 죽여 둘 이유가 없다는 판단.
+         ================================================================= */
+      ok(/const PROOM_VOL_KEY = "proomVol"/.test(PR) && /const PROOM_VOL_DEF = 100/.test(PR),
+         "★ 볼륨도 기기별 저장 키가 있다 (기본 100 = 지금 크기)");
+      ok(/function proom볼륨\(\)/.test(PR) && /function proom볼륨바꾸기\(v\)/.test(PR),
+         "★★ 볼륨을 읽고 바꾸는 손이 있다");
+      ok(!/proom볼륨[^\n]*db\.ref|db\.ref[^\n]*proom볼륨|AppStore\?\.setItem\(PROOM_VOL_KEY[\s\S]{0,40}db\.ref/.test(PR),
+         "★ 볼륨은 서버에 안 보낸다 (내 기기만 바뀐다)");
+      ok(/const 비율 = proom볼륨\(\) \/ 100;\s*\n\s*if \(비율 <= 0\) return;/.test(PR),
+         "★★ 0 이면 아예 안 운다 (exponentialRamp 는 0 을 목표로 못 잡아서, 걸러내지 않으면 조용히 에러가 난다)");
+      ok(/exponentialRampToValueAtTime\(1\.2 \* 비율/.test(PR),
+         "★★★ 볼륨은 정해진 상한 **안에서만** 조절한다 (0902 6차 — 상한을 1.2 로 올림, 그 위는 여전히 슬라이더로 못 올라간다)");
+      ok(/const v = el\("proom-vol"\);\s*\n\s*if \(v\) v\.disabled = !on;/.test(PR),
+         "★★ 🔔 를 끄면 볼륨 줄도 같이 잠긴다 (만져도 뜻이 없는 값이라는 걸 보여준다)");
+      ok(/id="proom-vol"[\s\S]{0,80}?data-proom-vol="1"/.test(PR),
+         "판에 볼륨 슬라이더가 실제로 그려진다");
+      ok(/e\.target\?\.id !== "proom-vol"[\s\S]{0,60}?proom소리풀기\(\);\s*\n\s*proom볼륨바꾸기\(e\.target\.value\);/.test(PR),
+         "★ 슬라이더를 만지면 볼륨도 바뀌고, 그 손짓이 소리 자물쇠도 같이 푼다");
+      ok(/#proom-vol\{/.test(CSp) && /#proom-vol::-webkit-slider-thumb\{/.test(CSp) &&
+         /#proom-vol:disabled\{/.test(CSp),
+         "★ 볼륨 줄 차림새가 있다 (♪ BGM 볼륨과 같은 결)");
+      /* [고침 2026-09-02 3차 — 콩 "슬라이더를 더 납작하게, 진행 바의
+         절반 정도로"] 점이 10px → 6px. 웹킷·모질라 둘 다 같이 줄여야
+         짝짝이가 안 납니다. */
+      ok(/#proom-vol::-webkit-slider-thumb\{[\s\S]{0,120}?width: 6px; height: 6px;/.test(CSp) &&
+         /#proom-vol::-moz-range-thumb\{[\s\S]{0,80}?width:6px; height:6px;/.test(CSp),
+         "★★ 볼륨 손잡이가 납작해졌다 (10px → 6px, 웹킷·모질라 짝을 맞춰서)");
+
+      /* =================================================================
+         ▶ 시험 (2026-09-02 4차 — 콩 "내가 들어보질 못했네??? 소리는
+         어느 정도로 커져???")
+         -----------------------------------------------------------------
+         소리는 정각 경계(:00·:25·:30·:55)에만 납니다 — 판을 열어 봐도
+         그 순간이 아니면 못 듣습니다. ▶ 는 그 순간을 안 기다리고 지금
+         볼륨 그대로 바로 들려주는 손입니다. 몸통(proom소리내기)과 판단
+         (proom소리 — 🔔 켜짐 확인)을 갈라서, ▶ 는 판단을 건너뜁니다.
+         ================================================================= */
+      ok(/function proom소리내기\(휴식\)/.test(PR) && /function proom소리시험\(\)/.test(PR),
+         "★★★ 소리 내는 몸통과 '울려도 되나' 판단이 갈려 있다");
+      {
+        const 몸통 = PR.slice(PR.indexOf("function proom소리내기"), PR.indexOf("function proom소리(휴식)"));
+        ok(!/proom종\(\)/.test(몸통),
+           "★★ 몸통(proom소리내기)은 🔔 를 안 본다 — 보면 판이 도로 하나로 뭉친다");
+      }
+      ok(/function proom소리\(휴식\) \{\s*\n\s*if \(!proom종\(\)\) return;\s*\n\s*proom소리내기\(휴식\);/.test(PR),
+         "★ 정식 알림(proom소리)은 여전히 🔔 를 본다 — 판단이 사라진 게 아니라 시험만 건너뛴다");
+      ok(/function proom소리시험\(\) \{\s*\n\s*proom소리풀기\(\);\s*\n\s*proom소리내기\(false\);/.test(PR),
+         "★★ ▶ 시험은 🔔 여부와 무관하게, 손짓 열쇠부터 풀고 곧장 울린다");
+      ok(/data-proom-vol-test="1"/.test(PR) &&
+         /if \(e\.target\.closest\("\[data-proom-vol-test\]"\)\) \{ proom소리시험\(\); return; \}/.test(PR),
+         "★★★ ▶ 단추가 실제로 그려지고, 눌리면 proom소리시험 을 부른다");
+      ok(/\.pr-vol-test\{/.test(CSp),
+         "▶ 단추 차림새가 있다 (🔔 처럼 작고 수수하게 — 도드라지면 안 되는 단추)");
+
+      /* ★★★ [고침 2026-08-30 — 콩 신고 "알림음이 안 들려"]
+         소리마다 AudioContext 를 새로 만들었습니다. 손짓(클릭·키) 밖에서
+         만든 컨텍스트는 자동재생 정책 탓에 suspended 로 태어나고, resume()
+         을 안 부르니 **소리 없이** 버려졌어요 — 에러도 안 나서 아무도
+         몰랐습니다. 알약 뽀모(script_ui.js)가 먼저 푼 문제와 같은 집안:
+         컨텍스트 하나를 계속 쓰고, 손짓이 있을 때 미리 풀어 둡니다. */
+      ok(/let _proomAC = null/.test(민낯p) && !/new A\(\);[\s\S]{0,600}?ac\.close/.test(민낯p),
+         "★★★ AudioContext 를 하나만 만들어 계속 쓴다 (매번 새로 만들면 잠긴 채 태어나 소리가 안 납니다)");
+      ok(/function proom소리풀기/.test(민낯p) && /proom소리풀기\(\)/.test(민낯p.slice(민낯p.indexOf("function openProom"))),
+         "★★★ 판을 여는 클릭에서 소리 자물쇠를 풀어 둔다");
+      ok(/state === "suspended"/.test(민낯p) && /\.resume\(\)/.test(민낯p),
+         "★★ 잠겨 있으면 resume() 을 해 본다");
+
+      /* ── ⑦ 🎨 닉네임 색 · 🔤 글씨 크기 (2026-08-30 — 콩) ── */
+      ok(/data-name-of="\$\{esc\(r\.user\)\}"/.test(PR) && /nickColorStyle\?\.\(r\.user\)/.test(PR),
+         "★★ 닉네임이 챗과 **같은 색**이다 (프로필 nickColor · 다크 보정 · 테마 전환 갱신까지 공짜)");
+      ok(/data-name-of="\$\{esc\(r\.user\)\}"/.test(fs.readFileSync(DIR+"script_sroom.js","utf8")),
+         "★★ 비밀방 닉네임도 챗과 같은 색이다");
+      ok(/const PROOM_FS_KEY = "proomFont"/.test(PR) && /data-proom-font="1"/.test(PR),
+         "★ 🔤 글씨 크기 스위치가 있다 (비밀방과 같은 결 — 기기별, 서버 쓰기 0)");
+      ok(/setProperty\("--pr-fs"/.test(민낯p) &&
+         !/innerHTML/.test(민낯p.slice(민낯p.indexOf("function proom글씨바꾸기"), 민낯p.indexOf("function proom틀모양"))),
+         "★★★ 크기를 바꿔도 판을 다시 그리지 않는다 — CSS 값 하나만 (글칸·커서 지킴)");
+      ok(/font-size:var\(--pr-fs, 13px\)/.test(CSp),
+         "★ 대화 줄과 글칸이 --pr-fs 를 입는다");
+
+      /* =================================================================
+         🧱 두 세트로 갈림 — [타이머+진행바] 한 세트, [도구 줄] 딴 세트
+         (2026-09-02, 2차 고침)
+         -----------------------------------------------------------------
+         콩(1차): "타이머 // 진행바, 그 위에 [단계·다음시각] / 그 아래로
+         줄을 하나 더 만들어서 [알림음·글씨크기·인원] 오른쪽 정렬".
+         콩(2차 — 1차 결과물을 보고): "타이머 밑단과 진행 바 밑단을 같은
+         선상에 맞춰줘, 그게 한 세트. 도구 줄은 타이머와 같은 선이 아니라
+         그 아래에 확실히 붙는 또 다른 세트. [단계·다음시각]은 진행 바
+         위에서 중앙 정렬." → .pr-tools 를 .pr-clock 밖(.pr-head 의
+         둘째 자식)으로 빼서, 밑선 맞춤이 다시 타이머-진행바 사이에서만
+         일어나게 했습니다.
+         ================================================================= */
+      ok(!/pr-sp/.test(PR) && !/\.pr-sp\{/.test(CSp),
+         "★ 옛 오른쪽 밀기 칸(.pr-sp)을 걷어냈다 — 도구가 아래 줄로 옮겨서 밀 것도 없다");
+      {
+        const 틀 = PR.slice(PR.indexOf("function proom틀짓기()"), PR.indexOf("proom종그리기();\n    proom시계();"));
+        const 헤i = 틀.indexOf('class="pr-head"');
+        const 클i = 틀.indexOf('class="pr-clock"');
+        const 랩i = 틀.indexOf('class="pr-lab"');
+        const 바i = 틀.indexOf('class="pr-bar"');
+        const 툴i = 틀.indexOf('class="pr-tools"');
+        ok(헤i >= 0 && 클i > 헤i && 랩i > 클i && 바i > 랩i && 툴i > 바i,
+           "★★★ 얼개 순서가 [.pr-head] → [.pr-clock] → [단계·다음시각] → [진행 바] → [도구 줄] 이다");
+        /* ★★★ 도구 줄이 .pr-clock **밖**에 있어야 합니다 — 안에 있으면
+           밑선 맞춤(.pr-clock 의 align-items:flex-end)이 타이머를 도구
+           줄 밑에 맞춰 버려서, "타이머 밑단 = 진행 바 밑단"이 깨집니다
+           (2026-09-02 1차의 실수). .pr-bar 와 .pr-tools 사이에 </div>
+           가 정확히 셋(.pr-bar 자신 · .pr-right · .pr-clock 이 차례로
+           닫힘) 있어야 그 밖입니다. */
+        const 사이 = 틀.slice(바i, 툴i);
+        const 닫힘수 = (사이.match(/<\/div>/g) || []).length;
+        ok(닫힘수 === 3,
+           `★★★ 도구 줄이 .pr-clock 밖에 있다 (사이에 </div> ${닫힘수}개 — .pr-bar·.pr-right·.pr-clock 셋 다 닫힌 뒤여야 3개다)`);
+        const 도구 = 틀.slice(툴i, 틀.indexOf("</div>\n        </div>", 툴i));
+        ok(/id="proom-bell"/.test(도구) && /id="proom-vol"/.test(도구) &&
+           /class="pr-fs"/.test(도구) && /id="proom-cnt"/.test(도구),
+           "★★ 도구 줄 안에 알림음(🔔+볼륨)·글씨크기·인원이 다 있다");
+      }
+      ok(/\.pr-head\{[\s\S]{0,80}?flex-direction: ?column;/.test(CSp),
+         "★★ .pr-head 가 [타이머 세트] 와 [도구 줄] 을 세로로 쌓는다");
+      ok(/\.pr-tools\{[\s\S]{0,80}?justify-content:flex-end;/.test(CSp),
+         "★★★ 도구 줄이 오른쪽 정렬이다");
+      ok(/\.pr-lab\{[\s\S]{0,80}?justify-content: ?center;/.test(CSp),
+         "★★ [단계·다음시각] 이 진행 바 위에서 가운데 정렬이다");
+      ok(/ph\.textContent = st\.휴식 \? "☕ 휴식 중" : "🍅 뽀모 중";/.test(PR),
+         "★ 단계 표시가 '~ 중' 이다 (지나가는 상태임이 더 또렷하게)");
+      ok(/두자리\(다음\.getHours\(\)\) \+ ":" \+ 두자리\(다음\.getMinutes\(\)\)/.test(PR),
+         "★★ 다음 전환 시각이 시:분까지 또렷하다 (분만 적으면 5분 뒤인지 55분 뒤인지 헷갈린다)");
+
+      /* ── ⑧ 🧹 자정 방 청소 (2026-08-30 — 콩 "자정을 기점으로 싹 리셋") ──
+         비밀방·수다방·뽀모방의 어제 대화는 그날 처음 여는 기기가 쓸어냅니다.
+         서버 크론이 없는 무료판에서 쓰는 눈 청소 방식 — 먼저 나온 사람이 쓺.
+         ★ 메인 Chat 은 절대 안 쓺 — 지난 발언을 지우지 않는 방침. */
+      {
+        const CO = fs.readFileSync(DIR + "script_core.js", "utf8");
+        const SR2 = fs.readFileSync(DIR + "script_sroom.js", "utf8");
+        const CH2 = fs.readFileSync(DIR + "script_chat.js", "utf8");
+        ok(/window\.자정방청소 = 자정방청소/.test(CO) && /window\.SOLO\) return/.test(CO),
+           "★★ 청소 도우미가 한 곳(core)에 있고, 혼자 방은 건너뛴다");
+        ok(/endAt\(오늘\.getTime\(\) - 1\)/.test(CO) && /limitToFirst\(400\)/.test(CO),
+           "★★ 어제까지만, 400줄씩 끊어 지운다");
+        ok(/AppStore\?\.getItem\(도장키\) === 도장/.test(CO),
+           "★ 기기마다 하루 한 번만 쓴다 (대화 올 때마다 불려도 도장에서 돌아옴)");
+        ok(/자정방청소\?\.\("proom", "proomSweepDay"\)/.test(PR) &&
+           /자정방청소\?\.\("sroom", "sroomSweepDay"\)/.test(SR2),
+           "★★★ 뽀모방·비밀방 둘 다 쓸린다 (수다방은 2026-08-30 에 접었습니다)");
+        ok(!/자정방청소[^\n]*"messages"/.test(CH2) && !/자정방청소\?\.\("messages"/.test(CO),
+           "★★★ 메인 Chat 은 안 쓸린다 — 지난 발언은 지우지 않습니다");
+      }
+
+      /* ── ⑤ 내리기 ≠ 나가기 (2026-08-30 콩 — "습관처럼 창을 내리는 멤버가 많아") ──
+         알약으로 내리면 방에 남고(시계·토마토·알림음 계속), ✕ 라야 나갑니다.
+         예전 "닫으면 시계도 멈춘다" 는 나가기에만 해당하게 됐어요. */
+      ok(/if \(나가기\) window\.closeProom\?\.\(\);\s*\n\s*else window\.hideProom\?\.\(\);/.test(DKp),
+         "★★★ 알약 내리기는 hideProom, ✕ 는 closeProom — 내리기와 나가기가 다른 문이다");
+      ok(/close\(x\.dataset\.dockClose, true\)/.test(DKp),
+         "★★ ✕ 가 진짜 나가기다");
+      ok(/close\(pid, true\)/.test(DKp) && /window\.imInProom\?\.\(\)\) window\.closeProom\?\.\(\)/.test(DKp),
+         "★★ 방을 통째로 나갈 때는 내려둔 뽀모방도 마저 내보낸다 (_open 에 없어 고리가 못 닿는 자리)");
+      ok(/const 다시펴기 = _proom열림;/.test(PR) && /if \(!다시펴기\) \{/.test(PR),
+         "★★★ 내려뒀다 다시 펴는 건 입장이 아니다 (👋 줄·들어온때·알림이 다시 잡히면 🍅 판정이 어긋납니다)");
+      ok(/function hideProom\(\) \{\}/.test(PR) && /window\.hideProom = hideProom;/.test(PR),
+         "★★ 내리기는 아무것도 안 멈춘다 (판 DOM 은 hidden 일 뿐 그대로라, 시계가 계속 돌아도 됩니다)");
+      ok(/clearInterval\(_proom시계기\)/.test(PR) && /window\.closeProom\?\.\(\);/.test(DKp),
+         "★★ 시계는 **나가야** 멈춘다");
+
+      /* ── 📊 알약이 곧 진행 바 (2026-08-30 — 콩) ──
+         내려둔 참여자에게만: 글자는 타이머, 배경은 --pr-pct 만큼 차오름.
+         전부 시계 길 안에서 도니 textContent·style 만 써야 합니다 —
+         ①의 innerHTML 금지 검사가 그것까지 함께 지킵니다. */
+      ok(/뽀모방 참여 중 · " \+ 시분초\(st\.남은\)/.test(PR) &&
+         /setProperty\("--pr-pct",/.test(PR),
+         "★★ 내려둔 참여자의 알약이 타이머+진행 바가 된다");
+      ok(/라벨\.dataset\.orig = 라벨\.textContent/.test(PR) &&
+         /라벨\.dataset\.orig\) 라벨\.textContent = 라벨\.dataset\.orig/.test(PR),
+         "★★ 원래 글자는 dataset.orig 한 곳에서만 되살린다 (두 군데 적으면 한쪽만 고쳐집니다)");
+      ok(/\.dock-pill\.joined\{[\s\S]{0,800}?var\(--pr-pct, 0%\)/.test(CSp) &&
+         /\.dock-pill\.joined\.rest\{/.test(CSp),
+         "★ 뽀모는 accent, 휴식은 초록으로 차오른다");
+      /* [고침 08-30] 채움을 **바탕색(--fill-1)에** 섞는다 — 투명에 섞으면
+         다크 테마에서 바탕과 같은 어둡기가 되어 차오르는 게 안 보입니다
+         (콩이 다크 테마에서 잡아냄). */
+      ok(/color-mix\(in srgb, var\(--accent\) 55%, var\(--fill-1\)\)/.test(CSp) &&
+         /color-mix\(in srgb, #5E8C61 55%, var\(--fill-1\)\)/.test(CSp),
+         "★★ 채움 농도 55% — 콩이 미리보기로 직접 고른 값 (22%는 다크에서 안 보였습니다)");
+      ok(/classList\.remove\("rest", "joined"\)/.test(PR),
+         "★ 나가면 알약이 원래 모습으로 돌아온다 (내려둔 채 나가도 — 시계가 멈춰 되살리기가 안 도는 자리)");
+
+      /* =====================================================================
+         🍅 개인 뽀모도 내려두면 알약이 타이머 (2026-09-10 — 콩)
+         ---------------------------------------------------------------------
+         뽀모방이 하던 것을 개인 뽀모에도 붙였습니다. 판을 내려둔 동안
+         알약 글자가 「🍅 집중 · 24:59」가 되고 배경이 차오릅니다.
+
+         ★★★ 이 무리에서 제일 중요한 검사는 **통신량**입니다.
+           2026-09 에 다운로드가 4.4GB 까지 갔다가 잡힌 참이라, 화면을
+           1초마다 다시 그리는 자리에 서버를 읽는 코드가 한 줄이라도
+           섞이면 그대로 다시 치솟습니다. 아래 "서버를 안 건드린다" 가
+           그것을 막습니다 — 지우지 마세요.
+         ===================================================================== */
+      {
+        const RTp = fs.readFileSync(DIR + "script_realtime.js", "utf8");
+        const 몸통 = (RTp.match(/function _paintPomoPill\(\) \{[\s\S]*?\n  \}/) || [""])[0];
+
+        ok(/function _paintPomoPill\(\)/.test(RTp) && /window\.paintPomoPill = _paintPomoPill;/.test(RTp),
+           "★★ 개인 뽀모도 알약에 그리는 함수가 있다");
+        ok(/_paintPomoPill\(\);\n    const pill = document\.getElementById\("timer-pill"\)/.test(RTp),
+           "★★ 1초 시계(_pomoTick) 맨 앞에서 그린다 (판 요소가 없어도 알약은 돈다)");
+        ok(/window\.paintPomoPill\?\.\(\);/.test(DKp),
+           "★★ 판을 여닫는 순간 dock 이 다시 그리라고 부른다 (1초를 안 기다린다)");
+
+        /* ★★★ 통신량 지킴이 — 이 함수 안에 서버를 만지는 말이 없어야 합니다 */
+        ok(!!몸통 && !/\bdb\b|firebase|\.ref\(|\.on\(|\.once\(|\.set\(|\.update\(|fetch\(/.test(몸통),
+           "★★★ 알약 그리기가 **서버를 한 글자도 안 건드린다** (1초마다 도는 자리 — 다운로드가 늘 자리가 아니다)");
+        ok(!!몸통 && /textContent/.test(몸통) && !/innerHTML/.test(몸통),
+           "★★ 시계 길이라 textContent 만 쓴다 (innerHTML 은 판을 헐어서 무겁습니다)");
+
+        ok(/const 내려둠 = !\(window\.dockOpened\?\.\(\) \|\| \[\]\)\.includes\("pomo"\)/.test(RTp),
+           "★★ 판이 펴져 있으면 알약은 원래 모습 (같은 숫자를 두 군데 보여 주지 않는다)");
+        ok(/라벨\.dataset\.orig = 라벨\.textContent/.test(RTp) &&
+           /라벨\.dataset\.orig\) 라벨\.textContent = 라벨\.dataset\.orig/.test(RTp),
+           "★★ 원래 글자는 dataset.orig 한 곳에서만 되살린다");
+        ok(/_isPaused\(\) \? "⏸️ Pomodoro · 멈춤 "/.test(RTp),
+           "★ 멈춰 두면 ⏸️ 로 갈린다 (막대만 흐르면 도는 줄 압니다)");
+        /* [2026-09-10 — 콩] 이름을 지우지 않고 뒤에 붙인다.
+           「집중 24:59」로만 두면 어느 알약이었는지가 사라집니다. */
+        ok(/"🍅 Pomodoro · 집중 "/.test(RTp) && /"☕ Pomodoro · 휴식 "/.test(RTp),
+           "★★ 알약 이름(Pomodoro)을 남겨 두고 단계를 뒤에 붙인다");
+        ok(/label: "🍅 Pomodoro"/.test(DKp),
+           "★ 알약 이름표가 아직 「🍅 Pomodoro」다 (여기를 바꾸면 위 글자도 같이 바꿔야 합니다)");
+        ok(/classList\.toggle\("rest", _pomo\.phase === "rest"\)/.test(RTp),
+           "★ 휴식이면 초록으로 (뽀모방과 같은 CSS 를 그대로 빌려 씁니다)");
+        ok(/_paintPomoPill\(\);\n  \}/.test(RTp),
+           "★★ 멈춘 뒤(_paintIdle)에도 알약을 원래대로 되돌린다");
+
+        /* ── 내려둔 알약 더블클릭 = 멈춤/이어가기 (2026-09-10 — 콩) ──
+           BGM 알약(2026-08-13)과 똑같은 길입니다. 판을 안 펴고도 멈출 수
+           있어야 "내려두고 쓰기" 가 완성돼요. */
+        ok(/id === "pomo" && window\.pomoRunningAny\?\.\(\) && !_open\.has\("pomo"\)/.test(DKp),
+           "★★ 내려두고 **도는 동안에만** 더블클릭 길로 간다 (판이 펴져 있으면 여닫기가 굼떠집니다)");
+        ok(/_pomoClickTimer = setTimeout/.test(DKp) && /window\.togglePomoRun\?\.\(\);/.test(DKp),
+           "★★ 250ms 기다렸다 한 번이면 열고 두 번이면 멈춤/이어가기");
+        ok(/window\.pomoRunningAny = \(\) => !!_pomo;/.test(RTp),
+           "★★★ pomoRunningAny 는 **멈춰 있어도 참**이다 (isPomodoroRunning 과 다름 — 헷갈리면 한 번 멈춘 뒤로 영영 안 먹힙니다)");
+        ok(/알약\.title = _isPaused\(\)/.test(RTp) && /알약\.removeAttribute\("title"\)/.test(RTp),
+           "★ 두 번 누르면 멈춘다는 것을 마우스 올렸을 때 알려 주고, 원래대로 돌아갈 때 치운다");
+      }
+
+      /* =====================================================================
+         🖼 그림 보내기 (2026-09-11 — 콩 "캡쳐는 올릴 수 있으면 좋겠어")
+         ---------------------------------------------------------------------
+         챗·수다방·비밀방에서 화면 캡처와 사진을 보냅니다. 설계의 고갱이는
+         **구조를 하나도 안 바꿨다**는 것 —
+
+           그림을 Storage 에 올린 뒤 → **그 주소를 평범한 글로 보냅니다.**
+           챗이 이미 갖고 있던 「주소를 그림으로 펼치는 장치(linkifyEscaped)」
+           가 나머지를 합니다. 스티커가 `[[스티커:id]]` 글자 하나로 도는 것과
+           같은 수법이에요.
+
+         그래서 메시지 생김새도, 실시간 DB 보안규칙도 안 건드렸습니다.
+         지난 대화가 안 깨지고, 세 자리가 **같은 길** 하나를 씁니다.
+         아래 검사들은 그 길이 도로 갈라지는 것을 막습니다.
+         ===================================================================== */
+      {
+        const IMG = fs.readFileSync(DIR + "script_imgup.js", "utf8");
+        const SRp = fs.readFileSync(DIR + "script_sroom.js", "utf8");
+        const CRp = fs.readFileSync(DIR + "script_core.js", "utf8");
+        const CHp = fs.readFileSync(DIR + "script_chat.js", "utf8");
+
+        ok(/window\.imgUpAttach\s*=/.test(IMG) &&
+           /window\.imgUpDeleteMsgs\s*=/.test(IMG) &&
+           /window\.imgUpPathOf\s*=/.test(IMG),
+           "★★ 그림 올리기가 바깥에 내주는 문이 셋 다 있다 (붙이기·지우기·길찾기)");
+
+        /* ★★★ 이 검사가 이 무리의 뿌리입니다.
+           "주소를 글칸에 적고 원래 보내기를 부른다" 를 지킵니다. 여기서
+           따로 db.ref().push() 를 쓰기 시작하면 답장·멘션·수다방 판단이
+           전부 두 벌이 되고, 한쪽만 고쳐지는 날이 옵니다. */
+        ok(/글칸\.value = url;[\s\S]{0,80}?곳\.send\?\.\(\)/.test(IMG),
+           "★★★ 주소를 **글칸에 적고 원래 보내기를 부른다** (보내는 길을 새로 뚫지 않는다)");
+        ok(!/window\.db\b|firebase\.database\(/.test(IMG),
+           "★★★ 그림 올리기가 **실시간 DB 를 한 글자도 안 건드린다** (창고에만 올리고, 오가는 건 주소 한 줄)");
+
+        /* 그림만 — 보안 규칙도 image/* 만 받습니다. 여기서 막아야 사용자가
+           한글 파일을 끌어다 놓고 "왜 안 되지" 하는 일이 없어요. */
+        ok(/\/\^image\\\//.test(IMG),
+           "★★ 그림(image/*)만 받는다 — 다른 파일은 올리기 전에 걸러 말해 준다");
+        ok(/accept = "image\/\*"/.test(IMG),
+           "★ 사진 고르기 창도 그림만 보여 준다");
+
+        /* ★★★ 붙여넣기는 **글칸에 손이 가 있을 때만**.
+           이게 없으면 챗과 비밀방이 같이 열려 있을 때 한 번 붙여넣기에
+           두 장이 올라갑니다 (두 자리가 같은 paste 를 듣습니다). */
+        /* [2026-10-02] 비밀방이 ↗ 따로 창에 가 있으면 글칸은 그 창의 문서에
+           있어서, "제 문서"(ownerDocument)의 activeElement 로 봅니다. */
+        ok(/글칸\.ownerDocument\.activeElement !== 글칸\) return;/.test(IMG),
+           "★★★ Ctrl+V 는 **글칸에 손이 가 있을 때만** 받는다 (두 곳이 열려 있어도 한 장만 올라간다)");
+        ok(/const _달림 = new Set\(\)/.test(IMG) && /if \(_달림\.has\(열쇠\)\) return;/.test(IMG),
+           "★★ 판을 다시 그려 여러 번 불러도 두 번 안 달린다");
+
+        /* 5MB — 보안 규칙에 적힌 수와 **같아야** 합니다. 여기만 키우면
+           올리다가 서버가 거절해서 몇 초 버리고 실패해요. */
+        ok(/HARD_MAX\s*=\s*5 \* 1024 \* 1024/.test(IMG),
+           "★★ 크기 상한 5MB 가 창고 보안 규칙과 같다 (한쪽만 바꾸면 올리다 거절당합니다)");
+        ok(/MAX_PX\s*=\s*1600/.test(IMG) && /toBlob\(r, "image\/jpeg", q\)/.test(IMG),
+           "★ 올리기 전에 긴 변 1600px 로 줄이고 눌러 담는다 (통신량·요금)");
+
+        /* 자리마다 폴더가 다릅니다 — 수명 규칙이 다르기 때문이에요.
+           chatimg 은 7일 뒤 구글이 지우고, sroomimg 은 자정 청소가 지웁니다. */
+        ok(/folder: "chatimg", inputId: "message"/.test(CRp),
+           "★★ 챗은 chatimg 폴더 (7일 수명 규칙이 걸린 자리)");
+        ok(/folder: "sroomimg", inputId: "sroom-in"/.test(SRp),
+           "★★ 비밀방은 sroomimg 폴더 (자정에 대화와 함께 지웁니다)");
+        ok(/id="chat-img-btn"/.test(IXp) && /id="sroom-img-btn"/.test(SRp),
+           "★★★ 🖼 단추가 두 자리에 다 있다 — **폰에는 Ctrl+V 가 없어서 이 단추가 유일한 길**입니다");
+
+        /* ★★★ 비밀방은 대화를 지우면서 그림도 지웁니다. 순서가 뒤집히면
+           (지우고 나서 주소를 찾으면) 주소가 이미 사라져서 그림이 창고에
+           영영 남아요 — 대화는 없는데 주소만 알면 열리는 상태. */
+        {
+          const 청소 = (CRp.match(/async function 자정방청소[\s\S]*?\n  \}/) || [""])[0];
+          const a = 청소.indexOf("imgUpDeleteMsgs");
+          const b = 청소.indexOf("update(묶음)");
+          ok(a > 0 && b > 0 && a < b,
+             "★★★ 자정 청소가 **그림을 먼저 지우고** 대화를 지운다 (순서가 뒤집히면 주소를 잃어 그림이 영영 남습니다)");
+        }
+        /* 남의 폴더는 안 건드립니다 — 챗 그림(chatimg)은 7일 규칙의 몫이에요 */
+        ok(/\/\^sroomimg\\\/\/\.test\(길\)/.test(IMG),
+           "★★ 자정 청소는 sroomimg 만 지운다 (챗 그림은 7일 규칙의 몫)");
+
+        /* 비밀방에서 주소가 안 눌리던 문제 — 챗이 쓰던 함수를 빌려 고쳤습니다 */
+        ok(/window\.linkifyEscaped\?\.\(esc\(r\.msg\)\)/.test(SRp),
+           "★★ 비밀방도 주소가 눌리고 그림이 펼쳐진다 (챗 함수를 빌려 씀 — 두 벌로 안 만든다)");
+        ok(/msg-img-gone/.test(CHp) && /\.msg-img-gone\{/.test(CSp),
+           "★ 사라진 그림은 「기간이 지나 사라진 그림이에요」로 보인다 (깨진 그림 아이콘 대신)");
+
+        /* 싣기 — 안 실리면 🖼 단추만 덩그러니 놓이고 아무 일도 안 일어납니다 */
+        ok(/firebase-storage-compat\.js/.test(IXp),
+           "★★★ index.html 이 창고(storage) 꾸러미를 싣는다 (없으면 그림 보내기가 통째로 안 돕니다)");
+        ok(/src="script_imgup\.js/.test(IXp) && /"script_imgup\.js":\s*"imgUpAttach"/.test(IXp),
+           "★★ index.html 이 싣고, 자가진단 목록에도 있다");
+        ok(/"script_imgup\.js"/.test(fs.readFileSync(DIR + "build-single.py", "utf8")),
+           "★★ 단일파일에도 실린다");
+      }
+
+      /* ── ⑥ 알약·차림새·싣기 ── */
+      ok(/\{ id: "proom",  label: "⏱️ 뽀모방"/.test(DKp),
+         "★ 알약 이름이 ⏱️ 뽀모방 이다 (🍅 는 알약 뽀모가 씁니다 — 콩)");
+      ok(/\.pr-big\{[\s\S]{0,260}?margin-bottom:-0\.19em;/.test(CSp),
+         "★★★ 숫자 밑과 줄 밑이 한 선이다 (콩이 눈으로 잡아낸 자리 — 글꼴의 내림 여백만큼 내립니다)");
+      ok(/\.pr-clock\{[\s\S]{0,120}?align-items:flex-end;/.test(CSp),
+         "★ 숫자와 줄이 나란히, 밑을 맞춰 섭니다");
+      ok(/font-size:35px/.test(CSp.slice(CSp.indexOf(".pr-big{"))),
+         "★ 숫자가 35px (41px 의 85% — 콩)");
+      ok(/src="script_proom\.js/.test(IXp) && /"script_proom\.js":\s*"openProom"/.test(IXp),
+         "★★ index.html 이 싣고, 자가진단 목록에도 있다");
+      ok(/"script_proom\.js"/.test(fs.readFileSync(DIR+"build-single.py","utf8")),
+         "★★ 단일파일에도 실린다");
+
+      /* ★★★ 빈 판 지킴이 (2026-08-30 — 콩 "뽀모방이 이렇게만 뜨고 있어")
+         판을 채우는 파일이 안 실리면 window.openXxx?.() 가 **조용히**
+         아무 일도 안 하고, 속이 텅 빈 판이 뜹니다. 고쳐 주지는 못해도
+         무엇이 없는지는 말해 줘야 해요. */
+      ok(/const 채우는것 = \{ pub: "openPubReview"/.test(DKp) && /dock-blank/.test(DKp),
+         "★★★ 판이 비어 있으면 조용히 두지 않고 말로 알려 준다");
+      ok(/body\.childElementCount > 0\) return;/.test(DKp),
+         "★★ 이미 채워졌으면 건드리지 않는다");
+      ok(/\.dock-blank\{/.test(CSp),
+         "빈 판 안내의 차림새가 있다");
+
+      /* =====================================================================
+         ⏱️ 뽀모방에 누가 있는지 (2026-08-29 — 콩 "1명 이상일 때 표시나게")
+         ---------------------------------------------------------------------
+         ★★ 새 구독을 **안 만드는 것**이 이 고침의 핵심입니다. 카드 정보
+            (status)는 이미 모두가 듣고 있어서, 칸 하나 얹는 값이 공짜예요.
+            proomHere 를 따로 구독하게 하면 뽀모방을 안 여는 사람에게도
+            통신이 생깁니다.
+         ===================================================================== */
+      const RT4 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      ok(/window\.imInProom = \(\) => _proom열림;/.test(PR),
+         "★★ 뽀모방이 '내가 안에 있나' 를 알려 준다");
+      ok(/proom: \(typeof window\.imInProom === "function"\) \? !!window\.imInProom\(\) : false,/.test(RT4),
+         "★★★ status 에 얹어 보낸다 (새 구독 0 — 이미 모두가 듣는 자리)");
+      ok(!/db\.ref\("proomHere"\)/.test(RT4),
+         "★★★ 카드 쪽에서 proomHere 를 따로 구독하지 않는다 (안 여는 사람에게 통신이 생깁니다)");
+      ok(/data\[n\]\.proom && isOnline\(data\[n\], now\)/.test(RT4),
+         "★★★ **접속 중인 사람만** 센다 — status 는 나가도 남아 있어서, 그냥 세면 어제 사람까지 잡힙니다");
+      ok(/window\.dockBadge\?\.\("proom", 뽀모방인원\)/.test(RT4),
+         "★★ 알약에 인원 배지를 올린다");
+      ok(/if \(id !== "proom"\) badge\(id, 0\);/.test(DKp),
+         "★★★ 판을 열어도 뽀모방 배지는 안 지운다 (거긴 '안 읽은 글' 이 아니라 **인원**입니다)");
+      ok(/row\.proom[\s\S]{0,120}?class="card-proom"/.test(RT4),
+         "★★ 카드에도 딱지가 붙는다 (누가 있는지 보여야 따라 들어갑니다 — 콩)");
+      ok(/\$\{proomChip\}\$\{pomoChip\}/.test(RT4),
+         "★ ⏱️ 가 🍅 **왼쪽**에 온다 (08-30 콩 — 🍅 뒤에 횟수 숫자가 붙어서, 딱지→숫자 순이라야 안 헷갈립니다)");
+      ok(/\{ id: "proom",[^\n]*size: 0\.78,/.test(DKp),
+         "★ 판 기본 높이가 챗의 65% 다 (08-30 콩 — 수다가 주 목적이 아니라서)");
+      ok(/\.card-proom\{/.test(CSp), "그 딱지의 차림새가 있다");
+      /* [2026-08-30 — 콩] ⏱️ 와 🍅 는 **같은 알약**이어야 합니다 — 크기·
+         padding 동일, 테두리 없음(예전 11px 고정+테두리가 짝짝이의 원인). */
+      {
+        const 딱지 = CSp.slice(CSp.indexOf(".card-proom{"), CSp.indexOf(".card-proom{") + 400);
+        ok(!/border:/.test(딱지.slice(0, 딱지.indexOf("}"))),
+           "★★ ⏱️ 딱지에 테두리가 없다 (🍅 알약과 같은 차림)");
+        ok(/\.card-wh \.card-proom\{[\s\S]{0,80}?font-size: 80%/.test(CSp) &&
+           /\.card-wh \.card-pomo-count\{[\s\S]{0,80}?font-size: 80%/.test(CSp),
+           "★★ ⏱️ 와 🍅 가 카드에서 같은 크기(80%)다 — 한쪽만 바꾸면 다시 짝짝이");
+        /* ★★★ [2026-09-01 — 콩 신고 "작업 시간이 두 줄로 됐어"] →
+           [되짚음 2026-09-01 2차 — 콩 "저건 원래 왼쪽·오른쪽 정렬이라
+           중간이 비어야 해"] 처음엔 margin-right:auto 를 걷어내고 다
+           붙였는데, 그건 0830 원래 뜻(시간 왼쪽·딱지 오른쪽)을 잘못
+           고친 것이었습니다. margin-right:auto 는 되살아 있어야 맞고,
+           두 줄 문제의 진짜 처방은 white-space:nowrap + flex-shrink:0
+           (아래)였습니다. */
+        {
+          const wt = CSp.indexOf(".card-wh .card-wh-t{");
+          const block = CSp.slice(wt, CSp.indexOf("}", wt));
+          ok(/margin-right:\s*auto;/.test(block),
+             "★ 시간은 왼쪽 벽에, 딱지는 오른쪽에 — margin-right:auto 가 있다 (중간이 비어야 정상)");
+        }
+        ok(/\.card-wh \.card-wh-t\{[\s\S]{0,500}?white-space: nowrap;/.test(CSp) &&
+           /\.card-wh \.card-wh-t\{[\s\S]{0,500}?flex: 0 0 auto;/.test(CSp),
+           "★★★ 시간 칸이 못 눌린다 (눌리면 '10h 12m' 사이 공백에서 줄바꿈 — 진짜 원인은 여기였다)");
+        /* [2026-09-01 2차 — 콩 "딱지 사이 여백 1px 로"] gap 을 쓰면
+           시간↔딱지와 딱지↔딱지가 똑같이 벌어져 버려서, 대신 .card-wh
+           의 gap 은 0 으로 두고 🍅 에만 margin-left:1px 를 줘 "딱지끼리만"
+           좁혔습니다 (시간 옆 큰 여백은 margin-right:auto 몫). */
+        ok(/\.card-wh\{[\s\S]{0,700}?gap: 0;/.test(CSp),
+           "★ .card-wh 자체 gap 은 0 — 딱지 간격은 🍅 의 margin-left 가 따로 맡는다");
+        ok(/\.card-wh \.card-pomo-count\{[\s\S]{0,140}?margin-left: 1px;/.test(CSp),
+           "★★ ⏱️ 뽀모방 딱지와 🍅 사이가 1px — 딱지끼리만 거의 붙는다");
+        ok(/\.card-wh \.card-pomo-count\{[\s\S]{0,80}?padding: 1px 5px;/.test(CSp) &&
+           /\.card-wh \.card-proom\{[\s\S]{0,80}?padding: 1px 5px;/.test(CSp),
+           "딱지 안쪽 여백도 6→5px — 짝을 이루는 둘을 같이 줄였다");
+        ok(/\.card-foot\{[\s\S]{0,200}?padding: 7px 7px 8px;[\s\S]{0,80}?padding-left: 7px;/.test(CSp),
+           "★ 카드 아래칸 좌우 여백도 9→7px (콩 '토마토 오른쪽·시간 왼쪽 공간도 줄여서라도 한 줄에')");
+      }
+      ok((PR.match(/window\.updateStatus\?\.\(true\)/g) || []).length === 2,
+         "★★ 들어올 때와 나갈 때 곧바로 알린다 (안 하면 최대 15초 뒤에야 남들 화면에 뜹니다)");
+
+      /* ── ⑨ 👋 입장 줄 (2026-08-30 — 콩) — 서버 쓰기 0 으로 ──
+         "누가 방에 있나" 는 status 에 이미 실려 옵니다. 명단에 없던 닉이
+         나타난 순간을 입장으로 칠 뿐, 서버에는 한 글자도 안 적습니다. */
+      {
+        const RT9 = fs.readFileSync(DIR + "script_realtime.js", "utf8");
+        ok(/window\.proomSetHere\?\.\(뽀모방명단\)/.test(RT9) &&
+           /뽀모방명단\.push\(n\)/.test(RT9),
+           "★★ 명단이 배지·n명과 **같은 재료**(status+isOnline)에서 나온다");
+        ok(/window\.proomSetHere = function/.test(PR) && /r\.입장/.test(PR),
+           "★★ 판이 명단을 받아 입장 줄을 그린다");
+        {
+          const 입 = 민낯p.slice(민낯p.indexOf("window.proomSetHere"),
+                                민낯p.indexOf("async function proom보내기"));
+          ok(입.length > 100 && !/db\.ref/.test(입),
+             "★★★ 입장 줄은 서버에 안 적는다 (제1원칙 '쓰기 0' 그대로)");
+        }
+        ok(/_proom명단 === null\) \{ _proom명단 = 새; return; \}/.test(PR),
+           "★★ 첫 명단은 입장이 아니다 (열자마자 이미 있던 사람들이 우르르 '입장' 하지 않게)");
+        ok(/PROOM_재입장무시 = 5 \* 60 \* 1000/.test(PR),
+           "★ 연결이 출렁여도 5분 안의 재등장은 입장으로 안 친다");
+        ok(/_proom명단 = null; _proom입장줄 = \[\]; _proom입장때 = \{\};/.test(PR),
+           "★ 판을 닫으면 입장 줄을 비운다 (다시 열면 새 방문)");
+      }
+
+      /* ── ⑩ 👥 "n명" 클릭 → 참여자 명단 팝 (2026-08-30 — 콩) ──
+         재료는 입장 줄과 같은 명단 — 새로 읽는 자료 0. */
+      ok(/data-proom-cnt/.test(PR) && /function proom명단토글/.test(PR),
+         "★★ n명을 누르면 명단이 열리고, 다시 누르면 닫힌다");
+      ok(/if \(!팝 \|\| 팝\.hidden\) return;/.test(PR),
+         "★★ 닫혀 있으면 안 그린다 (명단이 바뀔 때마다 헛일하지 않게)");
+      ok(/pr-pop-n" data-name-of=/.test(PR),
+         "★ 명단의 닉네임도 챗과 같은 색을 입는다");
+      ok(/\.pr-pop\{/.test(CSp) && /\.pr-board\{[\s\S]{0,200}?position:relative/.test(CSp),
+         "★ 팝의 차림새가 있고, 판이 닻(position:relative)을 내렸다");
+
+      /* ── ⑪ 제목 옆 잔글씨 (2026-08-30 — 콩) ──
+         뽀모방의 ✕ 는 숨기기가 아니라 **나가기**라, 제목 옆에 말로 적어 둡니다. */
+      /* ↔️ 카드가 차는 쪽 (2026-08-30 — 콩) — 왼쪽·가운데·오른쪽.
+         ★ 차례(cardSort)와 **다른 것**입니다. 저건 "누가 앞에 오나",
+           이건 "그 줄이 어느 쪽에 붙나" — 이름도 갈라 뒀습니다. */
+      {
+        const UI9 = fs.readFileSync(DIR + "script_ui.js", "utf8");
+        const IX9 = fs.readFileSync(DIR + "index.html", "utf8");
+        ok(/id="set-card-align"/.test(IX9) && /카드가 차는 쪽/.test(IX9),
+           "★★ 설정에 [카드가 차는 쪽] 이 있다");
+        ok(/value="center"[\s\S]{0,80}?value="left"[\s\S]{0,80}?value="right"/.test(IX9),
+           "★ 셋을 고를 수 있다 (가운데 기본 · 왼쪽 · 오른쪽)");
+        ok(/id="set-card-align"[\s\S]{0,900}?<\/div>\s*\n\s*<\/div><!-- \/\.set-grid2 -->/.test(IX9),
+           "★ 자리가 두 줄 판(set-grid2) 안이다 — [하단 메뉴 창 크기] 오른쪽 빈칸 (콩 지정)");
+        ok(/html\[data-cardalign="left"\]  \.dock-mode \.user-cards-grid\{ justify-content: flex-start; \}/.test(CSp) &&
+           /html\[data-cardalign="right"\] \.dock-mode \.user-cards-grid\{ justify-content: flex-end; \}/.test(CSp),
+           "★★ CSS 가 그 표를 보고 줄을 붙인다");
+        ok(/h\.removeAttribute\("data-cardalign"\)/.test(UI9),
+           "★ 가운데(기본)는 표를 아예 안 단다");
+        ok(/function 카드정렬쪽적용/.test(UI9) &&
+           !/카드정렬쪽적용[\s\S]{0,200}?rerenderUserCards/.test(UI9),
+           "★★★ 쪽을 바꿔도 카드를 다시 그리지 않는다 (표만 갈아 끼움 — 다시 그리면 스크롤이 튑니다)");
+        ok(/document\.documentElement;/.test(UI9.slice(UI9.indexOf("function 카드정렬쪽적용"))),
+           "★★ 표는 html 에 단다 (카드 마당은 배치가 바뀌며 옮겨다닙니다 — 0821 배경판 사고)");
+        ok(/try \{ 카드정렬쪽적용\(\); \} catch \(e\) \{\}/.test(UI9),
+           "★★ 들어오자마자 한 번 — 설정 창을 안 열어도 지난번에 고른 쪽이 살아 있다");
+        ok(/AppStore\.setItem\("cardAlign"/.test(UI9) && !/db\.ref[^\n]*cardAlign/.test(UI9),
+           "★★ 기기별이다 (서버에 안 보냅니다 — 남의 화면은 그대로)");
+
+        /* ★★ [고침 2026-08-30 — 콩 "오른쪽부터 골랐더니 전체가 치우쳐"]
+           마당이 화면 폭을 다 써서, 오른쪽 정렬이 곧 "화면 끝에 붙기"
+           였습니다. 들어가는 칸 수만큼 폭을 깎고 가운데 두면, 묶음은
+           가운데 놓이고 **마지막 줄만** 고른 쪽으로 붙습니다. */
+        ok(/function 카드묶음가운데/.test(UI9) &&
+           /마당\.style\.marginInline = "auto"/.test(UI9),
+           "★★★ 묶음은 가운데, 줄만 고른 쪽부터 (화면 끝에 붙지 않게)");
+        {
+          const 잼 = UI9.slice(UI9.indexOf("function 카드묶음가운데"),
+                              UI9.indexOf("let _묶음타이머"));
+          ok(/마당\.style\.maxWidth = "";\s*\/\/ ★ 재기 전에 풀어 둡니다/.test(잼),
+             "★★★ 재기 전에 폭을 푼다 (안 그러면 깎은 폭을 또 깎아 갈수록 좁아집니다)");
+          /* ★ [2026-09-07 뒤집음] 예전에는 "요소 자만 쓴다"였는데, 카드마다
+             zoom 이 걸리면서 요소 자로는 실제 폭을 알 수 없게 됐습니다.
+             이제 **전부 화면 자로 재고** 넣을 때만 요소 자로 되돌립니다 —
+             섞지 않는다는 원칙은 그대로, 기준 자만 바뀐 것입니다. */
+          ok(!/offsetWidth|clientWidth/.test(잼) &&
+             /const Z = \(window\.cardZoom\?\.\(\) \|\| 1\) \* \(window\.uiZoom\?\.\(\) \|\| 1\);/.test(잼) &&
+             /마당\.getBoundingClientRect\(\)\.width - \(padL \+ padR\) \* Z/.test(잼) &&
+             /const 폭 = 카드\.getBoundingClientRect\(\)\.width;/.test(잼) &&
+             /묶음 \/ Z \+ padL \+ padR/.test(잼),
+             "★★★ 재는 자를 안 섞는다 — 전부 화면 자로 재고 넣을 때만 요소 자로 (카드마다 zoom 이 걸려 요소 자로는 실제 폭을 못 잽니다 · 0907)");
+          ok(/Math\.max\(1, Math\.floor\(\(안쪽 \+ 틈화\) \/ \(폭 \+ 틈화\)\)\)/.test(잼),
+             "★★ 한 줄에 들어가는 칸 수를 제대로 센다 (마지막 칸은 틈이 없습니다)");
+          ok(/if \(v === "center"\) \{ 마당\.style\.maxWidth = ""; 마당\.style\.marginInline = ""; return; \}/.test(잼),
+             "★ 가운데를 고르면 원래대로 되돌린다");
+        }
+        ok(/new MutationObserver\(묶음다시재기\)/.test(UI9) && /new ResizeObserver\(묶음다시재기\)/.test(UI9),
+           "★★ 카드가 늘거나 창이 바뀌면 다시 잰다 (그리는 곳이 여럿이라 지켜보는 편이 안전합니다)");
+        ok(/_묶음타이머 = setTimeout\(카드묶음가운데, 60\)/.test(UI9),
+           "★ 잇달아 불려도 한 번만 잰다");
+      }
+
+      ok(/note: "내려도 방은 돌아가요 · ✕가 나가기"/.test(DKp) && /d\.note \? `<span class="dock-note">/.test(DKp),
+         "★★ 제목 옆 잔글씨가 새 동작을 말해 준다 (내려도 방은 돌아가요 · ✕가 나가기)");
+      ok(/\.dock-note\{[\s\S]{0,160}?var\(--fs-2xs\)/.test(CSp),
+         "★ 잔글씨는 제목과 구분된다 (작고 가늘고 흐리게)");
+
+      /* =====================================================================
+         🍅 뽀모방에서 토마토 쌓기 (2026-08-30 — 콩 "뽀모는 뽀모잖아?")
+         ---------------------------------------------------------------------
+         그냥 붙이면 **판을 25분 경계에 잠깐 열었다 닫는 것만으로** 붙습니다.
+         조건 넷 중 하나라도 빠지면 그 구멍이 도로 열려요.
+         ===================================================================== */
+      ok(/function proom토마토\(뽀모시작\)/.test(PR) &&
+         /if \(st\.휴식\) proom토마토\(proom단계시작\(t\) - PROOM_뽀모\);/.test(PR),
+         "★★ 뽀모 → 휴식 으로 넘어간 그 순간에만 센다 (한 바퀴를 채웠다는 뜻)");
+      ok(/if \(!_proom들어온때 \|\| _proom들어온때 > 뽀모시작\) return;/.test(PR),
+         "★★★ ① 바퀴가 **시작되기 전부터** 방에 있었어야 한다 (중간에 들어오면 안 셉니다)");
+      ok(/if \(proom센바퀴\(\) === 뽀모시작\) return;/.test(PR) &&
+         /const PROOM_센바퀴키 = "proomCounted";/.test(PR),
+         "★★★ ② 이미 센 바퀴는 다시 안 센다 — **탭을 열 개 열어도 한 번**입니다 (알약 뽀모에는 없는 장치)");
+      ok(/if \(window\.isPomodoroRunning\?\.\(\)\) return;/.test(PR),
+         "★★★ ③ 알약 🍅 뽀모가 돌고 있으면 안 센다 (둘 다 세면 같은 25분에 두 개 붙습니다)");
+      ok(/incrementTodayFocusSessions/.test(PR) && !/db\.status|"away"/.test(PR.slice(PR.indexOf("function proom토마토"))),
+         "★★ ④ 자리비움 검사는 알약 뽀모와 **같은 문**을 지난다 (조건을 둘로 갈라 두면 언젠가 한쪽만 고쳐집니다)");
+      ok(/_proom들어온때 = proom지금\(\);/.test(PR) && /_proom들어온때 = 0;/.test(PR),
+         "★ 들고 날 때 그 기준을 세우고 지운다");
+      {
+        /* ★★★ 판정이 전부 기기 안에서 끝나야 합니다 — 이 파일의 제1원칙 */
+        const 토 = PR.slice(PR.indexOf("const PROOM_센바퀴키"), PR.indexOf("  /* ====================================================================="
+                  , PR.indexOf("const PROOM_센바퀴키")));
+        ok(!/db\.ref/.test(토),
+           "★★★ 🍅 판정에 서버가 없다 (시계 쪽 쓰기 0 이라는 이 파일의 제1원칙이 그대로)");
+      }
+    }
+
+    /* =====================================================================
+       🪦 자동감지 — multiT 만 40분이던 것을 되돌림 (2026-08-30, 콩)
+       ---------------------------------------------------------------------
+       콩: "내가 해보니 악용되더라구. 어웨이 기준은 모두 동일하게 해줘."
+       상태 하나만 문턱이 두 배면, 그 상태를 고를 이유가 **일하는 방식이
+       아니라 느슨함**이 됩니다.
+       ===================================================================== */
+    {
+      const ID2 = fs.readFileSync(DIR+"script_idledetect.js","utf8");
+      const 민낯I = ID2.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+      ok(/const IDLE_THRESHOLD_MS = 20 \* 60 \* 1000;/.test(ID2),
+         "자리비움 문턱은 20분");
+      ok(!/MULTI_EXTRA_MS/.test(민낯I),
+         "★★★ multiT 만 더 기다리는 갈래가 없다 (모든 상태가 같은 20분)");
+      ok(!/_multi대기/.test(민낯I),
+         "★★ 그 갈래가 쓰던 예약 타이머도 남아 있지 않다");
+      ok(/되돌림 2026-08-30/.test(ID2) && /악용되더라구/.test(ID2),
+         "★ 왜 늘렸다 되돌렸는지 무덤 주석이 남아 있다 (되살리려는 사람이 먼저 읽게)");
     }
 
     /* =====================================================================
@@ -4834,8 +6512,18 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "셋까지" 라는 옛 규칙은 **판이 좁을 때** 이야기였어요. 이번 개편으로
          이 판이 매일 쓰는 자리가 되면서 폭을 넓혔습니다(styles.css
          의 #dock-panel-wc). 그래서 이름을 두 글자로 줄이고 다섯을 놓습니다.
-         ★ 여섯은 안 됩니다 — 폭을 더 넓히면 알약 줄 위가 무거워져요. */
-      ok(탭수 === 5, `★ 탭 줄은 다섯까지 (${탭수}개) — 여섯이 되면 두 줄로 접힌다`);
+         그때는 "여섯은 안 된다" 고 적었습니다.
+
+         [고침 2026-08-26 — 콩] 그 판단이 틀렸었습니다. 당시엔 날짜 넘기기
+         (‹ 오늘 ›)가 탭 줄과 **한 줄을 나눠 썼어서** 폭이 더 좁게 느껴졌고,
+         그걸 탭 자체가 좁다고 오해했습니다. 8/22에 날짜 넘기기를 탭 줄
+         **아래**로 내리면서(위 고침 참고) 탭 줄은 이제 탭들만 씁니다.
+         게다가 이 판은 늘 도킹돼 있어 머리말(Work Log ✍️)이 숨고
+         (.dock-body .wc-title{display:none}) 탭 줄이 폭을 통째로 씁니다
+         (.dock-body .wc-head{justify-content:flex-end}). 두 글자 탭
+         여섯 개는 이 폭에 여유 있게 들어갑니다. 폭(352px, 챗과 동일)은
+         그대로 둡니다. */
+      ok(탭수 === 6, `★ 탭 줄은 여섯까지 (${탭수}개) — 일곱이 되면 두 줄로 접힌다`);
       ok(/#dock-panel-wc\{ width: min\(352px/.test(fs.readFileSync(DIR+"styles.css","utf8")),
          "★ 판은 352px — 챗과 같은 폭 (2026-08-22, 내용 칸이 없어져 줄었습니다)");
       ok(/data-wc-tab="memo"/.test(H2), "내 메모 탭이 있다");
@@ -4887,11 +6575,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       /* 열어 둔 세 가지 — 하나라도 잠기면 화면이 깨집니다 */
       [["profile", "카드 프사·색"],
        ["pomoSessions", "전체 기록의 🍅"],
-       ["chattyParticipation", "수다방 참여 인원"]].forEach(([k, why]) =>
+       ["chattyParticipation", "수다방 참여 인원 (문 닫은 방 · 옛 기록 보존)"]].forEach(([k, why]) =>
         ok(U.$nick[k] && U.$nick[k][".read"] === true, `${k} 는 열려 있다 (${why})`));
 
       /* 잠긴 뒤에도 코드가 users 를 통째로 읽지 않는가 */
-      const wide = ["script_profile.js","script_chatty.js","script_wordcount.js",
+      const wide = ["script_profile.js","script_wordcount.js",
                     "script_mywork.js","script_timelog.js","script_data.js","script_ui.js"]
         .filter(f => /ref\("users"\)|ref\(`users`\)/.test(fs.readFileSync(DIR+f,"utf8")));
       ok(wide.length === 0,
@@ -4953,12 +6641,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        색인을 빠뜨리면 여기서 걸립니다. */
     {
       const rulesIdx = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
-      const jsAll = ["script_realtime.js","script_chatty.js","script_wordcount.js",
+      const jsAll = ["script_realtime.js","script_wordcount.js",
                      "script_chat.js","script_admin.js","script_forest.js"]
         .map(f => fs.readFileSync(DIR+f,"utf8")).join("\n");
 
       /* 코드에 실제로 있는 (노드, 기준) 짝 */
-      const need = [["messages","time"], ["messages2","time"], ["wordfeed","at"]];
+      const need = [["messages","time"], ["wordfeed","at"]];
       need.forEach(([node, key]) => {
         const used = new RegExp(`orderByChild\\("${key}"\\)`).test(jsAll);
         const node2 = rulesIdx[node] || {};
@@ -5047,7 +6735,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "나의 작업의 기록에는 리셋을 반영하지 않는다");
 
       /* 합계를 낼 때 그 표시를 실제로 반영하는가 */
-      ok(/resetAll = v\.workReset \|\| \{\}/.test(TL2), "합계 낼 때 표시를 읽는다");
+      /* [2026-09-08] users/{닉} 통째 읽기를 걷어내며 갈래별로 나눴습니다 */
+      ok(/resetAll = resetSnap\.val\(\)\s*\|\| \{\}/.test(TL2), "합계 낼 때 표시를 읽는다");
       ok(/const a = Math\.max\(Number\(seg\.a \|\| 0\), resetAt\)/.test(TL2),
          "표시를 걸친 구간은 뒤쪽만 센다");
       ok(/Math\.max\(curStart, dayMs, resetAt\)/.test(TL2),
@@ -5186,24 +6875,31 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/notesOut\/\$\{myNick\}/.test(NT), "보낸 쪽지도 내 자리에 남긴다");
       ok(/data-note-box="in"/.test(NT) && /data-note-box="out"/.test(NT),
          "받은 것 / 보낸 것 두 칸이 있다");
-      /* [고침 2026-08-09] 이름 오른편에 **늘 있는 자리**로 바꿨습니다.
-         새 쪽지가 왔을 때만 나타나면 그 자리가 뭔지 모르는 채로 갑자기
-         생깁니다. 안테나처럼 평소엔 옅은 윤곽으로 자리를 지키다가,
-         쪽지가 오면 색이 차오르는 편이 알아보기 쉬워요. */
-      ok(/function renderNoteBadge/.test(NT) && /\.card-note\{/.test(CSS),
-         "쪽지 자리가 내 카드 이름 오른편에 있다");
-      ok(/\.card-note::before\{/.test(CSS), "평소에는 옅은 윤곽과 점만 보인다");
-      ok(/\.card-note\.has\{/.test(CSS) && /classList\.toggle\("has", n > 0\)/.test(NT),
-         "새 쪽지가 오면 색이 차오른다");
-      /* [고침 2026-08-09] 이름 줄 안쪽에 넣어 [쪽지] [닉네임] 으로 나란히.
-         카드 끝에 띄워 두면 긴 닉네임과 부딪혔습니다. */
-      ok(/nameEl\.insertBefore\(b, nameEl\.firstChild\)/.test(NT),
-         "쪽지 자리가 이름보다 앞에 선다");
-      ok(/\.user-card\.is-me \.card-name\{[^}]*justify-content: flex-end/
-         .test(CSS.replace(/\s+/g, " ").replace(/ \{/g, "{")),
-         "둘이 함께 오른쪽에 붙는다");
-      ok(/\.card-note\{[^}]*flex: 0 0 auto/.test(CSS.replace(/\s+/g, " ").replace(/ \{/g, "{")),
-         "긴 닉네임에도 쪽지 자리가 찌그러지지 않는다");
+      /* [고침 2026-09-07 — 콩] 자리를 이름 줄에서 **프사 왼쪽 위 모서리**로.
+         배지(최대 7개)가 이름 앞에 붙으면서 긴 닉에서 이름 줄이 왼쪽부터
+         잘려 쪽지 알림이 제일 먼저 가려졌습니다. 새 쪽지가 있을 때만
+         초록 리본(선만, 배경 없음). 안테나는 그대로 이름 상자 왼쪽 구석. */
+      ok(/function renderNoteBadge/.test(NT) && /const wrap = card\.querySelector\("\.card-avatar-wrap"\) \|\| card\.querySelector\("\.lite-ph"\);/.test(NT) &&
+         /wrap\.appendChild\(b\);/.test(NT),
+         "★★ 쪽지 리본은 내 프사 칸(.card-avatar-wrap)에 붙는다");
+      ok(/if \(n <= 0\) \{ if \(b\) b\.remove\(\); return; \}/.test(NT),
+         "★★ 새 쪽지가 없으면 아무것도 안 보인다 (평소 자리 표시 없음 — 콩 \"요 아이콘만\")");
+      ok(/const NOTE_RIBBON = `<svg/.test(NT) && /stroke="#22a043"/.test(NT) && /fill="none"/.test(NT),
+         "★ 초록 리본 SVG — 선만, 배경 없음");
+      ok(/card\.querySelectorAll\("\.card-name \.card-note"\)\.forEach\(x => x\.remove\(\)\);/.test(NT),
+         "★ 옛 자리(이름 줄)에 남은 것은 치운다");
+      ok(/\.card-note\{\s*\n\s*position: absolute;\s*\n\s*left: -8px;\s*\n\s*top: -8px;/.test(CSS) &&
+         /background: transparent;/.test(CSS.slice(CSS.indexOf(".card-note{"), CSS.indexOf(".card-note{") + 500)),
+         "★ 리본은 프사 왼쪽 위 모서리, 배경 없음 (오른쪽 위는 스티커 A 자리)");
+      ok(!/\.card-note::before\{/.test(CSS) && !/nameEl\.insertBefore\(b, nameEl\.firstChild\)/.test(NT),
+         "★ 옛 방식(이름 줄 맨 앞 작은 원·윤곽 점)은 남아 있지 않다");
+      /* 프사 칸 안이라 프로필 창보다 먼저 가려내야 합니다 */
+      const PF3 = fs.readFileSync(DIR+"script_profile.js","utf8");
+      ok(PF3.indexOf('if (e.target?.closest?.("[data-note-open]")) return;') > 0 &&
+         PF3.indexOf('if (e.target?.closest?.("[data-note-open]")) return;') < PF3.indexOf('if (e.target?.closest?.("[data-edit-profile]")) {'),
+         "★★★ 리본을 누르면 프로필 창이 아니라 쪽지가 열린다 (프로필 쪽 손이 먼저 비켜 줌)");
+      ok(NT.indexOf('if (e.target.closest("[data-note-open]")) {') < NT.indexOf('if (e.target.closest("[data-edit-profile]")) return;'),
+         "★★ 쪽지 쪽 손도 [data-edit-profile] 보다 먼저 리본을 본다");
       ok(/data-note-open/.test(NT) && /switchMyWorkTab\?\.\("note"\)/.test(NT),
          "누르면 바로 📮 쪽지 탭이 열린다");
       ok(/KEEP_MS\s*=\s*30 \* 24/.test(NT), "30일이 지나면 사라진다");
@@ -5352,6 +7048,18 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       /* ── 첫 클릭 문제 ── */
       const CORE3 = fs.readFileSync(DIR+"script_core.js","utf8");
       ok(/afterJoinInitAlive/.test(CORE3), "★ 입장할 때 자동으로 켜진다");
+      /* [2026-09-30 콩] 입장 = 동의. 저장값과 무관하게 무조건 ON. 한 번 껐던
+         사람도 다음 입장엔 다시 ON. 폰도 묻지 않는다. */
+      {
+        const 입장 = AL.slice(AL.indexOf("window.afterJoinInitAlive"));
+        ok(!/if \(!_loadPref\(\)\)/.test(입장) && /const ok = await _startTone\(\);/.test(입장),
+           "★★★ 입장 때 저장값을 보지 않고 무조건 켠다 (기본값 ON — 콩 2026-09-30)");
+        ok(!/confirm\(/.test(AL), "★ 폰에서도 묻지 않는다");
+        ok(/let _userOff = false;/.test(AL) && /if \(_userOff\) return;/.test(AL) && /_userOff = true;/.test(AL),
+           "★★ 손으로 끈 사람은 그 접속 동안 보험(다음 클릭)이 도로 켜지 않는다");
+        ok(/_userOff = false;\s*\n\s*const ok = await _startTone\(\);\s*\n\s*if \(!ok\) _armFirstClick\(\);/.test(입장),
+           "★ 새 입장은 끈 기억을 지운다 — 다음 입장엔 다시 ON");
+      }
       ok(/_armFirstClick/.test(AL), "★ 클릭에 얹지 못하면 다음 클릭을 기다린다");
       ok(/_ctx\.state !== "running"/.test(AL),
          "★ 소리가 실제로 흐르는지 확인한다 (막힌 채 켜졌다고 하지 않는다)");
@@ -5360,24 +7068,28 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
       /* ── 화면 ── */
       const HxA = fs.readFileSync(DIR+"index.html","utf8");
-      ok(/id="alive-btn"/.test(HxA), "머리말에 무음 버튼이 있다");
-      ok(HxA.indexOf('id="alive-btn"') < HxA.indexOf('id="idle-detect-btn"'),
+      /* [2026-09-30 콩] 버튼·설정 탭을 뺐습니다 — 입장하면 무조건 켜지니 누를 일이 없어요.
+         script_alive.js 는 그대로 실려서 소리만 냅니다. */
+      ok(!/id="alive-btn"/.test(HxA), "★ 머리말에 접속유지 버튼이 없다 (저절로 켜진다)");
+      ok(!/id="set-alive"/.test(HxA) && !/data-tab="alive"/.test(HxA) && !/id="panel-alive"/.test(HxA),
+         "★ 설정에도 접속 유지 스위치·탭이 없다");
+      ok(!/renderAliveButton\?\.\(\)/.test(fs.readFileSync(DIR+"script_ui.js","utf8")),
+         "설정 창이 없어진 스위치를 부르지 않는다");
+      ok(false === /id="alive-btn"/.test(HxA) && HxA.indexOf('id="share-btn"') < HxA.indexOf('id="idle-detect-btn"'),
          "★ 무음 버튼이 자동감지 버튼 왼쪽에 있다");
-      ok(/id="set-alive"/.test(HxA), "설정에도 같은 스위치가 있다");
-      ok(/data-tab="alive"/.test(HxA) && /id="panel-alive"/.test(HxA),
-         "설정에 🔌 접속 유지 탭이 있다");
       ok(/"script_alive\.js":\s*"toggleKeepAlive"/.test(HxA),
          "★ 파일이 빠지면 자가진단이 잡아낸다");
       ok(/script_alive\.js\?v=/.test(HxA), "캐시 도장이 찍혀 있다");
 
       /* ── 폰 배려 ── */
-      ok(/window\.isMobile/.test(AL) && /confirm\(/.test(AL),
-         "★ 폰에서 켤 때는 음악이 끊길 수 있다고 먼저 묻는다");
+      /* [2026-09-30 콩] 폰 확인창은 뺐습니다 — 입장하면 이미 켜져 있어서.
+         (예전 검사: 폰에서 켤 때 confirm 으로 먼저 묻는다) */
+      ok(!/window\.isMobile[\s\S]{0,120}confirm\(/.test(AL), "★ 폰에서 확인창을 띄우지 않는다 (콩 2026-09-30)");
 
       /* ── 가이드에 설명이 있는가 ── */
       const G_AL = fs.readFileSync(DIR+"guide.html","utf8");
-      ok(/무음/.test(G_AL.slice(G_AL.indexOf('id="alive"'))),
-         "★ 접속 유지 가이드에 무음 방법이 적혀 있다");
+      ok(!/id="alive"/.test(G_AL) && !/접속유지 OFF/.test(G_AL),
+         "★ 가이드에 접속 유지 켜는 법이 남아 있지 않다 (2026-09-30 에 뺌)");
     }
 
     /* =====================================================================
@@ -5624,8 +7336,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/id: "music"[^}]*resize: true/.test(DK2), "BGM 판은 키를 조절할 수 있다");
       ok(/#dock-panel-music\{ width: min\(317px/.test(CS3),
          "BGM 판 폭 317px — 뽀모보다 10% 큼 (2026-08-13 볼륨 문제로 키움)");
-      ok(/#dock-panel-chat\{ width: min\(352px/.test(CS3), "★ 챗 폭 10% 줄임 (391→352)");
-      ok(/#dock-panel-chatty\{ width: min\(374px/.test(CS3), "★ 수다방 폭 10% 줄임 (416→374)");
+      ok(판폭(CS3, "dock-panel-chat") === 352, `★ 챗 폭 10% 줄임 (391→352) — 지금 ${판폭(CS3, "dock-panel-chat")}`);
 
       /* 연결 — 로드 자가진단·ORDER·규칙 */
       ok(/"script_music\.js":\s*"musicInit"/.test(HxM), "파일이 빠지면 자가진단이 잡는다");
@@ -5706,10 +7417,61 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
       /* ── 판 넘기기 (2026-08-13 · A안) ── */
       ok(/const PAGE_SIZE = 24/.test(FR), "★ 한 판에 24장이다");
-      ok(/all\.slice\(_page \* PAGE_SIZE, \(_page \+ 1\) \* PAGE_SIZE\)/.test(FR),
-         "★ 판은 시간순 자동 배정 — 시들면 뒤 판이 앞으로 저절로 당겨 붙는다");
-      ok(/_page = pageCount\(\) - 1;\s*\/\/ 새 쪽지는 맨 끝 판/.test(FR),
-         "★ 붙이면 새 쪽지가 붙은 맨 끝 판으로 데려다준다");
+      /* =====================================================================
+         🧷 쪽지는 붙인 판에 머문다 (2026-09-18 — 콩)
+         ---------------------------------------------------------------------
+         예전에는 쪽지를 시간순 한 줄로 세워 24장씩 잘라 판을 만들었습니다
+         (all.slice). 그래서 앞쪽 한 장이 시들면 **뒤의 모든 쪽지가 한 칸씩
+         당겨져** 판을 넘나들었고, x·y 는 그대로라 남의 쪽지와 겹쳤어요.
+         콩의 말 — "처음 자리 잡아 둔 게 소용이 없어져."
+
+         이제 쪽지마다 제 판 번호(pg)를 답니다.
+         ★★★ 아래 두 검사가 그 핵심입니다. 다시 slice 로 되돌리면
+           같은 불편이 그날로 돌아옵니다.
+         ===================================================================== */
+      ok(!/all\.slice\(_page \* PAGE_SIZE/.test(FR),
+         "★★★ 쪽지를 시간순으로 잘라 판을 만들지 않는다 (앞 장이 시들면 뒤가 전부 당겨지던 방식)");
+      ok(/function 판이름들\(\)/.test(FR) && /const roots = 판의쪽지\(_page\);/.test(FR),
+         "★★★ 판은 **쪽지가 달고 있는 번호(pg)** 로 묶는다 — 빈자리는 빈자리로 남는다");
+      ok(/s\.add\(n\.pg == null \? 0 : n\.pg\)/.test(FR) &&
+         /\[\.\.\.s\]\.sort\(\(a, b\) => a - b\)/.test(FR),
+         "★★★ 쪽지가 하나도 없는 판은 목록에서 빠진다 → 판이 통째로 없어지고 뒤 판이 앞당겨진다");
+      ok(/async function 판번호채우기\(\)/.test(FR) && /await 판번호채우기\(\);/.test(FR),
+         "★★★ pg 가 없던 옛 쪽지에 **지금 보이는 자리 그대로** 번호를 메워 서버에 적는다 (머릿속으로만 세면 다음에 또 밀립니다)");
+      ok(/Math\.floor\(i \/ PAGE_SIZE\)/.test(FR),
+         "★★ 그 메우기는 시간순 24장씩 — 고치기 전과 똑같은 자리라 화면이 안 튄다");
+      ok(/note\.pg = 새판 \?/.test(FR) && /const 꽉참 = 판의쪽지\(_page\)\.length >= PAGE_SIZE;/.test(FR),
+         "★★★ 새 쪽지는 **지금 보고 있는 판**에 붙는다 (꽉 찬 판이면 새 판을 연다)");
+      ok(/if \(새판\) _page = pageCount\(\) - 1;/.test(FR),
+         "★★ 그래서 붙인 뒤에도 보던 판에 그대로 머문다 (새 판을 연 경우만 옮겨 간다)");
+
+      /* ── 실제 숫자로 — 판이 통째로 비면 뒤가 앞당겨지는가 ── */
+      {
+        const 판이름들 = (ns) => {
+          const st = new Set();
+          ns.forEach(n => { if (!n.parent) st.add(n.pg == null ? 0 : n.pg); });
+          return [...st].sort((a, b) => a - b);
+        };
+        const 판의쪽지 = (ns, i) => {
+          const k = 판이름들(ns);
+          return k.length ? ns.filter(n => !n.parent && (n.pg == null ? 0 : n.pg) === k[i]) : [];
+        };
+        let 쪽지 = [];
+        for (let p = 0; p < 3; p++) for (let i = 0; i < 24; i++) 쪽지.push({ pg: p, i });
+        ok(판이름들(쪽지).length === 3, "★ 세 판 × 24장이면 판이 셋");
+
+        // 0번 판에서 스무 장이 시듦 — 판 수는 그대로, 1·2번 판은 안 흔들린다
+        쪽지 = 쪽지.filter(n => !(n.pg === 0 && n.i < 20));
+        ok(판이름들(쪽지).length === 3 && 판의쪽지(쪽지, 0).length === 4,
+           "★★★ 일부만 시들면 **빈자리만 생기고** 판 수는 그대로 (뒤 쪽지가 안 당겨진다)");
+        ok(판의쪽지(쪽지, 1).every(n => n.pg === 1) && 판의쪽지(쪽지, 1).length === 24,
+           "★★★ 그 사이 2번 판 쪽지는 한 장도 자리를 안 옮겼다");
+
+        // 0번 판이 통째로 사라짐 — 판이 하나 줄고 뒤 판이 앞당겨진다
+        쪽지 = 쪽지.filter(n => n.pg !== 0);
+        ok(판이름들(쪽지).length === 2 && 판의쪽지(쪽지, 0)[0].pg === 1,
+           "★★★ 한 판이 다 비면 그 판이 통째로 없어지고 뒤 판이 첫 판이 된다 (번호만 당겨지고 배치는 그대로)");
+      }
       ok(/_page = pageCount\(\) - 1;\s*\/\/ 열면 맨 끝 판/.test(FR),
          "열면 최신 판부터 보인다");
       const HxF = fs.readFileSync(DIR+"index.html","utf8");
@@ -5758,6 +7520,24 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
 
       ok(/card-row-break/.test(CSF), "줄바꿈 띠 CSS 가 있다");
+
+      /* ★★★ [사고 2026-09-19 — 콩 "줄 사이 간격이 달라 보여"]
+         ---------------------------------------------------------------------
+         줄바꿈 띠는 키가 0 이라 안 보이지만 flex 에게는 **한 줄**입니다.
+         줄 간격을 gap 으로 주면
+             윗줄 ─gap─ [안 보이는 띠] ─gap─ 아랫줄
+         처럼 **두 번** 들어가, 그 자리만 간격이 두 배가 됩니다.
+         카드가 7·7·1 로 떨어지는 날에만 띠가 끼니 어떤 날은 멀쩡하고
+         어떤 날은 벌어져 더 헷갈렸어요.
+         그래서 줄 사이는 gap 이 아니라 **카드의 아래 여백**이 맡습니다. */
+      ok(/\.dock-mode \.user-cards-grid\{ row-gap: 0; \}/.test(CSF),
+         "★★★ 줄 사이를 row-gap 으로 주지 않는다 (안 보이는 줄바꿈 띠가 간격을 한 번 더 먹습니다)");
+      ok(/\.dock-mode \.user-cards-grid > \*\{[^}]*margin-bottom: calc\(var\(--cards-gap, 12px\) \+ 8px\);/s.test(CSF),
+         "★★★ 줄 사이는 카드의 아래 여백이 맡는다 — 키 0 · 여백 0 인 띠는 자리를 안 차지한다");
+      ok(/\.dock-mode \.user-cards-grid > \.card-row-break\{[^}]*margin: 0;/s.test(CSF),
+         "★★ 띠의 여백은 0 이다 (여기에 여백이 붙으면 다시 두 배가 됩니다)");
+      ok(/\.user-cards-grid\{ gap: calc\(var\(--cards-gap, 12px\) \+ 8px\); \}/.test(CSF),
+         "★ 좌우 간격(column-gap)은 예전 그대로다");
       ok(/window\.fixLonelyCard\?\.\(\)/.test(fs.readFileSync(DIR+"script_share.js","utf8")),
          "★ 공유 카드가 끼어들 때도 다시 잰다");
       ok(/\.music-player-slot\{[^}]*border-radius: 0/s.test(CSF),
@@ -5804,9 +7584,32 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(!/function musicDefaultH/.test(MU2),
          "★ '영상까지만 열기' 기본은 철거됐다 (처음 여는 사람이 길을 잃는다)");
       const DK3 = fs.readFileSync(DIR+"script_dock.js","utf8");
-      ok(/id: "music"[^}]*size: 0\.72/.test(DK3),
-         "★ 기본 키는 리스트·입력칸까지 다 보이는 높이다");
-      ok(/pid === "music" \? 150 : baseH\(pid\)/.test(DK3),
+      /* ★★★ [사고 2026-08-22 — 콩 신고 "사람들이 리스트를 못 찾아"]
+         여기 예전엔 `size: 0.72` 라고 **값을 적어** 두고 "리스트까지 다
+         보이는 높이" 라고 이름 붙였습니다. 그런데 0.72(=310px)로는
+         리스트에 남는 높이가 **0px** 이었어요 — 한 줄도 안 보였습니다.
+         **값은 못 박았는데 뜻은 못 박은 것**이라, 검사가 통과하면서도
+         정작 하려던 일은 안 되고 있었습니다.
+
+         ★ 그래서 값 대신 **셈**을 박습니다. 판 안쪽에서 고정으로 먹는
+           높이를 빼고, 곡이 **다섯 줄 이상** 남는지 봅니다. 영상 비율이나
+           볼륨 줄을 손대면 이 검사가 먼저 걸려요.
+         ★ 교훈: "이 값이면 될 것" 이라고 이름 붙이지 말고, **되는지를
+           세어 보세요.** 이름은 틀려도 아무 소리를 안 냅니다. */
+      {
+        const 폭 = 317;                       // #dock-panel-music
+        const 안폭 = 폭 - 24;
+        const 영상 = Math.round(안폭 * 9 / 16) + 8;   // 16:9 + margin-bottom
+        const 고정 = 33 /*판 머리말*/ + 영상 + 28 /*볼륨 줄*/ + 48 /*곡 추가 칸*/;
+        const 구역머리 = 28, 한줄 = 29;
+        const size = Number((DK3.match(/id: "music"[^}]*?size: ([\d.]+)/) || [])[1] || 0);
+        const 높이 = Math.round(430 * size);
+        const 줄수 = Math.floor((높이 - 고정 - 구역머리) / 한줄);
+        ok(줄수 >= 5,
+           `★★★ 기본 키에 곡이 다섯 줄 이상 보인다 — 지금 ${높이}px 에서 ${줄수}줄` +
+           ` (고정으로 먹는 것 ${고정}px: 머리말 33 · 영상 ${영상} · 볼륨 28 · 추가칸 48)`);
+      }
+      ok(/pid === "music" \? 150 : Math\.round\(baseH\(pid\)/.test(DK3),
          "★ BGM 만 150px 까지 줄일 수 있다 (영상만 남기는 쓰임)");
       ok(/if \(d\.resize\) setH\(pid, loadH\(pid\)\)/.test(DK3),
          "줄여 둔 키는 다음에 열 때도 그대로다");
@@ -5831,8 +7634,26 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const RT6 = fs.readFileSync(DIR+"script_realtime.js","utf8");
       ok(/prev\.nicks\.every\(\(n, i\) => n === orderedNicks\[i\]\)/.test(RT6),
          "★ 멤버 구성이 같으면 바뀐 카드만 갈아 끼운다 (전체 innerHTML 금지)");
-      ok(/if \(p !== prev\.parts\[i\]\) domCards\[i\]\.outerHTML = p/.test(RT6),
+      ok(/if \(p !== prev\.parts\[i\]\) 카드갈아끼우기\(domCards\[i\], p\)/.test(RT6),
          "★ 안 바뀐 카드의 img 는 살아 있다 (그래서 안 깜빡인다)");
+      /* ── [2026-10-03 콩 "프사가 여기저기 간헐적으로 깜빡여"] 사진이 창고(Storage)
+         주소가 된 뒤로는 **바뀐 카드**를 갈아 끼울 때도 새 <img> 가 한 박자 비었다.
+         ⏱ 작업시간이 1분마다 카드마다 제각각 바뀌니 여기저기서 하나씩 깜빡였다.
+         → 주소가 같으면 옛 <img> 를 새 카드에 옮겨 심는다. */
+      ok(/function 프사옮겨심기\(옛img, 새카드\)[\s\S]{0,500}새img\.replaceWith\(옛img\)/.test(RT6) &&
+         /if \(옛img && 옛img\.getAttribute\("src"\) === 주소\) \{ 새img\.replaceWith\(옛img\); return; \}/.test(RT6),
+         "★★ 바뀐 카드도 프사 주소가 같으면 옛 <img> 를 옮겨 심는다 (창고 주소라 새 img 는 한 박자 빈다)");
+      /* 2차 (같은 날) — ① <template> 은 다른 문서라 옮겨 심는 순간 사진을 다시 받는다
+         (크로미움 ImageLoader::ElementDidMoveToNewDocument) → 같은 문서의 div 로.
+         ② src 가 붙은 새 <img> 는 만드는 순간 받기 시작한다 → data-src 로 지어 두고
+            옮겨 심지 못할 때만 src 를 켠다. */
+      ok(/const 틀 = document\.createElement\("div"\);\s*틀\.innerHTML = 프사src끄기\(html\.trim\(\)\);/.test(RT6) &&
+         !/document\.createElement\("template"\)[\s\S]{0,200}프사옮겨심기/.test(RT6),
+         "★★★ 새 카드는 <template> 이 아니라 같은 문서의 div 에 짓는다 (template 은 다른 문서라 사진을 다시 받는다)");
+      ok(/const 주소 = 새img\.dataset\.src;/.test(RT6) && /새img\.removeAttribute\("data-src"\);\s*새img\.src = 주소;/.test(RT6),
+         "★★ 새 카드의 프사는 data-src 로 지어 두고, 옮겨 심지 못할 때만 src 를 켠다 (만드는 순간 받는 걸 막음)");
+      ok(/list\.innerHTML = 프사src끄기\(html\);\s*list\.querySelectorAll\(":scope > \.user-card:not\(\.share-card\)"\)\.forEach\(c => \{\s*프사옮겨심기\(옛프사\[c\.dataset\.cardNick\], c\);/.test(RT6),
+         "★ 멤버 구성이 바뀌어 통째로 갈 때도 닉으로 찾아 옮겨 심는다");
       ok(/decoding="sync"/.test(RT6) && !/card-avatar has-photo[^>]*loading="lazy"/.test(RT6),
          "★ 프사는 다 풀고 나서 내보낸다 (빈 칸 먼저 그리는 사파리 대비)");
 
@@ -5956,8 +7777,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 이미지 주소는 그림으로 펼친다 (jpg·png·gif·webp·avif)");
       ok(CH2.indexOf("escapeHtml(text)") < CH2.indexOf("linkifyEscaped(withBr)"),
          "★ 이스케이프가 먼저다 (주입 차단은 그대로)");
-      ok(/onerror="this\.parentNode\.textContent=this\.src"/.test(CH2),
-         "★ 죽은 그림은 글자 링크로 되돌아간다 (textContent 라 주입 없음)");
+      /* [2026-09-11] 죽은 그림 자리를 **안내 글**로 바꿨습니다.
+         🖼 그림 보내기가 생기면서, 창고에서 7일 뒤 지워진 그림이 주소
+         글자로 되돌아가면 "이게 뭐지" 가 됩니다. 왜 안 보이는지 적어 줘요.
+         ★ 여전히 textContent 라 주입 걱정은 없습니다. */
+      ok(/onerror="this\.parentNode\.className='msg-img-gone';this\.parentNode\.textContent='🖼 기간이 지나 사라진 그림이에요'"/.test(CH2),
+         "★ 죽은 그림은 안내 글로 바뀐다 (textContent 라 주입 없음)");
       ok(/rel="noopener noreferrer"\s*\n?\s*><img class="msg-img"/.test(CH2),
          "누르면 원본이 새 탭에 (noopener)");
       ok(/\.msg-img\{[^}]*max-height: 260px/s.test(CSSK),
@@ -6004,9 +7829,9 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 나무는 느긋하게 읽는다 (core 보다 먼저 실려서 AppStore 가 아직 없다)");
 
       /* ④ 걷어내기 */
-      ok(/dock-pill-chatty/.test(SO) && /dock-pill-pub/.test(SO) && /alive-btn/.test(SO),
-         "★ 수다방·품평·접속유지를 걷어낸다");
-      ok(/body\.solo-mode \[data-dock="chatty"\]/.test(CSS_S),
+      ok(/dock-pill-pub/.test(SO) && !/"alive-btn"/.test(SO),
+         "★ 수다방·품평을 걷어낸다 (접속유지 버튼은 본편에서도 사라져 목록에서 뺌)");
+      ok(/body\.solo-mode \[data-dock="pub"\]/.test(CSS_S),
          "화면에서도 한 번 더 막는다 (그리는 쪽이 되살리는 경우가 있다)");
       ok(/FOREST_NO_WITHER/.test(SO) &&
          /if \(window\.FOREST_NO_WITHER\) return;/.test(fs.readFileSync(DIR+"script_forest.js","utf8")),
@@ -6058,11 +7883,28 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/DIL_NEED_ATT = 5/.test(AD) && /DIL_NEED_5H = 3/.test(AD) &&
          /DIL_5H_MS = 5 \* 60 \* 60 \* 1000/.test(AD),
          "★ 기준 — 출석 5일↑ + 5시간 작업일 3일↑ (콩이 정함)");
-      ok(/s\.s === "writing" \|\| s\.s === "focus"/.test(AD),
-         "★ '작업'은 Write+Job 만 센다 (카드의 작업시간과 같은 셈)");
-      ok(/const best = \{\}/.test(AD.slice(AD.indexOf("async function workMsOf"),
-                                           AD.indexOf("async function workMsOf") + 700)),
-         "중복 구간 흉터를 돋보기와 같은 규칙으로 거른다");
+      /* [고침 2026-09-23 — 통신량 점검]
+         예전엔 사람마다 × 날마다 timeSegs 를 열어 **337번** 읽었습니다.
+         관리자 페이지 통신량의 73% 가 이 단추 하나였어요.
+         이제는 방 공개 선반 worktime/{날} 을 이레치 일곱 번만 읽습니다.
+         무게 치기·중복 구간 거르기는 저쪽(script_timelog.js workSum)에서
+         이미 끝나서 올라오므로, "손으로 더하지 않는다"는 약속은 그대로입니다. */
+      const ADnc = AD.replace(/\/\*[\s\S]*?\*\//g, "");
+      ok(/db\.ref\(`worktime\/\$\{dk\}`\)/.test(ADnc),
+         "★ '작업'은 카드의 작업시간과 같은 셈으로 (방 공개 선반 worktime 그대로)");
+      ok(/DIL_5H_MIN = DIL_5H_MS \/ 60000/.test(ADnc),
+         "★ 5시간 문턱은 한 군데서만 — 분으로 견주되 값은 같다");
+      ok(!/s\.s === "writing" \|\| s\.s === "focus"/.test(ADnc),
+         "★★ 예전처럼 상태를 손으로 견주지 않는다 (📓multiT 를 빠뜨리는 자리)");
+      {
+        const i = ADnc.indexOf("async function runDiligent");
+        const 성실몸 = i < 0 ? "" : ADnc.slice(i, i + 2000);
+        ok(i > 0 && !/timeSegs/.test(성실몸) && !/async function workMsOf/.test(ADnc),
+           "★★★ 성실 멤버는 사람마다 timeSegs 를 열지 않는다 (337번 → 7번)");
+        ok(/days\.map\(async dk =>/.test(성실몸) &&
+           !/Object\.entries\(attByNick\)\.map\(async/.test(성실몸),
+           "★★ 읽는 횟수가 사람 수를 따라 늘지 않는다 (이레 × 2 로 고정)");
+      }
       const HxS = fs.readFileSync(DIR+"index.html","utf8");
       /* [고침 2026-08-18] 뒤에 있던 "좁아지면 보여줄 창"이 철거돼서,
          그것과의 앞뒤 대신 **채팅 탭 안에 있는가**로 봅니다 */
@@ -6109,7 +7951,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 프로필 탭일 때만 설정 창이 1188px 로 넓어진다 (세 칸, 2026-08-15 10% 확장)");
       ok(/grid-template-columns: 1fr 1fr 1fr/.test(CSP),
          "★ 세 칸이 같은 너비다 (2026-08-14 콩)");
-      ok(/\.stk-card\{[^}]*width: 214px/s.test(CSP),
+      ok(/\.stk-card\{[^}]*width: var\(--card-w, 214px\)/s.test(CSP),
          "★ 배치 카드가 실물 크기다 (여기서 놓은 그대로 진짜 카드에)");
       /* 2차 재수술 — 찐 카드 복제 */
       ok(/cloneNode\(true\)/.test(PF4) && /data-card-nick/.test(PF4),
@@ -6163,6 +8005,66 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 고른 배경에서 읽히는 글자색을 만들어낸다 (아무 색이나 골라도 안 묻힌다)");
       ok(/dataset\.dirty/.test(PF2),
          "★ 만진 자리만 색을 저장한다 (색 우물 기본값이 저장되는 사고 방지)");
+
+      /* ─────────────────────────────────────────────────────────────
+         🌙 다크에서 닉네임 건져 올리기 (2026-08-22 — 콩이 고른 B안)
+
+         값을 못 박지 않고 **뜻**을 못 박습니다. 문턱 숫자를 소스에서
+         읽어 와, 그 문턱을 지킨 색이 정말로 어두운 판에서 읽히는지
+         360가지 색상 전부에 대해 계산해 봅니다.
+         ───────────────────────────────────────────────────────────── */
+      {
+        ok(/function hexToHsl/.test(PF2), "닉네임 색을 HSL 로 풀어 본다");
+        ok(/function 읽히는색/.test(PF2), "화면에 찍을 색을 따로 만든다");
+        ok(/data-is-dark"\) === "true"/.test(PF2),
+           "★ 다크 테마일 때만 손댄다 (밝은 테마는 고른 색 그대로)");
+        ok(/읽히는색\(nickColorOf\(nick\)\)/.test(PF2),
+           "★ 새로 그리는 말풍선이 보정된 색을 쓴다");
+        ok(/읽히는색\(nickColorOf\(el\.dataset\.nameOf\)\)/.test(PF2),
+           "★ 이미 그려진 말풍선도 다시 칠할 때 보정된 색을 쓴다");
+        {
+          const UI9 = fs.readFileSync(DIR+"script_ui.js","utf8");
+          const 몸 = UI9.slice(UI9.indexOf("function applyTheme"),
+                              UI9.indexOf("function renderThemePalette"));
+          ok(/window\.refreshChatNickColors\?\.\(\)/.test(몸.replace(/\/\*[\s\S]*?\*\//g, "")),
+             "★★ 테마를 바꾸면 이미 뜬 말풍선도 다시 칠한다 (안 부르면 새 말풍선만 밝아진다)");
+        }
+
+        const 알맹이 = PF2.replace(/\/\*[\s\S]*?\*\//g, "");
+        const mL = 알맹이.match(/닉_최소밝기\s*=\s*(\d+)/);
+        const mS = 알맹이.match(/닉_최대채도\s*=\s*(\d+)/);
+        ok(!!mL && !!mS, "밝기·채도 문턱이 이름 붙은 값으로 적혀 있다");
+        if (mL && mS) {
+          const Lmin = Number(mL[1]), Smax = Number(mS[1]);
+          const hsl2rgb = (h, s, l) => {
+            h /= 360; s /= 100; l /= 100;
+            if (s === 0) return [l, l, l];
+            const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+            const f = t => { if (t < 0) t += 1; if (t > 1) t -= 1;
+              if (t < 1/6) return p + (q - p) * 6 * t;
+              if (t < 1/2) return q;
+              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+              return p; };
+            return [f(h + 1/3), f(h), f(h - 1/3)];
+          };
+          const 상대밝기 = ([r, g, b]) => {
+            const c = v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4);
+            return .2126 * c(r) + .7152 * c(g) + .0722 * c(b);
+          };
+          /* 다크 테마 판 색 — applyTheme 의 rgba(22,24,28,.70) 이 어두운
+             바탕 위에 얹힌 자리. 넉넉하게 가장 어두운 쪽으로 잡습니다. */
+          const 판 = 상대밝기([22/255, 24/255, 28/255]);
+          let 최악 = 99, 최악색상 = -1;
+          for (let h = 0; h < 360; h++) {
+            const 비 = (상대밝기(hsl2rgb(h, Smax, Lmin)) + .05) / (판 + .05);
+            if (비 < 최악) { 최악 = 비; 최악색상 = h; }
+          }
+          ok(최악 >= 4.5,
+             `★★★ 어떤 색을 골라도 어두운 판에서 읽힌다 — 가장 불리한 색상(${최악색상}도)에서 대비 ${최악.toFixed(2)}:1 (문턱 밝기 ${Lmin}% · 채도 ${Smax}%, 4.5:1 이 기준)`);
+          ok(Smax <= 70,
+             "★ 채도를 눌러 형광펜처럼 뜨지 않게 한다 (밝히기만 하면 눈이 아프다)");
+        }
+      }
       const RT3 = fs.readFileSync(DIR+"script_realtime.js","utf8");
       ok(/decoStickerHtml\?\.\("a", stk\.a, stkC\.a, stkS, stkP\.a\)/.test(RT3),
          "★ 카드가 자리별 색·모양·좌표를 넘긴다");
@@ -6234,6 +8136,153 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/const NONE = ""/.test(WT_CODE), "★ 기본은 아무것도 안 붙은 상태다");
       ok(!/DEFAULT_TAG/.test(WT_CODE), "기본값으로 원고를 붙이던 자리가 없다");
       ok(/data-worktag-val=""/.test(WT), "붙인 걸 다시 뗄 수 있다 [떼기]");
+      /* 🚨 [뒤집음 2026-08-30 — 콩] 비상 스티커를 모두에게 열었습니다 —
+         "상태표 리페어가 있으니까!!" 방장 전용 표시는 REPAIR 하나로 충분.
+         고를수있나() 장치 자체는 되돌릴 때 쓰라고 남겨 둡니다. */
+      ok(/\{ v: "sos",\s*emoji: "🚨", label: "비상" \}/.test(WT_CODE) &&
+         !/"sos"[^\n]*방장만/.test(WT_CODE),
+         "★★ 🚨 비상은 누구나 붙일 수 있다 (방장 전용은 이제 🛠️REPAIR 뿐)");
+      ok(/function 고를수있나/.test(WT_CODE),
+         "★ 거르는 장치는 남아 있다 (되돌리려면 방장만: true 한 조각이면 됩니다)");
+
+      /* =====================================================================
+       ⏲️ 대화 시각은 서버가 찍는다 (2026-08-30 — 콩 신고 "간발의 차 밀림")
+       ---------------------------------------------------------------------
+       비밀방·뽀모방은 그릴 때마다 time 으로 줄을 세웁니다. 그 time 을
+       Date.now()(각자 기기 시계)로 찍으면, 시계가 어긋난 사람의 글이
+       '과거'에 찍혀 먼저 온 글 위로 끼어들어요. 도장 찍는 자는 하나
+       (ServerValue.TIMESTAMP)여야 하고, 동률은 push 열쇠로 가릅니다.
+       ===================================================================== */
+      const SR9 = fs.readFileSync(DIR + "script_sroom.js", "utf8");
+      const PR9 = fs.readFileSync(DIR + "script_proom.js", "utf8");
+      [["비밀방", SR9, "sroom"], ["뽀모방", PR9, "proom"]].forEach(([이름, 소스, 노드]) => {
+        ok(/time: firebase\.database\.ServerValue\.TIMESTAMP/.test(소스),
+           `★★★ ${이름} 대화 시각은 서버가 찍는다 (기기 시계로 찍으면 줄이 엉킵니다)`);
+        ok(!new RegExp('ref\\("' + 노드 + '"\\)[\\s\\S]{0,200}?time: Date\\.now\\(\\)').test(소스),
+           `★★ ${이름} 보내기에 Date.now() 가 안 남아 있다`);
+        ok(/a\.time - b\.time \|\| String\(a\.id\)\.localeCompare\(String\(b\.id\)\)/.test(소스),
+           `★★ ${이름} 동률은 push 열쇠로 가른다 (그릴 때마다 줄이 안 뒤바뀌게)`);
+      });
+
+      /* =====================================================================
+         📋 주간 리포트 — weekly.html (2026-08-30 — 콩)
+         ---------------------------------------------------------------------
+         출석부와 같은 결의 "날짜 × 사람" 표. 관리자 페이지가 아니라 **모두가**
+         보는 자리라 따로 둡니다. 오픈카톡에 링크를 뿌릴 것이므로:
+           ★ 로그인해야 표가 그려집니다 (콩 지정 — 방 식구 확인 문 하나)
+           ★ **읽기만** 합니다. 여기서 서버에 한 글자도 쓰지 않아요
+         ===================================================================== */
+      {
+        const LT = fs.readFileSync(DIR + "weekly.html", "utf8");
+        ok(/signInWithEmailAndPassword/.test(LT) && /el\("board"\)\.style\.display = "block"/.test(LT),
+           "★★★ 로그인해야 표가 열린다 (콩: 다 같이 봐도 로그인은 하고)");
+        /* ★ 배열의 .push() 와 헷갈리지 않게 **ref 뒤의 쓰기**만 봅니다 */
+        ok(!/\bref\([^)]*\)[\s\S]{0,80}?\.(set|update|remove|transaction|push)\(/.test(LT),
+           "★★★ 읽기만 한다 — 서버에 쓰는 길이 한 줄도 없다");
+        ok(/범위\("wordlog", 첫, 끝\)/.test(LT),
+           "★★ 글자수는 보는 주만 받는다");
+        ok(/function nickToEmail/.test(LT) &&
+           /"n" \+ hex \+ "@themagam\.local"/.test(LT),
+           "★★ 본편과 같은 닉→계정 셈법이다 (다르면 같은 계정에 안 닿습니다)");
+        ok(/localeCompare\(b, "ko"\)/.test(LT), "★ 가나다순으로 세운다");
+        /* ── 👥 고른 사람 탭 (2026-09-09 — 콩 "모임 두 개가 겹치는 멤버만
+           따로 출석을 보고 싶어") ── */
+        ok(/data-tab="pick"/.test(LT) && /if \(_탭 === "pick"\) return 고른사람그리기\(날들\);/.test(LT),
+           "★★ 👥 고른 사람 탭이 있다");
+        ok(/const PICK_KEY = "tm:weeklyPick";/.test(LT) &&
+           /localStorage\.setItem\(PICK_KEY, JSON\.stringify\(\[\.\.\._고름\]\)\)/.test(LT),
+           "★★★ 고른 이름은 이 기기에만 남는다 — 서버에 안 올라간다 (남의 화면에 내 명단이 비치면 안 됨)");
+        ok(/firebase\.database\(\)\.ref\("nickOwner"\)\.once\("value"\)/.test(LT) &&
+           /if \(_명단\) return _명단;/.test(LT),
+           "★★ 방 명단(nickOwner)은 한 번만 받는다 — 이 주에 안 나온 사람도 골라야 하니까");
+        ok(/const r = \(_att\[key\] \|\| \{\}\)\[닉\] \|\| \{\};/.test(LT),
+           "★★ 출석 탭과 같은 잣대(attendance)를 쓴다 — 셈을 두 벌 두지 않는다");
+        ok(/후보 = 명단\.length \? 명단/.test(LT),
+           "★ 명단을 못 받으면 이 주에 나온 사람이라도 고르게 한다");
+        ok(/으뜸\[key\] === n \? " top"/.test(LT) && /td\.top\{/.test(LT),
+           "★ 그날 제일 많이 쓴 칸에 색이 든다");
+        ok(/줄합\[닉\] === 주으뜸 \? " top"/.test(LT) && /td\.sum\.top\{/.test(LT),
+           "★★ 합계 열의 1등도 같은 표시를 받는다 (콩 2026-08-30)");
+        ok(/<tfoot>/.test(LT) && /class="n sum\$\{왕\}"/.test(LT),
+           "★★ 방 전체 합계 줄과 사람별 합계 칸이 다 있다");
+        ok(/tr class="cnt-row"/.test(LT) && /n \? n \+ "명"/.test(LT),
+           "★★ 그날 쓴 사람 수 줄이 있다 (콩 — 한눈에 보이라고)");
+        ok(/인원 \+= `<td class="n cnt">\$\{사람\.length\}명<\/td>`/.test(LT),
+           "★★★ 주간 인원은 날마다 더한 값이 아니라 **이 주에 쓴 사람 수**다 (더하면 사흘 쓴 사람이 셋이 됩니다)");
+        ok(/그주월요일\(new Date\(\)\) <= _월요일/.test(LT),
+           "★ 오지 않은 주로는 못 넘어간다");
+        ok(!/apiKey: "AIzaSyD1YV5Klg/.test(LT),
+           "★★ 옛 파이어베이스(findpw 의 것)를 안 쓴다 — 지금 방의 것이어야 합니다");
+
+        /* 📅 출석 탭 (2026-08-30 — 콩 "크롬의 탭처럼") */
+        ok(/data-tab="wc"/.test(LT) && /data-tab="att"/.test(LT) && /_탭 = b\.dataset\.tab/.test(LT),
+           "★★ 탭으로 글자수↔출석을 갈아탄다");
+        /* ★★★ [2026-08-30 — 콩 "다운로드 늘어나는 거 아냐?"]
+           처음엔 네 노드를 **통째로** 받았습니다. 그러면 열 때마다 방의
+           모든 날이 내려와요 — 날이 갈수록 커지고, 링크가 오픈카톡에
+           도니 여는 횟수도 많습니다. 보는 주의 이레만 끊어 받습니다. */
+        ok(/orderByKey\(\)\.startAt\(첫날\)\.endAt\(끝날\)/.test(LT),
+           "★★★ 보는 주의 이레만 받는다 (통째로 받으면 날이 갈수록 무거워집니다)");
+        ok(/if \(_캐시\[열쇠\]\) return _캐시\[열쇠\];/.test(LT),
+           "★★ 한 번 받은 주는 손에 들고 있는다 (탭을 갈아타면 통신 0)");
+        ok(!/ref\("wordlog"\)\.once|ref\("attendance"\)\.once|ref\("worktime"\)\.once|ref\("roomStat"\)\.once/.test(LT),
+           "★★★ 노드를 통째로 받는 길이 남아 있지 않다");
+        ok(/Promise\.all/.test(LT), "★ 네 노드를 함께 받는다 (한 박자로)");
+        ok(/function 주간틀/.test(LT) && /function 머리줄/.test(LT),
+           "★ 주간 셈과 날짜 머리줄을 두 탭이 함께 쓴다 (한 곳만 고치면 둘 다 맞습니다)");
+        ok(/Number\(r\.firstAt \|\| r\.at\)/.test(LT),
+           "★★ 관리자 출석부와 같은 잣대다 (firstAt 없으면 at)");
+
+        /* ⏱️ 작업 시간 탭 — 공개 칸 worktime (2026-08-30 — 콩)
+           원본 timeSegs 는 users/{닉} 아래라 남이 못 읽습니다 (옆에 프로필·
+           할 일이 함께 살아서 열 수 없어요). 그래서 **합산된 분(分)만**
+           따로 적어 공개합니다 — 글자수(wordlog)와 같은 결. */
+        const TL = fs.readFileSync(DIR + "script_timelog.js", "utf8");
+        const R9 = 규칙읽기();
+        ok(/data-tab="wt"/.test(LT) && /function 작업시간그리기/.test(LT),
+           "★★ 작업 시간 탭이 있다");
+        ok(/ref\(`worktime\/\$\{day\}\/\$\{myNick\}`\)\.set\(분\)/.test(TL),
+           "★★★ 합산된 분만 공개 칸에 적는다 (상세 구간은 계속 잠근 채)");
+        ok(/const 분 = Math\.round\(workSum\(합\) \/ 60000\)/.test(TL),
+           "★★ 방 안과 같은 셈법이다 (workSum — WRITE 전액 + JOB·multiT 70%)");
+        /* [고침 2026-09-21] 유효 출석이 들어오면서 한 날에 두 숫자(작업 분 ·
+           머문 분)를 적게 됐습니다. continue 로 빠져나가면 뒤엣것까지 건너뛰어서
+           if 안에 넣는 모양으로 바뀌었어요 — 뜻("안 바뀌었으면 안 쓴다")은 그대로입니다. */
+        ok(/if \(_공개보낸\[day\] !== 분\) \{/.test(TL) &&
+           /if \(_머문보낸\[day\] === 머문\) continue;/.test(TL),
+           "★★ 안 바뀌었으면 안 쓴다 (분으로 반올림해 쓰기를 줄입니다 — 작업 분·머문 분 둘 다)");
+        ok(/await db\.ref\(`users\/\$\{myNick\}`\)\.update\(u\);[\s\S]{0,220}?공개시간올리기\(updates\)/.test(TL),
+           "★★★ 원본을 먼저 적고 공개 칸은 그 다음이다 (어느 쪽이 실패해도 원본이 진실)");
+        ok(R9.worktime && R9.worktime[".read"] === true &&
+           R9.worktime.$day.$nick[".write"].includes("nickOwner"),
+           "★★★ 보안규칙 — 읽기는 누구나, 쓰기는 본인 것만");
+        ok(R9.worktime.$day.$nick[".validate"].includes("newData.val() <= 1440"),
+           "★★ 하루는 1440분을 넘을 수 없다 (엉뚱한 값이 표를 망가뜨리지 않게)");
+
+        /* 📊 그래프 탭 (2026-08-30 — 콩 "관리자 그래프를 주별로 쪼개서 넷 한 번에") */
+        ok(/<title>더마감 — 주간 리포트<\/title>/.test(LT) && /📋 주간 리포트/.test(LT),
+           "★ 이름이 주간 리포트다");
+        ok(/data-tab="att"[^>]*>📅 출석[\s\S]{0,220}?data-tab="wt"[\s\S]{0,220}?data-tab="wc"[\s\S]{0,220}?data-tab="ch"/.test(LT),
+           "★★ 탭 차례가 출석 · 작업 시간 · 글자수 · 그래프 다 (콩 지정)");
+        ok(/let _탭 = "att"/.test(LT), "★ 처음 보이는 탭은 출석이다");
+        /* [뒤집음 2026-08-30 — 콩] 연 탭을 판과 같은 흰색으로 뒀더니
+           **비어 보여서 닫힌 것으로 읽혔습니다.** 눈은 '판과 이어졌나'
+           보다 '어느 쪽이 진하냐' 를 먼저 봅니다 → 연 탭이 짙습니다. */
+        ok(/\.tab\{[\s\S]{0,240}?background:var\(--panel\); color:var\(--dim\); opacity:\.75;/.test(LT) &&
+           /\.tab\.on\{[\s\S]{0,200}?background:var\(--fill\); color:var\(--deep\); opacity:1;/.test(LT),
+           "★★ 연 탭이 짙고 안 연 탭이 옅다 (반대로 두면 열린 탭이 닫힌 것처럼 보입니다)");
+        ok((LT.match(/꺾은선\("/g) || []).length === 3 && /function 시간대막대/.test(LT),
+           "★★ 그래프가 넷이다 (꺾은선 셋 + 시간대 막대 하나)");
+        ok(/범위\("roomStat", 첫, 끝\)/.test(LT) && /function 시간대막대/.test(LT),
+           "★★★ 시간대는 roomStat 으로 그린다 — 관리자 것이 쓰는 원본 구간(timeSegs)은 남이 못 읽는 자리입니다");
+        /* [바꿈 2026-08-30 — 콩] 2×2 → **한 줄에 하나씩 넉 줄.**
+           작으면 눈금이 답답해서, 폭을 다 쓰고 대신 납작하게(6:1) 잡았습니다. */
+        ok(/\.chs\{ display:grid; grid-template-columns:1fr;/.test(LT) &&
+           !/repeat\(2, minmax/.test(LT),
+           "★ 그래프는 한 줄에 하나씩 넉 줄이다");
+        ok(/const W = 900, H = 150/.test(LT),
+           "★★ 납작한 비율이다 (폭을 다 쓰면서 넷이 한 화면에 담기게)");
+      }
 
       /* ② [뒤집음 2026-08-09] 자정 초기화를 그만뒀습니다.
 
@@ -6488,7 +8537,16 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          "★ 가로세로를 따로 늘리지 않는다 (숫자 글자가 찌그러진다)");
       ok(/Math\.max\(1, \.\.\.pts\.map/.test(WC2),
          "★ 이레 내내 0 이어도 나누기가 터지지 않는다");
-      ok(/p\.v > 0 \?/.test(WC2), "0 인 날은 숫자를 적지 않는다");
+      /* [바꿈 2026-08-22 — 콩] 꺾은선에서 점과 숫자를 뺐습니다 ("흐름만").
+         주석에 남은 옛 코드에 속지 않게, 주석을 걷어내고 봅니다. */
+      {
+        const 알맹이 = WC2.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+        const 선 = 알맹이.slice(알맹이.indexOf("function lineChartHtml"),
+                              알맹이.indexOf("function lineChartHtml") + 2400);
+        ok(!/<circle/.test(선), "★ 한 달 꺾은선에 점을 찍지 않는다 (흐름만 본다)");
+        ok(!/wcl-num/.test(선), "★ 한 달 꺾은선에 숫자를 적지 않는다");
+        ok(/<polyline/.test(선), "★ 그래도 선은 그린다");
+      }
 
       /* 듣는 범위가 정말 두 보기를 다 덮는지 — 요일마다 달라지므로 열나흘을 돌려 봅니다 */
       {
@@ -6588,9 +8646,17 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(/if \(!h\) return/.test(SH2), "프로필 카드가 아직 없으면 손대지 않는다");
       ok(/addEventListener\("resize"[\s\S]{0,200}syncShareHeights/.test(SH2),
          "창 크기가 바뀌면 다시 잰다");
+      /* ★★★ [2026-09-07 — 콩 캡처] 가로형부터는 카드 한 장 한 장에 zoom 이
+         걸립니다. 화면 값에는 그 축소가 들어 있고 입히는 style.height 는
+         축소 전 값이라, 그 카드의 zoom 으로도 나눠 요소 자로 되돌려야
+         공유 카드 키가 맞습니다 (마당 배율 cardZoom 과는 따로 곱해짐). */
+      ok(/const 제배 = parseFloat\(getComputedStyle\(el\)\.zoom\) \|\| 1;\s*\n\s*h = Math\.max\(h, el\.getBoundingClientRect\(\)\.height \/ z \/ 제배\);/.test(SH2),
+         "★★★ 카드 한 장의 zoom 도 셈에 넣는다 (마당 배율만 나누면 공유 카드만 어긋남)");
+      ok(/window\.syncShareCardHeights\?\.\(\);/.test(fs.readFileSync(DIR+"script_ui.js","utf8")),
+         "★★ 카드 모양을 맞춘 **뒤에** 공유 카드 키를 다시 잰다 (자리 바뀌기 전 값이 남으면 공유 카드만 길어짐)");
 
       /* 카드 목록을 통째로 다시 그리면 공유 카드도 지워집니다 */
-      ok(/list\.innerHTML = html;[\s\S]{0,320}window\.renderShareCards\?\.\(\)/.test(RT2),
+      ok(/list\.innerHTML = 프사src끄기\(html\);[\s\S]{0,320}window\.renderShareCards\?\.\(\)/.test(RT2),
          "★ 카드를 다시 그린 뒤 공유 카드를 되끼운다");
     }
 
@@ -6751,8 +8817,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
            호박색이 박혀 있어 테마를 바꿔도 여기만 노랑이었고, 다크에서는
            숫자가 묻혔어요. 그 색에는 뜻이 없었으므로 포인트색으로 바꿨습니다.
            ★ 뜻 없는 색은 박아 넣지 말 것 — 그러면 다크 대비도 저절로 풀립니다. */
-        ok(/\.help-check\.is-on\{\s*border-color: var\(--accent-line\); color: var\(--accent\);/.test(원본),
-           "★★ 💡 아하 스티커가 테마 포인트색을 쓴다 (호박색을 박아 넣지 않는다)");
+        ok(/\.help-check\.is-on,\s*\n\.qna-heart\.is-on \{\s*border-color: var\(--accent-line\); color: var\(--accent\);/.test(원본),
+           "★★ 💡 아하 스티커가 테마 포인트색을 쓴다 (호박색을 박아 넣지 않는다) — Q&A ❤️ 도 같은 옷");
         /* ★ 같은 호박색이 📢 공지의 [고침] 딱지(.nt-tag-fix)에도 있는데,
            **거긴 분류 색이라 일부러 둔 것**입니다(새 기능=파랑 / 고침=호박).
            그래서 "어디에도 없다" 가 아니라 **표현 공부 판에 없다** 를 봅니다.
@@ -6769,8 +8835,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
            + (남은호박.length ? ` (${남은호박.length}곳)` : ""));
         /* ※ 🔗 참고 칩(보라)은 **일부러** 다른 색입니다 — "참고" 와 "SOS" 를
            눈으로 가르려는 것이라 포인트색으로 바꾸지 않았습니다. */
-        ok(/\.help-ref\{[\s\S]{0,140}?rgba\(140,120,200/.test(원본),
-           "★ 🔗 참고 칩은 보라를 지킨다 (뜻이 있는 색)");
+        ok(/\.help-ref,\s*\n\.qna-ref \{[\s\S]{0,140}?rgba\(140,120,200/.test(원본),
+           "★ 🔗 참고 칩은 보라를 지킨다 (뜻이 있는 색) — Q&A 도 같은 옷");
 
         ok(걸린것.length === 0,
            "★★★ 다크에서 묻힐 딱지가 없다 — 반투명 바탕 + 어두운 글자는 대비를 함께 둘 것"
@@ -6902,9 +8968,14 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
          동안 새로고침을 수십 번 하는데, 들어올 때마다 풀리면 그때마다
          입·퇴장 메시지가 뜨거든요(그 기능을 만든 이유가 그것).
          나머지(away·rest·빈값)는 예전 그대로 JOB 으로 시작합니다. */
-      ok(/if \(v === "writing" \|\| v === "focus"\) return v;/.test(DATA3)
-         && /if \(v === "repair"\) return v;\s*\n\s*return "focus";/.test(DATA3),
-         "★ away·rest·빈값은 모두 JOB 으로 시작한다 (WORK 를 안 눌러도 시간이 쌓이게)");
+      ok(/if \(String\(saved \|\| ""\) === "repair"\) return "repair";/.test(DATA3),
+         "★★ REPAIR 가 맨 앞에 있다 (고른 기본 상태보다 앞서야 안 풀린다)");
+      ok(/const 고른것 = getStartStatus\(\);\s*\n\s*if \(고른것\) return 고른것;/.test(DATA3),
+         "★★ 본인이 고른 기본 상태가 있으면 그것으로 (2026-08-23 콩)");
+      ok(/if \(v === "writing" \|\| v === "focus"\) return v;\s*\n\s*return "focus";/.test(DATA3),
+         "★ 안 고른 사람은 예전 그대로 — away·rest·빈값은 JOB 으로 시작한다");
+      ok(/const START_PICKS = \["writing", "focus", "multi"\];/.test(DATA3),
+         "★★★ 기본으로 걸 수 있는 것은 시간이 쌓이는 셋뿐 (BREAK·AWAY 를 걸면 시간이 안 쌓인다)");
       ok(!/return "rest"/.test(DATA3.slice(DATA3.indexOf("function _startStatus"),
                                            DATA3.indexOf("async function loadPersonalData"))),
          "BREAK 로 시작하던 옛 규칙이 남아 있지 않다");
@@ -7042,8 +9113,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       /* ② 구간 칸 이름이 맞는가 — 저장하는 쪽과 대조합니다 */
       ok(/= \{ s: normStatus\(status\), a, b: end \}/.test(TL),
          "구간은 { s, a, b } 로 저장된다");
-      ok(/seg\.s !== "writing" && seg\.s !== "focus"/.test(M),
-         "★ 모바일도 같은 칸 이름으로 읽는다 (틀리면 조용히 0 이 됩니다)");
+      ok(/ms \+= 작업ms\(seg\.s, Math\.max\(0, Number\(seg\.b \|\| 0\) - Number\(seg\.a \|\| 0\)\)\);/.test(M),
+         "★ 모바일도 같은 칸 이름·같은 셈으로 읽는다 (틀리면 조용히 0 이 됩니다)");
       ok(/Number\(seg\.b \|\| 0\) - Number\(seg\.a \|\| 0\)/.test(M),
          "★ 구간 길이도 같은 칸 이름으로 잰다");
 
@@ -7052,8 +9123,15 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         .match(/databaseURL: "([^"]+)"/) || [])[1];
       ok(!!url && M.includes(url), "★ 작업방과 같은 데이터베이스를 본다");
 
-      /* 접속 판정 규칙이 작업방과 같은가 */
-      ok(/DISCONNECT_GRACE_MS = 30 \* 60 \* 1000/.test(M), "끊김 유예가 작업방과 같다");
+      /* 접속 판정 규칙이 작업방과 같은가
+         ★★★ [고침 2026-08-25] 여기 **30분이 못 박혀 있었습니다.** 작업방이
+           0815 에 5분으로 줄었는데 이 검사는 그대로 통과했어요 — 30분이라는
+           **값**을 못 박았지 "작업방과 같은가" 라는 **뜻**을 못 박지 않아서.
+           덕분에 열흘 동안 폰과 작업방이 서로 다른 답을 냈습니다.
+           진짜 견주기는 아래 checkTimelog 쪽으로 옮겼습니다(두 파일에서
+           값을 뽑아 맞대 봅니다). 여기서는 "손으로 적힌 숫자가 아닌지"만. */
+      ok(/고침 2026-08-25/.test(M) && /같은 규칙\*\* 이어야 합니다|같은 규칙\*\*이어야 합니다/.test(M),
+         "★ 끊김 유예 옆에 '작업방과 같아야 한다'는 까닭이 적혀 있다");
       ok(/ONLINE_STALE_MS     = 12 \* 60 \* 60 \* 1000/.test(M), "고아 기록 기준이 작업방과 같다");
 
       /* 새 닉네임을 여기서 만들 수는 없어야 합니다 (도장 절차가 없으므로) */
@@ -7096,6 +9174,39 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(cnt > 0 && cols > 0 && 끝줄 !== 1,
          `스티커 ${cnt}개가 ${cols}칸에 놓이면 마지막 줄이 ${끝줄 || cols}개 (하나만 남지 않는다)`);
 
+      /* =====================================================================
+         ★★★ 판이 화면 밖으로 나가지 않는가
+              (2026-09-12 — 콩 "판 아래쪽이 잘려 보인다는 의견이 있어")
+         ---------------------------------------------------------------------
+         스티커가 쉰셋이 되며 5칸 판이 **784px** 로 자랐습니다. 세로 800px 이
+         안 되는 화면에서는 위에도 아래에도 못 들어가는데, 옛 셈은 "위가
+         좁으면 무조건 아래" 였어요 — 아래로 700px 넘게 잘려 나갔습니다.
+
+         ★ 만든 사람 화면(세로가 긴 아이맥)에서는 멀쩡해 보입니다. 그래서
+           **눈으로는 못 잡는 자리**예요. 아래 세 검사가 대신 봅니다.
+         ===================================================================== */
+      {
+        const CSs = fs.readFileSync(DIR + "styles.css", "utf8");
+        const 판 = (CSs.match(/\.sticker-pop\{[\s\S]*?\n\}/) || [""])[0];
+
+        ok(/max-height:\s*calc\(100dvh - 16px\)/.test(판) && /overflow-y:\s*auto/.test(판),
+           "★★★ 판은 화면보다 클 수 없고, 넘치면 속을 굴린다 (이 두 줄이 마지막 방패입니다)");
+        ok(/overscroll-behavior:\s*contain/.test(판),
+           "★ 판을 다 굴려도 뒤쪽 채팅이 따라 움직이지 않는다");
+        ok(/top = Math\.max\(8, Math\.min\(top, VH - h - 8\)\);/.test(SK),
+           "★★★ 위·아래 어디에 놓든 **마지막에 화면 안으로 끌어당긴다** (예전엔 아래로 밀려 나갔습니다)");
+        ok(/const 위칸 = r\.top \/ _z - 8;/.test(SK) && /\(h <= 위칸\)/.test(SK),
+           "★★ 위에 들어갈 때만 위로 올린다 (안 들어가는데 올리면 머리가 잘립니다)");
+
+        /* 넓은 화면에서는 칸을 늘려 짧게 폅니다 — 칸 수마다 마지막 줄을
+           다시 봅니다. 어느 하나라도 하나만 남으면 허전해요. */
+        const 넓은칸 = [...CSs.matchAll(/\.sticker-pop\{\s*grid-template-columns:\s*repeat\((\d+)/g)]
+          .map(m => Number(m[1]));
+        ok(넓은칸.length >= 2, "★★ 넓은 화면용 칸 수가 따로 있다 (5칸 열한 줄은 노트북에서 안 들어갑니다)");
+        넓은칸.forEach(c => ok(cnt % c !== 1,
+          `${c}칸으로 폈을 때도 마지막 줄이 ${cnt % c || c}개 (하나만 남지 않는다)`));
+      }
+
       /* ① 오가는 값이 짧은 글자인가 */
       ok(/\[\[스티커:\$\{id\}\]\]/.test(SK), "★ 보낼 때 짧은 표시만 적는다");
       ok(!/data:image/.test(SK), "★ 그림을 통째로 실어 보내지 않는다");
@@ -7130,7 +9241,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         const words = new Set();
         S.forEach(x => {
           words.add("/" + x.cmd);
-          if (x.cmdRe) (x.cmdRe.source.match(/[가-힣ㄱ-ㅎ]+/g) || []).forEach(w => words.add("/" + w));
+          /* ★ [2026-09-10] 한글만 뽑으면 "1빡" 이 "빡" 으로 반토막 납니다.
+             그러면 있지도 않은 /빡 을 적어 놓은 줄 알고 헛것으로 셌어요.
+             앞뒤 숫자까지 같이 뽑되, **한글이 한 글자는 있어야** 합니다 —
+             안 그러면 /ㅋ{1,12} 의 "1" "12" 까지 이름으로 세게 됩니다. */
+          if (x.cmdRe) (x.cmdRe.source.match(/[0-9]*[가-힣ㄱ-ㅎ][가-힣ㄱ-ㅎ0-9]*/g) || [])
+            .forEach(w => words.add("/" + w));
         });
         const hits = [...words].map(m => [m, S.filter(x => m === "/" + x.cmd || (x.cmdRe && x.cmdRe.test(m)))]);
         const 겹침 = hits.filter(([, a]) => a.length > 1).map(([m, a]) => `${m}→${a.map(x => x.id).join("/")}`);
@@ -7165,8 +9281,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const CSk = fs.readFileSync(DIR+"styles.css","utf8").replace(/\s*\{/g,"{");
       ok(/\.sticker-btn\{[^}]*position: absolute/.test(CSk),
          "단추가 입력칸 폭을 잡아먹지 않는다");
-      ok(/\.input-wrap #message\{[^}]*padding-right: 42px/.test(CSk),
-         "★ 글자가 단추 밑으로 들어가지 않게 오른쪽 여백을 준다");
+      /* [2026-09-11] 🖼 그림 단추가 🖍️ 왼쪽에 하나 더 붙어서 42 → 76px */
+      ok(/\.input-wrap #message\{[^}]*padding-right: 76px/.test(CSk),
+         "★ 글자가 단추 둘 밑으로 들어가지 않게 오른쪽 여백을 준다");
+      ok(/\.sticker-btn\.img-btn\{[^}]*right: 41px/.test(CSk),
+         "★ 🖼 는 🖍️ 왼쪽 한 칸에 선다 (둘이 안 겹친다)");
       ok(/script_sticker\.js/.test(fs.readFileSync(DIR+"build-single.py","utf8")),
          "단일파일 빌드 목록에도 있다");
     }
@@ -7182,7 +9301,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
         .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s*\{/g,"{");
       const blk = CSl.slice(CSl.indexOf(".share-live{"), CSl.indexOf("}", CSl.indexOf(".share-live{")));
       ok(!/background: rgba\(255,59,48/.test(blk), "★ 알약 전체를 빨갛게 칠하지 않는다");
-      ok(/\.share-live i\{[^}]*background: #FF3B30/.test(CSl), "빨강은 점에만 남는다");
+      /* [넓힘 2026-09-28 — 콩] 점이 **재생 삼각형**이 됐습니다. 삼각형은
+         테두리로 그리므로 빨강이 background 가 아니라 border-color 에 붙어요.
+         지키려던 뜻은 그대로입니다 — 빨강은 **작은 표시에만**, 상자에는 안 칠함. */
+      ok(/\.share-live i\{[^}]*(background: #FF3B30|border-color: transparent transparent transparent #FF3B30)/.test(CSl),
+         "빨강은 안쪽 작은 표시에만 남는다");
       /* 글자를 뺐으니 뜻은 다른 방법으로 남아야 합니다 */
       ok(/aria-label="공유 중"/.test(SH3) && /title="공유 중"/.test(SH3),
          "★ 글자를 빼도 뜻은 남는다 (마우스·화면 낭독기)");
@@ -7223,7 +9346,15 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const 한글 = {8:"여덟 개",9:"아홉 개",10:"열 개",11:"열한 개",12:"열두 개",
                     13:"열세 개",14:"열네 개",15:"열다섯 개",16:"열여섯 개",17:"열일곱 개",
                     18:"열여덟 개",19:"열아홉 개",20:"스무 개",21:"스물한 개",22:"스물두 개",
-                    23:"스물세 개",24:"스물네 개",25:"스물다섯 개"}[n];
+                    23:"스물세 개",24:"스물네 개",25:"스물다섯 개",26:"스물여섯 개",
+                    27:"스물일곱 개",28:"스물여덟 개",29:"스물아홉 개",30:"서른 개",
+                    31:"서른한 개",32:"서른두 개",33:"서른세 개",34:"서른네 개",
+                    35:"서른다섯 개",36:"서른여섯 개",37:"서른일곱 개",38:"서른여덟 개",
+                    39:"서른아홉 개",40:"마흔 개",41:"마흔한 개",42:"마흔두 개",
+                    43:"마흔세 개",44:"마흔네 개",45:"마흔다섯 개",46:"마흔여섯 개",
+                    47:"마흔일곱 개",48:"마흔여덟 개",49:"마흔아홉 개",50:"쉰 개",
+                    51:"쉰한 개",52:"쉰두 개",53:"쉰세 개",54:"쉰네 개",55:"쉰다섯 개",
+                    56:"쉰여섯 개",57:"쉰일곱 개",58:"쉰여덟 개",59:"쉰아홉 개",60:"예순 개"}[n];
       ok(!!한글 && MAN2.includes(`손그림 <b>${한글}</b>`),
          `가이드의 스티커 개수가 코드와 같다 (${n}개 = ${한글})`);
       ok(!/man-cmd">\/축하/.test(MAN2), "가이드에 없앤 명령이 남아 있지 않다");
@@ -7467,8 +9598,8 @@ function checkMonthLine() {
   ok(/async function myMonthTimeLineHtml/.test(TL), "이번 달 나의 작업 시간 꺾은선이 있다");
   ok(/loadSummary\(myNick, 오늘, 0/.test(TL),
      "★ 오늘 날짜만큼 거슬러 = 이번 달 1일부터 (새 읽기를 안 만든다)");
-  ok(/r\.totals\?\.writing \|\| 0\) \+ Number\(r\.totals\?\.focus \|\| 0\)/.test(TL),
-     "★★ Write + Job 만 센다 (카드 시계와 같은 기준)");
+  ok(/const ms = workSum\(r\.totals\);/.test(TL),
+     "★★ 카드 시계와 같은 기준으로 센다 (workSum 하나가 규칙을 안다)");
   ok(/window\.Wordcount\?\.lineChartHtml/.test(TL),
      "★ 그림은 글자수 쪽 것을 빌려 쓴다 (두 벌로 갈라지지 않게)");
 
@@ -7616,8 +9747,8 @@ function checkWorklog() {
   ok(/n\.hidden = \(c === "wc-memoline"\) \? 새탭 : \(새탭 && !적는탭\)/.test(WC),
      "★ 메모칸만 감춘다 (할 일 명령은 메모 탭 몫)");
   ok(/\.wl-ep\{/.test(CSS) && /\.wl-epadd\{/.test(CSS), "회차 줄 모양이 있다");
-  ok(/#dock-panel-wc\{ width: min\(352px/.test(CSS), "판이 352px 다 (챗과 같은 폭)");
-  ok(/#dock-panel-chat\{ width: min\(352px/.test(CSS),
+  ok(판폭(CSS, "dock-panel-wc") === 352, "판이 352px 다 (챗과 같은 폭)");
+  ok(판폭(CSS, "dock-panel-chat") === 352,
      "★ 챗도 352px 다 — 둘이 같아야 알약 줄 위가 가지런합니다");
 
   /* ── ⑧ me() 함정 — 자료실에서 데인 자리 ───────────────────────── */
@@ -7647,6 +9778,75 @@ function checkWorklog() {
      "★★ 예전 날짜별 줄을 주간에서 함께 보여 준다 (지우지 않았습니다)");
   ok(!/worklog[^\n]*\$\{day\}[^\n]*\.remove\(\)/.test(WL),
      "★★ 옛 줄을 지우는 코드가 없다");
+
+  /* ── ⑫ 회차 ✕ 는 반드시 묻는다 (2026-08-28 — 콩이 프롤로그를 잃음) ──
+     작품 탭은 회차 줄을 그 자리에서 세는 화면이라, 줄을 지우면 편수·
+     평균·진도가 함께 빠집니다. 되살릴 수 없으니 확인창은 필수입니다. */
+  {
+    const 지움 = WL.slice(WL.indexOf('if (act === "del")'),
+                          WL.indexOf('if (act === "stage")'));
+    ok(/confirm\(/.test(지움),
+       "★★★ 회차 ✕ 에 확인창이 있다 (콩: 마침 처리한 프롤로그를 무심코 지웠다가 작품 탭 기록까지 잃었습니다)");
+    ok(/작품 탭/.test(지움),
+       "★★ 확인창이 '작품 탭 기록도 빠진다' 를 알려 준다");
+    ok(/오늘 쓴 글자수와 업적/.test(지움),
+       "★ 확인창이 '오늘 글자수·업적은 안 줄어든다' 도 알려 준다 (wordlog 는 딴 노드라서)");
+    ok(/W\.회차들\(\)\[id\]/.test(지움) && /r\.cnt/.test(지움),
+       "★ 무엇을 잃는지 회차·글자수를 숫자로 보여 준다");
+  }
+  ok((WL.match(/confirm\(/g) || []).length >= 2,
+     "★ 회차 지우기·작품 지우기 둘 다 묻는다");
+
+  /* ── ⑬ 서랍이 둘 — 치우기는 지우기가 아니다 (2026-08-28, 콩) ────────
+     콩: "삭제(엑스)와 치우는 건 별개가 되는 거지."
+     ★ 여기가 무너지면 '치웠을 뿐인데 작품 탭 기록이 날아가는' 옛 사고가
+       그대로 돌아옵니다. 눈에는 안 보이고 숫자만 조용히 줄어요. */
+  {
+    ok(/let _box = \{\}/.test(WL), "치워 둔 회차를 담는 _box 가 있다");
+    ok(/const 치운것들 = \(\) => _box/.test(WL) && /치운것들,/.test(WL),
+       "치운것들() 을 밖으로 낸다");
+
+    /* 치우기·꺼내기는 remove 를 안 씁니다 — 옮기기니까요 */
+    const 이사 = WL.slice(WL.indexOf("const 서랍옮기기"), WL.indexOf("★ 글자수 — 여기가"));
+    ok(/update\(짐\)/.test(이사) && !/\.remove\(\)/.test(이사),
+       "★★★ 치우기·꺼내기는 지우지 않고 옮긴다 (remove 를 안 쓴다)");
+    ok(/짐\[`\$\{저쪽\}\/\$\{id\}`\] = r; 짐\[`\$\{이쪽\}\/\$\{id\}`\] = null;/.test(이사),
+       "★★ 한 번의 여러갈래 쓰기로 옮긴다 (나눠 보내면 중간에 끊겼을 때 줄이 사라집니다)");
+    ok(/_보낸\[id\] = Number\(r\.cnt\) \|\| 0;/.test(이사),
+       "★★★ 꺼낼 때 기준을 지금 값으로 다시 세운다 (안 그러면 누적이 통째로 오늘 쓴 글자로 잡혀 흐름·업적이 부풉니다)");
+
+    /* 읽는 쪽 셋이 모두 box 를 봐야 합니다 */
+    const 작품회차 = WL.slice(WL.indexOf("function 작품회차"), WL.indexOf("[철거 2026-08-22"));
+    ok(/Object\.entries\(_box\)/.test(작품회차),
+       "★★★ 작품 탭이 치워 둔 회차도 센다 (이게 '치워도 기록이 남는다' 를 지탱합니다)");
+    ok(/boxId/.test(작품회차), "★ 치운 회차에 boxId 를 실어 준다 (작품 탭에서 꺼내려면 필요)");
+    const 날마침 = WL.slice(WL.indexOf("function 날마침"), WL.indexOf("function 작품회차"));
+    ok(/Object\.entries\(_box\)/.test(날마침),
+       "★★ 주간 달력도 치워 둔 회차를 본다 (안 그러면 치우는 순간 지난 주가 텅 빕니다)");
+    const 지난분량 = WL.slice(WL.indexOf("function 지난분량"), WL.indexOf("function 날마침"));
+    ok(/Object\.values\(_box\)\.forEach\(훑기\)/.test(지난분량),
+       "★★ 이어 쓰기 기준도 치워 둔 회차를 본다");
+
+    /* 늘 켜 두는 구독은 ep 뿐 — 통신량이 회차 수만큼 불어나지 않게 */
+    ok(/_ref = window\.db\.ref\("worklog\/" \+ nick \+ "\/ep"\)/.test(WL),
+       "★★★ 늘 듣는 것은 worklog/{닉}/ep 뿐이다 (통째로 들으면 글자수 한 칸 고칠 때마다 회차 전체가 다시 내려옵니다)");
+    ok(/\.once\("value"\)[\s\S]{0,200}_box = v\.box/.test(WL),
+       "★ 치운 줄·옛 줄은 처음 한 번만 읽는다");
+
+    /* 화면 */
+    ok(/data-wl="sweep"/.test(WL) && /마친 \$\{마친수\}편 치우기/.test(WL),
+       "★ 목록 아래에 '마친 N편 치우기' 단추가 있다 (콩이 고른 방식 — 저절로 안 치웁니다)");
+    ok(/const 마친수 = Object\.values\(eps\)\.filter\(r => r\.done\)\.length;/.test(WL) &&
+       /마친수\s*\n?\s*\? `<button/.test(WL.replace(/\r/g, "")),
+       "★ 마친 게 없으면 단추도 안 뜬다");
+    ok(/data-wl="unsweep"/.test(WL) && /_방금치움/.test(WL),
+       "★★ 치운 직후 되돌리기 한 줄이 뜬다 (지우기가 아니라 확인창을 안 띄우는 대신입니다)");
+    ok(/data-wl="unbox"/.test(WL) && /function 회차칸/.test(WL),
+       "★★ 작품 탭 회차 칸에서 다시 꺼낼 수 있다 (콩: \"치우고 나서 다시 불러오기도 가능해?\")");
+    const 손 = WL.slice(WL.indexOf('if (act === "sweep")'), WL.indexOf('/* ── 작품 ──'));
+    ok(!/confirm\(/.test(손),
+       "★ 치우기·꺼내기에는 확인창이 없다 (잃는 게 없으니 묻지 않습니다)");
+  }
 }
 
 function checkWordcount(){
@@ -8099,7 +10299,254 @@ async function finish(){
      아래 MIN(700) 은 너무 헐거워서 이런 걸 못 잡습니다. 그래서 사슬로
      이어 부르는 블록마다 도장을 찍게 하고, 여기서 도장을 셉니다.
      새 블록을 사슬에 안 걸면 이 줄에서 바로 걸립니다. */
-  const CHAIN = ["mywork","wordcount","timelog","notice","achv"];
+  /* =====================================================================
+     [2026-10-02 — 콩] 👀 접속자 명단 · 숨은 문 옮김 · ⚙️↗ 비밀방 따로 창 ·
+     📊 혼자 방 Member 판의 본방 접속 현황 · 웨일 안내
+     ===================================================================== */
+  {
+    const RT2 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    const SP  = fs.readFileSync(DIR+"script_srpop.js","utf8");
+    const SR2 = fs.readFileSync(DIR+"script_sroom.js","utf8");
+    const ST2 = fs.readFileSync(DIR+"script_sticker.js","utf8");
+    const IM2 = fs.readFileSync(DIR+"script_imgup.js","utf8");
+    const MB2 = fs.readFileSync(DIR+"script_member.js","utf8");
+    const ID2 = fs.readFileSync(DIR+"script_idledetect.js","utf8");
+    const MN2 = fs.readFileSync(DIR+"script_manual.js","utf8");
+    const GD2 = fs.readFileSync(DIR+"guide.html","utf8");
+    const BS  = fs.readFileSync(DIR+"build-single.py","utf8");
+
+    /* ── 숨은 문 → 왼쪽 제목 ── */
+    ok(/document\.querySelector\("\.brand-title"\)[\s\S]{0,200}addEventListener\("dblclick"/.test(RT2),
+       "★★ 숨은 문은 이제 왼쪽 'TheMagam' 제목 더블클릭이다");
+    ok(!/hc\.addEventListener\("dblclick"/.test(RT2),
+       "★ 'n명 집필 중' 에는 더블클릭 문이 더 없다 (명단이 열렸다 PIN 이 뜨는 일이 없게)");
+
+    /* ── 👀 접속자 명단 ── */
+    ok(/hc\.addEventListener\("click", \(\) => \{ _olistOpen \? closeOnlineList\(\) : openOnlineList\(\); \}\);/.test(RT2),
+       "★★ 'n명 집필 중' 한 번 클릭 → 접속자 명단 열고 닫기");
+    ok(/function onlineListRows\(\)[\s\S]{0,400}_statusCache/.test(RT2) &&
+       !/function onlineListRows\(\)[\s\S]{0,900}db\.ref/.test(RT2),
+       "★★★ 명단은 받아 둔 _statusCache 만 그린다 — 서버 읽기 0");
+    ok(/class="card-conn olist-conn\$\{r\.ok \? "" : " off"\}"/.test(RT2),
+       "★ 접속점은 카드와 같은 조각(.card-conn)이고 끊기면 .off");
+    ok(/ok: !Number\(row\.disconnectedAt \|\| 0\)/.test(RT2),
+       "★ 접속점 판정이 카드(connOk)와 같다 — disconnectedAt");
+    ok(/if \(_olistOpen\) drawOnlineList\(\);/.test(RT2),
+       "★ 열어 둔 동안 상태가 바뀌면 같이 다시 그린다");
+    ok(/#online-list\{/.test(CSS) && /\.olist-conn\{ position: static;/.test(CSS),
+       "명단 CSS 가 있고 접속점은 흐름 속에 선다");
+    ok(/_olistOutside/.test(RT2) && /e\.key === "Escape"\) closeOnlineList/.test(RT2),
+       "바깥 클릭·Esc 로 닫힌다");
+
+    /* ── ⚙️↗ 비밀방 따로 창 ── */
+    ok(/<script src="script_srpop\.js\?v=/.test(HTML) &&
+       HTML.indexOf('script_srpop.js') > HTML.indexOf('script_sroom.js'),
+       "★★ script_srpop.js 가 실리고, 비밀방 뒤에 온다 (closeSroom 을 감싸야 해서)");
+    ok(/"script_srpop\.js":\s*"srpopToggle"/.test(HTML), "로드 자가진단 목록에 들어 있다");
+    ok(/"script_sroom\.js", "script_srpop\.js", "script_proom\.js"/.test(BS), "단일파일 목록에도 같은 자리");
+    ok(/host\.appendChild\(body\);\s*\/\/ ★ 옮깁니다/.test(SP),
+       "★★★ 비밀방 속을 **옮긴다** — 새로 그리지 않는다 (글칸·구독이 그대로 따라온다)");
+    ok(!/innerHTML = [\s\S]{0,40}sr-board/.test(SP) && !/db\.ref\(/.test(SP),
+       "★★ 따로 창이 비밀방을 다시 그리거나 서버를 따로 읽지 않는다 — 통신량 그대로");
+    ok(/documentPictureInPicture\.requestWindow\(\{ width: W \+ 16, height: H \}\)/.test(SP),
+       "★ 되는 브라우저에선 문서 PiP (항상 다른 창 위)");
+    ok(/window\.open\("", "themagam-sroom"/.test(SP), "★ 안 되면 보통 팝업으로");
+    ok(/const W = 352;/.test(SP) && /#dock-panel-sroom,\n#dock-panel-proom\{ width: min\(352px/.test(CSS),
+       "★ 폭은 본방 비밀방과 같은 352px 고정 (세로는 자유)");
+    ok(/win\.addEventListener\("pagehide", restore\)/.test(SP) &&
+       /panel\.insertBefore\(body, panel\.querySelector\("\.dock-popped-note"\)\)/.test(SP),
+       "★★ 창을 닫으면 제자리로 돌아온다");
+    ok(/window\.closeSroom = function \(\)[\s\S]{0,120}close\(\)/.test(SP),
+       "★ 비밀방 판을 닫으면 따로 창도 닫힌다 (closeSroom 감싸기)");
+    ok(/window\.srpopDoc\s*=/.test(SP), "다른 파일이 그 창의 문서를 찾을 창구(srpopDoc)가 있다");
+    ok(/const el = \(id\) => document\.getElementById\(id\) \|\| window\.srpopDoc\?\.\(\)\?\.getElementById\(id\)/.test(SR2),
+       "★★ 비밀방 el() 이 따로 창의 문서도 본다 (안 보면 옮긴 뒤 글칸을 못 찾는다)");
+    ok(/const 찾기 = \(id\) => document\.getElementById\(id\) \|\| window\.srpopDoc/.test(ST2) &&
+       /doc\.body\.appendChild\(pop\)/.test(ST2),
+       "★★ 스티커 고르기 판이 단추가 사는 문서에 뜬다");
+    ok(/const f = document\.getElementById\("sticker-filter-host"\);\s*if \(f\) doc\.body\.appendChild\(f\.cloneNode\(true\)\)/.test(SP),
+       "★★ 스티커 흔들림 필터를 그 창에도 심는다 (없으면 스티커가 아예 안 그려진다)");
+    ok(/btn\.ownerDocument\.createElement\("input"\)/.test(IM2),
+       "★ 🖼 그림 단추의 파일 창은 단추가 사는 창에서 연다");
+    ok(/_doc\.addEventListener\("paste"/.test(SP) && /new ClipboardEvent\("paste"/.test(SP),
+       "★ 따로 창의 Ctrl+V 그림을 본 문서로 넘긴다");
+    ok(/head link\[rel="stylesheet"\], head style/.test(SP) && /new MutationObserver/.test(SP),
+       "스타일을 베끼고 테마가 바뀌면 따라간다");
+    ok(/\.dock-pop\{/.test(CSS) && /\.dock-panel\.is-popped\{ height: auto !important;/.test(CSS),
+       "↗ 단추 CSS · 따로 보는 동안 판은 한 줄");
+
+    /* ── [2026-10-03 콩] 따로 창 다듬기 — 스크롤 자리 · 그림 보내기 · 최소 키 ── */
+    {
+      const SP3 = fs.readFileSync(DIR+"script_srpop.js","utf8");
+      const DK3 = fs.readFileSync(DIR+"script_dock.js","utf8");
+      const IM3 = fs.readFileSync(DIR+"script_imgup.js","utf8");
+      ok(/const 스크롤 = 스크롤기억\(body\);\s*host\.appendChild\(body\);[\s\S]{0,80}스크롤되살리기\(body, 스크롤\);/.test(SP3) &&
+         /const 스크롤 = 스크롤기억\(body\);\s*if \(body && panel\) panel\.insertBefore[\s\S]{0,120}스크롤되살리기\(body, 스크롤\);/.test(SP3),
+         "★★ 옮길 때·되돌릴 때 채팅 스크롤 자리를 지킨다 (문서를 옮기면 scrollTop 이 0 이 된다)");
+      ok(/기억\.바닥 \? log\.scrollHeight : 기억\.top/.test(SP3), "★ 바닥을 보고 있었으면 바닥으로, 아니면 그 자리로");
+      ok(/async function 올리기\(file, 곳\) \{[\s\S]{0,300}window\.srpopDoc\?\.\(\)\?\.getElementById\(곳\.inputId\)/.test(IM3),
+         "★★ 그림 올리기가 따로 창의 글칸도 찾는다 (못 찾으면 올리고도 안 보냈다)");
+      ok(/id: "sroom",[^\n]*minRatio: 0\.6/.test(DK3) && /Math\.round\(baseH\(pid\) \* \(\(d && d\.minRatio\) \|\| 1\)\)/.test(DK3),
+         "★ 비밀방 판은 기본 키의 60% 까지 줄일 수 있다 (다른 판은 그대로)");
+    }
+
+    /* ── [2026-10-03 콩] 유령 카드 — 퇴근 누르고 컴 끔 → 휴식 상태·초록 접속점으로 남음 ── */
+    {
+      const CO5 = fs.readFileSync(DIR+"script_core.js","utf8");
+      const lv = CO5.slice(CO5.indexOf("async function leaveRoom"), CO5.indexOf("window.resetPomoUserScopedUI"));
+      const i삭제 = lv.indexOf('db.ref("status/" + myNick).remove()');
+      const i취소 = lv.indexOf("cancelPresenceOnDisconnect()");
+      const i마감 = lv.indexOf("finalizeTimelogOnLeave");
+      ok(i삭제 > 0 && i취소 > i삭제 && i마감 > i취소,
+         "★★★ 퇴근은 status 삭제가 맨 먼저, 그 다음 끊김 예약 취소, 그 다음 마감·출석 (취소가 먼저 닿고 삭제가 못 닿으면 12시간 유령)");
+      ok(/const 잠깐만 = \(p, ms\) => Promise\.race/.test(lv) &&
+         /try \{ await 잠깐만\(cancelPresenceOnDisconnect\(\), 3000\); \} catch \(e\) \{\}/.test(lv),
+         "★★ 퇴근의 모든 단계가 try 안이고 3초면 다음으로 넘어간다 (한 단계가 걸려도 삭제·퇴장 화면이 막히지 않게)");
+      const RT7 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      ok(/if \(!\(seen > 0\)\) return false;/.test(RT7),
+         "★★ lastSeen 없는 줄(끊김 예약이 남긴 {disconnectedAt} 토막)은 접속으로 안 본다");
+      /* 실제로 굴려 봅니다 */
+      {
+        const m = RT7.match(/function isOnline\(row, now\) \{[\s\S]*?\n  \}/);
+        const fn = new Function("DISCONNECT_GRACE_MS", "ONLINE_STALE_MS", m[0] + "; return isOnline;")(5*60*1000, 12*60*60*1000);
+        const now = Date.now();
+        ok(fn({ disconnectedAt: now - 1000 }, now) === false, "★ { disconnectedAt } 만 있는 토막 → 접속 아님");
+        ok(fn({ lastSeen: now - 1000 }, now) === true, "lastSeen 만 있는 보통 줄 → 접속");
+        ok(fn({ lastSeen: now - 1000, disconnectedAt: now - 60*1000 }, now) === true, "1분 전 끊김은 유예 안");
+      }
+    }
+
+    /* ── ★★★ [2026-10-03 콩 "나가기 누른 여럿이 휴식 카드로 남아"] 진짜 원인 ──
+       status 를 지우면 status 구독의 **자가 복구**(10-01)가 "내 줄이 사라졌다" 고
+       300ms 뒤 updateStatus(true) 로 줄을 되살렸다. 상태는 방금 휴식, 끊김 예약은
+       취소된 뒤라 컴을 꺼도 안 지워졌다. → 나가는 중(__leaving)에는 아무도 안 쓴다. */
+    {
+      const CO6 = fs.readFileSync(DIR+"script_core.js","utf8");
+      const RT8 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      const lv = CO6.slice(CO6.indexOf("async function leaveRoom"), CO6.indexOf('db.ref("status/" + myNick).remove()'));
+      ok(/window\.__leaving = true;/.test(lv) && lv.indexOf("window.__leaving = true") < lv.indexOf("savePersonalData"),
+         "★★★ 나가기는 맨 먼저 __leaving 을 켠다 (savePersonalData 가 updateStatus 를 부르기 전에)");
+      ok(/function updateStatus\(force = false\) \{\s*if \(!myNick\) return;[\s\S]{0,200}if \(window\.__leaving\) return;/.test(RT8),
+         "★★★ 나가는 중에는 updateStatus 가 status 를 쓰지 않는다");
+      ok(/if \(myNick && !window\.__leaving && _lastSentObj && \(!mine/.test(RT8) &&
+         /setTimeout\(\(\) => \{ try \{ if \(!window\.__leaving\) updateStatus\(true\);/.test(RT8),
+         "★★★ 자가 복구는 나가는 중엔 안 돈다 (지운 줄을 되살려 휴식 유령을 만들던 자리)");
+      ok(/if \(!myNick \|\| window\.__leaving\) return;   \/\/ 나가는 중이면 되살리지/.test(CO6) &&
+         /const revive = \(\) => \{\s*if \(!myNick \|\| window\.__leaving\) return;/.test(CO6),
+         "★★ 재연결·탭 깨어남도 나가는 중엔 줄을 되살리지 않는다");
+      ok(/_myJoinTs = 0;\s*window\.__leaving = false;/.test(CO6), "다 나간 뒤 표시를 끈다 (다시 들어오면 평소처럼)");
+    }
+
+    /* ── [2026-10-04 콩] 창을 그냥 닫을 때도 — 닫히는 틈에 자가 복구가 줄을 되살리지 않게 ── */
+    {
+      const CO7 = fs.readFileSync(DIR+"script_core.js","utf8");
+      ok(/function _handleBeforeUnload\(\) \{\s*if \(!myNick \|\| _leaveBeaconSent\) return;[\s\S]{0,400}window\.__leaving = true;/.test(CO7),
+         "★★ 창을 닫을 때도 __leaving 을 켠다 (지운 줄을 닫히는 틈에 되살리지 않게)");
+      ok(/_leaveBeaconSent = false;\s*window\.__leaving = false;/.test(CO7),
+         "★ 얼렸다 돌아오면(bfcache) 다시 끈다 — 안 끄면 돌아온 뒤 상태가 영영 안 올라간다");
+    }
+
+    /* ── 🪶 [2026-10-04 콩] 단순 카드 · 좁은 화면 자동 · 정렬 기본 = 접속 순서 ── */
+    {
+      const RTL = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      const UIL = fs.readFileSync(DIR+"script_ui.js","utf8");
+      const PRL = fs.readFileSync(DIR+"script_profile.js","utf8");
+      ok(/const sortPref = \(window\.AppStore\?\.getItem\("cardSort"\)\) \|\| "join";/.test(RTL) &&
+         /csort\.value = AppStore\.getItem\("cardSort"\) \|\| "join";/.test(UIL) &&
+         /<option value="join">접속한 순서 \(기본\)<\/option>/.test(HTML),
+         "★ 카드 정렬 기본은 접속 순서 (직접 고른 값은 그대로)");
+      ok(/const LITE_NARROW = 1100;/.test(UIL) && /function liteNow\(\) \{ return isLiteMode\(\) \|\| \(window\.innerWidth \|\| 9999\) < LITE_NARROW; \}/.test(UIL),
+         "★★ 창 폭이 1100px 보다 좁으면 설정과 상관없이 단순 카드");
+      ok(/window\.addEventListener\("resize", \(\) => \{ if \(liteNow\(\) !== _liteWas\) applyLiteMode\(\); \}\);/.test(UIL),
+         "★ 창 크기를 바꿔 1100px 을 넘나들 때만 다시 그린다");
+      ok(/box\.checked = isLiteMode\(\);/.test(UIL), "체크칸은 내가 고른 값만 (좁아서 저절로 켜진 건 체크 안 됨)");
+      ok(/class="user-card lite-card/.test(RTL) && /data-card-nick="\$\{escapeHtml\(u\)\}">\s*<div class="lite-in">/.test(RTL),
+         "★ 단순 카드도 user-card · data-card-nick 을 단다 (정렬·하트·공유 키 맞추기가 그대로 먹게)");
+      ok(/<div class="lite-ph[\s\S]{0,200}\$\{avatar\}<\/div>/.test(RTL),
+         "★ 단순 카드의 프사도 .card-avatar > img 꼴 — 깜빡임 막는 옮겨 심기가 그대로 먹는다");
+      ok(/if \(단순\) \{\s*const 꾸민 = parts\.pop\(\);[\s\S]{0,160}_fullCardHtml[\s\S]{0,60}parts\.push\(단순\);/.test(RTL) &&
+         /window\._fullCardHtml\?\.\[profileTargetNick\(\)\]/.test(PRL),
+         "★★ 꾸민 카드는 맡겨 두고, 꾸미기 창 미리보기는 꾸민 카드로 짓는다");
+      ok(/\.lite-card \.lite-in\{[\s\S]{0,120}grid-template-columns: 86px minmax\(0, 1fr\);\s*grid-template-rows: 54px 32px 28px;/.test(CSS),
+         "★ 프사 칸은 정사각 (위 두 칸 54+32 = 86)");
+      ok(/\.user-card\.lite-card > :not\(\.lite-in\)\{ display: none !important; \}/.test(CSS),
+         "★ 다른 파일이 덧붙이는 꾸밈(하트·딱지…)은 단순 카드에서 안 보인다");
+      ok(/\.lite-card \.lite-gl\{[\s\S]{0,300}text-overflow: ellipsis; white-space: nowrap;/.test(CSS), "목표는 한 줄, 넘치면 …");
+      ok(/\$\{곁 \? `<span class="lite-sub">/.test(RTL), "★ 뽀모가 없으면 시간만 — 가운데에 선다");
+      ok(/html\[data-lite\] \.share-card \.share-who\{ display: none !important; \}/.test(CSS) &&
+         /html\[data-lite\] \.share-card \.share-foot\{[\s\S]{0,80}background: none;/.test(CSS),
+         "★ 단순 카드에서 화공 카드는 '누구의 화면' 띠 없이 [off] 단추만 (콩 2026-10-04)");
+      ok(/\.lite-card \.lite-ph\{ grid-row: 1 \/ 3; border-right: 1px solid var\(--border\); position: relative; \}/.test(CSS) &&
+         /\.lite-card \.lite-ph \.card-avatar\{[^}]*overflow: hidden;/.test(CSS),
+         "★ 프사 칸은 열어 두고 사진만 자른다 — 📮 쪽지 리본이 카드 밖으로 넘어가도 보이게");
+      ok(/<div class="lite-tm">[\s\S]{0,200}window\.workTagChipHtml\?\.\(row, isMine\)/.test(RTL) &&
+         /\.lite-card \.lite-tm \.card-tag-slot\{ top: -9px; left: -14px;/.test(CSS),
+         "★ 단순 카드에도 작업 스티커 — 시간 칸 왼쪽 위, 카드 위로 삐죽");
+      ok(/\.lite-card \.lite-ph\{ border-right: 0; \}/.test(CSS) && /\.lite-card \.lite-st\{ border-top: 0; border-right: 0; background: var\(--fill-1\);/.test(CSS),
+         "★ 단순 카드는 안쪽 칸 선이 없다 — 상태 칸에만 옅은 바탕 (B안)");
+      ok(/\.lite-card \.lite-tm \.card-tag-slot\{ zoom: \.8;/.test(CSS), "★ 단순 카드의 작업 스티커는 80%");
+      ok(/const 단순 = !!window\.isLiteCards\?\.\(\);[\s\S]{0,300}pop\.className = "status-pop" \+ \(단순 \? " is-lite" : ""\);/.test(PRL) &&
+         /\.status-pop\.is-lite \.status-pop-item\.on::before\{ background: currentColor; \}/.test(CSS),
+         "★ 단순 카드일 땐 상태 고르기 판도 색 글자만 · 고른 것은 점 하나");
+      ok(/\.lite-card \.lite-nk\{ background: var\(--fill-1\); \}/.test(CSS), "★ 닉네임 칸에도 상태 칸과 같은 옅은 바탕");
+      ok(/u === ADMIN_NICK \? " is-owner" : \(_vice\[u\] === true \? " is-vice" : ""\)/.test(RTL),
+         "★ 단순 카드에 방장·부방장 표시(is-owner · is-vice)");
+      ok(/\.lite-card\.is-me \.lite-in::after,\s*\.lite-card\.is-owner \.lite-in::after,\s*\.lite-card\.is-vice \.lite-in::after\{[\s\S]{0,160}z-index: 3;\s*border: 2\.5px solid var\(--me\);/.test(CSS) &&
+         /\.lite-card\.is-me \.lite-in::after\{ border-color: var\(--accent\); \}/.test(CSS),
+         "★★ 테두리는 프사 위에 얹은 막(::after)이라 네 변이 같은 두께 · 내 카드 = 둘째 포인트, 운영진 = 첫 포인트");
+      ok(/html\[data-lite\] \.share-cheers\{ zoom: \.8;/.test(CSS), "★ 가볍게 보기에서 화공 응원 스티커는 80% (꾸민 카드는 그대로)");
+      ok(/html:not\(\[data-lite\]\) \.card-avatar-wrap > \.card-heart svg,\s*html:not\(\[data-lite\]\) \.share-cheers \.card-heart svg\{ width: 32px; height: 30px; \}/.test(CSS),
+         "★ 꾸민 카드의 하트·화공 응원은 80% — 기준 변(하트 오른쪽·응원 윗변)은 그대로라 튀어나온 만큼 유지");
+      /* 3차 (같은 날) — 쪽지 · 하트 · 접속점 · 디데이 · 화공 */
+      {
+        const HTL = fs.readFileSync(DIR+"script_heart.js","utf8");
+        const NTL = fs.readFileSync(DIR+"script_note.js","utf8");
+        ok(/card\.classList\.contains\("lite-card"\) && !e\.target\.closest\("\.lite-tm"\)\) return;/.test(HTL),
+           "★★ 단순 카드의 하트는 작업시간 칸 더블클릭만");
+        ok(/\.lite-card \.lite-tm \.card-heart\{ top: auto; left: auto; right: -3px; bottom: 0;/.test(CSS),
+           "★ 하트는 시간 칸 오른쪽 아래, 작게");
+        ok(/class="lite-tm">[\s\S]{0,400}<span class="card-conn\$\{connOk \? "" : " off"\}"/.test(RTL) &&
+           /\.lite-card \.lite-tm \.card-conn\{ left: auto; right: 6px; top: 5px;/.test(CSS),
+           "★ 접속점은 시간 칸 오른쪽 위");
+        ok(/<div class="lite-nk">\$\{ddChipHtml\(row\)\}<span class="lite-nm"[^>]*>\$\{shareChip\}<span>/.test(RTL),
+           "★ 닉 칸 차례: 🚩 디데이(왼쪽 끝) → 화공 말풍선 → 닉 (꾸민 카드와 같은 차례)");
+        ok(/\.lite-card \.lite-in\{[\s\S]{0,400}overflow 는 열어 둡니다/.test(CSS) && !/\.lite-card \.lite-in\{[^}]*overflow: hidden/.test(CSS),
+           "★ 하트 숫자 딱지가 카드 밖으로 살짝 나갈 수 있다 (판이 자르지 않음)");
+      }
+    }
+
+    /* ── 📊 혼자 방 배경판 — 본방 오늘 접속 현황 (콩: "본방과 동일하게") ── */
+    ok(/if \(window\.SOLO\) \{ 본방현황시작\(\); return; \}/.test(RT2),
+       "★★ 혼자 방은 가짜 서버 대신 본방을 REST 로 읽어 **같은 배경판**에 그린다");
+    ok(/fetch\(`\$\{SOLO_DB_URL\}\/roomStat\/\$\{날\}\.json`/.test(RT2) && /themagam-ec0e4-default-rtdb/.test(RT2),
+       "★ roomStat/{오늘} 을 본방 주소에서 (숫자 24개)");
+    ok(/attendance\/\$\{날\}\.json\?shallow=true/.test(RT2) && /nickOwner\.json\?shallow=true/.test(RT2),
+       "★ 출석·총원은 shallow 로 열쇠만");
+    ok(/if \(!_총원읽음\) \{[\s\S]{0,300}nickOwner\.json\?shallow/.test(RT2), "★ 총원은 한 번만");
+    ok(/const SOLO_TICK_MS = 60 \* 1000;/.test(RT2) && /setInterval\(본방현황읽기, SOLO_TICK_MS\)/.test(RT2),
+       "★ 1분마다 — 혼자 방 탭이 열려 있는 동안만");
+    ok(!/fetchPulse|barsHtml|member-pulse/.test(MB2) && !/\.member-pulse\{/.test(CSS),
+       "★ Member 판 위에 따로 그리던 막대는 없다 (배경판 하나로)");
+    ok(/"roomStat": \{\s*"\.read": true/.test(fs.readFileSync(DIR+"보안규칙.json","utf8")),
+       "★ roomStat 은 누구나 읽을 수 있어 로그인 없는 혼자 방에서도 된다");
+
+    /* ── 🥕 당근 흔들어요 (2026-10-02 콩 — 미리보기 A 고름, 글씨는 두 줄) ── */
+    ok(/id: "carrot", cmd: "당근", label: "당근 흔들어요", fs: 15, lines: \["당근", "흔들어요"\]/.test(ST2),
+       "★ 당근 스티커가 있고 이름은 두 줄(lines)로 찍는다");
+    ok(/Array\.isArray\(s\.lines\)[\s\S]{0,120}<tspan x="36" y="62">[\s\S]{0,80}<tspan x="36" y="79">/.test(ST2),
+       "★ stickerHtml 이 lines 를 같은 <text> 안에 두 줄로 — 글씨체·색은 한 줄과 같다");
+    ok(/cmdRe: \/\^\\\/\(당근\|당근흔들\|당근흔들어요\|소식\)\$\//.test(ST2), "슬래시 /당근 /소식 도 먹는다");
+    ok(/당근 흔들어요 ·/.test(MN2) && /쉰여덟 개/.test(MN2) && /n: 58/.test(fs.readFileSync(DIR+"script_achv.js","utf8")),
+       "★ 설명서·업적 개수가 58 로 맞다");
+
+    /* ── 🖱 자동감지 — 네이버 웨일도 (2026-10-02 멤버 확인) ── */
+    ok(/크롬·엣지·네이버 웨일에서만 쓸 수 있어요/.test(ID2) && /크롬·엣지·웨일 전용/.test(ID2),
+       "★ 자동감지 안내에 웨일이 들어 있다");
+    ok(/크롬 · 엣지 · 네이버 웨일에서만/.test(MN2) && /크롬·엣지·네이버 웨일 전용/.test(GD2),
+       "★ 설명서·가이드에도 웨일");
+  }
+
+  const CHAIN = ["mywork","wordcount","timelog","notice","achv","hearts","cheers"];
   const 안돈것 = CHAIN.filter(k => !ran[k]);
   if (안돈것.length) {
     console.log(`\n검사 블록이 실행되지 않았습니다: ${안돈것.join(", ")}`);
@@ -8141,7 +10588,199 @@ function checkTimelog(){
   c2.window.document=c2.document; vm.createContext(c2); vm.runInContext(src,c2);
   const T=c2.window.TimeLog;
   ok(!!T, "TimeLog 모듈이 로드된다");
-  ok(T.STATUS_IDS.join(",")==="writing,focus,rest,away", "상태 네 가지를 구분한다");
+  ok(T.STATUS_IDS.join(",")==="writing,focus,multi,rest,away",
+     "상태 다섯 가지를 구분한다 ("+T.STATUS_IDS.join(",")+")");
+
+  /* =====================================================================
+     ⏱ 작업 시간 무게 — 세 벌이 어긋나면 여기서 걸립니다 (2026-08-23)
+     ---------------------------------------------------------------------
+     이번 작업의 **유일하게 무서운 고장**이 이것입니다. 관리자 페이지와
+     모바일 페이지는 script_timelog.js 를 안 실어서 표를 한 벌씩 더 갖고
+     있어요. 한쪽만 고치면 오류 하나 없이 **숫자만** 어긋납니다 —
+     방에서 본 작업 시간과 성실 멤버 기준, 폰에서 본 값이 서로 달라져요.
+
+     그래서 소스에서 세 표를 **직접 읽어 견줍니다.** 글자를 찾아보는 게
+     아니라 값을 파싱해서 맞대요.
+     ===================================================================== */
+  {
+    const 표뽑기 = (글, 어디) => {
+      const i = 글.indexOf("const WORK_WEIGHT");
+      if (i < 0) return { _없음: 어디 };
+      const j = 글.indexOf("}", i);
+      const 몸 = 글.slice(글.indexOf("{", i) + 1, j);
+      const out = {};
+      (몸.match(/(\w+)\s*:\s*([\d.]+)/g) || []).forEach(kv => {
+        const [k, v] = kv.split(":").map(x => x.trim());
+        out[k] = Number(v);
+      });
+      return out;
+    };
+    const 방표 = 표뽑기(fs.readFileSync(DIR+"script_timelog.js","utf8"), "script_timelog.js");
+    const 관표 = 표뽑기(fs.readFileSync(DIR+"script_admin.js","utf8"),   "script_admin.js");
+    const 폰표 = 표뽑기(fs.readFileSync(DIR+"m.html","utf8"),            "m.html");
+    const 글 = (o) => JSON.stringify(o);
+
+    /* ★ [2026-08-23 운영진 회의 확정] 하루에 세 번 바뀐 끝의 자리입니다.
+       한 줄로: **집필만 온전히 인정하고, 나머지 둘은 70%.**
+       WRITE 와 그 밖을 가르는 것이 이 방의 뜻이고, JOB 과 multiT 사이에
+       굳이 등급을 더 두지 않기로 했어요. */
+    ok(방표.writing === 1,
+       `★★ 🔥WRITE 만 전액 — 지금 ${방표.writing}`);
+    ok(방표.focus === 0.7 && 방표.multi === 0.7,
+       `★★★ 💻JOB·📓multiT 는 둘 다 70% — 지금 JOB ${방표.focus} / multiT ${방표.multi} (콩: "둘 다 각 70%만 인정하는 거로. 확정")`);
+    /* ★ [2026-09-08 — 콩 "리페어 중일 때 시간이 안 쌓이는 게 아쉬워, 30%라도"]
+       🛠️REPAIR 30% 가 넷째로 들어왔습니다. 방을 고치는 동안에도 자리에는
+       앉아 있고, 그 상태는 방장·운영진만 고르므로 형평 문제도 작습니다. */
+    ok(방표.repair === 0.3,
+       `★★ 🛠️REPAIR 는 30% — 지금 ${방표.repair}`);
+    ok(Object.keys(방표).length === 4,
+       `★ 무게를 받는 상태는 넷뿐 — ${글(방표)}`);
+    ok(글(관표) === 글(방표),
+       `★★★ 관리자 페이지의 무게표가 방과 같다 — 방 ${글(방표)} / 관리자 ${글(관표)}`);
+    ok(글(폰표) === 글(방표),
+       `★★★ 모바일(m.html)의 무게표가 방과 같다 — 방 ${글(방표)} / 폰 ${글(폰표)}`);
+
+    /* =====================================================================
+       ⏳ 접속 판정 상수도 세 곳이 같아야 합니다 (2026-08-25 — 콩 신고)
+       ---------------------------------------------------------------------
+       m.html 의 DISCONNECT_GRACE_MS 가 30분으로 굳어 있었습니다. 작업방은
+       0815 에 5분으로 줄였는데 안 따라온 것이라, 5~30분 사이에 끊긴 사람이
+       **작업방에서는 사라졌는데 폰에서는 접속 중**으로 보였어요.
+       ("작업방 1명 집필 중 / 폰 온라인 2")
+
+       ★ 그 줄 위에는 "작업방과 같은 규칙이어야 합니다" 라고 **맞는 말이
+         적혀 있었습니다.** 주석은 안 어긋나는데 값만 어긋나요 — 그래서
+         말이 아니라 **값을 견줍니다.**
+       ===================================================================== */
+    {
+      const 재기 = (글자, 이름) => {
+        const m = 글자.match(new RegExp(`const ${이름}\\s*=\\s*([0-9*\\s]+);`));
+        if (!m) return null;
+        try { return Function(`return (${m[1]})`)(); } catch (e) { return null; }
+      };
+      const RT8 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      const M8  = fs.readFileSync(DIR+"m.html","utf8");
+      const 분 = (v) => v == null ? "못 읽음" : (v / 60000) + "분";
+
+      ["DISCONNECT_GRACE_MS", "ONLINE_STALE_MS"].forEach(이름 => {
+        const 방 = 재기(RT8, 이름), 폰 = 재기(M8, 이름);
+        ok(방 != null && 폰 != null && 방 === 폰,
+           `★★★ ${이름} 이 작업방과 모바일에서 같다 — 방 ${분(방)} / 폰 ${분(폰)}`);
+      });
+      /* 유예가 너무 짧으면 지하철에서 잠깐 끊긴 사람이 나갔다 들어온 것처럼
+         보여 입장 알림이 다시 뜹니다 (0815 주석 참고) */
+      const 유예 = 재기(RT8, "DISCONNECT_GRACE_MS");
+      ok(유예 >= 3 * 60000,
+         `★★ 끊김 유예가 3분보다 짧지 않다 — 지금 ${분(유예)} (짧으면 잠깐 끊긴 사람이 나갔다 들어온 것처럼 보여 입장 알림이 다시 뜬다)`);
+    }
+    ok(!("rest" in 방표) && !("away" in 방표),
+       "★ 휴식·자리비움은 표에 아예 없다 (0 을 적어 두면 '언젠가 셀 수도' 로 읽힌다)");
+
+    /* ─────────────────────────────────────────────────────────────
+       📖 사람이 읽는 설명에도 들어갔나 (2026-08-23 — 콩이 물어봄)
+       "작업 시간 통계 기준이 있는 곳에는 설명 덧붙여줘."
+
+       셈만 맞고 설명이 옛날이면, 숫자를 손으로 더해 본 사람이 "안 맞네"
+       하고 고장으로 읽습니다. 셈과 말이 같이 가야 해요.
+       ───────────────────────────────────────────────────────────── */
+    const 설명자리 = [
+      ["script_timelog.js", /💻JOB·📓multiT는 <b>70%<\/b>만 쌓여요/,
+       "⏱ 작업 시간 탭 맨 위 (오늘 작업 시간 아래)"],
+      ["script_timelog.js", /\(Write 전액 \+ Job·multiT 70% · 분\)/,
+       "이번 달 하루하루 꺾은선 제목 옆"],
+      ["script_timelog.js", /작업 시간 \$\{fmtDur\(tw\)\} \(Write 전액 \+ Job·multiT 70%\)/,
+       "텍스트로 내보내기 .txt 합계 줄"],
+      ["guide.html", /💻multiT📓/, "가이드 — 상태 알약"],
+      ["guide.html", /<b>💻JOB·📓multiT는 70%<\/b>만 쌓여요/, "가이드 — 상태 설명"],
+      ["guide.html", /🚪 들어올 때 상태/, "가이드 — 들어올 때 상태"],
+      ["guide.html", /JOB·multiT는 70%만 쌓이니<\/b>/, "가이드 — 들어올 때 상태의 70% 안내"],
+      ["script_manual.js", /💻JOB·📓multiT는 70%만<\/b>/, "방 안 설명서 — 집필 현황 탭"],
+      ["script_manual.js", /<b>WRITE만 전액<\/b>이에요/, "방 안 설명서 — 나의 작업 탭"],
+      ["script_manual.js", /🚪 들어올 때 상태<\/b>에서/, "방 안 설명서 — 자리비움 탭"],
+      ["admin.html", /💻JOB·📓multiT는 70%<\/b>/, "관리자 — ✨성실 멤버 기준"],
+      ["script_admin.js", /자리에 있었던 시간<\/b> 전부예요/,
+       "관리자 — 한 달 작업 시간 그래프 (여기는 상태를 안 가림)"],
+      ["script_admin.js", /상태를 안 가린 자리 지킨 시간이에요/, "관리자 — 🔍 돋보기 쌓인 시간"],
+      ["m.html", /💻JOB·📓multiT 70%<\/b>예요/, "모바일 — 오늘·이번 주 누적"],
+      ["script_achv.js", /achv-gnote/, "업적판 — 작업 시간 갈래 아래 기준 한 줄"],
+      ["script_achv.js", /💻JOB·📓multiT는 <b>70%<\/b>로 셉니다/, "업적판 — 기준 한 줄의 내용"],
+      ["index.html", /<b>💻JOB과 📓multiT는 70%만<\/b> 쌓여요/, "설정 — 🚪 들어올 때 상태"],
+      ["index.html", /70%가 아쉬우면 들어와서 상태표를 눌러 바꾸시면 됩니다/,
+       "설정 — 70%가 싫으면 스스로 바꾸라는 안내 (콩이 콕 집어 요청)"],
+    ];
+    설명자리.forEach(([f, 무늬, 어디]) => {
+      ok(무늬.test(fs.readFileSync(DIR + f, "utf8")),
+         `★★ 기준 설명이 붙어 있다 — ${어디} (${f})`);
+    });
+    ok(/\.achv-gnote\{/.test(CSS), "★ 업적판 기준 한 줄에 모양이 있다");
+    /* 옛 설명이 남아 있으면 셈과 말이 어긋납니다 */
+    ok(!/Write\(집필\)와 Job\(다른 일\)을 더한 합계예요/.test(
+         fs.readFileSync(DIR+"script_timelog.js","utf8")),
+       "★★ 옛 설명(Write와 Job을 더한 합계)이 안 남아 있다");
+    /* ★★★ [0823 회의로 뒤집힘] 화면에 "multiT 는 절반" 이 하나라도 남으면
+       셈과 말이 어긋납니다. 오전에 그렇게 적어 놓은 자리가 열 곳 넘었어요. */
+    ["script_timelog.js", "guide.html", "script_manual.js", "admin.html",
+     "m.html", "index.html", "script_achv.js", "script_admin.js"].forEach(f => {
+      const 글 = fs.readFileSync(DIR + f, "utf8");
+      /* ★ 줄 단위로 봅니다 — 걸린 조각만 보면 "처음에는 …" 같은 사연이
+         그 조각 밖에 있어서 못 걸러집니다 (한 번 헛짚었습니다). */
+      const 남은 = 글.split("\n").filter(줄 =>
+        /multiT[^\n]{0,24}절반|절반[^\n]{0,24}multiT/.test(줄) &&
+        !/처음|오전|뒤집|바뀌|옛|회의/.test(줄));   // 지난 일을 적은 주석은 봐 줌
+      ok(남은.length === 0,
+         `★★★ ${f} 에 "multiT 는 절반" 이라는 옛말이 안 남아 있다${남은.length ? " ← " + 남은[0].trim().slice(0, 70) : ""}`);
+    });
+    /* 📐 이번 달 하루하루 그래프 높이 — 콩이 "지금의 80% 정도로" (2026-08-23) */
+    {
+      const WC9 = fs.readFileSync(DIR+"script_wordcount.js","utf8");
+      const m = WC9.match(/const W = (\d+), H = (\d+);/);
+      ok(!!m, "꺾은선 판 크기를 읽을 수 있다");
+      if (m) {
+        const W9 = Number(m[1]), H9 = Number(m[2]);
+        const 비 = H9 / W9;
+        ok(Math.abs(비 - 168 / 640) < 0.001,
+           `★★ 판이 예전(640×210)의 80% 높이다 — 지금 ${W9}×${H9} (${(H9 / 210 * 100).toFixed(0)}%)`);
+        const t = WC9.match(/const L = \d+, R = \d+, T = (\d+), B = (\d+);/);
+        if (t) {
+          const 그리는칸 = H9 - Number(t[1]) - Number(t[2]);
+          ok(그리는칸 >= 110,
+             `★ 선을 그릴 칸이 눌리지 않았다 — ${그리는칸}px (점·숫자를 걷어낸 위 여백을 되돌려 씁니다)`);
+        }
+      }
+    }
+    /* 🏷 설정 탭 이름 — 겉글자만 바뀌고 속 이름은 그대로여야 합니다 */
+    {
+      const H9 = fs.readFileSync(DIR+"index.html","utf8");
+      ok(/onclick="openTab\('chat'\)">⚙️ 기본 설정<\/button>/.test(H9),
+         "★ 설정 첫 탭 이름이 [⚙️ 기본 설정] 이다 (2026-08-23 콩)");
+      ok(/data-tab="chat"/.test(H9) && /id="panel-chat"/.test(H9),
+         "★★★ 속 이름(chat)은 그대로다 — 여러 파일이 그 이름으로 이 탭을 부른다");
+      ok(!/>💬 채팅<\/button>/.test(H9), "★ 옛 이름이 안 남아 있다");
+    }
+    ok(!/상태는 <b>Work · Break<\/b> 둘이에요/.test(
+         fs.readFileSync(DIR+"script_manual.js","utf8")),
+       "★★ 설명서에 '상태는 둘' 이라는 아주 옛 문구가 안 남아 있다");
+    /* 되돌렸을 때를 위해 옛 배치본에도 값 자리가 있어야 합니다 */
+    ok(/<option value="multi">/.test(fs.readFileSync(DIR+"index-classic.html","utf8")),
+       "★★ 옛 배치본(index-classic.html)에도 multi 값 자리가 있다 (되돌려도 안 무시되게)");
+
+    /* ★ 손으로 더하는 옛 방식이 어디에도 안 남아 있어야 합니다 —
+       한 벌만 남아도 그 화면만 조용히 multiT 를 빠뜨립니다. */
+    ["script_timelog.js", "script_achv.js", "script_admin.js", "m.html",
+     "script_wordcount.js", "script_mywork.js", "script_realtime.js"].forEach(f => {
+      const 알맹이 = fs.readFileSync(DIR + f, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*/gm, "")
+        .replace(/<!--[\s\S]*?-->/g, "");
+      /* script_achv.js·script_solo.js 의 되돌림용 한 줄은 window.workMs 가
+         없을 때만 쓰이는 안전망이라 봐 줍니다 (window.workMs ? … 꼴) */
+      const 남은것 = (알맹이.match(/totals\.writing \+ [^\n]*totals\.focus/g) || [])
+        .concat((알맹이.match(/=== "writing" \|\| [^\n]*=== "focus"/g) || [])
+                  .filter(x => !/window\.workMs \?/.test(알맹이.slice(
+                    Math.max(0, 알맹이.indexOf(x) - 160), 알맹이.indexOf(x)))));
+      ok(남은것.length === 0,
+         `★★★ ${f} 에 손으로 더하는 옛 셈이 안 남아 있다${남은것.length ? " ← " + 남은것[0].slice(0, 70) : ""}`);
+    });
+  }
   ok(T.OFFLINE_MIN_MS>=5*60*1000, `끊김 인정 간격이 5분 이상 (${Math.round(T.OFFLINE_MIN_MS/60000)}분)`);
   ok(T.SEG_CAP_MS>=4*60*60*1000, `한 구간 상한이 4시간 이상 (${Math.round(T.SEG_CAP_MS/3600000)}시간)`);
 
@@ -8233,7 +10872,7 @@ function checkAchv(){
   ran["achv"]=true;
   const AC = fs.readFileSync(DIR+"script_achv.js","utf8");
   const H8 = fs.readFileSync(DIR+"index.html","utf8");
-  const RULES2 = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8").replace(/\/\/.*/g,"")).rules;
+  const RULES2 = 규칙읽기();
 
   /* ── 목록 ── */
   {
@@ -8304,7 +10943,16 @@ function checkAchv(){
       const i = AC.indexOf("  function " + n + "(");
       return AC.slice(i, AC.indexOf("\n  }\n", i) + 5);
     };
-    const box = {};
+    /* ★★★ [2026-08-23] 업적의 작업 시간 셈은 script_timelog.js 의 workMs 를
+       빌려 씁니다 (규칙이 두 벌이 되지 않게). 그러니 시험도 **진짜 그 함수**
+       를 물려야 해요 — 여기서 가짜를 물리면 이 검사가 규칙을 안 지킵니다. */
+    const TL9 = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const 무게방 = {};
+    vm.createContext(무게방);
+    vm.runInContext(TL9.slice(TL9.indexOf("const WORK_WEIGHT"),
+                              TL9.indexOf("function isWorkStatus")) +
+                    "\nglobalThis._workMs = workMs;", 무게방);
+    const box = { window: { workMs: 무게방._workMs } };
     vm.createContext(box);
     vm.runInContext(`
       function dayKey(d){d=d||new Date();const m=String(d.getMonth()+1).padStart(2,"0");
@@ -8382,6 +11030,32 @@ function checkAchv(){
     ok(r3.msTotal === 4 * H, `★ 휴식은 작업 시간에 안 섞인다 (${(r3.msTotal / H).toFixed(1)}h)`);
     ok(r3.bestSeg === 4 * H, "한 번에 가장 오래 한 구간을 잡는다");
     ok(r3.owlDays === 1, "새벽 작업을 센다");
+
+    /* ★★★ 📓multiT 는 절반 (2026-08-23 — 콩이 고른 쪽: 업적에도 적용) */
+    {
+      const segs2 = {};
+      segs2[D(1)] = {
+        a: { s: "multi", a: n2.getTime(), b: n2.getTime() + 5 * H },
+        b: { s: "focus", a: n2.getTime() + 6 * H, b: n2.getTime() + 16 * H }
+      };
+      box.s4 = { att: {}, wcs: {}, pomo: {}, segs: segs2, nick: "나" };
+      const r4 = vm.runInContext("computeStats(s4)", box);
+      ok(r4.msTotal === 10.5 * H,
+         `★★★ multiT 5시간(→3.5) + Job 10시간(→7) = 10.5시간 — 지금 ${(r4.msTotal / H).toFixed(2)}h`);
+      ok(r4.bestSeg === 7 * H,
+         `★★ '한 번에 가장 오래' 도 무게를 거쳐 잰다 — Job 10시간은 7시간 (지금 ${(r4.bestSeg / H).toFixed(1)}h). 안 그러면 무게가 가벼운 상태로 🎯집중왕 따는 게 더 쉬워진다`);
+      ok(r4.seg3hCount === 2,
+         "★★ 🎯집중왕(3시간) 판정도 무게를 거친 값으로 (multiT 3.5h·Job 7h 둘 다 넘음)");
+      /* ★ WRITE 는 안 깎입니다 — 이 방이 하려는 바로 그 일 */
+      {
+        const segs3 = {};
+        segs3[D(1)] = { a: { s: "writing", a: n2.getTime(), b: n2.getTime() + 4 * H } };
+        box.s5 = { att: {}, wcs: {}, pomo: {}, segs: segs3, nick: "나" };
+        const r5 = vm.runInContext("computeStats(s5)", box);
+        ok(r5.msTotal === 4 * H,
+           `★★★ 🔥WRITE 4시간은 그대로 4시간 — 지금 ${(r5.msTotal / H).toFixed(1)}h`);
+      }
+    }
 
     /* 종류/날짜로 세는 것들 — 이름이 c 로 시작한다고 횟수로 새면 안 됩니다 */
     box._c = { cGreet: 7, stk_a: 1, stk_b: 1, tag_x: 1, rew_1: 1, rew_2: 1,
@@ -8842,7 +11516,7 @@ function checkAchv(){
        **막는 일을 화면이 아니라 보안규칙(서버)이 한다.**
        화면에서만 막으면 개발자도구로 그냥 뚫립니다. */
   {
-    const R = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8").replace(/\/\/.*/g,"")).rules;
+    const R = 규칙읽기();
     const AU = fs.readFileSync(DIR+"script_auth.js","utf8");
     const AD = fs.readFileSync(DIR+"script_admin.js","utf8");
     const AH = fs.readFileSync(DIR+"admin.html","utf8");
@@ -8859,7 +11533,7 @@ function checkAchv(){
        "★ 내보낸 사람은 접속 표시를 쓸 수 없다");
 
     /* ③ 남의 이름으로 채팅을 쓸 수 없다 + 내보낸 사람은 못 쓴다 */
-    ["messages", "messages2"].forEach(k => {
+    ["messages"].forEach(k => {
       const v = R[k].$id[".validate"] || "";
       ok(/nickOwner'\)\.child\(newData\.child\('user'\)/.test(v),
          `★ ${k} — 자기 이름으로만 쓸 수 있다`);
@@ -8993,46 +11667,17 @@ function checkAchv(){
        "★ 그릴 때 둘 중 하나를 반드시 붙인다 (안 붙으면 그림이 늘어난다)");
   }
 
-  /* ── ☕ 수다방 들어온 날 (2026-08-11) ─────────────────────────
-     chattyParticipation 에는 "지금 참여 중인가" 한 칸만 있고 **어느
-     날들에 들어왔는지는 기록이 없습니다.** 그래서 오늘부터 하루씩 세요.
-     ★ 세는 자리가 [참여하기] 를 누른 곳이어야 합니다 — 탭만 열어 본
-       것으로 세면 "들어왔다" 가 아니라 "구경했다" 가 됩니다. */
+  /* ── ☕ 수다방 들어온 날 — **문 닫은 방의 기록** (2026-08-30) ──
+     수다방을 접으면서 세는 코드(script_chatty.js)가 사라졌습니다.
+     그래서 "제대로 세는가" 시험도 함께 걷었어요 — 셀 것이 없으니까요.
+     ★ 다만 **쌓인 값은 그대로 둡니다.** 지우면 이미 딴 분들의 배지가
+       꺼져요 (배지 자체를 안 지운 것과 같은 이유). */
   {
-    const CH3 = fs.readFileSync(DIR+"script_chatty.js","utf8");
-    const jc = CH3.slice(CH3.indexOf("async function joinChatty"),
-                         CH3.indexOf("async function leaveChatty"));
-    ok(/achvBump\?\.\("cha"/.test(jc), "★ [참여하기] 를 누른 자리에서 센다");
-    ok(!/achvBump\?\.\("cha"/.test(CH3.slice(CH3.indexOf("function switchChatTab"),
-                                              CH3.indexOf("function _escChatty"))),
-       "★ 탭을 여는 것만으로는 안 센다");
-
-    /* 실제 조각을 떼어 돌려 봅니다 */
-    const i3 = CH3.indexOf("      const d = new Date();");
-    const 조각 = "{" + CH3.slice(i3, CH3.indexOf("} catch (e) {}", i3)) + "}";
-    const cut2 = (n) => {
-      const i = AC.indexOf("  function " + n + "(");
-      return AC.slice(i, AC.indexOf("\n  }\n", i) + 5);
-    };
-    const box3 = { _c: {}, _stats: {}, window: {} };
-    vm.createContext(box3);
-    vm.runInContext(`${cut2("kindCount")}${cut2("valueOf")}
-      window.achvBump=(key,member)=>{ if(member===undefined){_c[key]=(_c[key]||0)+1;return;}
-        const k=key+"_"+String(member).replace(/[.#$/[\\]]/g,""); if(_c[k])return; _c[k]=1; };`, box3);
-    const 들어감 = (back) => {
-      const real = Date; const d = new Date(); d.setDate(d.getDate() - back);
-      box3.Date = class extends real { constructor(...a) { return a.length ? new real(...a) : new real(d); } };
-      vm.runInContext(조각, box3);
-    };
-    const 값3 = () => vm.runInContext(`valueOf({at:"cChattyDay"})`, box3);
-
-    for (let b = 39; b >= 0; b--) 들어감(b);
-    ok(값3() === 40, "서로 다른 40일이면 40");
-    box3._c = {}; for (let k = 0; k < 5; k++) 들어감(0);
-    ok(값3() === 1, "★ 같은 날 여러 번 눌러도 하루로 센다");
-    ok(vm.runInContext(`valueOf({at:"cForest"})`, box3) === 0
-       && vm.runInContext(`valueOf({at:"cShareDay"})`, box3) === 0,
-       "★ 대숲·화면 공유와 섞이지 않는다");
+    const AC9 = fs.readFileSync(DIR+"script_achv.js","utf8");
+    ok(/if \(a\.at === "cChattyDay"\) return kindCount\("cha"\);/.test(AC9),
+       "★★ 쌓인 값을 읽는 길은 그대로다 (딴 배지가 꺼지지 않게)");
+    ok(!fs.existsSync(DIR+"script_chatty.js"),
+       "★ 세는 쪽은 사라졌다 — 더는 오르지 않습니다");
   }
 
   {
@@ -9169,6 +11814,15 @@ function checkAchv(){
      "★ 횟수가 늘었을 때만 알린다 (매번 알리면 새로고침마다 뜬다)");
   ok(/achv-x/.test(AC) && /\.achv-x\{/.test(CSS), "×N 표시가 있다");
 
+  const 무게방2 = (() => {
+    const TLb = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const b = {}; vm.createContext(b);
+    vm.runInContext(TLb.slice(TLb.indexOf("const WORK_WEIGHT"),
+                              TLb.indexOf("function isWorkStatus")) +
+                    "\nglobalThis._w = workMs;", b);
+    return b._w;
+  })();
+
   /* ── 오래된 기록 접기 (2026-08-11) ────────────────────────────────
      훑는 범위가 200일이라, 반년이 넘으면 오래된 날이 계산에서 빠지고
      **누적이 뒷걸음질칩니다.** 150일보다 오래된 날을 미리 합계로 접어
@@ -9179,7 +11833,8 @@ function checkAchv(){
       const i = AC.indexOf("  function " + n + "(");
       return AC.slice(i, AC.indexOf("\n  }\n", i) + 5);
     };
-    const box = { FOLD_DAYS: 150 };
+    /* 접기 쪽 상자에도 진짜 workMs 를 물립니다 (위와 같은 이유) */
+    const box = { FOLD_DAYS: 150, window: { workMs: 무게방2 } };
     vm.createContext(box);
     vm.runInContext(`
       function dayKey(d){d=d||new Date();const m=String(d.getMonth()+1).padStart(2,"0");
@@ -9337,7 +11992,7 @@ function checkAchv(){
        파일이 실제로 쓰는 이름**과 맞는지 봅니다. */
     const RT3 = fs.readFileSync(DIR+"script_realtime.js","utf8");
     const m = NT2.match(/if \(e\.target\.closest\("([^"]+)"\)\) \{\s*window\.openAchvOf/);
-    ok(!!m, "★ 남의 카드 프사는 업적, 그 밖은 쪽지");
+    ok(!!m, "★ 남의 카드 프사는 업적 (2026-09-30 부터 쪽지는 네임 박스만, 바탕 더블클릭은 💘 하트 — checkHearts)");
     if (m) {
       const 이름들 = m[1].split(",").map(x => x.trim().replace(/^\./, "")).filter(x => !x.startsWith("["));
       ok(이름들.some(c => RT3.includes(`class="${c}`)),
@@ -9387,10 +12042,14 @@ function checkAchv(){
     ok(!헛것.length, "★ 적어둔 스티커가 전부 실제로 있다" + (헛것.length ? " — " + 헛것.join(", ") : ""));
 
     /* 오늘 정한 짝 — 바뀌면 여기서 걸립니다 */
+    /* [2026-09-10] 스티커 열셋을 더하면서 짝도 늘렸습니다.
+         👋 인사왕  ← 하루를 여닫는 굿모닝·낼 봐요·굿밤도 인사입니다
+         🫶 토닥이  ← 칭찬해요(하트 뿅뿅)는 위로 쪽
+         📣 응원왕  ← 박수·참잘했어요는 "잘했다" 니까 응원 쪽 */
     const 정답 = {
-      cGreet: ["hi", "rehi", "welcome", "bye"],
-      cPat:   ["pat", "cheerup"],
-      cCheer: ["fight", "cheerup", "cando"]
+      cGreet: ["hi", "rehi", "welcome", "wel", "bye", "morning", "seeya", "gnight"],
+      cPat:   ["pat", "cheerup", "praise"],
+      cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]
     };
     Object.keys(정답).forEach(k =>
       ok((짝[k] || []).join(",") === 정답[k].join(","),
@@ -9436,7 +12095,7 @@ function checkAchv(){
    ===================================================================== */
 function checkStaff(){
   ran["staff"]=true;
-  const R  = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8").replace(/\/\/.*/g,"")).rules;
+  const R  = 규칙읽기();
   const AD = fs.readFileSync(DIR+"script_admin.js","utf8");
   const AH = fs.readFileSync(DIR+"admin.html","utf8");
   const RT = fs.readFileSync(DIR+"script_realtime.js","utf8");
@@ -9457,7 +12116,8 @@ function checkStaff(){
      이 목록이 이 검사의 심장입니다. 하나라도 열리면 사고가 납니다. */
   const 방장전용 = {
     "messages/.write":            R.messages[".write"],            // 채팅 통째 삭제
-    "messages2/.write":           R.messages2[".write"],           // 수다방 통째 삭제
+    "sroom/.write":               R.sroom[".write"],               // 비밀방 통째 삭제
+    "sreactions/.write":          R.sreactions[".write"],          // 비밀방 반응 통째 삭제
     "users/$nick/.write":         R.users.$nick[".write"],         // 멤버 기록 통째 삭제
     "nickOwner/$nick/.write":     R.nickOwner.$nick[".write"],     // 닉 주인 바꾸기 = 계정 탈취
     "wordlog/$day/.write":        R.wordlog.$day[".write"],
@@ -9729,6 +12389,213 @@ function checkStaff(){
          "★★★ 상태 스냅숏이 와도 도중에 멈추지 않는다 — 선언이 사라진 이름이 없다"
          + (사고 ? ` ← ${사고.slice(0, 120)}` : ""));
     }
+    /* ★★★ [2026-08-22] **배경판을 진짜로 그려 보는 검사.**
+
+       위의 돌려 보는 검사는 document 를 "뭘 물어도 자기 같은 걸 돌려주는"
+       너그러운 가짜로 세웠습니다. 그러면 배경판살피기() 가
+       getElementById("room-board") 에서 **늘 있다는 답**을 받아 곧바로
+       돌아가서, drawBoard 안쪽은 **한 줄도 안 돌아 봅니다.**
+       개근 명단이 들어오며 drawBoard 를 뜯어고쳤으니, 여기서는 조금 더
+       정직한 가짜 화면을 세워 **실제로 그려 봅니다.**
+
+       보는 것 넷:
+         ① 예외 없이 끝까지 도는가
+         ② 뼈대를 두 번 세우지 않는가 (세우면 흐름이 되감깁니다)
+         ③ 같은 명단이면 개근 줄에 손을 안 대는가 (〃)
+         ④ 명단이 비면 칸이 사라지는가 */
+    {
+      const 아무거나 = () => new Proxy(function () {}, {
+        get(t, k) {
+          if (k === "length") return 0;
+          if (k === Symbol.toPrimitive || k === "toString") return () => "";
+          if (k === Symbol.iterator) return function* () {};
+          if (k === "then") return undefined;
+          return 아무거나();
+        },
+        set() { return true; }, apply() { return 아무거나(); }, has() { return true; },
+      });
+      /* 아주 작은 가짜 조각. innerHTML 은 글로만 담고, querySelector 는
+         **내가 적어 넣은 글 안에 그 id 가 정말 있는지**로 답합니다 —
+         id 를 오타 내면 여기서 걸립니다. */
+      const 새조각 = (tag) => {
+        const e = {
+          tagName: tag, id: "", className: "", _html: "", textContent: "",
+          dataset: {}, kids: [], parent: null, _쓴횟수: 0, _조각: {},
+          setAttribute(k, v) { if (k === "id") e.id = v; },
+          appendChild(c) { e.kids.push(c); c.parent = e; return c; },
+          insertBefore(c) { e.kids.unshift(c); c.parent = e; return c; },
+          remove() { if (e.parent) e.parent.kids = e.parent.kids.filter(x => x !== e); e.parent = null; },
+          querySelector(sel) { return 찾기(e, sel); },
+          get firstChild() { return e._html ? { fake: true } : (e.kids[0] || null); },
+          get innerHTML() { return e._html; },
+          set innerHTML(v) { e._html = String(v); e._쓴횟수++; e.kids = []; e._조각 = {}; },
+        };
+        return e;
+      };
+      function 찾기(e, sel) {
+        const 아이디 = sel.startsWith("#") ? sel.slice(1) : null;
+        const 클래스 = sel.startsWith(".") ? sel.slice(1) : null;
+        const 훑기 = (n) => {
+          for (const k of n.kids.concat(Object.values(n._조각 || {}))) {
+            if (아이디 && k.id === 아이디) return k;
+            if (클래스 && String(k.className || "").split(/\s+/).includes(클래스)) return k;
+            const r = 훑기(k); if (r) return r;
+          }
+          return null;
+        };
+        const 있는것 = 훑기(e); if (있는것) return 있는것;
+        const 표 = 아이디 ? `id="${아이디}"` : `class="${클래스}"`;
+        if (e._html.includes(표)) {
+          if (!e._조각[sel]) {
+            const st = 새조각("div"); st.id = 아이디 || ""; st.className = 클래스 || "";
+            e._조각[sel] = st;
+          }
+          return e._조각[sel];
+        }
+        return null;
+      }
+
+      const host = 새조각("div"); host.className = "cards-area";
+      let 방판 = null;
+      const 들은것 = [];
+      const 가짜db = { ref(경로) { return {
+        on(ev, cb) { 들은것.push([경로, cb, ev]); return cb; }, off() {},
+        once() { return Promise.resolve({ val: () => 경로 === "nickOwner"
+          ? Object.fromEntries(Array.from({ length: 41 }, (_, i) => ["멤버" + i, "u" + i]))
+          : null }); },
+        set() { return Promise.resolve(); }, remove() { return Promise.resolve(); },
+        update() { return Promise.resolve(); }, transaction() { return Promise.resolve(); },
+        orderByKey() { return this; }, startAt() { return this; }, endAt() { return this; },
+        limitToLast() { return this; }, child() { return 가짜db.ref(경로); },
+        onDisconnect() { return { remove() { return Promise.resolve(); }, cancel() {} }; },
+      }; } };
+
+      const 방 = {
+        console: { log() {}, warn() {}, error() {}, info() {} },
+        setTimeout() { return 0; }, clearTimeout() {},
+        setInterval() { return 0; }, clearInterval() {}, requestAnimationFrame() { return 0; },
+        Date, Math, JSON, Object, Array, String, Number, Boolean, RegExp,
+        Promise, Map, Set, Error, isNaN, parseInt, parseFloat,
+        encodeURIComponent, decodeURIComponent, Intl, Symbol, Proxy, Reflect,
+        localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+        sessionStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+        AppStore: { getItem() { return null; }, setItem() {}, removeItem() {} },
+        AppSession: { getItem() { return null; }, setItem() {}, removeItem() {} },
+        escapeHtml: (x) => String(x ?? ""),
+        db: 가짜db,
+        /* ★ script_core.js 가 `const db = firebase.database()` 로 자기 db 를
+           만듭니다 — 그래서 firebase 쪽을 갈아 끼워야 개근 구독이 잡힙니다.
+           (처음엔 방.db 만 바꿔 두고 "왜 안 듣지" 하고 헤맸습니다) */
+        firebase: new Proxy({ database: Object.assign(() => 가짜db, {
+          ServerValue: { TIMESTAMP: 1 }, enableLogging() {},
+        }) }, { get(t, k) { return (k in t) ? t[k] : 아무거나(); } }),
+        navigator: 아무거나(), location: 아무거나(),
+      };
+      방.document = new Proxy({
+        getElementById(id) { return id === "room-board" ? 방판 : 아무거나(); },
+        querySelector(sel) { return sel === ".cards-area" ? host : 아무거나(); },
+        querySelectorAll() { return []; },
+        createElement(tag) { const e = 새조각(tag); if (!방판) 방판 = e; return e; },
+      }, { get(t, k) { return (k in t) ? t[k] : 아무거나(); }, set() { return true; } });
+      방.addEventListener = () => {}; 방.removeEventListener = () => {};
+      방.dispatchEvent = () => true;
+      방.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {} });
+      방.getComputedStyle = () => 아무거나();
+      방.innerWidth = 1200; 방.innerHeight = 800; 방.devicePixelRatio = 1;
+      방.performance = { now: () => 0 };
+      방.CustomEvent = function () {}; 방.Event = function () {};
+      방.IntersectionObserver = function () { return { observe() {}, disconnect() {}, unobserve() {} }; };
+      방.MutationObserver = function () { return { observe() {}, disconnect() {} }; };
+      방.ResizeObserver = function () { return { observe() {}, disconnect() {}, unobserve() {} }; };
+      방.window = 방; 방.globalThis = 방;
+      vm.createContext(방);
+
+      const 결과 = { 사고: "", 뼈대쓴횟수: 0, 처음개근: true, 구독: [], 칸생김: false,
+                     칸쓴횟수: 0, 되감김: false, 빈뒤칸: true, 속: "" };
+      try {
+        ["fortune_data.js", "script_core.js", "script_data.js", "script_realtime.js"]
+          .forEach(f => vm.runInContext(fs.readFileSync(DIR + f, "utf8"), 방, { timeout: 5000 }));
+        vm.runInContext('myNick = "방장"; myEmoji = "🦉";', 방);
+
+        vm.runInContext("drawBoard()", 방);                       // ① 처음
+        결과.처음개근 = !!방판.querySelector("#rb-honor");
+        결과.구독 = 들은것.map(x => x[0]).filter(p => p.startsWith("honors/"));
+        결과.출석구독 = 들은것.filter(x => x[0].startsWith("attendance/")).map(x => x[0]);
+
+        vm.runInContext("drawBoard()", 방);                       // ② 새 줄이 온 셈
+        결과.뼈대쓴횟수 = 방판._쓴횟수;
+
+        /* [2026-09-07] honors/{달} 통째로 듣습니다 (list + 🎖️ badges) */
+        const 이번달 = `honors/${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+        const 자리 = 들은것.find(x => x[0] === 이번달);
+        if (자리) 자리[1]({ val: () => ({ list: ["능소화", "도토리", "먹감", "링가링🍄", "잣나무", "보라매"] }) });
+        const 칸 = 방판.querySelector("#rb-honor");
+        결과.칸생김 = !!칸;
+        결과.칸쓴횟수 = 칸 ? 칸._쓴횟수 : 0;
+        결과.속 = 칸 ? 칸._html : "";
+
+        vm.runInContext("drawBoard()", 방);                       // ③ 같은 명단으로 또
+        결과.되감김 = !!칸 && 칸._쓴횟수 > 결과.칸쓴횟수;
+
+        if (자리) 자리[1]({ val: () => null });                   // ④ 명단이 빔
+        결과.빈뒤칸 = !!방판.querySelector("#rb-honor");
+
+        /* ⑤ 출석 도장 열일곱 개가 우르르 (총원 41명) */
+        const 출석자리 = 들은것.find(x => x[0].startsWith("attendance/"));
+        if (출석자리) for (let i = 0; i < 17; i++) 출석자리[1]({ key: "멤버" + i, val: () => ({ at: 1 }) });
+        vm.runInContext("_총원 = 41; drawBoard()", 방);
+        const 출석칸 = 방판.querySelector("#rb-att");
+        결과.출석글 = 출석칸 ? String(출석칸.textContent) : "";
+        결과.끝뼈대 = 방판._쓴횟수;
+      } catch (e) { 결과.사고 = (e && e.message) ? e.message : String(e); }
+
+      ok(!결과.사고, "★★★ 배경판이 예외 없이 끝까지 그려진다"
+         + (결과.사고 ? ` ← ${결과.사고.slice(0, 140)}` : ""));
+      ok(결과.뼈대쓴횟수 === 1,
+         `★★★ 두 번 그려도 뼈대는 한 번만 세운다 — 지금 ${결과.뼈대쓴횟수}번 (통째로 다시 그리면 흐름이 처음으로 되감깁니다)`);
+      ok(결과.처음개근 === false,
+         "★ 명단이 오기 전에는 개근 칸을 안 그린다");
+      ok(결과.구독.length === 2,
+         `★★ 개근은 두 달치만 듣는다 — 지금 ${결과.구독.length}곳 (${결과.구독.join(", ")})`);
+      ok(결과.칸생김 === true, "★★ 명단이 오면 개근 칸이 생긴다");
+      ok(/rb-hrow/.test(결과.속) && /animation-duration:\d+s/.test(결과.속),
+         "★ 이름이 여섯이면 흘러간다 (짧을 때만 세워 둡니다)");
+      ok(결과.되감김 === false,
+         "★★★ 같은 명단으로 또 그려도 개근 줄에 손대지 않는다 (손대면 흐름이 되감깁니다)");
+      ok(결과.빈뒤칸 === false,
+         "★★ 명단이 비면 칸이 사라진다");
+      ok(결과.출석글 === "41명 중 17명 출석",
+         `★★★ 제목 옆 글이 제대로 나온다 — 지금 "${결과.출석글}" (총원 41 · 도장 17)`);
+      ok(결과.끝뼈대 === 1,
+         `★★ 여기까지 다 겪고도 뼈대는 한 번 — 지금 ${결과.끝뼈대}번`);
+      ok((결과.출석구독 || []).length === 1 &&
+         결과.출석구독[0] === `attendance/${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`,
+         `★★ 오늘 출석 한 곳만 듣는다 — 지금 [${(결과.출석구독||[]).join(", ")}]`);
+
+      /* ★★★ 안전벨트 — 배경판이 넘어져도 방은 돌아야 합니다.
+         일부러 drawBoard 를 넘어지게 만들어 놓고, renderUserCards 가
+         끝까지 도는지 봅니다. (0822 사고가 바로 이 길목이었어요) */
+      {
+        let 튀어나옴 = "";
+        try {
+          vm.runInContext('drawBoard = function(){ throw new Error("일부러"); };', 방);
+          vm.runInContext('document.getElementById = function(){ return null; };', 방);
+          vm.runInContext("배경판살피기()", 방);
+        } catch (e) { 튀어나옴 = (e && e.message) ? e.message : String(e); }
+        ok(!튀어나옴,
+           "★★★ 배경판이 넘어져도 밖으로 안 튄다 — renderUserCards 가 여기서 죽으면 방이 언다"
+           + (튀어나옴 ? ` ← ${튀어나옴.slice(0, 80)}` : ""));
+      }
+      {
+        const RTs = fs.readFileSync(DIR+"script_realtime.js","utf8");
+        const 몸 = RTs.slice(RTs.indexOf("function 배경판살피기"),
+                            RTs.indexOf("function 배경판살피기") + 500);
+        ok(/try \{/.test(몸) && /catch/.test(몸), "★★ 배경판살피기 에 안전벨트가 있다");
+        ok(/console\.warn/.test(몸),
+           "★ 다만 조용히 삼키지는 않는다 (안 뜨면 왜 안 뜨는지 볼 수 있어야 한다)");
+      }
+    }
+
     ok(/\.rb-bars \.rp-b\{[\s\S]{0,90}var\(--accent\)/.test(CS3),
        "★★ 막대 조각 모양이 남아 있다 (지우면 배경판 막대가 통째로 사라집니다)");
 
@@ -9766,6 +12633,212 @@ function checkStaff(){
        "★★ 밀려나면 스스로 되살아난다 (멀쩡하면 아무 일도 안 함)");
     ok(/배경판살피기\(\);/.test(RT.slice(RT.indexOf("function renderUserCards"))),
        "★★ 카드를 그릴 때마다 자리에 있는지 본다");
+
+    /* ─────────────────────────────────────────────────────────────
+       🏅 개근 명단 흘리기 (2026-08-22 — 콩)
+       ───────────────────────────────────────────────────────────── */
+    {
+      const RT9 = RT.replace(/\/\*[\s\S]*?\*\//g, "");
+      ok(/function 개근HTML/.test(RT9) && /function 개근듣기/.test(RT9),
+         "🏅 개근 명단을 읽어 흘린다");
+      /* ★★ 셈을 여기서 다시 하지 않습니다 — 의무 출석일 규칙은
+         관리자 출석부에만 있어야 해요 (두 벌이 되면 언젠가 어긋납니다) */
+      ok(!/RULE_DAYS/.test(RT9) && !/function ruleOf/.test(RT9),
+         "★★★ 방 쪽은 의무 출석일을 다시 세지 않는다 (규칙은 출석부 한 곳에만)");
+      ok(/db\.ref\(`honors\/\$\{k\}`\)/.test(RT9) && !/db\.ref\(`honors\/\$\{k\}\/list`\)/.test(RT9),
+         "★ 달마다 작은 명단 노드(list+badges) 하나만 읽는다 (전원 출석 기록을 훑지 않는다)");
+      /* ★ 두 달만 — 지난 달과 이번 달 */
+      ok(/function 두달키/.test(RT9) &&
+         /getMonth\(\) - 1/.test(RT9.slice(RT9.indexOf("function 두달키"), RT9.indexOf("function 두달키") + 300)),
+         "★ 지난 달과 이번 달, 두 달만 본다");
+      ok(/if \(표 === _honorKeys\) return;/.test(RT9) && /r\.off\("value", h\)/.test(RT9),
+         "★★ 자정을 넘겨 달이 바뀌면 듣는 자리를 다시 건다 (옛 달을 계속 듣지 않는다)");
+      /* ★★★ 흐름이 되감기지 않아야 합니다 — 이 판은 새 줄이 올 때마다 다시 그려져요 */
+      ok(/if \(칸\.dataset\.sig === 개근\) return;/.test(RT9),
+         "★★★ 명단이 그대로면 손대지 않는다 (손대면 흐름이 처음으로 되감긴다)");
+      ok(/if \(!box\.firstChild\)/.test(RT9) && /#rb-bars/.test(RT9) && /#rb-feed/.test(RT9),
+         "★★★ 판 전체를 다시 그리지 않고 속만 갈아 끼운다");
+      ok(!/box\.innerHTML = `<div class="rb-inner">[\s\S]{0,400}흐름줄들\(\)/.test(RT9),
+         "★ 예전처럼 매번 innerHTML 로 통째로 그리지 않는다");
+
+      /* =====================================================================
+         📐 배경 현황판은 **두 줄기** (2026-09-19 — 콩 "양쪽 높이 맞춰서")
+         ---------------------------------------------------------------------
+           왼쪽 : 📊 접속 현황 (위) · 🏅 개근 (아래 끝)
+           오른쪽: 🔥 지금 참여 중 (왼쪽 두 칸을 합친 만큼 길게)
+         세 칸을 세로로 쌓으니 판이 길어져 카드를 가렸고, 흐름 칸은 짧은데
+         양옆이 텅 비어 있었습니다.
+         ===================================================================== */
+      ok(/<div class="rb-col" id="rb-left">/.test(RT9) && /<div class="rb-box rb-col-r">/.test(RT9),
+         "★★ 판이 왼쪽 줄기(rb-left)와 오른쪽 칸(rb-col-r) 둘로 나뉘어 있다");
+      ok(/box\.querySelector\("#rb-left"\) \|\| box\.querySelector\("\.rb-inner"\)/.test(RT9),
+         "★★★ 🏅 개근 칸은 **왼쪽 줄기 안**으로 들어간다 (.rb-inner 에 붙이면 격자의 셋째 칸이 되어 판이 무너집니다)");
+      /* [2026-09-19 — 콩] 오른쪽은 왼쪽의 0.75배. 줄이 짧아 반씩 나누면
+         오른쪽이 휑했습니다. 왼쪽은 415px 밑으로 가면 「최다 n명」이
+         삐져나오므로 총 너비를 755px 로 잡았어요 (426 : 320). */
+      ok(/\.rb-inner\{[^}]*grid-template-columns: 1fr \.75fr;/s.test(CSS) &&
+         /\.rb-inner\{[^}]*align-items: stretch;/s.test(CSS),
+         "★★★ 양쪽 키는 격자가 맞춘다 · 오른쪽은 왼쪽의 0.75배 (높이를 숫자로 박아 두면 줄 수가 달라질 때 어긋납니다)");
+      ok(/width: min\(755px, calc\(100% - 28px\)\)/.test(CSS),
+         "★★ 왼쪽 칸이 426px — 막대 스물넷(321px) + 「최다 n명」 딱지가 다 들어간다");
+
+      /* ★★ [고침 2026-09-19 — 콩 "오늘 접속과 개근 사이 간격이 너무 커"]
+         space-between 이 남는 높이를 둘 사이에 몰아넣고 있었습니다.
+         이제 gap 9px 로 붙여 쌓고, 남는 높이는 접속 현황 칸이 받습니다. */
+      ok(!/\.rb-col\{[^}]*justify-content: space-between;/s.test(CSS),
+         "★★ 두 칸 사이를 벌려 놓지 않는다 (간격은 양옆 칸 사이와 같은 9px)");
+      ok(/\.rb-col > \.rb-box:first-child\{[^}]*flex: 1 1 auto;/s.test(CSS),
+         "★★★ 남는 높이는 📊 접속 현황 칸이 받아 키가 커진다");
+      ok(/\.rb-col > \.rb-box:first-child \.rb-bars\{[^}]*flex: 1 1 auto;/s.test(CSS),
+         "★★ 칸이 커진 만큼 막대 자리도 같이 커진다");
+      ok(/style="height:\$\{키\.toFixed\(1\)\}%"/.test(RT9),
+         "★★★ 막대 키를 **백분율**로 그린다 (px 으로 박아 두면 칸만 커지고 막대는 주저앉아 위가 휑해집니다)");
+      ok(/@media \(max-width: 720px\)\{[\s\S]{0,200}?grid-template-columns: 1fr;/.test(CSS),
+         "★★ 좁은 화면에서는 예전처럼 한 줄기 (두 칸으로 나누면 글자가 잘립니다)");
+
+      /* ★★★ [사고 2026-09-19 — 콩 "대형 사곤데????"]
+         판이 통째로 터졌습니다. 🏅 개근 명단은 한 줄로 흘러가는 글
+         (white-space: nowrap)이라 길이가 1000px 을 넘는데, 격자·flex 의
+         칸은 기본값(min-width: auto)이 "속을 안 줄이는 만큼" 입니다.
+         그래서 왼쪽 줄기가 그 길이만큼 벌어지고 오른쪽 「참여 중」 칸이
+         손톱만 하게 짓눌렸어요.
+         개근 칸 자체(.rb-honor)에는 overflow: hidden 이 있어 예전에는
+         멀쩡했는데, 이번에 그 위에 줄기를 씌우면서 그 장치가 없는 칸이
+         하나 생긴 것이 원인이었습니다. */
+      ok(/\.rb-col, \.rb-col-r\{ min-width: 0; \}/.test(CSS),
+         "★★★ 두 줄기에 min-width: 0 이 있다 — 흘러가는 개근 명단이 칸을 밀어내지 못하게 (지우면 그날로 판이 터집니다)");
+      ok(/\.rb-honor\{ overflow: hidden/.test(CSS),
+         "★★ 개근 칸은 overflow: hidden — 창문 노릇을 합니다");
+      /* ★ 이음매 — 같은 벌을 두 번 이어 붙이고 -50% 만큼 밀어야 안 끊깁니다 */
+      ok(/\$\{한벌\}\$\{한벌\}/.test(RT9), "★★ 같은 벌을 두 번 이어 붙인다");
+      ok(/translateX\(-50%\)/.test(CSS), "★★ 한 벌 길이(-50%)만큼만 민다 (이음매가 안 보인다)");
+      ok(/@keyframes rb-honor-flow/.test(CSS), "흐름 규칙이 있다");
+      ok(/prefers-reduced-motion[\s\S]{0,120}\.rb-hrow\{ animation: none/.test(CSS),
+         "★ 움직임을 줄여 달라고 한 분에게는 세워서 보여 준다");
+      /* ★ 사람이 늘어도 빨라지지 않아야 합니다 */
+      ok(/Math\.max\(30, Math\.round\(글자수 \* 1\.5\)\)/.test(RT9),
+         "★★ 길이에 맞춰 시간을 늘린다 (사람이 늘어도 빠르기는 그대로)");
+      ok(/if \(!개근\) \{ 칸\?\.remove\(\); return; \}/.test(RT9),
+         "★ 흘릴 이름이 없으면 칸 자체를 안 그린다 (8월엔 지난 달이 없다)");
+
+      /* ── 🙋 총원 중 n명 출석 (2026-08-23) ── */
+      ok(/function 출석글/.test(RT9) && /id="rb-att"/.test(RT9),
+         "🙋 제목 옆에 출석 숫자를 붙인다");
+      ok(/\.on\("child_added"/.test(RT9) && !/db\.ref\(`attendance\/\$\{날\}`\)\.on\("value"/.test(RT9),
+         "★★★ 출석은 child_added 로 듣는다 (value 로 들으면 한 명 찍힐 때마다 오늘 것 전부가 다시 온다)");
+      ok(/db\.ref\("nickOwner"\)\.once\("value"\)/.test(RT9),
+         "★★ 총원은 한 판에 한 번만 읽는다 (구독하지 않는다)");
+      ok(/if \(!_총원읽음\)/.test(RT9), "★ 두 번 읽지 않는다");
+      ok(/if \(날 !== _출석날\)/.test(RT9) && /off\("child_added", _출석듣는곳\.h\)/.test(RT9),
+         "★★ 자정을 넘기면 듣는 자리를 옮기고 0부터 다시 센다");
+      ok(/_출석다시그리기 = setTimeout/.test(RT9),
+         "★★ 처음 우르르 오는 도장을 한 박자 묶는다 (마흔 번 그리지 않는다)");
+      ok(/if \(!_총원 && !_오늘출석\) return "";/.test(RT9),
+         "★ 아직 못 읽었으면 0명이라고 하지 않는다 (빈 글)");
+      /* ★ 관리자 출석부와 **같은 자**를 써야 숫자가 안 어긋납니다 */
+      {
+        const AD8 = AD.replace(/\/\*[\s\S]*?\*\//g, "");
+        ok(/Object\.keys\(nickSnap\.val\(\) \|\| \{\}\)/.test(AD8),
+           "★★★ 출석부도 총원을 nickOwner 개수로 센다 (방과 같은 자를 써야 안 어긋난다)");
+      }
+    }
+
+    /* ── 명단을 적는 쪽 — 관리자 출석부 ── */
+    {
+      const AD9 = AD.replace(/\/\*[\s\S]*?\*\//g, "");
+      ok(/명단굳히기\(ymKey, rateRows, await 배지뽑기\(/.test(AD9),
+         "★★ 출석부를 그릴 때 개근 명단(+🎖️ 배지)이 함께 적힌다 (새로 세는 것 없음)");
+      ok(/r\.state === "ok" && r\.need > 0/.test(AD9),
+         "★★ 달성(✅)만, 그리고 기준이 0인 사람은 빼고 담는다");
+      ok(/if \(JSON\.stringify\(옛명단\) === JSON\.stringify\(명단\) &&\s*\n\s*JSON\.stringify\(옛배지\) === JSON\.stringify\(새배지\)\) return;/.test(AD9),
+         "★★★ 명단·배지가 안 바뀌었으면 쓰지 않는다 (새로고침 백 번에 쓰기 0번)");
+      ok(/if \(!최근두달\(\)\.includes\(ymKey\)\) return;/.test(AD9),
+         "★★ 옛 달을 들춰 봐도 그때 명단이 새로 적히지 않는다");
+      ok(/if \(!명단\.length\) \{ await db\.ref\(`honors\/\$\{ymKey\}`\)\.remove\(\); return; \}/.test(AD9),
+         "★ 아무도 없으면 노드를 지운다 (빈 칸을 그리지 않게)");
+    }
+
+    /* ── 보안규칙 ── */
+    {
+      const R9 = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
+      ok(!!R9.honors, "★★ 보안규칙에 honors 절이 있다 (없으면 방장도 못 적는다)");
+      ok(R9.honors[".read"] === true, "★ 명단은 모두가 읽는다 (배경판이 봐야 하니까)");
+      ok(/staff/.test(String(R9.honors[".write"])) && /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(String(R9.honors[".write"])),
+         "★★★ 적는 것은 방장·운영진만 (아무나 자기 이름을 넣을 수 없다)");
+    }
+  }
+
+  /* =====================================================================
+     📊 사용 현황 (2026-08-23 — 콩)
+     "아무도 안 쓰는 기능을 유지할 이유는 없으니까."
+     여기서 지켜야 할 것은 **읽지 말아야 할 것을 안 읽는가** 입니다 —
+     Blaze 로 바뀐 뒤라 큰 노드를 훑으면 그대로 돈이 됩니다.
+     ===================================================================== */
+  {
+    const AD7 = AD.replace(/\/\*[\s\S]*?\*\//g, "");
+    const ADH = fs.readFileSync(DIR+"admin.html","utf8");
+    const 몸 = AD7.slice(AD7.indexOf("async function runUsage"),
+                        AD7.indexOf("async function runDiligent"));
+    ok(!!몸 && 몸.length > 400, "📊 사용 현황을 뽑는 함수가 있다");
+    ok(/el\("adm-usage-run"\)\?\.addEventListener\("click", runUsage\)/.test(AD7),
+       "★ [훑기] 단추에 손가락이 달려 있다 (눌렀을 때만 돕니다)");
+    ok(/id="adm-usage"/.test(ADH) && /id="adm-usage-run"/.test(ADH),
+       "★ 관리자 화면에 자리가 있다");
+
+    /* ★★★ 읽으면 안 되는 것 */
+    [["messages", "채팅 전체 — 대신 achv 의 cChat 을 씁니다"],
+     ["messages2", "수다방 전체"],
+     ["wordlog", "이미 위 그래프가 보여 줍니다"],
+     ["wordfeed", "〃"],
+     ["attendlog", "출입 기록 전체"],
+     ["reactions", "반응 전체 — 사람 수만큼 곱해집니다"]].forEach(([노드, 왜]) => {
+      ok(!new RegExp(`통째로\\("${노드}"\\)`).test(몸),
+         `★★★ ${노드} 를 통째로 안 읽는다 (${왜})`);
+    });
+    ok(!/db\.ref\(`users\/\$\{n\}`\)/.test(몸) && !/잔가지\(n, ""\)/.test(몸),
+       "★★★ users/{닉} 을 통째로 안 읽는다 (안에 timeSegs 가 들어 있어 무겁다)");
+    ok(/function 잔가지/.test(AD7) && /users\/\$\{닉\}\/\$\{가지\}/.test(AD7),
+       "★★ 작은 잔가지만 골라 읽는다");
+
+    /* ★ 못 읽는 것을 읽으려 들지 않는다 — 보안규칙이 방장도 막은 자리 */
+    ok(!/통째로\("notes"\)/.test(몸) && !/통째로\("notesOut"\)/.test(몸),
+       "★★ 📮 쪽지를 읽으려 들지 않는다 (보안규칙이 주인에게만 열려 있다)");
+
+    /* ★ 아무것도 새로 기록하지 않는다 — 방 코드를 안 건드린 이유가 그것 */
+    ok(!/\.set\(|\.update\(|\.push\(|transaction/.test(몸),
+       "★★★ 훑기는 **읽기만** 한다 (새로 남기는 기록이 없다)");
+
+    /* ★ 안 쓰는 것이 위로 와야 합니다 — 찾으려는 게 그것이니까 */
+    ok(/줄\.sort\(\(a, b\) => a\[1\] - b\[1\]\)/.test(몸),
+       "★★ 적게 쓰는 것이 위로 온다");
+    ok(/안쓰는것/.test(몸) && /아무도 안 쓰는 것/.test(AD),
+       "★★ 아무도 안 쓰는 것을 따로 모아 보여 준다");
+
+    /* ★ 못 세는 것을 못 센다고 적었는가 — 안 적으면 "0명" 을 사실로 읽습니다 */
+    ok(/판 여닫기/.test(AD) && /각자 브라우저에만 남습니다/.test(AD),
+       "★★★ 흔적이 없어 못 세는 것을 화면에 밝힌다 (안 적으면 0 을 사실로 읽는다)");
+    ok(/2026-08-11부터/.test(AD),
+       "★★ 업적으로 세는 줄이 언제부터인지 밝힌다 (그 전 것은 안 잡힌다)");
+    ok(/익명/.test(ADH) && /글 수만/.test(ADH),
+       "★★ 익명 기능은 사람 수를 못 센다고 밝힌다");
+
+    /* 셈 함수를 실제로 돌려 봅니다 */
+    {
+      const 방7 = { Object, Array, Number, String, Set };
+      vm.createContext(방7);
+      const 떼기 = (n) => {
+        const i = AD.indexOf("  function " + n + "(");
+        return AD.slice(i, AD.indexOf("\n  }\n", i) + 5);
+      };
+      vm.runInContext(떼기("새사람수") + 떼기("개수") + 떼기("품평수") +
+        "\nglobalThis.A = 새사람수; globalThis.B = 개수; globalThis.C = 품평수;", 방7);
+      ok(방7.A({ a:{nick:"콩"}, b:{nick:"콩"}, c:{nick:"도토리"} }, "nick") === 2,
+         "★★ 같은 사람이 여러 번 올려도 한 명으로 센다");
+      ok(방7.C({ p1:{ r1:{}, r2:{} }, p2:{ r3:{} } }) === 3,
+         "★ 품평은 두 겹이라 안쪽까지 센다");
+      ok(방7.A(null, "nick") === 0 && 방7.B(null) === 0 && 방7.C(null) === 0,
+         "★★ 못 읽은 노드(null)에서 터지지 않는다 (권한이 막힌 곳이 있을 수 있다)");
+    }
   }
 
   /* ── 🎋 대숲 전체 비우기도 방장만 (검토에서 빠져 있던 자리) ── */
@@ -9815,7 +12888,7 @@ function checkStaff(){
      "★ data-owner-only 가 붙은 칸은 운영진에게 안 보인다");
   /* 그 id 를 단 태그 자신에 붙었거나(카드), 바로 위 감싼 상자에 붙었거나(단추 묶음).
      둘 중 하나면 됩니다 — 앞뒤 어느 쪽에 적혀 있든 상관없게 봅니다. */
-  ["adm-staff-card", "adm-wc-clear", "adm-chat-clear", "adm-chatty-clear"].forEach(id => {
+  ["adm-staff-card", "adm-wc-clear", "adm-chat-clear"].forEach(id => {
     const i = AH.indexOf(`id="${id}"`);
     const 제태그 = i > 0 ? AH.slice(AH.lastIndexOf("<", i), AH.indexOf(">", i) + 1) : "";
     const 위쪽   = i > 0 ? AH.slice(Math.max(0, i - 400), i) : "";
@@ -9900,10 +12973,23 @@ function checkStaff(){
     /* ── 🏅 출석률 순위 (2026-08-18 — 연속 출석에서 바꿈, 콩) ──
        방 규칙이 "매일"이 아니라 "한 달 18일"이라, 연속은 취지와 어긋남.
        기준이 사람마다 달라(입장일·휴가) 날수가 아니라 **비율**로 세움. */
-    ok(/function 출석률순위\(rateRows\)/.test(AD) && !/attend\/streak/.test(AD),
+    ok(/function 출석률순위\(rateRows, 앞달\)/.test(AD) && !/attend\/streak/.test(AD),
        "★★ 순위가 출석률이다 — streak 은 더 이상 읽지 않는다 (요청도 줄었다)");
-    ok(/rateRows\.push\(\{ n, att: attDays, need: r\.need, state: r\.state \}\)/.test(AD),
-       "★★ 재료는 출석부 표가 이미 센 값 그대로 (ruleOf 와 같은 셈 — 다시 안 센다)");
+    {
+      /* [좁힘 2026-09-21] 예전에는 "출석률순위 뒤로 attMonth 가 아예 없다" 로
+         봤습니다. 그런데 ⏳ 옛 날짜 채우기가 파일 **뒤쪽**에 생기면서 걸렸어요 —
+         그 함수는 attMonth 를 쓰는 게 맞습니다(표가 읽어 둔 것을 빌려 쓰는 것).
+         보려던 것은 처음부터 **출석률순위 함수 안**이었으니, 그 몸통만 봅니다. */
+      const i = AD.indexOf("function 출석률순위");
+      /* 다음 함수가 시작하는 자리까지 — function / async function 둘 다 봅니다
+         (하나만 보면 그 사이의 다른 함수까지 딸려 들어와요). */
+      const 끝들 = ["\n  function ", "\n  async function "]
+        .map(k => AD.indexOf(k, i + 10)).filter(x => x > i);
+      const 끝 = 끝들.length ? Math.min(...끝들) : -1;
+      const 몸 = AD.slice(i, 끝 > i ? 끝 : i + 4000);
+      ok(/rateRows\.push\(\{\s*\n\s*n, att: attDays,/.test(AD) && !/attMonth/.test(몸),
+         "★★ 재료는 출석부 표가 이미 센 값 그대로 (순위는 서버를 다시 안 읽는다)");
+    }
     ok(/rate: r\.need > 0 \? r\.att \/ r\.need : null/.test(AD),
        "★ 기준이 0인 사람(입장 전)은 등수 없이 맨 아래로");
     ok(/Math\.min\(100, /.test(AD.slice(AD.indexOf("function 출석률순위"))),
@@ -9991,7 +13077,7 @@ function checkStaff(){
     ok(/async function 올리기\(text, parent, refId\)/.test(HP) &&
        /if \(refId\) 줄\.ref = refId;/.test(HP),
        "올릴 때 ref 가 실린다 (없으면 안 실림 — 옛 글과 같은 모양)");
-    ok(/\.help-ref\{/.test(HC) && /\.help-sug\{/.test(HC) && /\.help-pin\{/.test(HC),
+    ok(/\.help-ref,/.test(HC) && /\.help-sug,/.test(HC) && /\.help-pin,/.test(HC),
        "칩·제안·핀의 옷이 있다");
     /* 굴려 봅니다 — 낱말 앞 두 글자 겹침 */
     {
@@ -10083,6 +13169,40 @@ function checkStaff(){
        "★★ url 이 있으면 그리로 간다 — 나중에 Storage 로 옮겨도 화면이 안 바뀐다");
     ok(/url: typeof v\.url === "string" \? v\.url : ""/.test(FL),
        "목록에 url 칸을 미리 읽어 둔다 (섞여 있어도 돌아가게)");
+
+    /* ── 🔗 링크 자료 (2026-08-28 — 콩) ────────────────────────────────
+       파일은 밖에 두고 목록엔 이름표만. 2MB 상한도, DB 요금도 안 겪습니다.
+       ★★★ 여기서 제일 무서운 건 **아무나 링크를 걸 수 있게 되는 것**입니다.
+          "원고양식.hwp" 라는 이름으로 엉뚱한 주소를 가리키면, 자료실은
+          서로 믿고 받는 자리라 그대로 눌러요. 그래서 방장만입니다. */
+    {
+      const RF = R.files.$id;
+      const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+      ok(/if \(!window\.isRoomOwner\?\.\(\)\) \{/.test(FL),
+         "★★★ 링크는 방장만 건다 (canAdmin 이 아니라 isRoomOwner — 운영진도 아님)");
+      ok(RF[".write"].includes("!newData.child('url').exists() || auth.uid === '" + ADMIN_UID + "'"),
+         "★★★ 그 자물쇠가 보안규칙에도 있다 (화면 문고리만으로는 못 막습니다)");
+      ok(/if \(!\/\^https:\\\/\\\/\/i\.test\(주소\)\) \{/.test(FL),
+         "★★ 화면이 https 만 받는다");
+      ok(RF[".validate"].includes("beginsWith('https://')"),
+         "★★ 보안규칙도 https 만 받는다 (http 는 중간에서 바꿔치기가 됩니다)");
+      ok(RF[".validate"].includes("newData.child('size').val() <= 2097152"),
+         "★ 올려 담는 파일의 2MB 상한은 그대로다");
+      ok(/const dead = _rows\.filter\(r => !링크인가\(r\) &&/.test(FL),
+         "★★ 링크 자료는 90일에 안 사라진다 (방장이 걸어 둔 도구가 말없이 없어지면 곤란)");
+      ok(/window\.open\(r\.url, "_blank", "noopener,noreferrer"\)/.test(FL),
+         "★★★ 링크는 noopener 로 연다 (안 붙이면 열린 쪽이 이 방을 딴 주소로 돌려버립니다 — 탭내빙)");
+      ok(/function 집\(url\)/.test(FL) && /esc\(집\(r\.url\)\)/.test(FL),
+         "★★ 목록에 주소의 집(도메인)을 보여 준다 — 어디로 가는지 보고 누르라고");
+      ok(/list\.some\(링크인가\) \? " <b>· 🔗 링크는 그대로<\/b>" : ""/.test(FL),
+         "★★ 위 안내가 '90일 뒤 사라져요' 를 뭉뚱그리지 않는다 (링크가 섞이면 갈라 말합니다)");
+      ok(/note: String\(v\.note \|\| ""\)\.slice\(0, 200\)/.test(FL) &&
+         RF[".validate"].includes("newData.child('note').val().length <= 200"),
+         "★ 안내 한 줄(note)을 담을 수 있다 (설치 경고가 정상이라는 안내용)");
+      /* 실행 파일 차단은 그대로여야 합니다 — 링크가 생겼다고 풀면 안 됩니다 */
+      ok(!/"exe"|"bat"|"cmd"|"scr"/.test(FL),
+         "★★★ 올려 담는 쪽에는 여전히 실행 파일이 없다 (링크가 생겼어도 그대로)");
+    }
   }
 
   /* =====================================================================
@@ -10193,21 +13313,377 @@ function checkStaff(){
   /* ★ finish() 는 async 입니다 (돌려 보는 검사 하나를 기다립니다).
      터지면 조용히 넘어가지 않게 여기서 붙잡습니다 — 안 그러면
      "검사가 다 돌았다" 고 착각하게 됩니다. */
+  return checkHearts();
+}
+
+/* =====================================================================
+   💘 하트 쏘기 (2026-09-30 — 콩)
+   ---------------------------------------------------------------------
+   남의 카드 바탕 더블클릭 → 하트. 프사 오른쪽 위 귀퉁이(쪽지 리본의
+   반대편). 하루만 살고 자정에 사라짐. 카드의 손가락 세 곳을 콩이
+   못 박았습니다 — 프사=업적 · 네임 박스=쪽지 · 바탕(더블)=하트.
+   ===================================================================== */
+function checkHearts(){
+  ran["hearts"]=true;
+  const HT = fs.readFileSync(DIR+"script_heart.js","utf8");
+  const NT = fs.readFileSync(DIR+"script_note.js","utf8");
+  const PF = fs.readFileSync(DIR+"script_profile.js","utf8");
+  const CO = fs.readFileSync(DIR+"script_core.js","utf8");
+  const SO = fs.readFileSync(DIR+"script_solo.js","utf8");
+  const H9 = fs.readFileSync(DIR+"index.html","utf8");
+  const BS = fs.readFileSync(DIR+"build-single.py","utf8");
+  const R  = 규칙읽기();
+
+  /* ── 실려 있는가 ── */
+  ok(/<script src="script_heart\.js\?v=/.test(H9), "script_heart.js 가 index.html 에 실린다");
+  ok(H9.indexOf('src="script_note.js') < H9.indexOf('src="script_heart.js'),
+     "★ 쪽지(script_note.js) 뒤에 실린다 — 카드 손가락 순서가 맞아야 해서");
+  ok(/"script_heart\.js":\s*"listenHearts"/.test(H9), "로드 자가진단 목록에 들어 있다");
+  ok(/"script_heart\.js"/.test(BS), "단일파일 묶음에도 들어간다");
+  ok(/callIfFn\("listenHearts"\)/.test(CO), "입장할 때 듣기 시작한다 (script_core.js)");
+  ok(/"listenHearts"/.test(SO), "🧘 혼자 방에서도 돈다 (가짜 DB — 유령에게 쏴 볼 수 있다)");
+
+  /* ── 카드의 손가락 세 곳 (콩 결정) ── */
+  ok(/list\.addEventListener\("dblclick"/.test(HT) && /sendHeart\(nick, card\)/.test(HT),
+     "★★ 바탕 **더블클릭** 이 하트다");
+  ok(/closest\("\.card-avatar-wrap, \.card-foot, \.card-state, \[data-pick-worktag\], \.share-card/.test(HT),
+     "★★ 프사·네임 박스·상태 알약·작업 스티커 자리·공유 액자는 비켜 준다 (바탕만)");
+  ok(/if \(!nick \|\| nick === me\(\)\) return;/.test(HT), "★ 나에게는 못 쏜다");
+  ok(/if \(!e\.target\.closest\("\.card-foot, \.lite-nk"\)\) return;\s*\n\s*openNoteTo\(nick\);/.test(NT),
+     "★★★ 쪽지는 **네임 박스(.card-foot)** 만 — 바탕 한 번 클릭엔 아무 일도 없다");
+  ok(NT.indexOf('window.openAchvOf?.(nick)') < NT.indexOf('if (!e.target.closest(".card-foot, .lite-nk")) return;'),
+     "★ 프사=업적 판단이 네임 박스 판단보다 먼저다");
+  ok(/if \(e\.target\.closest\("\[data-heart-open\]"\)\) return;/.test(NT),
+     "★ 쪽지 쪽 손은 하트 단추를 비켜 준다");
+  ok(PF.indexOf('if (e.target?.closest?.("[data-heart-open]")) return;') > 0 &&
+     PF.indexOf('if (e.target?.closest?.("[data-heart-open]")) return;') < PF.indexOf('if (e.target?.closest?.("[data-edit-profile]")) {') &&
+     PF.indexOf('if (e.target?.closest?.("[data-heart-open]")) return;') < PF.indexOf('if (window.SOLO) {\n      const wrap = e.target?.closest?.(".card-avatar-wrap");'),
+     "★★★ 프로필 쪽 손도 하트 단추를 비켜 준다 (프사 칸 안이라 프로필 창·혼자 방 프꾸보다 먼저)");
+  ok(!/sendHeart/.test(PF) && !/cardHearts/.test(PF),
+     "프로필 파일은 하트를 모른다 (한 곳에서만 쏜다)");
+
+  /* ── 붙는 자리 — 프사 오른쪽 위 (쪽지 리본은 왼쪽 위) ── */
+  ok(/const wrap = card\.querySelector\("\.card-avatar-wrap"\) \|\| card\.querySelector\("\.lite-tm"\);/.test(HT) && /wrap\.appendChild\(b\);/.test(HT),
+     "★★ 하트는 프사 칸(.card-avatar-wrap)에 붙는다 — 프사를 따라가야 해서 (콩 2026-09-30 세 번째 자리)");
+  ok(/const _shown = new Set\(\);/.test(HT) && /\(_shown\.has\(nick\) \? "" : " is-new"\)/.test(HT) &&
+     /\.card-heart\.is-new\{ animation: heart-pop/.test(CSS) && !/\.card-heart\{[^}]*animation:/.test(CSS),
+     "★★ 등장 애니는 처음 붙을 때만 (.is-new) — 카드가 15초마다 다시 그려져도 깜빡이지 않는다 (콩 제보)");
+  ok(/if \(_day !== day\) _shown\.clear\(\);/.test(HT), "★ 새 날이 되면 다시 퐁 할 수 있다");
+  ok(/if \(!hasHeart\(nick\)\) \{ if \(b\) b\.remove\(\); _shown\.delete\(nick\); return; \}/.test(HT),
+     "★★ 하트가 없으면 아무것도 안 보인다");
+  {
+    const i = CSS.indexOf(".card-heart{");
+    const 덩이 = i >= 0 ? CSS.slice(i, i + 400) : "";
+    ok(i >= 0 && /right:\s*-2[0-9]px;/.test(덩이) && /top:\s*4[0-9]%;/.test(덩이) && !/left:/.test(덩이) && !/bottom:/.test(덩이),
+       "★★ 프사 **오른쪽 변 60% 쯤**, 카드 밖으로 살짝 — 방장 딱지(bottom -8px)보다 위 (콩 2026-09-30)");
+    const j = CSS.indexOf(".card-note{");
+    const 리본 = j >= 0 ? CSS.slice(j, j + 300) : "";
+    ok(/left:\s*-\d+px;/.test(리본), "★ 쪽지 리본은 여전히 왼쪽 위 — 둘이 마주 본다");
+    ok(/z-index:\s*4;/.test(덩이), "★ 스티커(z 2)·리본(z 3) 위에 놓인다");
+  }
+  ok(/fill="\$\{color\}" stroke="#fff" stroke-width="5"/.test(HT),
+     "★ 꽉 찬 하트 + 흰 테두리 (콩 선택 · 하트모양_고르기 5번) — 색은 코랄/진빨강 둘");
+  ok(/prefers-reduced-motion: reduce\)\{ \.card-heart, \.card-heart-fly\{ animation: none; \}/.test(CSS),
+     "움직임 줄이기 설정을 따른다");
+
+  /* ── 누가 무엇을 보나 (C안 — 콩 2026-09-30) ──
+     하트는 모두에게, 누가·몇 개는 받은 본인만. */
+  ok(/const NODE_ON = "cardHeartsOn";/.test(HT) && /const NODE\s+= "cardHearts";/.test(HT),
+     "★★★ 자리가 둘 — 공개(cardHeartsOn: 받았다) / 본인만(cardHearts: 누가·몇 개)");
+  ok(/document\.createElement\(mine \? "button" : "span"\)/.test(HT),
+     "★★ 남의 카드 하트는 단추가 아니다 (눌러도 아무 일 없음) — 내 것만 단추");
+  ok(/b\.innerHTML = heartSvg\(color\) \+ \(mine \? `<span class="card-heart-n"><\/span>` : ""\);/.test(HT),
+     "★★ 숫자 칸은 내 카드에만 붙는다");
+  /* [2026-09-30 밤 — 콩] 하루 한 번 + 내가 쏜 카드는 색이 다르다 (C안: 코랄/진빨강) */
+  ok(/const MAX_PER_DAY = 1;/.test(HT), "★★★ 하루에 한 사람당 한 번 (파일)");
+  ok(/if \(sentTo\(to\)\) \{ toast\("오늘 이미 보냈어요 💘"\); return; \}/.test(HT),
+     "★★ 두 번째 더블클릭엔 토스트만");
+  ok(/const NODE_BY = "cardHeartsBy";/.test(HT) && /_byRef = db\.ref\(`\$\{NODE_BY\}\/\$\{day\}\/\$\{me\(\)\}`\);/.test(HT),
+     "★★ 내가 오늘 누구에게 쐈는지는 내 가지(cardHeartsBy/{날짜}/{내닉})로 안다");
+  ok(/const COLOR_OTHER = "#f4866a";/.test(HT) && /const COLOR_MINE\s+= "#c0121e";/.test(HT) &&
+     /const color = \(!mine && sentTo\(nick\)\) \? COLOR_MINE : COLOR_OTHER;/.test(HT),
+     "★★ 남이 쏜 카드는 코랄, 내가 쏜 카드는 진빨강 — 내 카드는 늘 코랄 (C안)");
+  ok(/else if \(b\.getAttribute\("data-heart-color"\) !== color\)/.test(HT), "★ 코랄이던 하트가 내가 쏘면 진빨강으로 바뀐다");
+  ok(/return Object\.values\(myHearts\(\)\)\.filter\(n => Number\(n\) > 0\)\.length;/.test(HT), "★ 숫자 딱지는 이제 '몇 명'");
+  ok(/\.card-heart-toast\{/.test(CSS) && /window\.heartToast = toast;/.test(HT), "토스트가 있고 화공 응원도 빌려 쓴다");
+  ok(/\.card-heart-n:empty\{ display: none; \}/.test(CSS) && /nEl\.textContent = n > 1 \? String\(n\) : ""/.test(HT),
+     "★ 숫자는 둘 이상일 때만");
+  ok(/if \(mine\) \{ b\.type = "button"; b\.setAttribute\("data-heart-open", nick\); \}/.test(HT),
+     "★ [data-heart-open] 은 내 하트에만");
+  ok(/_mineRef = db\.ref\(`\$\{NODE\}\/\$\{day\}\/\$\{me\(\)\}`\);/.test(HT) && !/db\.ref\(`\$\{NODE\}\/\$\{day\}`\)/.test(HT),
+     "★★★ 세는 자리는 **내 닉 밑**만 듣는다 (남의 것은 읽을 수도 없다)");
+  ok(/_onRef = db\.ref\(`\$\{NODE_ON\}\/\$\{day\}`\);/.test(HT),
+     "★★ 모두가 듣는 건 공개 가지 하나 (통신량)");
+  ok(/나만 볼 수 있어요/.test(HT), "판에 '나만 볼 수 있어요' 라고 적혀 있다");
+
+  /* ── 하루만 산다 ── */
+  ok(/\[`\$\{NODE\}\/\$\{day\}\/\$\{to\}\/\$\{from\}`\]: MAX_PER_DAY,/.test(HT) && /\[`\$\{NODE_ON\}\/\$\{day\}\/\$\{to\}`\]:\s+true,/.test(HT) && /\[`\$\{NODE_BY\}\/\$\{day\}\/\$\{from\}\/\$\{to\}`\]: true/.test(HT),
+     "★★★ 쏘면 cardHearts/{날짜}/{받는닉}/{쏜닉} · cardHeartsOn/{날짜}/{받는닉} · cardHeartsBy/{날짜}/{쏜닉}/{받는닉} 셋을 한 번에 — 날짜가 맨 위라 오늘 것만 읽으면 자정 리셋");
+  ok(/if \(_onRef && _day && _day !== dayKey\(\)\) \{ subscribe\(dayKey\(\)\)/.test(HT),
+     "★★ 자정을 넘겨 켜 둔 창도 새 날짜 가지로 갈아 끼운다 (하트가 싹 사라진다)");
+  ok(/await db\.ref\(\)\.update\(\{/.test(HT) && !/\.transaction\(/.test(HT),
+     "★ 쏘기는 세 자리 한 번에 쓰기 (하루 한 번이라 transaction 이 필요 없다)");
+  ok(/if \(!window\.canAdmin\?\.\(\) \|\| !window\.db\) return;/.test(HT) && /for \(const node of \[NODE_ON, NODE, NODE_BY\]\)/.test(HT),
+     "어제 가지 치우기는 방장·운영진만 시도, 세 자리 다 (남들은 조용히 넘어간다)");
+  ok(/window\.detachHearts\s*=/.test(HT) && /__heartPatched/.test(HT),
+     "나갈 때 듣기를 끊고, 카드를 다시 그리면 하트를 다시 붙인다");
+
+  /* ── 보안규칙 ── */
+  {
+    const H = R.cardHearts, O = R.cardHeartsOn;
+    ok(!!H && !!O, "★★★ 보안규칙에 cardHearts · cardHeartsOn 둘 다 있다 (없으면 쏘는 즉시 permission denied)");
+    if (H) {
+      ok(H[".read"] !== true && !(H.$day && H.$day[".read"]),
+         "★★★ 세는 자리는 아무나 못 읽는다 (누가·몇 개는 비밀)");
+      const T = H.$day && H.$day.$to;
+      ok(!!T && /nickOwner.*\$to.*auth\.uid/.test(String(T[".read"])),
+         "★★★ 받는 사람 자리는 **그 닉의 주인만** 읽는다");
+      const F = T && T.$from;
+      ok(!!F && /nickOwner.*\$from.*auth\.uid/.test(String(F[".read"])),
+         "★★ 쏜 사람은 **자기 칸 하나**만 읽는다 (+1 하려면 지금 값이 필요해서 — transaction)");
+      ok(!!F && /nickOwner.*\$from.*auth\.uid/.test(String(F[".write"])),
+         "★★★ 쏜 사람 자리는 **그 닉의 주인만** 적는다 (사칭 불가)");
+      ok(!!F && /\$from !== \$to/.test(String(F[".write"])), "★★ 나에게는 못 쏜다 (규칙에서도)");
+      ok(!!F && /!data\.exists\(\)/.test(String(F[".write"])) && /newData\.val\(\) === 1/.test(String(F[".validate"])),
+         "★★★ 규칙도 하루 한 번 — 두 번째 쓰기는 서버가 거절 (값은 1 뿐)");
+      const B = R.cardHeartsBy;
+      ok(!!B && B.$day && B.$day.$from && /nickOwner.*\$from.*auth\.uid/.test(String(B.$day.$from[".read"])) &&
+         B.$day.$from.$to && /!data\.exists\(\)/.test(String(B.$day.$from.$to[".write"])),
+         "★★ cardHeartsBy 는 쏜 사람만 읽고, 한 번만 쓴다");
+      ok(!!F && /\$day\.matches/.test(String(F[".validate"])), "★ 날짜 열쇠 꼴(YYYY-MM-DD)만 받는다 — 엉뚱한 가지가 생기지 않게");
+      ok(H.$day && /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(String(H.$day[".write"])) && /!newData\.exists\(\)/.test(String(H.$day[".write"])),
+         "★★ 날짜 가지 통째 지우기는 방장만, 지우기만 (채우기는 못 한다)");
+    }
+    if (O) {
+      ok(O.$day && O.$day[".read"] === true, "★★ 공개 가지는 누구나 읽는다 (남의 카드에도 하트가 보여야 한다)");
+      const T = O.$day && O.$day.$to;
+      ok(!!T && /newData\.val\(\) === true/.test(String(T[".validate"])), "★ 공개 가지 값은 true 뿐 (숫자·이름이 새지 않는다)");
+      ok(!!T && /nickOwner.*\$to.*exists\(\)/.test(String(T[".write"])), "★ 있는 닉에만 켤 수 있다");
+      ok(!!T && /nickOwner.*\$to.*!== auth\.uid/.test(String(T[".write"])), "★ 자기 것은 못 켠다");
+      ok(!!T && /\$day\.matches/.test(String(T[".validate"])), "★ 날짜 열쇠 꼴만");
+      ok(O.$day && /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(String(O.$day[".write"])) && /!newData\.exists\(\)/.test(String(O.$day[".write"])),
+         "★★ 공개 가지도 통째 지우기는 방장만");
+    }
+  }
+
+  return checkCheers();
+}
+
+/* =====================================================================
+   🔥 화공 응원 (2026-09-30 — 콩)
+   ---------------------------------------------------------------------
+   남의 화면 공유 카드 더블클릭 → 넷(🔥👍⭐❤️) 중 골라 응원. 카드 윗변에
+   나란히. 보이는 규칙은 프로필 하트와 같다 (스티커는 공개, 누가·몇 개는
+   주인만).
+   ===================================================================== */
+function checkCheers(){
+  ran["cheers"]=true;
+  const CH = fs.readFileSync(DIR+"script_cheer.js","utf8");
+  const HT = fs.readFileSync(DIR+"script_heart.js","utf8");
+  const CO = fs.readFileSync(DIR+"script_core.js","utf8");
+  const SO = fs.readFileSync(DIR+"script_solo.js","utf8");
+  const H9 = fs.readFileSync(DIR+"index.html","utf8");
+  const BS = fs.readFileSync(DIR+"build-single.py","utf8");
+  const R  = 규칙읽기();
+
+  ok(/<script src="script_cheer\.js\?v=/.test(H9), "script_cheer.js 가 index.html 에 실린다");
+  ok(H9.indexOf('src="script_share.js') < H9.indexOf('src="script_cheer.js'),
+     "★★ 화공(script_share.js) 뒤에 실린다 — renderShareCards 를 감싸야 해서");
+  ok(/"script_cheer\.js":\s*"listenCheers"/.test(H9), "로드 자가진단 목록에 들어 있다");
+  ok(/"script_cheer\.js"/.test(BS), "단일파일 묶음에도 들어간다");
+  ok(/callIfFn\("listenCheers"\)/.test(CO), "입장할 때 듣기 시작한다");
+  ok(/"listenCheers"/.test(SO), "🧘 혼자 방에서도 돈다");
+
+  /* ── 넷 ── */
+  ok(/const KINDS = \["fire", "thumb", "star", "heart"\];/.test(CH), "★ 종류는 🔥 👍 ⭐ ❤️ 넷, 이 순서로 늘어선다");
+  ok(/width="40" height="38"/.test(CH) && /stroke="#fff" stroke-width="5"/.test(CH),
+     "★★ 프로필 하트와 같은 크기(40×38)·같은 결(흰 테두리 5)");
+  ok(/class="card-heart-n"/.test(CH), "★ 숫자 딱지도 프로필 하트의 것을 그대로 쓴다");
+  ok(/"translate\(32 31\) scale\(1\.3\) translate\(-32 -26\)"/.test(CH) && /"translate\(0 -3\)"/.test(CH),
+     "★ 중심선 맞춤 — 불꽃은 1.3배, 따봉은 3 위로 (콩 2026-09-30 오후)");
+
+  /* ── 손가락 ── */
+  ok(/list\.addEventListener\("dblclick"/.test(CH) && /closest\("\.share-card\[data-share-nick\]"\)/.test(CH) && /openPicker\(nick, card, e\.clientX, e\.clientY\)/.test(CH),
+     "★★ 남의 화공 카드 더블클릭 → 고르기 판");
+  ok(/closest\("\[data-share-stop\], \[data-share-switch\], \[data-blur-open\], \[data-cheer-open\], \.share-cheers"\)/.test(CH),
+     "★ 내 화공 카드의 off·창 바꾸기·빨간 불과 스티커 줄은 비켜 준다");
+  ok(/if \(!nick\) return;\s*\/\/ 내 카드도 됩니다/.test(CH) && !/to === from/.test(CH),
+     "★★ 내 화공 카드에도 붙일 수 있다 (콩 2026-09-30 — 화공 홍보용. 프로필 하트와 다른 점)");
+  ok(/data-cheer-pick/.test(CH) && /sendCheer\(nick, pick\.getAttribute\("data-cheer-pick"\), card\)/.test(CH),
+     "★ 판에서 하나 고르면 보낸다");
+  ok(/document\.createElement\(mine \? "button" : "span"\)/.test(CH) && /if \(mine\) \{ b\.type = "button"; b\.setAttribute\("data-cheer-open", kind\); \}/.test(CH),
+     "★★ 내 스티커만 단추 (누가 보냈나) — 남의 것은 그림");
+
+  /* ── 자리 — 윗변 ── */
+  ok(/let row = card\.querySelector\(":scope > \.share-cheers"\);/.test(CH) && /card\.appendChild\(row\);/.test(CH),
+     "★★ 스티커 줄(.share-cheers)은 화공 카드 바로 밑에 붙는다");
+  {
+    const i = CSS.indexOf(".share-cheers{");
+    const 덩이 = i >= 0 ? CSS.slice(i, i + 300) : "";
+    ok(i >= 0 && /top:\s*-1\d+px;/.test(덩이) && /right:\s*calc\(10% - 20px\);/.test(덩이) && /display:\s*flex;/.test(덩이),
+       "★★ 윗변, 오른쪽 끝이 90% 지점 — 늘면 왼쪽으로 자란다 (콩 2026-09-30, 70%→90%)");
+    ok(/\.user-card\.share-card\{ overflow: visible; \}/.test(CSS),
+       "★★★ 화공 카드의 overflow:hidden 을 더 센 선택자(.user-card.share-card)로 푼다 (안 풀면 윗변 밖 스티커가 잘린다 — 순서로는 못 이긴다, 이 규칙이 앞에 있어서)");
+    ok(/\.share-shot\{[^}]*overflow: hidden/.test(CSS.replace(/\/\*[\s\S]*?\*\//g, "")), "★ 그림을 액자에 가두는 건 .share-shot 이 계속 맡는다");
+  }
+  ok(/const _shown = new Set\(\);/.test(CH) && /_shown\.has\(key\) \? "" : " is-new"/.test(CH),
+     "★ 등장 애니는 처음 붙을 때만 (깜빡임 방지)");
+
+  /* ── 하루만 · 통신량 ── */
+  ok(/const NODE\s+= "shareCheers";/.test(CH) && /const NODE_ON = "shareCheersOn";/.test(CH),
+     "★★★ 자리가 둘 — 공개(shareCheersOn) / 주인만(shareCheers)");
+  ok(/\[`\$\{NODE\}\/\$\{day\}\/\$\{to\}\/\$\{kind\}\/\$\{from\}`\]: MAX_PER_DAY,/.test(CH) && /\[`\$\{NODE_BY\}\/\$\{day\}\/\$\{from\}\/\$\{to\}\/\$\{kind\}`\]: true/.test(CH),
+     "★★★ 날짜/받는닉/종류/쏜닉 + 내 보낸 목록 — 날짜가 맨 위라 오늘 것만 읽으면 자정 리셋");
+  /* [2026-09-30 밤 — 콩] 화공 응원도 하루에 종류마다 한 번 (색은 안 바꿈) */
+  ok(/const MAX_PER_DAY = 1;/.test(CH) && /if \(sentTo\(to, kind\)\) \{ window\.heartToast\?\.\(/.test(CH),
+     "★★★ 화공 응원도 하루 한 번 — 두 번째는 토스트만");
+  ok(!/COLOR_MINE/.test(CH), "★ 화공 응원은 내 것이라고 색을 바꾸지 않는다 (콩)");
+  ok(/_mineRef = db\.ref\(`\$\{NODE\}\/\$\{day\}\/\$\{me\(\)\}`\);/.test(CH) && /_onRef = db\.ref\(`\$\{NODE_ON\}\/\$\{day\}`\);/.test(CH),
+     "★★ 모두는 공개 가지 하나, 나는 내 가지 하나 (통신량)");
+  ok(/if \(_onRef && _day && _day !== dayKey\(\)\) \{ subscribe\(dayKey\(\)\)/.test(CH), "★ 자정 넘기면 새 날짜로 갈아 끼운다");
+  ok(/const _renderShare = window\.renderShareCards;/.test(CH) && /__cheerPatched/.test(CH),
+     "★★ 화공 카드가 다시 그려지면(켜기/끄기 포함) 스티커도 다시 붙인다");
+  /* [2026-09-30 저녁 — 콩 제보] 감싼 옷만으로는 script_share.js **안에서** 부르는
+     renderShareCards() 에 안 걸렸습니다 — 화면 사진이 새로 올 때마다 카드가
+     새로 태어나고 스티커가 사라졌어요. 카드 마당을 지켜보는 눈이 필요합니다. */
+  ok(/new MutationObserver\(/.test(CH) && /observe\(list, \{ childList: true \}\)/.test(CH) && /classList\?\.contains\("share-card"\)/.test(CH),
+     "★★★ 카드 마당을 지켜보다가 화공 카드가 새로 태어나면 스티커를 다시 붙인다 (감싼 옷은 안쪽 호출에 안 걸린다)");
+  ok(/new MutationObserver\(/.test(HT) && /observe\(list, \{ childList: true \}\)/.test(HT),
+     "★★ 프로필 하트도 같은 눈으로 지킨다");
+  /* [2026-09-30 밤 — 콩 제보 "아직도 간헐적으로 깜빡인다"] 두 가지였습니다.
+     ① script_share.js 가 새 사진마다 카드를 전부 떼고 새로 붙임 → <img> 재디코딩
+     ② 관찰자가 setTimeout 으로 미뤄 붙여서 한 프레임 비었음 */
+  {
+    const SH2 = fs.readFileSync(DIR+"script_share.js","utf8");
+    ok(/const had = list\.querySelector\(`\.share-card\[data-share-nick="\$\{CSS\.escape\(row\.nick\)\}"\]`\);/.test(SH2) &&
+       /if \(im\.getAttribute\("src"\) !== row\.img\) im\.setAttribute\("src", row\.img\);/.test(SH2),
+       "★★★ 화공 카드는 같은 사람이면 제자리에서 사진만 바꾼다 (카드를 새로 만들지 않는다 — 깜빡임의 뿌리)");
+    ok(!/list\.querySelectorAll\("\.share-card"\)\.forEach\(el => el\.remove\(\)\);/.test(SH2),
+       "★★ 옛 '전부 떼고 새로' 줄이 남아 있지 않다");
+    ok(/const 남길닉 = new Set\(rows\.map\(r => r\.nick\)\);/.test(SH2), "★ 없어진 사람 카드만 뗀다");
+    ok(!/_watchTimer = setTimeout\(/.test(CH) && !/_watchTimer = setTimeout\(/.test(HT),
+       "★★ 관찰자는 미루지 않고 그리기 전에 바로 붙인다 (미루면 한 프레임 비어 깜빡인다)");
+  }
+
+  /* ── 보안규칙 ── */
+  {
+    const H = R.shareCheers, O = R.shareCheersOn;
+    ok(!!H && !!O, "★★★ 보안규칙에 shareCheers · shareCheersOn 둘 다 있다");
+    if (H) {
+      const T = H.$day && H.$day.$to;
+      ok(!!T && /nickOwner.*\$to.*auth\.uid/.test(String(T[".read"])), "★★★ 받는 사람 자리는 그 닉의 주인만 읽는다");
+      const K = T && T.$kind;
+      ok(!!K && /fire.*thumb.*star.*heart/.test(String(K[".validate"])), "★ 종류는 넷만");
+      const F = K && K.$from;
+      ok(!!F && /nickOwner.*\$from.*auth\.uid/.test(String(F[".write"])) && !/\$from !== \$to/.test(String(F[".write"])),
+         "★★★ 쏜 사람 자리는 그 닉의 주인만 (사칭 불가) — 자기에게도 된다");
+      ok(!!F && /!data\.exists\(\)/.test(String(F[".write"])) && /newData\.val\(\) === 1/.test(String(F[".validate"])),
+         "★★★ 규칙도 하루 한 번 (값은 1 뿐)");
+      const B = R.shareCheersBy;
+      ok(!!B && B.$day && B.$day.$from && B.$day.$from.$to && B.$day.$from.$to.$kind &&
+         /!data\.exists\(\)/.test(String(B.$day.$from.$to.$kind[".write"])),
+         "★★ shareCheersBy 는 한 번만 쓴다");
+    }
+    if (O) {
+      ok(O.$day && O.$day[".read"] === true, "★★ 공개 가지는 누구나 읽는다");
+      const K = O.$day && O.$day.$to && O.$day.$to.$kind;
+      ok(!!K && /newData\.val\(\) === true/.test(String(K[".validate"])) && /fire.*thumb.*star.*heart/.test(String(K[".validate"])),
+         "★ 공개 가지 값은 true 뿐, 종류 넷만");
+      ok(!!K && /nickOwner.*\$to.*exists\(\)/.test(String(K[".write"])) && !/!== auth\.uid/.test(String(K[".write"])), "★ 있는 닉이면 자기 것도 켤 수 있다");
+    }
+  }
+
+  /* =====================================================================
+     📅 디데이 (2026-10-01 — 콩)
+     할 일 탭 맨 위 칸 · 달력 🚩 · 카드 접속 점 옆 딱지(이름 없이 D-N 과 개수)
+     ===================================================================== */
+  {
+    const DD = fs.readFileSync(DIR+"script_dday.js","utf8");
+    const RT9 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    const H9 = fs.readFileSync(DIR+"index.html","utf8");
+    const BS = fs.readFileSync(DIR+"build-single.py","utf8");
+    const CO9 = fs.readFileSync(DIR+"script_core.js","utf8");
+    const SO9 = fs.readFileSync(DIR+"script_solo.js","utf8");
+    ok(/<script src="script_dday\.js\?v=/.test(H9) && H9.indexOf('src="script_mywork.js') < H9.indexOf('src="script_dday.js'),
+       "script_dday.js 가 나의 작업(script_mywork.js) 뒤에 실린다");
+    ok(/"script_dday\.js":\s*"listenDday"/.test(H9) && /"script_dday\.js"/.test(BS), "자가진단·단일파일 목록에 있다");
+    ok(/callIfFn\("listenDday"\)/.test(CO9) && /"listenDday"/.test(SO9), "입장 때·혼자 방에서 듣는다");
+    ok(/users\/\$\{me\(\)\}\/events/.test(DD), "★ 저장 자리는 users/{닉}/events — 본인만 (할 일과 따로)");
+    ok(/host\.insertAdjacentHTML\("afterbegin", html\)/.test(DD) && /observe\(todo, \{ childList: true \}\)/.test(DD),
+       "★★ 할 일 탭 **맨 위**에 끼우고, 탭이 다시 그려져도 다시 끼운다");
+    ok(/\.att-day\[data-d\]/.test(DD) && /dd-flag/.test(DD) && /observe\(cal, \{ childList: true \}\)/.test(DD), "★ 달력 날짜에 🚩");
+    ok(/diffDays\(x\.d\) >= -KEEP_PAST_DAYS/.test(DD) && /KEEP_PAST_DAYS = 1;/.test(DD), "★ 지난 것은 D+1 까지만 보인다");
+    ok(/window\.myDday = summary;/.test(DD) && /ddN: \(window\.myDday\?\.\(\) \|\| null\)\?\.n \?\? null,/.test(RT9) && /ddD:/.test(RT9),
+       "★★ status 에 개수(ddN)·남은 날(ddD)만 얹는다 — 항목 이름은 안 나간다 (콩)");
+    ok(!/\bt:\s*/.test(RT9.slice(RT9.indexOf("ddN:"), RT9.indexOf("ddN:") + 200)), "★ status 에 디데이 이름(t)은 없다");
+    ok(/function ddChipHtml\(row\)/.test(RT9) && /\$\{ddChipHtml\(row\)\}/.test(RT9) &&
+       RT9.indexOf("${ddChipHtml(row)}") > RT9.indexOf('<span class="card-conn') && RT9.indexOf("${ddChipHtml(row)}") < RT9.indexOf("row.onPhone === true"),
+       "★★ 카드 딱지는 접속 점 바로 다음에 그린다");
+    ok(/n > 1 \? `<i>·\$\{n\}<\/i>` : ""/.test(RT9), "★ 둘 이상이면 개수를 덧붙인다 (콩)");
+    {
+      const i = CSS.indexOf(".card-dday{"); const 덩이 = i >= 0 ? CSS.slice(i, i + 600) : "";
+      ok(i >= 0 && /left:\s*22px;/.test(덩이) && /border-radius:\s*3px;/.test(덩이), "★ 접속 점 옆(left 22px) · 네모지게 (3px — 콩 2026-10-01 저녁, 8 에서 더 각지게)");
+      ok(!/animation/.test(덩이) && !/\.card-dday\.is-day\{[^}]*animation/.test(CSS), "★ 깜빡임 없음 (콩)");
+      ok(/\.card-foot:has\(\.card-dday\) \.card-name\{ padding-left: 78px; \}/.test(CSS), "★ 딱지가 있으면 긴 닉이 더 잘린다 (겹치지 않게)");
+    }
+  }
+
+  /* =====================================================================
+     📢 새 공지 팝업 · 닉별 읽음 (2026-10-01 — 콩)
+     ===================================================================== */
+  {
+    const NB = fs.readFileSync(DIR+"script_notice.js","utf8");
+    const CO9 = fs.readFileSync(DIR+"script_core.js","utf8");
+    ok(/users\/\$\{nick\}\/noticeSeenAt/.test(NB) && /return Math\.max\(local, Number\(_seenServer \|\| 0\)\);/.test(NB),
+       "★★ 읽음은 닉별(users/{닉}/noticeSeenAt) — 기기 값은 버팀목으로만");
+    ok(/function seedSeenIfNew\(\)/.test(NB) && /_seenServer != null \|\| !_list\.length\) return;/.test(NB) && /const base = Math\.max\(newest, seenAt\(\)\);/.test(NB),
+       "★★★ 서버 값이 없으면 지금 있는 공지를 다 읽은 셈으로 — 옛 공지가 몽땅 새 공지로 뜨지 않게 (콩)");
+    ok(/async function showNoticePopOnce\(\)/.test(NB) && /document\.querySelector\("\.hello-veil"\)/.test(NB),
+       "★★ 입장 팝업은 👋 입장 인사가 닫힌 뒤에 뜬다");
+    ok(/const fresh = _list\.filter\(isUnread\);/.test(NB) && /if \(!fresh\.length\) return;/.test(NB),
+       "★ 안 읽은 게 없으면 안 뜬다 (붉은 점과 같은 잣대)");
+    ok(/npop-later/.test(NB) && /npop-open/.test(NB) && /닫기\(\); openNoticeBoard\(\);/.test(NB),
+       "★ [나중에]는 이번만 닫고, [공지 보기]는 공지판을 열어 읽음 처리");
+    ok(/if \(_popShown \|\| !window\.db \|\| window\.SOLO\) return;/.test(NB), "한 접속에 한 번 · 혼자 방에선 안 뜬다");
+    ok(/window\.showNoticePopOnce\?\.\(\)/.test(CO9) && CO9.indexOf("showHelloOnce?.()") < CO9.indexOf("showNoticePopOnce?.()"),
+       "입장 때 부른다 (입장 인사 다음에)");
+    ok(/\.npop-card\{/.test(CSS) && /\.npop-tag\{[^}]*rgba\([^)]*\.9\)[^}]*color: #fff/.test(CSS), "팝업 CSS · 딱지는 불투명+흰 글씨 (다크 대비)");
+  }
+
+  /* [2026-10-01 콩 제보] 내 status 줄이 지워진 뒤 반쪽으로 되살아나면(joinedAt 없음) 접속 순서에서 맨 뒤 */
+  {
+    const RT9 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    ok(/\(!mine \|\| mine\.joinedAt == null\) && Date\.now\(\) - _selfHealAt > 30000/.test(RT9) && /_lastSentObj = null;\s*\n\s*setTimeout\(\(\) => \{ try \{ if \(!window\.__leaving\) updateStatus\(true\); \}/.test(RT9),
+       "★★ 내 줄이 비었거나 joinedAt 이 빠졌으면 통째로 다시 보낸다 (30초에 한 번)");
+    ok(/\(Number\(data\[a\]\?\.joinedAt\) \|\| Infinity\)/.test(RT9), "접속 순서 정렬은 joinedAt 없는 사람을 맨 뒤로 (그래서 위 치유가 필요)");
+  }
+
+  /* ⏱ [2026-10-01 콩] 카드 작업 시간 HH:MM (01:04 · 11:44) — 두 자리 고정, 초 없음 */
+  {
+    const RT9 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    ok(/function whFmt\(ms\)/.test(RT9) && /\$\{String\(h\)\.padStart\(2, "0"\)\}:\$\{String\(m\)\.padStart\(2, "0"\)\}/.test(RT9),
+       "★★ 표기는 시:분 두 자리 고정 (01:04 · 11:44) — 콩 (10시간 넘어도 칸 밖으로 안 나간다)");
+    ok(/const whTxt = whFmt\(_whMs\);/.test(RT9), "★★ 카드 숫자는 whFmt() 하나로 만든다");
+    ok(!/whTick|wh-live|wh-s|_whAt|data-rate|setInterval\(whTick/.test(RT9), "★★★ 초 흘리기(1초 틱·.wh-s·data-rate)는 완전히 걷어냈다 — 반쯤 남기 금지");
+    ok(!/data-at=/.test(RT9), "★★★ 받은 시각을 HTML 에 넣지 않는다 (넣으면 하트비트마다 카드 전부 다시 그려진다)");
+    ok(/\.card-wh-t b\{ font-variant-numeric: tabular-nums; \}/.test(CSS) && !/\.wh-s/.test(CSS), "숫자 폭 고정 · 초용 CSS(.wh-s) 없음");
+    ok(/Math\.floor\(ms \/ 60000\)/.test(RT9), "분은 내림 (59초는 아직 00:00)");
+  }
+
   finish().catch(e => { console.error("\n검사 마무리에서 터졌습니다:", e); process.exit(1); });
 }
 
 function checkNotice(){
   ran["notice"]=true;
   const NT = fs.readFileSync(DIR+"script_notice.js","utf8");
-  const RULES = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8").replace(/\/\/.*/g,"")).rules;
+  const RULES = 규칙읽기();
   const ADMIN = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
 
   /* ── 화면 뼈대 ── */
   ok(/id="notice-btn"/.test(HTML), "채팅 머리말에 📢 공지 단추가 있다");
-  /* [2026-08-11] 순서를 Chat → 📢 공지 → ☕ 수다방 으로 바꿨습니다 */
-  ok(HTML.indexOf('id="my-info"') < HTML.indexOf('id="notice-btn"')
-     && HTML.indexOf('id="notice-btn"') < HTML.indexOf('id="chat-tab-chatty"'),
-     "★ 머리말 차례가 Chat → 공지 → 수다방 이다");
+  /* [2026-08-30] 수다방을 접어 머리말은 Chat → 📢 공지 둘뿐입니다 */
+  ok(HTML.indexOf('id="my-info"') < HTML.indexOf('id="notice-btn"'),
+     "★ 머리말 차례가 Chat → 공지 이다");
   ok(/id="notice-dot"/.test(HTML), "안 읽음 붉은 점 자리가 있다");
   ["notice-modal","notice-board","notice-foot","notice-zoom"].forEach(id =>
     ok(new RegExp('id="'+id+'"').test(HTML), `${id} 자리가 있다`));
@@ -10261,8 +13737,13 @@ function checkNotice(){
      "저장된 사진 값은 data:image 만 통과시킨다 (외부 주소·javascript: 차단)");
 
   /* ── 읽음 표시 ── */
-  ok(/setTimeout\(markSeen, 1200\)/.test(NT),
-     "★ 열자마자가 아니라 잠깐 뒤에 읽음 처리한다 (무엇이 새것인지 보이게)");
+  /* [2026-10-01 콩] 공지판을 열기만 해선 읽음이 아니다 — 공지를 눌러 펼쳐야 읽음 */
+  ok(!/setTimeout\(markSeen, 1200\)/.test(NT) && /if \(_open === id\) markRead\(id\);/.test(NT),
+     "★★ 공지판을 열어도 읽음이 아니고, 공지를 펼쳐야 읽음이다 (콩 2026-10-01)");
+  ok(/users\/\$\{nick\}\/noticeRead\/\$\{id\}/.test(NT) && /function isUnread\(n\) \{ return Number\(n\.at \|\| 0\) > seenAt\(\) && !_read\[n\.id\]; \}/.test(NT),
+     "★ 펼친 공지 id 를 닉별로 적는다 — 안 읽음 = 기준선보다 새것이면서 아직 안 펼친 것");
+  ok(/if \(!_list\.some\(isUnread\)\) markSeen\(\);/.test(NT) && /noticeRead`\)\.remove\(\)/.test(NT),
+     "★ 다 읽으면 기준선을 올리고 id 목록을 비운다 (안 쌓이게)");
   ok(!/notice\/read|noticeSeen.*db\.ref/.test(NT), "누가 읽었는지는 서버에 남기지 않는다");
 
   /* ── ★ 팝업 안쪽 클릭이 리스너까지 닿는가 ────────────────────────
@@ -10373,9 +13854,88 @@ function checkNotice(){
        "끄는 길이 있고, 끄면 손가락을 다 걷어낸다");
     ok(/조합 없이 자모 입력/.test(UI2) && /if \(e\.isComposing\) return;/.test(UI2),
        "★ 조합이 시작조차 안 되는 형태도 잡는다 (그물 둘)");
-    ok(/AppStore\?\.setItem\("imeDiagOn", "1"\)/.test(UI2) &&
-       /getItem\("imeDiagOn"\) === "1"/.test(UI2),
-       "★ 한 번 켜면 다음 접속에도 켜져 있다 (드물게 나는 증상이라)");
+    /* ★★★ [뒤집음 2026-08-29 — 콩 신고 "아이맥에서 타자가 지연된다"]
+       예전엔 "한 번 켜면 다음 접속에도 켜져 있다" 를 **좋은 것으로** 못
+       박고 있었습니다. 증상이 드물게 나니 계속 지켜보자는 뜻이었어요.
+       그런데 이 블랙박스는 가볍지 않습니다 — MutationObserver 로 body 를
+       subtree 째 보고, 자모 한 획·커서 한 칸마다 돕니다. 끄는 길은
+       콘솔 한 줄뿐이라, 한 번 켜고 잊으면 그 기기는 영영 무거워져요.
+       ★ 이제 **기억하지 않는 것**을 못 박습니다. 필요할 때 켜고,
+         새로고침하면 꺼집니다. */
+    ok(!/AppStore\?\.setItem\("imeDiagOn", "1"\)/.test(UI2),
+       "★★★ 켜 둔 것을 기억하지 않는다 (잊고 켜 두면 그 기기가 영영 무거워집니다)");
+    ok(!/getItem\("imeDiagOn"\) === "1"/.test(UI2) && !/setTimeout\(\(\) => window\.imeDiag\(\), 800\)/.test(UI2),
+       "★★★ 입장할 때 저절로 켜지지 않는다");
+    ok(/removeItem\("imeDiagOn"\)/.test(UI2),
+       "★ 옛 기기에 남은 자동 켜기 표시는 조용히 걷어낸다");
+
+    /* =====================================================================
+       ⌨️ 타자가 무거워지는 자리 (2026-08-29 — 콩 "아이맥에서 타자가 지연")
+       ---------------------------------------------------------------------
+       공통점은 하나입니다 — **화면이 클수록 값이 비싸지는 일**을 글자마다
+       하고 있었어요. 작은 모니터에서는 여유 안에 들어와 안 보였습니다.
+       ===================================================================== */
+    {
+      const CH2 = fs.readFileSync(DIR+"script_chat.js","utf8");
+      const RT3 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+
+      /* ① 글칸 높이 — 매 글자 강제 배치계산이었습니다 */
+      ok(/const 짧은가 = ta\.value\.length <= 40 && ta\.value\.indexOf\("\\n"\) < 0;/.test(CH2),
+         "★★★ 짧은 한 줄이면 **재보지도 않는다** (예전엔 글자마다 문서 전체 배치를 다시 쟀습니다)");
+      ok(/if \(짧은가 && _한줄h\) \{/.test(CH2) && /return 한줄;/.test(CH2),
+         "★★ 한 줄 높이는 처음 한 번만 재서 들고 있는다");
+      ok(/if \(지금 !== 새높이\) ta\.style\.height = 새높이;/.test(CH2),
+         "★★★ 이제 진짜로 **달라질 때만** 쓴다 (옛 방어는 죽은 코드였습니다)");
+
+      /* ② 전체화면 잔재 — 화면 크기에 정비례합니다 */
+      ok(/function _치우기\(\)/.test(CH2) && /_effectCanvas\?\.remove\(\)/.test(CH2),
+         "★★★ 이펙트가 끝나면 화면 전체 크기 캔버스를 걷어낸다 (남겨 두면 그만한 합성 층을 세션 내내 붙듭니다)");
+      ok(/if \(!_effect리스너\) \{/.test(CH2),
+         "★★ 캔버스를 다시 만들어도 resize 리스너는 한 번만 단다");
+      ok(/아직 && 아직\.style\.opacity === "0"\) 아직\.remove\(\)/.test(CH2),
+         "★★★ 외치기 오버레이도 걷어낸다 — blur(20px) 짜리 전체화면이 투명한 채로 남아 있었습니다");
+
+      /* ③ 말풍선 DOM — 서버만 자르고 화면은 안 잘랐습니다 */
+      ok(/const 화면말풍선한도 = 400;/.test(RT3) && /function 말풍선걷어내기\(\)/.test(RT3),
+         "★★★ 화면 말풍선에 한도가 있다 (서버는 250개로 자르는데 화면 DOM 은 무한히 쌓였습니다)");
+      ok(/box\.firstElementChild\.remove\(\)/.test(RT3),
+         "★★ 위(오래된 것)부터 걷어낸다 — 아래가 사람이 보는 쪽이라");
+      ok(/window\.renderChatMessage\?\.\(document\.getElementById\("chat-box"\), data, key\);\s*\n\s*말풍선걷어내기\(\);/.test(RT3),
+         "★ 새 말풍선을 붙인 바로 뒤에 걷어낸다");
+
+      /* ④ 카드 마당 — 하트비트마다 배치계산이 끼어들었습니다 */
+      ok(/function 마당폭\(list\)/.test(RT3) && /window\.addEventListener\("resize", \(\) => \{ _마당폭 = 0; \}\);/.test(RT3),
+         "★★★ 카드 마당 폭은 창 크기가 바뀔 때만 다시 잰다 (예전엔 '다시 재지 않으려고' 매번 재고 있었습니다)");
+      ok(/const sig = cards0\.length \+ "@" \+ Math\.round\(마당폭\(list\) \/ 20\);/.test(RT3),
+         "★★ 열쇠를 만들 때 clientWidth 를 직접 안 읽는다");
+
+      /* ⑤ 🪶 가볍게 보기 — 레티나에서 픽셀 수만큼 값이 드는 것들을 끕니다.
+         ★ 콩의 아이맥: 2048×1152 로 보이지만 실제로 칠하는 픽셀은
+           4096×2304 = 943만. 일반 모니터(207만)의 4.5배입니다. */
+      const UI3 = fs.readFileSync(DIR+"script_ui.js","utf8");
+      const CSl = fs.readFileSync(DIR+"styles.css","utf8");
+      const IX3 = fs.readFileSync(DIR+"index.html","utf8");
+      ok(/const LITE_KEY = "liteMode";/.test(UI3) && /window\.setLiteMode = function/.test(UI3),
+         "★★ 가볍게 보기 스위치가 있다");
+      ok(/AppStore\?\.setItem\(LITE_KEY/.test(UI3) && !/db\.ref[^\n]*liteMode/.test(UI3),
+         "★★★ **기기별**로 기억한다 (서버에 안 보냅니다 — 아이맥만 켜고 노트북은 그대로)");
+      ok(/applyLiteMode\(\);\s*\/\/ 🪶/.test(UI3),
+         "★ 그리기 전에 먼저 적용한다 (나중에 하면 번쩍입니다)");
+      ok(/id="set-lite"/.test(IX3) && /onchange="setLiteMode\(this\.checked\)"/.test(IX3),
+         "★ 설정에 스위치가 있다");
+      ok(/html\[data-lite\][\s\S]{0,400}?backdrop-filter: none !important;/.test(CSl),
+         "★★★ 켜면 흐림이 꺼진다 (흐림은 픽셀 수에 정비례 — 레티나에서 네 배)");
+      ok(/html\[data-lite\] body\.room-bg-on\{ background-attachment: scroll/.test(CSl),
+         "★★ 배경 고정을 뗀다 (fixed 는 캐시가 안 돼 매번 다시 그립니다)");
+      ok(/html\[data-lite\] \.user-card\{/.test(CSl),
+         "★ 카드 그림자를 줄인다");
+      ok(/html\[data-lite\] \.rb-hrow\{ animation: none; \}/.test(CSl),
+         "★ 영구 애니메이션도 멈춘다 (늘 '움직이는 중' 이면 매 프레임 다시 합성할 기회가 생깁니다)");
+      /* ★ 켜지 않은 사람에게는 아무 일도 없어야 합니다 */
+      ok((CSl.match(/html\[data-lite\]/g) || []).length >= 8 &&
+         !/^\s*\.user-card\{[^}]*box-shadow: 0 1px 2px rgba\(90,70,40,\.10\)/m.test(CSl),
+         "★★ 스위치를 안 켠 사람의 화면은 그대로다 (덮어쓰기만 하고 원래 규칙을 안 고쳤습니다)");
+    }
     ok(/AppStore\?\.removeItem\("imeDiagOn"\)/.test(UI2), "끄면 다음 접속에도 꺼진다");
 
     /* ⇪ Caps Lock 지킴이 — "타자가 풀려요" 의 정체가 이것이었다.
@@ -10442,7 +14002,7 @@ function checkNotice(){
        "★ 저장도 그 카드에 — myNick 이 아니라 대상 닉으로 씁니다");
     ok(/if \(window\.SOLO\) \{[\s\S]{0,300}?card-avatar-wrap[\s\S]{0,300}?openProfileEditor\(card\.getAttribute\("data-card-nick"\)\)/.test(PR),
        "혼자 방에서 유령 카드 프사를 누르면 그 카드의 꾸미기가 열린다");
-    ok(/const src = Array\.from[\s\S]{0,200}?data-card-nick"\) === profileTargetNick\(\)/.test(PR),
+    ok(/const src0 = Array\.from[\s\S]{0,200}?data-card-nick"\) === profileTargetNick\(\)/.test(PR),
        "스티커 배치판이 복제하는 카드도 지금 고른 카드다");
   }
 
@@ -10477,6 +14037,26 @@ function checkNotice(){
     ["listenStatus","listenPomodoro","startWordcount","startTimelog","renderShareButton"]
       .forEach(fn => ok(new RegExp('"'+fn+'"').test(SO),
         "혼자 방도 " + fn + " 을 켠다 (진짜 방에서는 join 이 하던 일)"));
+
+    /* ★ [2026-08-28] ✍️ Work Log 도 켭니다.
+       이게 빠져 있어서 혼자 방에서는 회차를 만들면 보이는데 새로고침하면
+       사라진 것처럼 보였습니다 — 저장은 됐고 읽는 쪽이 없었어요.
+       위 목록은 window[이름]() 꼴만 부를 수 있어 따로 한 줄입니다. */
+    ok(/window\.Worklog\?\.listen\(\);/.test(SO),
+       "★★ 혼자 방도 Worklog.listen() 을 켠다 (없으면 새로고침 때 회차가 사라진 것처럼 보입니다)");
+    ok(/window\.Worklog\?\.기준맞추기\(\)/.test(SO),
+       "★ 기준맞추기도 뒤따라 부른다");
+
+    /* ★★ 가짜 update 가 진짜처럼 여러 갈래를 받아야 합니다.
+       얕게 덮어쓰면 worklog 의 서랍 옮기기가 "box/abc" 라는 **이름의 칸**을
+       만들고 ep 는 안 지워집니다. 혼자 방에서만 조용히 어긋나는 종류라,
+       솔로에서 멀쩡해 보이다가 본편에서 터집니다. */
+    ok(/열쇠\.forEach\(k => _설정\(path \+ "\/" \+ k, 짐\[k\] === undefined \? null : 짐\[k\]\)\);/.test(SO),
+       "★★★ 가짜 update 가 열쇠의 / 를 경로로 읽고 null 로 지운다 (진짜 파이어베이스와 같게)");
+    ok(!/const base = \(cur && typeof cur === "object"\) \? cur : \{\};/.test(SO),
+       "★★ 옛 얕은 병합 방식이 남아 있지 않다");
+    ok(/function _설정\(path, val\)/.test(SO) && /_설정\(path, val\);\s*\n\s*_save\(\);/.test(SO),
+       "★ 나무 손대기와 저장·알림을 갈라, 여러 갈래를 한 번만 저장한다");
     ok(/window\.updateStatus\?\.\(true\)/.test(SO) && /setInterval\([\s\S]{0,80}?updateStatus/.test(SO),
        "★ 내 카드도 계속 갱신된다 — 뽀모 🍅 와 작업 시간이 여기 실린다");
     ok(/const \{ screens, \.\.\.남길것 \} = _tree;/.test(SO),
@@ -10899,18 +14479,26 @@ function checkNotice(){
     /* ★ [고침 2026-08-22] 자가 uiZoom → cardZoom 으로 바뀌었습니다.
        재는 것도 카드고 입히는 것도 카드라, 뒤집힌 방에서는 뿌리 자가
        틀린 자가 됩니다 (70% 에서 공유 카드가 1.4배 길어져요). */
-    ok(/const z = \(window\.cardZoom\?\.\(\) \|\| window\.uiZoom\?\.\(\) \|\| 1\);[\s\S]{0,240}?getBoundingClientRect\(\)\.height \/ z/.test(SH3),
+    ok(/const z = \(window\.cardZoom\?\.\(\) \|\| window\.uiZoom\?\.\(\) \|\| 1\);[\s\S]{0,900}?getBoundingClientRect\(\)\.height \/ z \/ 제배/.test(SH3),
        "★★ 공유 카드 높이는 프로필 카드를 **카드 기준**으로 재서 맞춘다");
 
     /* 팝업 네 곳(작업 스티커·상태표·화면 공유·채팅 스티커)도 같은 자 */
     [["script_worktag.js","작업 스티커"], ["script_profile.js","상태표"],
-     ["script_share.js","화면 공유"], ["script_sticker.js","채팅 스티커"]]
+     ["script_share.js","화면 공유"]]
       .forEach(([f, 이름]) => {
         const T = fs.readFileSync(DIR+f,"utf8");
         ok(/const _z = \(window\.uiZoom\?\.\(\) \|\| 1\);/.test(T)
            && /const VW = innerWidth \/ _z, VH = innerHeight \/ _z;/.test(T),
            이름 + " 고르기 판도 배율에 맞춰 자리를 잡는다");
       });
+    /* 채팅 스티커 판은 [2026-10-02] 비밀방 ↗ 따로 창 때문에 "단추가 사는
+       창"의 크기로 잽니다 — 본 문서면 배율을, 따로 창이면 1 을. */
+    {
+      const T = fs.readFileSync(DIR+"script_sticker.js","utf8");
+      ok(/const _z = \(doc === document\) \? \(window\.uiZoom\?\.\(\) \|\| 1\) : 1;/.test(T)
+         && /const VW = view\.innerWidth \/ _z, VH = view\.innerHeight \/ _z;/.test(T),
+         "채팅 스티커 고르기 판도 배율에 맞춰 자리를 잡는다 (따로 창이면 그 창 크기로)");
+    }
   }
 
   /* =====================================================================
@@ -11061,8 +14649,8 @@ function checkNotice(){
        "올리기" 라는 글자가 네모나게 앉아 있으면 판이 무거워 보입니다. */
     ok(/class="help-send"[\s\S]{0,120}?>↑<\/button>/.test(HP),
        "★ 올리기는 채팅과 같은 ↑ 단추다");
-    ok(/\.help-send\{[\s\S]{0,120}?width: 32px; height: 32px;/.test(fs.readFileSync(DIR+"styles.css","utf8")),
-       "그 단추는 32px — 한 줄 글칸 옆에서 우뚝하지 않게");
+    ok(/\.help-send,\s*\n\.qna-send \{[\s\S]{0,120}?width: 32px; height: 32px;/.test(fs.readFileSync(DIR+"styles.css","utf8")),
+       "그 단추는 32px — 한 줄 글칸 옆에서 우뚝하지 않게 (Q&A 도 같은 옷)");
 
     /* 부제는 "맞나요?" 가 아닙니다 — 맞다/틀리다를 묻는 말투는 답하는
        쪽에 정답을 요구하게 돼요. 확신이 없어도 거들 수 있어야 답이 답니다. */
@@ -11085,6 +14673,99 @@ function checkNotice(){
     const RLh = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
     ok(!!RLh.help && RLh.help[".read"] === "auth != null",
        "보안규칙에 help 가 대숲과 같은 결로 들어 있다");
+    /* ★★★ [고침 2026-08-28] 여기에 **구멍이 있었습니다.**
+       주석에는 "대숲과 같은 결" 이라 적혀 있었는데, 실제로는 대숲·품평에
+       있는 가드가 빠져 있었어요 — $id 의 .write 가 "auth != null" 뿐이라
+       **로그인한 아무나 남의 질문·답 본문을 통째로 바꿔 쓸 수 있었습니다.**
+       (지우기는 셋 다 열려 있습니다 — 익명이라 "글쓴이만" 을 규칙으로
+        쓸 수가 없어서요. 하지만 몰래 **바꿔치기**하는 것은 다른 얘기입니다.)
+       ★ 옛 검사가 이걸 못 잡은 이유: .read 만 보고 있었습니다.
+         "같은 결" 이라는 **말**을 믿지 말고 **값**을 견줄 것. */
+    ok(RLh.help.$id[".write"] === RLh.forest.$id[".write"],
+       "★★★ help 의 $id 쓰기 규칙이 대숲과 **글자까지 같다** (남의 글 바꿔치기를 규칙이 막는다)");
+
+    /* ── 🤔 Q&A — 표현 공부의 형제 (2026-08-28, 콩) ────────────────────
+       콩: "표현공부와 동일한 형태면 돼! 대신 전구 대신에 하트로."
+       갈리는 것은 셋뿐입니다 — ❤️ · 안 사라짐 · 답을 ❤️ 순으로. */
+    {
+      const QN = fs.readFileSync(DIR+"script_qna.js","utf8");
+      const DKq = fs.readFileSync(DIR+"script_dock.js","utf8");
+      const CSq = fs.readFileSync(DIR+"styles.css","utf8");
+
+      /* 익명 — 이 판의 뼈대. 서버에 닉을 적기 시작하면 판의 뜻이 사라집니다 */
+      ok(!/nick|myNick|닉네임/.test(QN.replace(/\/\*[\s\S]*?\*\//g, "")),
+         "★★★ 서버에 닉네임을 아예 안 적는다 (대숲·표현공부와 같은 익명)");
+      ok(/const MINE_KEY  = "qnaMine"/.test(QN) && /const HEART_KEY = "qnaHearts"/.test(QN),
+         "★★ 내 글·내 하트는 이 기기만 안다");
+      ok(/function 지우기\(id\) \{\s*\n\s*if \(!isMine\(id\)\) return;/.test(QN),
+         "★ 내 글에만 ✕ 가 먹는다");
+      ok(/표현공부/.test(QN) || /표현 공부/.test(QN),
+         "★ 어느 판을 본떴는지 적어 둔다 (한쪽을 고칠 때 다른 쪽을 떠올리게)");
+
+      /* ❤️ — 겹쳐 붙습니다. 고르는 게 아니라 쌓이는 것 */
+      ok(/data-qna-heart=/.test(QN) && /qna\/" \+ id \+ "\/hearts"\)\s*\n\s*\.transaction/.test(QN),
+         "★★ ❤️ 는 transaction 으로 겹쳐 붙는다 (동시에 눌러도 안 덮인다)");
+      ok(/이 답 도움 됐어요/.test(QN),
+         "★ ❤️ 의 뜻은 '이 답 도움 됐어요' (콩이 고른 쪽)");
+      ok(!/채택/.test(QN.replace(/\/\*[\s\S]*?\*\//g, "")),
+         "★★ 채택은 없다 — 뽑히지 않은 답을 단 사람이 머쓱해지면 다음부터 아무도 답을 안 단다");
+
+      /* 안 사라짐 — 표현공부(14일)와 갈리는 지점 */
+      ok(!/KEEP_MS/.test(QN) && !/function sweep/.test(QN),
+         "★★★ Q&A 글은 안 사라진다 (표현공부의 14일 걷어내기가 없다 — 콩 확정)");
+      ok(/사라지지 않습니다/.test(QN),
+         "★ 화면에도 '안 사라진다' 를 적어 둔다 (표현공부와 다른 점이라 헷갈립니다)");
+      ok(/const PAGE      = 20;/.test(QN) && /data-qna-act="more"|a === "more"/.test(QN),
+         "★★ 안 사라지는 대신 화면은 끊어 그린다 (내려받는 양이 주는 건 아님 — 머리말 참고)");
+
+      /* 답을 ❤️ 순으로 — 되돌리기 쉬운 한 줄이어야 합니다 */
+      ok(/\.sort\(\(a, b\) => \(b\.hearts - a\.hearts\) \|\| \(a\.at - b\.at\)\)/.test(QN),
+         "★ 답은 ❤️ 많은 차례 (표현공부는 시간순 — 갈리는 셋째)");
+
+      /* 줄 세우기 — 답 없는 질문을 위로. 이게 이 판의 핵심입니다 */
+      ok(/const a없 = a\.답 === 0, b없 = b\.답 === 0;/.test(QN),
+         "★★★ 답 없는 질문이 위로 온다 (시간순으로 쌓으면 영영 답을 못 받는다)");
+
+      /* 통신량 — 판을 열 때만 듣습니다 */
+      ok(/function openQna\(\)[\s\S]{0,200}?listen\(\);/.test(QN) &&
+         /if \(pid === "qna"\)    window\.openQna\?\.\(\);/.test(DKq),
+         "★★★ 판을 열 때에만 듣는다 (안 여는 사람에게는 한 글자도 안 보냅니다)");
+      ok(/const NEW_BOARDS = \["pub", "help", "music", "qna"\]/.test(DKq),
+         "★★ 붉은 점은 newmark 숫자 하나만 본다 (게시판을 통째로 구독하면 통신량이 터집니다)");
+      ok(/window\.dockMarkNew\?\.\("qna"\)/.test(QN),
+         "★ 글을 올리면 표식을 찍는다");
+      ok(/remember\(MINE_KEY, ref\.key\);[\s\S]{0,600}?\n      render\(\);/.test(QN),
+         "★★ 올린 뒤 한 번 더 그린다 (안 그러면 듣는 쪽이 먼저 깨어나, 방금 올린 내 글에 '내 글' 표시와 ✕ 가 안 붙습니다)");
+
+      /* 한글 조합 — 이 방에서 여러 번 데인 자리 */
+      ok(/e\.isComposing \|\| e\.keyCode === 229/.test(QN),
+         "★★ 한글 조합 중 엔터를 무시한다 (자소 분리의 친척)");
+      ok(/if \(e\.target\?\.id === "qna-new"\) 제안그리기\(\);/.test(QN) &&
+         !/if \(e\.target\?\.id === "qna-new"\) render\(\)/.test(QN),
+         "★★ 쓰는 중에는 전체 render 를 안 한다 (초점·조합이 날아갑니다)");
+      ok(/const 굴린자리 = box\.querySelector\("\.qna-list"\)\?\.scrollTop \|\| 0;/.test(QN),
+         "★★ 굴려 둔 자리를 붙든다 (❤️ 누를 때마다 맨 위로 튀면 못 씁니다)");
+      ok(/const host = el\("dock-body-qna"\);/.test(QN),
+         "★ 손가락은 판 안쪽에 단다 (겉껍데기에 달면 클릭이 통째로 죽는다)");
+
+      /* 알약·싣기·규칙 */
+      ok(/\{ id: "qna",/.test(DKq) && /label: "🤔 Q&A"/.test(DKq),
+         "★ 알약 이름이 '🤔 Q&A' 다");
+      ok(/src="script_qna\.js/.test(IXh), "index.html 이 script_qna.js 를 싣는다");
+      ok(/"script_qna\.js"/.test(fs.readFileSync(DIR+"build-single.py","utf8")),
+         "★★ 단일파일에도 실린다 (빠뜨리면 단일파일에서만 판이 안 열립니다)");
+      ok(!!RLh.qna && RLh.qna[".read"] === "auth != null",
+         "보안규칙에 qna 가 있다");
+      ok(RLh.qna.$id[".write"] === RLh.forest.$id[".write"],
+         "★★★ qna 의 $id 쓰기 규칙이 대숲과 글자까지 같다 (남의 글 바꿔치기를 규칙이 막는다)");
+
+      /* 옷은 함께 입습니다 — 베껴 두면 한쪽만 고치는 날이 옵니다 */
+      ok(/\.help-board,\s*\n\.qna-board \{/.test(CSq),
+         "★★★ 표현 공부와 **같은 옷을 함께 입는다** (베껴 두면 한쪽만 고쳐져 조용히 달라집니다)");
+      ok(/\.help-check,\s*\n\.qna-heart \{/.test(CSq),
+         "★★ 💡 자리와 ❤️ 자리가 같은 규칙을 쓴다");
+      ok(/\.qna-page\{/.test(CSq), "'더 보기' 단추의 옷이 있다");
+    }
   }
 
   /* =====================================================================
@@ -11404,8 +15085,9 @@ function checkNotice(){
 
     ok(/id="wc-memo"/.test(IX4) && /id="wc-slash"/.test(IX4),
        "메모칸과 명령 목록이 화면에 있다");
-    /* [2026-08-16] 머리말 양쪽 여백 80% — 카드 폭에 기댄 비율은 유지 */
-    ok(/padding-left: calc\(var\(--card-w\) \* 0\.64\);/.test(fs.readFileSync(DIR+"styles.css","utf8")),
+    /* [2026-08-16] 머리말 양쪽 여백 80% — 카드 폭에 기댄 비율은 유지
+       [2026-10-02 콩] 다시 70% (0.64 → 0.448) — 좁은 화면 멤버가 많아서 */
+    ok(/padding-left: calc\(var\(--card-w\) \* 0\.448\);/.test(fs.readFileSync(DIR+"styles.css","utf8")),
        "★ 머리말 여백은 카드 폭에 기대어 잡는다 (px 로 박으면 카드 폭이 바뀔 때 어긋난다)");
 
     /* [2026-08-16] 이름 — 숫자만 적던 자리가 아니라 일지가 됐습니다 */
@@ -11632,8 +15314,11 @@ function checkNotice(){
     const SH = fs.readFileSync(DIR+"script_share.js","utf8");
     ok(/let rows = \(_sharing \|\| window\.SOLO\) \? shareRows\(\) : \[\];/.test(SH),
        "★★ 진짜 방은 여전히 **내가 공유 중일 때만** 남의 화면을 본다");
-    ok(/if \(!window\.SOLO && age > SHARE_DROP_MS\) continue;/.test(SH),
-       "★★ 30초 끊김 판정은 진짜 방에만 — 혼자 방 사진은 늙지 않는다");
+    /* [바뀜 2026-08-22 · 2차] 나이 얼개가 통째로 사라졌습니다.
+       치우는 잣대는 "접속해 있는가" 이고, 혼자 방 예외는 껍데기인가()
+       첫 줄에 있어요 — 거기 사진은 보내는 사람이 없으니까요. */
+    ok(/function 껍데기인가\(nick\) \{\s*if \(window\.SOLO\) return false;/.test(SH),
+       "★★ 혼자 방에서는 아무도 안 치운다 (그 사진은 늙지 않는다)");
     /* [갈라짐 2026-08-21 — 콩] 손잡이 둘의 뜻이 달라서 따로 답니다.
        [off] 는 진짜 공유에만, 뭉갬 슬라이더는 혼자 방에도 — 거기가
        시험장인데 정작 뭉갬을 못 시험했거든요. */
@@ -11648,8 +15333,11 @@ function checkNotice(){
        "★ [off] 는 여전히 mine 을 본다");
     /* ★★ shareRows 만 막고 tickShare 를 놓쳐서, 걸어 둔 사진이 20초에
        흐려지고 30초에 사라졌다가 다시 나타났습니다 (실제 제보). */
-    ok(/function tickShare\(\)[\s\S]{0,600}?if \(window\.SOLO\) return;[\s\S]{0,200}?SHARE_DROP_MS/.test(SH),
-       "★★ 늙음 판정(흐려짐·치우기)도 혼자 방에서는 통째로 건너뛴다");
+    /* [넓힘 2026-09-21] 🔻 자동 끄기가 tickShare 앞머리에 들어오면서 머리말이
+       길어졌습니다. 보는 것은 그대로예요 — SOLO 반환이 껍데기 치우기보다
+       **앞에** 있는가. 찾는 창만 넓힙니다. */
+    ok(/function tickShare\(\)[\s\S]{0,1400}?if \(window\.SOLO\) return;[\s\S]{0,600}?껍데기인가\(nick\)/.test(SH),
+       "★★ 치우는 손도 혼자 방에서는 통째로 건너뛴다");
   }
 
   /* 진짜 방의 글자 크기 조절은 그대로 있어야 합니다 (혼자 방만 바꿨습니다) */
@@ -11726,6 +15414,977 @@ function checkNotice(){
 
     ok(/cnt\.onchange = \(\) => \{/.test(PR),
        "카드 수는 슬라이더를 **놓았을 때** 다시 짓는다 (끄는 내내 지으면 어지럽다)");
+  }
+
+  /* =====================================================================
+     🃏 정사각(가로형) 카드 — 본방 전면 적용 (2026-09-07, 콩)
+     세로형(책 표지)을 **대체**했습니다. 고르는 것이 아니라 카드 모양 자체가
+     바뀐 것이라 설정도 저장도 없고, 갈림길은 좁은 화면(833px)뿐입니다.
+     ⏱ 작업시간·상태표를 옮기는 손은 script_realtime.js 로 옮겨 와 본방·
+     혼자 방이 함께 씁니다.
+     ===================================================================== */
+  {
+    const SO2 = fs.readFileSync(DIR+"script_solo.js","utf8");
+    const CS4 = fs.readFileSync(DIR+"styles.css","utf8");
+    const PR2 = fs.readFileSync(DIR+"script_profile.js","utf8");
+    const RT2 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    const UI2 = fs.readFileSync(DIR+"script_ui.js","utf8");
+    const DT2 = fs.readFileSync(DIR+"script_data.js","utf8");
+    const IX2 = fs.readFileSync(DIR+"index.html","utf8");
+
+    /* ---- 고를 것이 없다 (운영진: 초반 선택권 최소화) ---- */
+    ok(!/set-card-shape/.test(IX2) && !/카드 모양<\/div>/.test(IX2),
+       "★★ 설정에 카드 모양 라디오가 없다 — 가로형이 곧 기본");
+    ok(!/function loadCardShapeForNick|function saveCardShapeForNick/.test(DT2),
+       "★★ 계정 저장(prefs/cardShape)도 없다");
+    ok(!/soloGetWide|soloSetWide|soloCardWideArrange|WIDE_KEY/.test(SO2) && !/id="solo-wide"/.test(PR2),
+       "★★ 혼자 방 미리보기 스위치는 걷어냈다 (모두의 기본이 되었으니)");
+
+    /* ---- 기본값·안전장치 ---- */
+    ok(/let currentCardShape = "wide";/.test(UI2),
+       "★★★ 기본이 가로형이다");
+    ok(/const wide = true;/.test(UI2) && /let _stkShape = "wide";/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
+       "★★★ 🃏 세로형 걷어냄 — 카드도 꾸미기 미리보기도 늘 가로형 (2026-10-03)");
+    ok(/document\.getElementById\("user-cards"\)\?\.classList\.toggle\("card-wide", wide\);/.test(UI2) &&
+       /window\.cardWideArrange\?\.\(wide\);/.test(UI2) &&
+       /if \(changed\) window\.rerenderUserCards\?\.\(\);/.test(UI2),
+       "★★★ 카드 마당에 .card-wide, 줄 세우는 손 호출, 모양이 바뀌면 다시 그림");
+    ok(/window\.addEventListener\("resize", \(\) => applyCardShape\(\)\);/.test(UI2),
+       "★ 창 크기가 바뀌면 다시 맞춘다");
+
+    /* ---- 줄 세우는 손 (본방·혼자 방 공용) ---- */
+    ok(/<small class="lite-clk">⏱<\/small>\$\{whTxt\}/.test(RT2), "가볍게 보기 시간 앞에도 ⏱ 시계가 붙는다");
+    ok(/cardWideArrange\?\.\(_stkShape === "wide", \[clone\]\)/.test(fs.readFileSync(DIR+"script_profile.js","utf8")), "가볍게 보기에서도 꾸미기 미리보기 카드는 가로형 줄 세우기를 거친다");
+    ok(/function 가로재배치\(넣기, 카드들\) \{/.test(RT2) && /window\.cardWideArrange = 가로재배치;/.test(RT2),
+       "★★★ ⏱ 작업시간·상태표를 옮기는 손이 script_realtime.js 에 있다 (두 방 공용)");
+    ok(/if \(wht && wht\.parentElement !== side\) side\.insertBefore\(wht, side\.firstChild\);/.test(RT2) &&
+       /if \(state && foot && state\.nextElementSibling !== foot\) card\.insertBefore\(state, foot\);/.test(RT2) &&
+       /if \(wht && wht\.parentElement !== wh\) wh\.insertBefore\(wht, wh\.firstChild\);/.test(RT2) &&
+       /if \(state && side && state\.parentElement !== side\) side\.appendChild\(state\);/.test(RT2),
+       "★★★ 켜면 [시간·칩]은 상태표 박스로 상태표는 프사 아래로, 끄면 전부 제자리 — 왕복 다 있다");
+    ok(/const ink = foot\?\.style\.getPropertyValue\("--ink-wh"\);/.test(RT2) &&
+       /if \(wht\) wht\.style\.removeProperty\("--ink-wh"\);/.test(RT2),
+       "★★ 작업시간 글자색(--ink-wh)을 옮길 때 같이 들고 온다 (안 그러면 고른 색이 풀림)");
+    ok(/window\.applyCardShape\?\.\(\);/.test(RT2) &&
+       RT2.indexOf("배경판살피기();") < RT2.indexOf("window.applyCardShape?.();"),
+       "★★ 카드를 새로 그릴 때마다 모양을 다시 맞춘다");
+
+    /* ---- 다크에서도 읽히는 글자색 (콩) ---- */
+    ok(/const 읽히게 = \(c\) => \(cardBg \? c : \(window\.닉읽히는색\?\.\(c\) \|\| c\)\);/.test(RT2) &&
+       /const inkNick = 읽히게\(/.test(RT2) && /const inkGoal = 읽히게\(/.test(RT2) && /const inkWh   = 읽히게\(/.test(RT2),
+       "★★★★ 카드 배경을 안 고른 사람의 글자색만 다크에서 읽히게 끌어올린다 (배경 고른 사람은 그 배경에 맞춘 색이라 안 건드림)");
+    ok(RT2.indexOf("const cardBg  =") < RT2.indexOf("const 읽히게 ="),
+       "★ cardBg 를 먼저 읽고 나서 판단한다");
+
+    /* ---- CSS — 캡처1 구조 ---- */
+    ok(!/body\.card-wide/.test(CS4) && /\.card-wide\{\s*\n\s*--solo-sq-w: calc\(var\(--card-w\) \* 1\.2\);/.test(CS4),
+       "★★ .card-wide 규칙(마당·편집기 액자 공용), 폭은 --card-w 의 120%");
+    ok(/\.dock-mode \.user-cards-grid\.card-wide > \*:not\(\.card-row-break\)\{[\s\S]{0,400}?zoom: \.9025;/.test(CS4),
+       "★ 카드 칸을 넓히고(줄바꿈 띠 제외) 통째로 95%×95%");
+    ok(/\.card-wide \.card-body\{\s*\n\s*flex-direction: row-reverse;[\s\S]{0,200}?align-items: center;[\s\S]{0,120}?justify-content: center;/.test(CS4),
+       "★★★ 상태표 박스 | 프사 (row-reverse), 중심선 맞춤");
+    ok(/\.card-wide \.card-avatar-wrap\{ flex: 0 0 118px; width: 118px; align-self: center; \}/.test(CS4) &&
+       /\.card-wide \.card-side\{ flex: 1 1 auto; width: auto; min-width: 0; \}/.test(CS4),
+       "★★★★ 프사는 118px 고정, 상태표 박스가 남은 폭에 맞춰 줄어든다 (책 표지형 잔여 규칙 되돌리기 + 프사 밀림 방지)");
+    ok(/\.card-wide \.card-side > \.card-wh-t b\{\s*\n\s*font-size: calc\(\(var\(--fs-lg\) \+ 8px\) \* 1\.04\);[\s\S]{0,160}?color: var\(--ink-wh, var\(--accent\)\);[\s\S]{0,120}?word-spacing: -\.15em;/.test(CS4),
+       "★★ 작업시간 숫자 — 크게·프로필 편집 색·시간↔분 간격 좁힘");
+    ok(/const _u = \(t\) => t\.replace\(\/\(\[hm\]\)\/g, '<i class="wh-u">\$1<\/i>'\);/.test(RT2) &&
+       /\.card-wide \.card-side > \.card-wh-t b \.wh-u\{[\s\S]{0,140}?font-size: \.81em;\s*\n\s*font-weight: inherit;/.test(CS4),
+       "★★★ h·m 단위 글자는 숫자와 갈라져 10% 작게·굵기는 숫자와 같게 (콩)");
+    ok(/\["goal", "목표",\s+curInkGoal\]/.test(PR2) && /\["wh",   "작업 시간",\s+curInkWh\]/.test(PR2) &&
+       !/"목표 · 🍅"/.test(PR2) && !/"작업 시간 ⏱"/.test(PR2),
+       "★ 설정의 카드 글자색 목록에서 🍅·⏱ 표시를 뺐다 — 둘 다 테마 고정색이라 고르는 것과 무관 (콩)");
+    ok(/\.card-foot \.card-wh \.card-pomo-count\{ color: var\(--card-pomo-ink, var\(--card-pomo\)\); \}/.test(CS4),
+       "★★ 세로형(좁은 화면)의 🍅 도 같은 고정색 — 폰과 PC 가 어긋나지 않게");
+    ok(/\.card-wide \.card-name\{ font-size: calc\(var\(--fs-lg\) \* 1\.15\); \}/.test(CS4) &&
+       /\.card-wide \.card-goal \.goal-line\{ font-size: calc\(\(var\(--fs-md\) - 0\.5px\) \* 1\.15\); \}/.test(CS4),
+       "★★ 가로형은 닉네임·목표도 15% 크게 (콩)");
+    ok(/\.card-wide \.card-side > \.card-wh-t small\{\s*\n\s*font-size: calc\(\(var\(--fs-lg\) \+ 8px\) \* \.9\);[\s\S]{0,120}?color: var\(--muted\);/.test(CS4),
+       "★ ⏱ 아이콘은 숫자와 같은 크기, 편집 색과 무관하게 고정");
+    ok(/\.card-wide \.card-side > \.card-wh > \.card-proom\{ order: 2;/.test(CS4) &&
+       /\.card-wide \.card-side > \.card-wh > \.card-pomo-count\{ order: 1;/.test(CS4),
+       "★ 칩 순서 🍅 → ⏱️ (DOM 은 그대로, 화면만)");
+    ok(/\.card-wide \.card-side\{[\s\S]{0,700}?width: fit-content;[\s\S]{0,200}?background-color: color-mix\(in srgb, var\(--foot-veil\) 62%, transparent\);/.test(CS4),
+       "★ 상태표 박스는 내용만큼만(fit-content) 차지하고 배경은 62% (콩: 더 짙게·영역 최소)");
+    ok(/\.card-wide \.card-side > \.card-wh > \.card-pomo-count\{[\s\S]{0,500}?color: var\(--card-pomo-ink, var\(--card-pomo\)\);[\s\S]{0,200}?font-weight: var\(--fw-bold\);[\s\S]{0,80}?font-size: 91\.2%;/.test(CS4) &&
+       /:root\{ --card-pomo-ink: #5B4B96; \}/.test(CS4) &&
+       /:root\[data-is-dark="true"\]\{ --card-pomo-ink: #D6CDF5; \}/.test(CS4),
+       "★★ 🍅 숫자는 테마별 고정색(밝은 테마는 진한 보라·어두운 테마는 라벤더) + 굵게 + 96% — 프로필 색을 안 따라간다 (콩)");
+    ok(/\.card-wide \.card-side > \.card-wh > \.card-proom\{\s*\n\s*font-size: 91\.2%;/.test(CS4),
+       "★ ⏱️ 뽀모방 딱지도 같은 크기 — 둘은 늘 짝");
+    ok(/\.card-wide \.user-card > \.card-state-row\{[\s\S]{0,700}?margin-top: 6\.5px;/.test(CS4) &&
+       /\.card-wide \.card-foot\{ margin-top: 6\.5px; \}/.test(CS4),
+       "★★ 꺼낸 상태표 줄은 카드 전폭 가운데, 알약이 커진 만큼 위·아래 여백을 반반씩 먹어 카드 높이는 그대로 (콩)");
+    ok(/\.card-wide \.user-card > \.card-state-row \.card-state\{\s*\n\s*font-size: calc\(var\(--fs-sm\) \* 1\.05 \* \.9 \* 1\.1\);/.test(CS4) &&
+       /\.card-wide \.user-card > \.card-state-row \.card-state-ghost\{\s*\n\s*font-size: calc\(var\(--fs-sm\) \* 1\.05 \* \.9 \* 1\.1\);/.test(CS4),
+       "★★★ 상태표 10% 확대 — 폭 기준자(보이지 않는 자)도 같은 값이라야 칸 폭이 안 어긋난다");
+    ok(!/\.card-wide \.card-foot\{[^}]*max-width/.test(CS4),
+       "★ 닉네임 박스는 폭을 못박지 않는다 — 카드 전폭 (여백만 조정)");
+    ok(/\.stk-card\.card-wide\{ width: var\(--solo-sq-w, var\(--card-w\)\); \}/.test(CS4),
+       "★ 스티커 배치 액자도 가로형이면 같은 폭");
+  }
+
+  /* =====================================================================
+     📉 통신량 — 자주 도는 자리는 "쓰는 갈래만" 읽기 (2026-09-08)
+     프로파일러(firebase database:profile)로 잡은 것: 5분 동안 내려받은
+     5.2MB 중 3.78MB(73%)가 `/users/$wildcard` 통째 읽기였고, 그 범인이
+     카드 타이머의 loadSummary — **1분마다** 자기 users/{닉} 전체(평균
+     47kB, 프꾸 사진 포함)를 읽고 있었습니다.
+     ===================================================================== */
+  {
+    const TL5 = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const 잼3 = TL5.slice(TL5.indexOf("async function loadSummary"), TL5.indexOf("for (let i = days - 1"));
+    ok(!/db\.ref\(`users\/\$\{nick\}`\)\.once/.test(잼3),
+       "★★★★ loadSummary 가 users/{닉} 을 통째로 읽지 않는다 (1분마다 도는 자리 — 프꾸 사진까지 딸려 오던 곳)");
+    /* [넓힘 2026-09-22] 날짜로 자르면서 모양이 바뀌었습니다 —
+       `범위("timeSegs").once(…)` 처럼요. 보는 것은 그대로예요:
+       **그 갈래를 콕 집어 읽는가**(users/{닉} 통째가 아니라). */
+    ["timeSegs", "pomoSessions", "timeCur", "workReset"].forEach(k => {
+      ok(new RegExp(`db\\.ref\\(\`users/\\$\\{nick\\}/${k}\`\\)\\.once`).test(잼3) ||
+         new RegExp(`범위\\("${k}"\\)\\.once`).test(잼3) ||
+         new RegExp(`\`users/\\$\\{nick\\}/\\$\\{가지\\}\``).test(잼3),
+         `★★ 쓰는 갈래만 읽는다 — ${k}`);
+    });
+    ok(/await Promise\.all\(\[/.test(잼3),
+       "★ 넷을 한꺼번에 읽는다 (요청 수는 늘어도 기다림은 그대로)");
+  }
+
+  /* =====================================================================
+     🏅 업적 — 하루 한 번 훑기 다이어트 (2026-09-07, 콩)
+     users/{닉} 을 통째로 읽던 것을 pomoSessions·timeSegs 둘만 콕 집어.
+     ===================================================================== */
+  {
+    const AC2 = fs.readFileSync(DIR+"script_achv.js","utf8");
+    /* [넓힘 2026-09-22] 여기도 날짜로 잘렸습니다(limitToLast). 뜻은 그대로. */
+    ok(/window\.db\.ref\(`users\/\$\{nick\}\/pomoSessions`\)\.orderByKey\(\)/.test(AC2) &&
+       /window\.db\.ref\(`users\/\$\{nick\}\/timeSegs`\)\.orderByKey\(\)/.test(AC2) &&
+       !/window\.db\.ref\(`users\/\$\{nick\}`\)\.once\("value"\)/.test(AC2),
+       "★★★ 업적은 users/{닉} 을 통째로 안 읽는다 — 쓰는 두 갈래만 (프꾸 사진·투두·쪽지가 딸려 오던 것)");
+    ok(/pomo: pomoSnap\.val\(\) \|\| \{\},\s*\n\s*segs: segSnap\.val\(\) \|\| \{\},/.test(AC2),
+       "★★ 받은 두 갈래를 그대로 셈에 넣는다");
+    ok(/if \(!force && window\.AppStore\?\.getItem\(CACHE_KEY\) === today && _stats\) return _stats;/.test(AC2),
+       "★★ 훑기는 하루 한 번 — 날짜가 그대로면 다시 안 읽는다");
+  }
+
+  {
+    const UI4 = fs.readFileSync(DIR+"script_ui.js","utf8");
+    /* ★★ 묶음 가운데 맞추기가 zoom 을 몰라서 카드가 작아진 만큼 한쪽으로
+       치우쳤습니다 (콩 2026-09-07). offsetWidth 는 zoom 적용 전 값이라
+       zoom 을 곱해 부모의 자로 환산해야 합니다. */
+    ok(/const 폭 = 카드\.getBoundingClientRect\(\)\.width;/.test(UI4) &&
+       !/카드\.offsetWidth/.test(UI4),
+       "★★★ 카드 묶음 가운데 맞추기는 카드의 **실제 폭**(zoom 반영)으로 잰다 — 안 그러면 넉넉한 화면에서도 세 장만 서고 나머지가 아래로 내려갑니다 (콩 0907)");
+    ok(/const Z = \(window\.cardZoom\?\.\(\) \|\| 1\) \* \(window\.uiZoom\?\.\(\) \|\| 1\);/.test(UI4),
+       "★★★★ 되돌릴 때 **마당 자체의 배율(cardZoom)** 까지 곱한다 — 뒤집힌 방에서 uiZoom 은 늘 1이라, 이걸 빼면 95% 같은 배율에서만 어긋난다 (콩 0908)");
+    {
+      const RT5 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+      const 잼2 = RT5.slice(RT5.indexOf("function fixLonelyCard"), RT5.indexOf("window.fixLonelyCard"));
+      ok(/const Z = \(window\.cardZoom\?\.\(\) \|\| 1\) \* \(window\.uiZoom\?\.\(\) \|\| 1\);/.test(잼2) &&
+         /Math\.floor\(\(_마당폭 \* Z - padX \* Z \+ gap \* Z\) \/ \(cw \+ gap \* Z\)\)/.test(잼2),
+         "★★★★ 외로운 카드 구제도 같은 자로 센다 — 카드 폭은 화면 자, 마당 폭은 요소 자로 재던 것을 맞췄다 (배율 100% 가 아니면 한 줄 장수를 잘못 셈)");
+    }
+  }
+
+  /* =====================================================================
+     🎖️ 닉네임 앞 배지 (2026-09-07 — 콩 "업적 대신, 관리자 창에서 뽑는 성실
+     멤버 같은 기준으로 배지가 하나씩 붙는 시스템", 최대 7개)
+     관리자 표가 그 달 통계로 자동으로 뽑아 honors/{달}/badges/{닉} 에
+     굳히고(개근 명단과 한 번에), 카드는 지난 달 것을 닉네임 앞에 답니다.
+     보안규칙 변경 없음 — honors/$ym 은 list·at 만 요구하고 다른 자식을
+     막지 않습니다.
+     ===================================================================== */
+  {
+    const AD3 = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const RT3 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    const CS5 = fs.readFileSync(DIR+"styles.css","utf8");
+    const SO3 = fs.readFileSync(DIR+"script_solo.js","utf8");
+    const RU3 = fs.readFileSync(DIR+"보안규칙.json","utf8");
+
+    /* 그림·설명표가 두 파일에 한 벌씩 — 같아야 합니다 */
+    const metaOf = (src) => {
+      const m = src.match(/const BADGE_META = \{([\s\S]*?)\n  \};/);
+      return m ? m[1].replace(/\s+/g, " ") : "";
+    };
+    ok(metaOf(AD3) && metaOf(AD3) === metaOf(RT3),
+       "★★★ BADGE_META 가 script_admin.js 와 script_realtime.js 에서 글자 하나까지 같다");
+    ["개근","장인","다작","뽀모왕","완결러","올빼미","아침형","새싹"].forEach(k => {
+      ok(new RegExp(`"${k}":\\s*\\{ e: "`).test(RT3), `배지 종류 ${k} 가 있다`);
+    });
+
+    /* 관리자 — 뽑는 기준 (콩 확정값) */
+    ok(/async function 배지뽑기\(\{ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen \}\)/.test(AD3),
+       "★★ 관리자 표가 이미 읽어 둔 값으로 뽑는다 (새로 읽는 건 🍅·📚 뿐)");
+    ok(/상위\(work, 5\)\.forEach\(n => 주기\(n, "장인"\)\);/.test(AD3), "★ 장인 = 작업 시간 상위 5 (콩 0908: 3 → 5)");
+    ok(/상위\(words, 5\)\.forEach\(n => 주기\(n, "다작"\)\);/.test(AD3), "★ 다작 = 글자수 상위 5 (콩: 3은 아쉬워)");
+    ok(/상위\(pomo, 5\)\.forEach\(n => 주기\(n, "뽀모왕"\)\);/.test(AD3), "★ 뽀모왕 = 뽀모 완주 상위 5");
+    ok(/if \(c >= 15\) 주기\(n, "완결러"\);/.test(AD3), "★ 완결러 = 회차 마침 15회 (콩 0908: 18 → 15, \"하루 1빡은 빡세\")");
+    ok(/if \(h >= 23 \|\| h < 3\) nt \+= step;/.test(AD3) && /if \(h >= 5 && h < 9\) mo \+= step;/.test(AD3),
+       "★ 올빼미 23~03시 · 아침형 05~09시");
+    /* ★ [2026-09-08 — 콩] 비중 1등 한 명 → **총량 상위 5명씩**. 둘 다
+       받을 수 있어 한 사람이 8종을 다 달 수도 있습니다. */
+    ok(/상위\(night, 5\)\.forEach\(n => 주기\(n, "올빼미"\)\);/.test(AD3) &&
+       /상위\(morn, 5\)\.forEach\(n => 주기\(n, "아침형"\)\);/.test(AD3),
+       "★★ 올빼미·아침형은 그 시간대에 쌓은 **총량 상위 5명씩** (한 사람이 둘 다 받을 수 있다)");
+    ok(!/비중\(night\)|if \(total\[n\] < 5 \* 3600000\)/.test(AD3),
+       "★ 옛 방식(비중 1등 한 명·5시간 문턱)은 남아 있지 않다");
+    ok(/\.filter\(\(\[, v\]\) => v > 0\)/.test(AD3), "★ 상위 n 은 값이 0 이면 안 준다");
+    ok(/if \(firstSeen && String\(firstSeen\[r\.n\] \|\| ""\)\.startsWith\(ymKey\)\) 주기\(r\.n, "새싹"\);/.test(AD3),
+       "★ 새싹 = 그 달에 처음 온 사람이 출석 기준 달성");
+    ok(/w \+= 작업ms\(sg\.s, ms\);/.test(AD3) &&
+       /rawPer\[d\] = Object\.values\(best\)\.map\(sg => \(\{ a: sg\.a, b: sg\.b, s: sg\.s \}\)\);/.test(AD3),
+       "★★ 장인의 작업 시간은 방 공용 셈(작업ms) — 구간에 상태(s)를 같이 남겨 셈");
+    /* ★★★★ [다이어트 2026-09-08 — 콩 "다운로드가 확 치솟았어"] 배지뽑기는
+       사람마다 pomoSessions·worklog 를 읽습니다. 옛 달을 훑을 때도 읽고
+       버리고 있었고, 같은 달을 다시 그릴 때마다 또 읽었어요. */
+    ok(/if \(!최근두달\(\)\.includes\(ymKey\)\) return null;/.test(AD3),
+       "★★★★ 옛 달은 배지를 아예 안 센다 (어차피 굳히지 않는데 읽기만 하던 자리 — 통신량)");
+    ok(/const 열쇠 = `\$\{ymKey\}\|\$\{nicks\.length\}`;\s*\n\s*if \(_배지캐시\.key === 열쇠 && _배지캐시\.값\) return _배지캐시\.값;/.test(AD3) &&
+       /_배지캐시 = \{ key: 열쇠, 값: out \};/.test(AD3),
+       "★★★ 같은 달을 다시 그릴 때는 방금 센 값을 쓴다 (표는 자주 다시 그려집니다)");
+    ok(/if \(isOwner\) \{\s*\n\s*await Promise\.all\(nicks\.map\(async n => \{[\s\S]{0,200}?worklog\/\$\{n\}\/ep/.test(AD3),
+       "★★★ 📚 완결러는 방장만 센다 — worklog 는 방장만 읽히므로 운영진 화면에서는 거절될 요청을 보내지 않는다");
+    ok(/const 새배지 = \(배지 === null\) \? 옛배지 : \(배지 \|\| \{\}\);/.test(AD3),
+       "★★ 안 센 달(null)은 이미 굳힌 배지를 그대로 둔다 (빈 것으로 덮어쓰면 카드에서 배지가 사라진다)");
+    ok(/명단굳히기\(ymKey, rateRows, await 배지뽑기\(/.test(AD3) &&
+       /badges: 새배지,/.test(AD3) &&
+       /JSON\.stringify\(옛배지\) === JSON\.stringify\(새배지\)\) return;/.test(AD3),
+       "★★★ 개근 명단과 한 번에 honors/{달} 에 굳히고, 둘 다 그대로면 안 쓴다");
+    ok(!/"badges"/.test(RU3) && /"\$ym": \{\s*\n\s*"\.validate": "\$ym\.matches\(\/\^\[0-9\]\{4\}-\[0-9\]\{2\}\$\/\) && newData\.hasChildren\(\['list','at'\]\)"/.test(RU3),
+       "★ 보안규칙은 그대로 — honors/$ym 은 list·at 만 요구하고 badges 같은 다른 자식을 막지 않는다");
+
+    /* 카드 */
+    ok(/const r = db\.ref\(`honors\/\$\{k\}`\);/.test(RT3) &&
+       /_badges\[k\] = \(o\.badges && typeof o\.badges === "object"\) \? o\.badges : \{\};/.test(RT3),
+       "★★ 방은 honors/{달} 을 통째로 듣고 list 와 badges 를 가른다");
+    ok(/function 배지HTML\(nick\) \{\s*\n\s*const \[지난\] = 두달키\(\);/.test(RT3) && /arr\.slice\(0, 8\)/.test(RT3),
+       "★★★ 카드에는 **지난 달** 배지만, 8종까지");
+    /* [넓힘 2026-09-28] 이름 줄 **안**에 🖥️ 공유 딱지가 하나 들어왔습니다.
+       배지(트로피)가 이름 줄의 바로 앞 형제라는 것은 그대로예요 — 딱지는
+       이름 줄 안쪽, 닉네임 앞자리라 상자 밖 배지와 자리를 다투지 않습니다. */
+    ok(/\$\{배지HTML\(u\)\}\s*\n\s*<div class="card-name">(\$\{shareChip\})?<span class="card-nick">\$\{escapeHtml\(u\)\}<\/span><\/div>/.test(RT3),
+       "★★★ 배지는 이름 상자 안, 이름 줄 바로 앞 형제로 (상자 위 테두리에 걸침)");
+    ok(/try \{ renderUserCards\(\); \} catch \(e\) \{\}/.test(RT3),
+       "★ 배지가 바뀌면 카드도 다시 그린다 (인자 없이 → 지금 명단)");
+    ok(/\.card-badges\{[\s\S]{0,400}?position: absolute;\s*\n\s*left: 50%;\s*\n\s*bottom: -8px;[\s\S]{0,120}?transform: translate\(-50%, 50%\);/.test(CS5) &&
+       /\.card-badges\{ cursor: pointer; pointer-events: auto; \}/.test(CS5),
+       "★ 배지는 이름 상자 아래 테두리(카드 맨 아래 여백)에 걸쳐 가운데, 눌러서 설명을 여는 자리 (콩 0908)");
+    ok(/font-size: 25px;/.test(CS5.slice(CS5.indexOf(".card-badges{"), CS5.indexOf(".card-badges{") + 700)),
+       "★ 배지 25px");
+    ok(!/\.card-foot:has\(\.card-badges\)/.test(CS5),
+       "★★★ 배지가 있어도 이름 상자 여백은 남들과 같다 — 카드 높이가 들쭉날쭉해지면 안 됨 (콩 캡처)");
+
+    /* 🎖️ 배지 설명 팝업 (2026-09-08 — 콩 "무슨 뜻인지 다들 모르니 눌러서
+       조건이 뜨면 좋겠어") — 새로 읽거나 저장하는 값 없이, 이미 듣고 있는
+       배지 자료와 설명표만 그립니다. */
+    ok(/function openBadgeInfo\(nick\) \{/.test(RT3) && /window\.openBadgeInfo = openBadgeInfo;/.test(RT3) &&
+       /window\.closeBadgeInfo = closeBadgeInfo;/.test(RT3),
+       "★★ 배지 설명 팝업을 여닫는 손이 있다");
+    ok(/const 받은 = \(\(_badges\[지난\] \|\| \{\}\)\[nick\] \|\| \[\]\)/.test(RT3) &&
+       !/db\.ref[^\n]*honors[^\n]*once/.test(RT3),
+       "★★★ 팝업은 이미 듣고 있는 _badges 만 본다 — 새로 읽지 않는다 (서버 요청 0)");
+    ok(/Object\.keys\(BADGE_META\)\.map\(k => \{/.test(RT3) && /const got = 받은\.includes\(k\);/.test(RT3) &&
+       /badge-row\$\{got \? " got" : ""\}/.test(RT3),
+       "★★★ 여덟 종을 모두 보여주되 받은 것만 색이 산다 (못 받은 것도 조건은 보여야 다음 달을 노린다 — 콩)");
+    ok(/"장인":   \{ e: "⏱",  t: "장인 — 작업 시간 상위 5",     c: "그달 작업 시간 상위 5명" \},/.test(RT3) &&
+       /c: "Work Log 회차 '마침' 15회 이상"/.test(RT3),
+       "★ 설명표에 사람이 읽을 조건(c)이 함께 있다");
+    ok(/data-badge-of="\$\{escapeHtml\(nick\)\}"/.test(RT3),
+       "★★ 배지 줄에 누구 것인지 표가 붙는다 (남의 카드도 그 사람 기준으로 열림)");
+    const PF4 = fs.readFileSync(DIR+"script_profile.js","utf8");
+    ok(/const 배지 = e\.target\?\.closest\?\.\("\[data-badge-of\]"\);/.test(PF4) &&
+       PF4.indexOf('const 배지 = e.target?.closest?.("[data-badge-of]");') < PF4.indexOf('if (e.target?.closest?.("[data-edit-profile]")) {'),
+       "★★★ 배지를 누르면 아래칸(나의 작업)이 아니라 설명 팝업이 열린다 — 프로필 손보다 먼저 가려낸다");
+    ok(/if \(e\.target\.closest\("\[data-badge-of\]"\)\) return;/.test(fs.readFileSync(DIR+"script_note.js","utf8")),
+       "★★ 남의 카드에서도 배지를 누르면 쪽지가 아니라 설명이 열린다");
+    const IX4 = fs.readFileSync(DIR+"index.html","utf8");
+    ok(/id="badge-modal"/.test(IX4) && /id="badge-body"/.test(IX4) && /id="badge-who"/.test(IX4) &&
+       /closeBadgeInfo\(\)/.test(IX4),
+       "★ 팝업 껍데기가 index.html 에 있다");
+    ok(/#badge-modal\{\s*\n\s*position: fixed; inset: 0;/.test(CS5) &&
+       /\.badge-row\.got\{ opacity: 1; filter: none; \}/.test(CS5),
+       "★★ 팝업 CSS — 다른 팝업과 같은 결, 못 받은 줄은 옅고 흑백");
+
+    /* 혼자 방 미리보기 */
+    ok(/_설정\(`honors\/\$\{지난\}`, \{ list: Object\.keys\(badges\), badges, at: now \}\);/.test(SO3) &&
+       /badges\[f\.nick\] = \["개근", "장인", "다작", "뽀모왕", "완결러", "올빼미", "새싹"\]; return;/.test(SO3),
+       "★ 혼자 방은 지난 달 자리에 표본 배지를 심는다 (내 카드는 7개 꽉)");
+  }
+
+  /* =====================================================================
+     ✔ 유효 출석 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     "당일 접속 1시간 이상이면 유효 출석, 그 미만이면 기존 방식" 이 요청.
+     콩이 고른 잣대는 **순수 접속 시간**(무게 안 침)이고, 한 달 18일
+     규칙은 **건드리지 않습니다** — 눈으로만 구분해요.
+
+     ★★★ 이 검사가 지키는 것은 하나입니다: **문턱이 네 파일에서 같은가.**
+       화면마다 다른 문턱을 말하면 "내 화면과 출석부가 다르다" 가 됩니다
+       (VAC_DAYS 때 한 번 데인 자리예요).
+     ===================================================================== */
+  {
+    const TL = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const AD5 = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const MW5 = fs.readFileSync(DIR+"script_mywork.js","utf8");
+    const WK5 = fs.readFileSync(DIR+"weekly.html","utf8");
+    const AH5 = fs.readFileSync(DIR+"admin.html","utf8");
+    const CS6 = fs.readFileSync(DIR+"styles.css","utf8");
+
+    /* ── 문턱 — 네 파일이 같은 이름·같은 값 ── */
+    const 문턱 = [["script_timelog.js", TL], ["script_admin.js", AD5],
+                  ["script_mywork.js", MW5], ["weekly.html", WK5]];
+    문턱.forEach(([이름, 글]) => {
+      ok(/const VALID_STAY_MIN = 60;/.test(글),
+         `★★★ ${이름} 에 VALID_STAY_MIN = 60 이 있다 (문턱은 한 값이어야 한다)`);
+    });
+
+    /* ── 쌓는 쪽 ── */
+    ok(/function staySum\(totals\)/.test(TL) && /for \(const s in \(totals \|\| \{\}\)\) n \+= Number\(totals\[s\]\) \|\| 0;/.test(TL),
+       "★★★ 머문 시간은 **무게를 안 친다** (Break·Away 도 그대로 — 콩이 고른 '순수 접속 시간')");
+    ok(/const 머문 = Math\.round\(staySum\(합\) \/ 60000\);/.test(TL) &&
+       /db\.ref\(`attendance\/\$\{day\}\/\$\{myNick\}`\)\.update\(\{ m: 머문 \}\)/.test(TL),
+       "★★★ attendance 에 **update** 로 얹는다 — set 으로 덮으면 firstAt 이 날아가고 보안규칙 검사에도 걸린다");
+    ok(/db\.ref\(`users\/\$\{myNick\}\/attend\/mins\/\$\{day\}`\)\.set\(머문\)/.test(TL),
+       "★★ 나의 작업 달력 몫으로 개인 자리에도 한 벌 (달력이 방 전체 출석을 안 내려받게)");
+    ok(/const 분 = Math\.round\(workSum\(합\) \/ 60000\);/.test(TL),
+       "★ 작업 시간(worktime)은 예전 그대로 무게를 친다 — 둘은 다른 숫자다");
+    {
+      /* ①이 실패해도 ②가 돌아야 합니다 — try 를 따로 둡니다 */
+      const 토막 = TL.slice(TL.indexOf("async function 공개시간올리기"),
+                            TL.indexOf("async function 공개시간올리기") + 2200);
+      ok((토막.match(/\btry \{/g) || []).length >= 3,
+         "★★ 원본 읽기 · 작업 분 · 머문 분이 각각 try — 하나가 실패해도 나머지가 간다");
+    }
+
+    /* ── 보는 쪽 — 세 화면 ── */
+    ok(/if \(stay >= VALID_STAY_MIN\) \{ cls \+= " full"; validDays\+\+; \}/.test(AD5) &&
+       /else cls \+= " brief";/.test(AD5),
+       "★★ 출석부 칸이 유효(full) / 잠깐(brief) 로 갈린다");
+    /* =====================================================================
+       ⏳ 옛 날짜도 ✔ 유효 출석으로 (2026-09-21 — 콩)
+       ---------------------------------------------------------------------
+       m 은 오늘부터 쌓이지만 **원본(timeSegs)은 처음부터 다 있습니다** —
+       지우는 손이 아예 없어요. 표는 그 원본으로 바로 가리고, 다른 두 화면
+       몫으로는 방장이 한 번 적어 줍니다(그 둘은 원본에 손이 안 닿아요).
+       ===================================================================== */
+    ok(/const stay = rec && rec\.m != null \? Number\(rec\.m\) \|\| 0\s*\n\s*: \(mins\[dk\] != null \? Math\.round\(Number\(mins\[dk\]\) \|\| 0\) : null\);/.test(AD5),
+       "★★★ m 이 없으면 원본 구간(minsByNick)으로 메꾼다 — 옛 날짜도 가려진다");
+    ok(/_채울거리 = \{ ymKey, attMonth, minsByNick, nicks \};/.test(AD5) &&
+       !/fillOldStayMins[\s\S]{0,1800}?db\.ref\([^)]*\)\.once/.test(AD5),
+       "★★★ 채우기는 표가 이미 읽어 둔 값만 쓴다 — 서버를 다시 안 읽는다");
+    ok(/if \(!rec \|\| !\(rec\.firstAt \|\| rec\.at\)\) return;/.test(AD5),
+       "★★★ 도장이 없는 날에는 안 적는다 — m 만 있으면 보안규칙 검사에 걸려 **묶음 전체가 실패**한다");
+    ok(/if \(rec\.m != null\) return;/.test(AD5),
+       "★★★ 이미 적힌 날은 안 건드린다 — 그날 본인이 적은 값이 진실이다");
+    ok(/if \(!\(분 > 0\)\) return;/.test(AD5),
+       "★★★ 원본이 없거나 0 이면 건너뛴다 — 0 으로 적으면 '잠깐 들렀다' 로 잘못 읽힌다 (모름 ≠ 안 머묾)");
+    ok(/if \(!dk\.startsWith\(ymKey\)\) return;/.test(AD5),
+       "★★ 보고 있는 그 달만 채운다 (전 기간을 한 번에 쓰면 되돌리기 어렵다)");
+    ok(/await db\.ref\("attendance"\)\.update\(묶음\);/.test(AD5) &&
+       /db\.ref\(`users\/\$\{n\}\/attend\/mins`\)\.update\(사람별\[n\]\)/.test(AD5),
+       "★★ 두 자리에 적는다 — 출석부·주간 기록이 보는 attendance, 개인 달력이 보는 attend/mins");
+    ok(/if \(!ownerOnly\("옛 날짜 채우기"\)\) return;/.test(AD5),
+       "★★ 방장만 — 남의 users 에 쓰는 일이라 규칙도 방장뿐이다");
+    ok(/id="adm-att-fill"/.test(AH5) &&
+       /<span data-owner-only>\s*\n\s*<button type="button" id="adm-att-fill"/.test(AH5),
+       "★ 버튼이 출석부 머리에 있고 방장에게만 보인다");
+
+    ok(/const stay = rec && rec\.m != null \? Number\(rec\.m\) \|\| 0/.test(AD5) &&
+       /const stay = on && _mins\[key\] != null \? Number\(_mins\[key\]\) \|\| 0 : null;/.test(MW5) &&
+       /m: r\.m == null \? null : Number\(r\.m\) \|\| 0/.test(WK5),
+       "★★★ 머문 분이 **없는 날은 null** — 옛 날짜를 '미달'로 칠하지 않는다 (모르는 것과 못 넘은 것은 다르다)");
+    ok(/} else if \(v\.m >= VALID_STAY_MIN\) \{/.test(WK5) && /class="o brief"/.test(WK5),
+       "★★ 주간 기록 📅 출석 탭 — ● 유효 / ○ 잠깐");
+    ok(/full \? "full" : "", brief \? "brief" : "",/.test(MW5),
+       "★★ 나의 작업 달력 칸에도 같은 두 갈래가 붙는다");
+
+    /* ── 규칙은 그대로 (콩 2026-09-21) ── */
+    ok(/attended: attDays, daysLeft \}\);/.test(AD5) && !/attended: validDays/.test(AD5),
+       "★★★ 한 달 18일 규칙은 **나온 날(attDays)** 로 센다 — 유효 출석으로 바꾸면 규칙이 세지는 일이라 공지가 먼저다");
+    ok(/ruleHtml\(y, m, attended, vacCount\)/.test(MW5) && !/ruleHtml\(y, m, validCount/.test(MW5),
+       "★★ 멤버 화면의 규칙도 마찬가지 — 두 화면이 같은 말을 한다");
+
+    /* ── 빨강을 안 쓴다 (2026-08-14 에 걷어낸 잔소리를 되살리지 않기) ── */
+    /* =====================================================================
+       🩵 1시간 미만은 하늘색 (2026-09-21 — 콩이 고른 마지막 모양)
+       ---------------------------------------------------------------------
+       2026-08-14 에 '1시간 미만 붉은 표시' 를 잔소리 같다고 걷어낸 적이
+       있습니다. 하늘색에는 그 경고 느낌이 없어요 — 나무라지 않고 "이런 날"
+       이라고만 말합니다. 표도 초록 일색에서 벗어나 차분해집니다.
+       ===================================================================== */
+    ok(/td\.cell\.brief\{ background: #DCEAF7; color: #2A5E86; \}/.test(AH5),
+       "★★★ 1시간 미만이 하늘색이다");
+    ok(!/cell\.brief\{[^}]*#A33127/.test(AH5) && !/cell\.brief\{[^}]*rgba\(74,63,51/.test(AH5),
+       "★★★ 붉게도(잔소리) 흐리게도(덜 중요한 날) 안 한다 — 2026-08-14 결정을 되살리지 않는다");
+    ok(!/td\.cell\.brief\{[^}]*box-shadow/.test(AH5) &&
+       /td\.cell\.full\{ box-shadow: inset 0 -2px 0 #7FA96F; \}/.test(AH5),
+       "★★★ 밑줄은 ✔ 유효 출석에만 — brief 에도 달면 둘이 같은 뜻으로 읽힌다");
+
+    /* =====================================================================
+       ✔ 유효 출석은 **밑줄만** (2026-09-21 — 콩)
+       ---------------------------------------------------------------------
+       이 방에서는 유효 출석이 거의 모든 칸입니다. 거기 바탕색을 깔면 표가
+       통째로 그 색이 되고, 드물어서 눈에 띄어야 할 🌿 개인사정이 묻혀요.
+       **바탕색은 특별한 상태에만** — 하늘(1시간 미만) · 잎색(개인사정) ·
+       모래(휴가). 제일 흔한 것이 제일 조용해야 드문 것이 보입니다.
+       ===================================================================== */
+    ok(!/td\.cell\.full\{[^}]*background/.test(AH5),
+       "★★★ ✔ 유효 출석에는 바탕색이 없다 — 제일 흔한 칸이라 바탕을 깔면 표가 통째로 그 색이 된다");
+    ok(!/td\.cell\.full\{[^}]*font-weight/.test(AH5) && !/td\.cell\.full\{[^}]*color:/.test(AH5),
+       "★★ 글자색·굵기도 안 건드린다 — 밑줄 하나로 충분하다 (콩: '기존과 같고 밑줄만')");
+    ok(/\.lg\.full\{\s*\n\s*background: #FFFDF8;/.test(AH5),
+       "★ 범례 스와치도 같은 모양이다 (범례와 표가 다르면 범례가 거짓말을 한다)");
+    ok(/td\.cell\.leave\{ background: #DCE9D6; \}/.test(AH5),
+       "★★ 🌿 개인사정은 원래 잎색으로 되돌렸다 (콩 2026-09-21 — 표를 차분하게)");
+    ok(/td\.cell\.vac\{ background: #F5E3B8; \}/.test(AH5),
+       "★★ 🏖️ 휴가는 모래색 그대로");
+    ok(/class="lg leave"/.test(AD5) && /class="lg vac"/.test(AD5) &&
+       /1시간이 안 되게 머문 날/.test(AD5),
+       "★ 범례가 네 가지를 다 말한다 (✔ 유효 · 1시간 미만 · 🌿 · 🏖️)");
+    ok(/\.att-day\.on\.brief\{/.test(CS6) && /\.mw-calfoot \.mw-valid\{/.test(CS6),
+       "★ 달력 CSS 도 함께 들어왔다");
+
+    /* ── 범례 — 표만 보고는 진한 칸의 뜻을 모릅니다 ── */
+    ok(/adm-att-legend/.test(AD5) && /adm-att-legend/.test(AH5),
+       "★★ 출석부 아래에 범례가 있다");
+    ok(/class="legend"/.test(WK5), "★ 주간 기록에도 범례 한 줄");
+
+    /* =====================================================================
+       📊 그래프 탭 — 나온 사람은 **하루 평균** (2026-09-21 — 콩)
+       ---------------------------------------------------------------------
+       더하면 "이 주 28명" 이 되는데 방에는 마흔한 명뿐입니다. 같은 사람이
+       이레 내내 나오면 7로 세어지니까요 — 사람 수는 더할 수 있는 값이 아닙니다.
+       ★ 작업 시간·글자수는 그대로 **합**입니다 (콩: 나머지는 그대로).
+       ===================================================================== */
+    ok(/function 평균요약\(꼬리\)/.test(WK5) && /function 합요약\(꼬리\)/.test(WK5),
+       "★★ 요약을 만드는 손이 둘이다 — 더하는 것과 평균 내는 것");
+    ok(/const 지난 = 날들\.filter\(\(\{ key \}\) => key <= 오늘키\);/.test(WK5) &&
+       /return `하루 평균 \$\{꼬리\(합 \/ 지난\.length\)\}`;/.test(WK5),
+       "★★★ 아직 안 온 날은 빼고 **오늘까지 지나간 날**로 나눈다 (이레로 고정해 나누면 주중엔 평균이 반토막으로 보인다)");
+    ok(/꺾은선\("📅 나온 사람", 날들, 사람수, \(v\) => Math\.round\(v\) \+ "명", 잉크\.선,[\s\S]{0,260}?평균요약\(/.test(WK5),
+       "★★ 나온 사람만 평균요약을 받는다");
+    ok(/꺾은선\("⏱️ 작업 시간", 날들, 시간, \(v\) => 분글\(v\), 잉크\.보조\)\}/.test(WK5) &&
+       /꺾은선\("✍️ 글자수", 날들, 글자, \(v\) => fmt\(Math\.round\(v\)\), 잉크\.선\)\}/.test(WK5),
+       "★★ 작업 시간·글자수는 요약을 안 넘겨 예전처럼 **합**이다 (콩: 나머지는 그대로)");
+    ok(/toFixed\(1\)\}명`\)\)\}/.test(WK5),
+       "★ 평균만 소수 한 자리 — 축 눈금은 정수 그대로 (4명과 4.4명은 다른 이야기)");
+    ok(/📅 나온 사람은 <b>하루 평균<\/b>이에요/.test(WK5),
+       "★ 그래프 탭 아래 설명에도 적혀 있다 (숫자 뜻이 바뀌면 말도 바뀌어야 한다)");
+
+    /* 🧘 혼자 방 미리보기 — 진짜 방에 올리기 전에 눈으로 봅니다 (콩의 순서) */
+    {
+      const SO5 = fs.readFileSync(DIR+"script_solo.js","utf8");
+      ok(/_설정\(`users\/\$\{나\}\/attend\/mins`, mins\);/.test(SO5) &&
+         /if \(m !== null\) mins\[날키\(d\)\] = m;/.test(SO5),
+         "★★ 혼자 방이 표본 머문 시간을 심는다 (진한 ✓ · 옅은 ✓ · 모르는 날 셋 다 보이게)");
+      ok(/if \(d > t\.getDate\(\)\) return;/.test(SO5),
+         "★ 아직 안 온 날에는 도장을 안 찍는다");
+    }
+  }
+
+  /* =====================================================================
+     🚦 화면 공유 인원 제한 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     "접속 14명 이상이면 못 켜기 · 동시 공유는 5명까지 · 문구는 다정하게
+     '안정적인 접속을 위해' · 설정은 방장만 · 방장만 소리없이 예외."
+     ===================================================================== */
+  {
+    const SH = fs.readFileSync(DIR+"script_share.js","utf8");
+    const AD6 = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const AH6 = fs.readFileSync(DIR+"admin.html","utf8");
+    const IX6 = fs.readFileSync(DIR+"index.html","utf8");
+    const CS7 = fs.readFileSync(DIR+"styles.css","utf8");
+    const R10 = 규칙읽기();
+
+    /* ── 기본값 — 두 파일이 같은 이름·같은 값 ── */
+    [["script_share.js", SH], ["script_admin.js", AD6]].forEach(([이름, 글]) => {
+      ok(/const SHARE_LIMIT_BASE = \{ on: true, max: 14, maxShare: 5 \};/.test(글),
+         `★★★ ${이름} 에 SHARE_LIMIT_BASE = { on:true, max:14, maxShare:5 } (관리자가 말하는 기본값과 실제 문턱이 같아야 한다)`);
+    });
+
+    /* ── 보안규칙을 안 고쳐도 되는가 ── */
+    ok(R10.config && R10.config[".read"] === true &&
+       /ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(String(R10.config[".write"])) &&
+       !R10.config.share,
+       "★★★ config 는 이미 누구나 읽기·방장만 쓰기 — share 칸에 따로 규칙을 안 둔다 (콘솔에 붙여넣을 것이 없다)");
+
+    /* ── 막는 자리 ── */
+    ok(/if \(!켜도되나\(\)\) return;[\s\S]{0,120}?const stream = await _pickWindow\(\);/.test(SH),
+       "★★★ **창 고르기 판이 뜨기 전**에 막는다 (다 고른 뒤 거절하면 허탈하다)");
+    ok(/if \(!_제한읽음\) return true;/.test(SH),
+       "★★★ 아직 못 읽었으면 막지 않는다 (통신이 흔들렸다고 공유가 통째로 막히면 더 곤란하다)");
+
+    /* =====================================================================
+       🐛 첫 누름이 늘 통과하던 자리 (2026-09-21 — 콩이 잡음)
+       ---------------------------------------------------------------------
+       `.on("value")` 의 답은 한 박자 뒤에 옵니다. 그 사이 _제한읽음 이 false 라
+       "못 읽었으니 막지 말자" 로 빠져나갔어요. 19명인데 공유가 켜졌습니다.
+       ===================================================================== */
+    ok(/if \(!_제한읽음\) await 제한보장\(\);\s*\n\s*if \(!켜도되나\(\)\) return;/.test(SH),
+       "★★★ 켤 때 설정을 **기다렸다가** 본다 (.on 의 답은 한 박자 뒤에 온다 — 19명인데 뚫린 자리)");
+    ok(/^  function 켜도되나\(\) \{/m.test(SH) && !/async function 켜도되나/.test(SH),
+       "★★★ 🍎 판단은 **동기**다 — getDisplayMedia 앞에 기다림이 끼면 사파리가 '사람이 누른 것'으로 안 쳐 준다");
+    ok(/if \(!_제한읽음\) await 제한보장\(\);/.test(SH) && !/^\s*await 제한보장\(\);/m.test(SH),
+       "★★★ 🍎 이미 읽어 뒀으면 **한 번도 안 기다린다** (거의 늘 이 길)");
+    ok(/async function 제한보장\(\)[\s\S]{0,400}?if \(_제한읽음\) return;/.test(SH),
+       "★★ 이미 읽었으면 한 글자도 더 안 읽는다");
+    ok(/function 제한적용\(v\)/.test(SH) &&
+       (SH.match(/_제한읽음 = true;/g) || []).length === 1,
+       "★★★ 값을 적용하는 자리가 하나다 — on 과 once 가 따로 셈하면 또 어긋난다");
+    ok(/제한듣기\(\);\s*\n\s*\n\s*const 막힘 = !_sharing && 지금막혔나\(\);/.test(SH),
+       "★★★ 입장 뒤에도 붙인다 — 접속자 정보가 바뀔 때마다 도는 renderShareButton 에서 (판을 열 때는 로그인 전이라 못 붙을 수 있다)");
+    ok(/window\.offerShareResume 을 \*\*부르는 곳이\n\s*없습니다\.\*\*/.test(SH),
+       "★★ offerShareResume 은 아직 안 이어 붙은 자리라고 적어 둔다 (여기 뭘 얹으면 헛돈다)");
+    ok(/window\.shareLimitNow = function \(\)/.test(SH),
+       "★ 방장이 콘솔에서 '왜 안 막히지' 를 눈으로 볼 수 있다");
+    ok(/if \(방장인가\(\)\) return true;        \/\/ 🤫 조용히/.test(SH),
+       "★★ 방장만 조용히 지나간다");
+    ok(/firebase\.auth\(\)\.currentUser\?\.uid === SHARE_ADMIN_UID/.test(SH) &&
+       !/canAdmin\(\)/.test(SH.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "")),
+       "★★★ canAdmin() 을 안 쓴다 — 그걸 쓰면 **운영진까지** 예외가 된다 (콩: 나만)");
+    {
+      /* 주석은 빼고 **눈에 보이는 글자**만 봅니다 — 설명 주석에는 적어 둬야
+         다음 사람이 까닭을 압니다. 멤버에게 안 보이면 되는 것이니까요. */
+      const 보이는것 = AH6.replace(/<!--[\s\S]*?-->/g, "");
+      const i = 보이는것.indexOf("화면 공유 제한");
+      ok(i >= 0 && !/예외/.test(보이는것.slice(i, i + 1800)),
+         "★★★ 관리자 화면에 '방장은 예외' 라고 안 적혀 있다 (콩: 소리없이)");
+    }
+
+    /* ── 세는 값 — 서버에 안 묻는다 ── */
+    ok(/const cache = window\._statusCache;/.test(SH.slice(SH.indexOf("function 지금접속수"))) &&
+       !/db\.ref\("screens"\)\.once/.test(SH),
+       "★★★ screens 를 once 로 읽지 않는다 — 그림까지 통째로 내려받는다 (막으려고 통신량을 쓰는 꼴)");
+    ok(/const 공유 = othersSharing\(\);/.test(SH),
+       "★★ 공유 인원은 status 의 shareOn 으로 센다 (이미 있는 손을 다시 쓴다)");
+    ok(/if \(_제한\.maxShare > 0 && 공유 >= _제한\.maxShare\)/.test(SH),
+       "★★ 이미 다섯이 켜 뒀으면 내가 여섯째라 막힌다");
+
+    /* ── 🔻 공유 중에도 끕니다 (고침 2026-09-21 — 콩) ──
+       "이미 켠 사람은 안 끊는다" 로 두면 **미리 켜 두는 것이 이득**이 되어,
+       막으려던 바로 그 시간대가 제일 무거워집니다. 콩이 짚은 자리예요. */
+    ok(!/이미 켜 둔 사람은 그대로 둡니다/.test(SH) &&
+       /function 자동끄기살피기\(\)/.test(SH),
+       "★★★ 공유 중이어도 접속 인원이 넘으면 꺼진다 (미리 켜 두는 게 이득이 되면 안 된다)");
+    ok(/자동끄기살피기\(\);/.test(SH.slice(SH.indexOf("function tickShare"), SH.indexOf("function tickShare") + 900)),
+       "★★ 공유 중에만 도는 타이머(tickShare)가 부른다 — 타이머를 새로 안 만든다");
+    ok(/const SHARE_OVER_GRACE_MS = 60 \* 1000;/.test(SH) &&
+       /if \(t - _넘은때 < SHARE_OVER_GRACE_MS\) return;/.test(SH),
+       "★★★ 넘은 채로 1분이 이어질 때만 끈다 — 인원은 출렁이므로 즉시 끄면 껐다 켰다 한다");
+    ok(/if \(!넘음\) \{[\s\S]{0,240}?_넘은때 = 0; _예고함 = false;[\s\S]{0,40}?return;/.test(SH),
+       "★★ 1분 안에 내려가면 조용히 없던 일이 된다 (다시 한산해졌다고 또 알리지 않는다)");
+    ok(/window\.showCommandToast\?\.\(\s*\n?\s*`🖥️ 지금 \$\{접속\}명 접속 중이에요/.test(SH),
+       "★★★ 끄기 전에 **먼저 알린다** — 예고 없이 꺼지면 고장으로 읽힌다");
+    ok(/stopScreenShare\(\);\s*\n\s*막힘팝업\("자동", 접속, _제한\.max\);/.test(SH),
+       "★★ 끄고 나서 까닭을 알려 준다");
+    ok(/화면 공유를 <b>잠시 멈췄어요<\/b>/.test(SH),
+       "★★ 자동으로 꺼졌을 때는 '멈췄어요' 를 **먼저** 말한다 (고장이 아니라는 것이 먼저)");
+    {
+      /* ★★★ 끄는 방아쇠는 접속 인원 하나뿐 — 콩이 콕 집은 자리 */
+      const 몸 = SH.slice(SH.indexOf("function 자동끄기살피기"),
+                          SH.indexOf("function 자동끄기살피기") + 1600);
+      ok(/_제한\.max/.test(몸) && !/maxShare/.test(몸),
+         "★★★ 동시 공유 수로는 안 끈다 — 다섯이 켜 둔 건 정상이고, 여섯째를 막는 것까지만 (콩 지정)");
+      ok(/if \(!_제한읽음 \|\| !_제한\.on \|\| 방장인가\(\)\)/.test(몸),
+         "★★ 못 읽었거나 · 꺼 뒀거나 · 방장이면 자동 끄기도 안 돈다");
+    }
+    ok(/공유 중이어도 스스로 꺼져요/.test(AH6) && !/이미 켠 사람은 끊지 않아요/.test(AH6),
+       "★★ 관리자 설명도 바뀐 규칙을 말한다 (화면과 동작이 다른 말을 하면 안 된다)");
+
+    /* ── 문구 ── */
+    ok(/안정적인 접속을 위해/.test(SH),
+       "★★★ '안정적인 접속을 위해' — 콩이 고른 말 ('데이터 안정화' 대신)");
+    ok(/지금 방에 <b>\$\{값\}명<\/b>이나 계셔요 🙂/.test(SH) &&
+       /조금 한산해지면 다시 켜 주세요!/.test(SH),
+       "★★ 다정한 톤 그대로 (나무라지 않는다)");
+    ok(/id="share-block-modal"/.test(IX6) && /id="share-block-body"/.test(IX6) &&
+       /closeShareBlock\(\)/.test(IX6),
+       "★ 팝업 껍데기가 index.html 에 있다");
+    ok(/#share-block-modal\{/.test(CS7) && /\.share-block-ok\{/.test(CS7),
+       "★ 팝업 CSS 도 다른 팝업과 같은 결로 들어왔다");
+    ok(/if \(!box \|\| !body\) \{/.test(SH) && /alert\("🖥️ 화면 공유/.test(SH),
+       "★★ 껍데기가 없으면 alert 로라도 알려 준다 (안내가 통째로 사라지지 않게)");
+
+    /* ── 관리자 칸 ── */
+    ok(/id="adm-share-on"/.test(AH6) && /id="adm-share-max"/.test(AH6) && /id="adm-share-cap"/.test(AH6),
+       "★★ 관리자 칸에 세 가지(켜기·접속 문턱·동시 공유 수)가 있다");
+    ok(/<span data-owner-only>\s*\n\s*<div class="adm-card">\s*\n\s*<h2>🖥️ 화면 공유 제한<\/h2>/.test(AH6),
+       "★★★ 방장에게만 보인다 (콩: 방장만 만지게)");
+    ok(/if \(!ownerOnly\("화면 공유 제한 설정"\)\) return;/.test(AD6),
+       "★★ 저장도 방장만 — 규칙이 막기 전에 말로 먼저 알려 준다");
+    ok(/if \(!\(max >= 2 && max <= 99\)\)/.test(AD6) && /if \(!\(cap >= 1 && cap <= 30\)\)/.test(AD6),
+       "★★★ 빈칸·0 을 걸러낸다 — '0명 이상이면 막기' 가 되면 **아무도 못 켠다**");
+    ok(/ref\("config\/share"\)\.on\("value"/.test(SH) && /function 제한듣기\(\)/.test(SH),
+       "★★ 멤버 쪽은 계속 듣는다 — 방장이 바꾸면 새로고침 없이 바로 반영");
+
+    /* ── 혼자 방 미리보기 ── */
+    ok(/_설정\("config\/share", \{ on: true, max: 14, maxShare: 5 \}\);/.test(fs.readFileSync(DIR+"script_solo.js","utf8")),
+       "★ 혼자 방에도 같은 문턱을 심어 시험해 볼 수 있다");
+  }
+
+  /* =====================================================================
+     🗄️ 프사를 창고(Storage)로 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     DB 자료는 브라우저가 캐시하지 않아, 끊겼다 붙을 때마다 방에 있는 사람
+     전원의 사진을 다시 받았습니다(재접속 한 번에 150~300KB). 창고 파일은
+     주소를 가지니 두 번째부터는 아예 안 받습니다.
+     ===================================================================== */
+  {
+    const PF5 = fs.readFileSync(DIR+"script_profile.js","utf8");
+    const RT5 = fs.readFileSync(DIR+"script_realtime.js","utf8");
+    const MH5 = fs.readFileSync(DIR+"m.html","utf8");
+    const ST5 = fs.readFileSync(DIR+"보안규칙_Storage.txt","utf8");
+    const AD6 = fs.readFileSync(DIR+"script_admin.js","utf8");
+
+    /* ── 창고 규칙 ── */
+    ok(/match \/profileimg\/\{uid\}\/\{fileName\}/.test(ST5) &&
+       /request\.auth\.uid == uid/.test(ST5),
+       "★★★ 프사 폴더를 계정 uid 로 가른다 — 안 가르면 로그인한 누구나 **남의 프사를 바꿔칠 수** 있다");
+    ok(/allow delete: if request\.auth != null && request\.auth\.uid == uid;/.test(ST5),
+       "★★ 지우기도 제 것만");
+    ok(/request\.resource\.size < 400 \* 1024/.test(ST5),
+       "★ 400KB — 옛 움직이는 GIF 프사를 원본 그대로 옮겨 줄 수 있게");
+
+    /* ── 읽는 손이 하나인가 ── */
+    ok(/function photoSrcOf\(prof\)/.test(PF5) &&
+       /return sanitizePhotoUrl\(prof && prof\.photoUrl\) \|\| sanitizePhoto\(prof && prof\.photo\);/.test(PF5),
+       "★★★ 새 것(창고 주소) 먼저, 없으면 옛 것(글자 사진) — 아직 안 옮긴 분 프사가 사라지면 안 된다");
+    {
+      /* ★ 이전하는 손(migrateMyPhoto)만은 **옛 사진을 일부러** 읽습니다 —
+         그게 그 함수가 하는 일이니까요. 그 몸통은 빼고 봅니다. */
+      const i = PF5.indexOf("async function migrateMyPhoto");
+      const 끝 = PF5.indexOf("\nwindow.putMyPhoto", i);
+      const 그린쪽 = PF5.slice(0, i) + PF5.slice(끝 > i ? 끝 : i);
+      ok(!/sanitizePhoto\(prof\.photo\)/.test(그린쪽) && !/sanitizePhoto\(p\.photo\)/.test(그린쪽),
+         "★★ 그리는 자리가 photoSrcOf 하나로 모였다 (두 벌이면 한쪽만 고쳐져 어긋난다)");
+    }
+    ok(/window\.photoSrcOf \? window\.photoSrcOf\(prof\)/.test(RT5),
+       "★★ 카드 그리는 쪽도 같은 손을 쓴다");
+
+    /* ── 바깥 주소 막기 ── */
+    ok(/\^https:\\\/\\\/firebasestorage\\\.googleapis\\\.com/.test(PF5),
+       "★★★ 창고 주소만 통과 — 바깥 주소를 프사로 걸면 그 서버가 멤버 전원의 접속을 들여다본다(추적)");
+    ok(/firebasestorage\\\.googleapis\\\.com/.test(MH5) &&
+       !/\^\(https\?:\|data:image/.test(MH5),
+       "★★★ 폰 화면도 같은 잣대다 (여기만 느슨하면 거기로 들어온다)");
+
+    /* ── 올리기 ── */
+    ok(/const PHOTO_QUALITY = 0\.70;/.test(PF5) && /const PHOTO_TYPE    = "image\/webp";/.test(PF5),
+       "★★ WebP 화질 70 — 콩이 미리보기에서 고른 값");
+    /* =====================================================================
+       🎞️ GIF — 새로 올리는 것은 안 받고, 옛 것은 그대로 옮깁니다
+       ---------------------------------------------------------------------
+       2026-09-21 에 프사를 창고로 옮기면서, **옛 GIF 의 움직임을 지키려던
+       한 줄**이 새로 올리는 길에서도 쓰여 2026-08-22 의 차단이 조용히
+       풀렸습니다. 하루 만에 새 GIF 프사가 올라왔어요(팬팬님).
+       ★ 옮기는 길까지 막으면 이미 GIF 인 분들이 영영 옛 방식으로 남아
+         모두가 계속 내려받습니다 — 막으려던 바로 그 일이 됩니다.
+       ===================================================================== */
+    ok(/function _프사줄이기\(file, opts\)/.test(PF5) &&
+       /const gif허용 = !!\(opts && opts\.gif허용\);/.test(PF5),
+       "★★ 같은 함수에 문이 둘이다 — 올리는 길과 옮기는 길");
+    ok(/if \(gif허용\) \{ resolve\(file\); return; \}/.test(PF5) &&
+       /reject\(new Error\("움직이는 GIF 는 프사로 쓸 수 없어요/.test(PF5),
+       "★★★ 새 GIF 는 **거절**하고, 옮길 때만 원본 그대로 통과한다");
+    ok(/const blob = await _프사줄이기\(file\);          \/\/ ★ gif허용 없음/.test(PF5),
+       "★★★ 새로 올리는 길에는 gif허용이 **없다** — 여기 한 글자가 2026-08-22 결정을 풀었다");
+    ok(/const 줄인것 = await _프사줄이기\(blob, \{ gif허용: true \}\);/.test(PF5),
+       "★★★ 옮기는 길에만 gif허용 — 이미 GIF 프사인 분의 움직임을 지키며 창고로 보낸다");
+    ok(/if \(!file \|\| !\/\^image\\\/\/\.test\(file\.type \|\| ""\)\) throw new Error\("이미지 파일만/.test(PF5) &&
+       /if \(file\.size > PHOTO_INPUT_MAX\) throw new Error/.test(PF5),
+       "★★★ 옛 길이 보던 검사(이미지인가 · 12MB 이하인가)를 새 길에도 옮겨 두었다 — 길을 바꿀 때 빠뜨리기 쉬운 자리다");
+    ok(/st\.ref\(`profileimg\/\$\{uid\}\/\$\{_무작위\(20\)\}\.\$\{끝\}`\)/.test(PF5),
+       "★★ 내 uid 폴더에만 올린다 (규칙과 같은 모양)");
+    ok(/await saveMyProfile\(\{ photoUrl: url, photo: null \}\);/.test(PF5),
+       "★★★ 옛 글자 사진을 **바로 지운다** — 남겨 두면 계속 내려받아 옮긴 보람이 없다 (콩 지정)");
+    ok(/async function _옛프사지우기\(url\)/.test(PF5) &&
+       /if \(!st \|\| !길 \|\| !\/\^profileimg\\\/\/\.test\(길\)\) return;/.test(PF5),
+       "★★★ 옛 파일을 창고에서 지우되 profileimg 안의 것만 — 경로를 안 가리면 남의 그림을 지울 수 있다");
+
+    /* ── 조용한 이전 ── */
+    ok(/async function migrateMyPhoto\(\)/.test(PF5) &&
+       /if \(sanitizePhotoUrl\(p\.photoUrl\)\) return;/.test(PF5),
+       "★★★ 각자 자기 것만 옮긴다 — 방장이 쉰두 명 것을 옮기려면 규칙을 느슨하게 풀어야 한다");
+    ok(/try \{ migrateMyPhoto\(\); \} catch \(e\) \{\}/.test(PF5) &&
+       !/await migrateMyPhoto/.test(PF5),
+       "★★ 기다리지 않는다 — 입장이 이것 때문에 늦어지면 안 된다");
+    ok(!/migrateMyPhoto[\s\S]{0,900}?AppStore\?\.setItem/.test(PF5),
+       "★★ 도장을 안 찍는다 — 실패하면 다음 입장 때 다시 해 봐야 한다");
+    ok(/await db\.ref\(`users\/\$\{myNick\}\/profile`\)\.update\(\{ photoUrl: url, photo: null \}\);/.test(PF5),
+       "★★★ 이전은 **내 닉을 박아서** 쓴다 — saveMyProfile 은 '프로필 창이 보고 있는 사람' 에게 쓰므로, 남의 프로필에 내 사진이 적힐 수 있다");
+    ok(/try \{ await afterJoinLoadProfile\(\); \}/.test(PF5),
+       "★★ 입장할 때마다 불린다 — 아무도 손대지 않아도 저절로 옮겨진다");
+    ok(/🗄 프사 창고로 옮김/.test(AD6) && /⏳ 아직 옛 방식/.test(AD6),
+       "★★ 관리자 📊 사용 현황에서 이전 진척을 볼 수 있다 (0 이 되면 끝)");
+
+    /* ── 폰 화면의 죽은 구독 ── */
+    ok(!/db\.ref\("users"\)\.on\("value"/.test(MH5) && /db\.ref\(`users\/\$\{n\}\/profile`\)/.test(MH5),
+       "★★★ 폰이 users 를 통째로 듣지 않는다 — 규칙이 users 루트를 안 열어 줘서 **늘 실패**하던 구독이다");
+    ok(/try \{ _profRefs\[n\]\.off\(\); \} catch\(e\)\{\}/.test(MH5),
+       "★★ 나간 사람 귀는 뗀다");
+  }
+
+  /* =====================================================================
+     📉 통신량 조이기 2탄 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     ① 출석부가 매번 attendance 를 통째로 읽던 것 → 적어 두고 쓰기
+     ② 게시판을 한 번 열면 세션 내내 듣던 것 → 닫으면 귀 떼기
+     ===================================================================== */
+  {
+    const AD7 = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const AH7 = fs.readFileSync(DIR+"admin.html","utf8");
+    const DK7 = fs.readFileSync(DIR+"script_dock.js","utf8");
+    const R11 = 규칙읽기();
+
+    /* ── ① 입장일을 적어 두고 씁니다 ── */
+    ok(/const FIRSTSEEN_PATH = "config\/firstSeen";/.test(AD7),
+       "★★ 입장일을 config/firstSeen 에 적어 둔다 (config 는 누구나 읽기·방장만 쓰기라 규칙을 안 고쳐도 된다)");
+    ok(R11.config && R11.config[".read"] === true && !R11.config.firstSeen,
+       "★★★ firstSeen 에 따로 규칙을 안 둔다 — config 의 기본 규칙이 그대로 맞다");
+    {
+      /* 통째 읽기는 두 자리에만 남아 있어야 합니다 —
+           ① 처음온날통째로  (처음 한 번 · [다시 셈] 때만)
+           ② 멤버 삭제       (그 사람 기록을 전부 지우려면 어쩔 수 없어요)
+         **출석부를 여는 길(loadAttendance)** 에는 없어야 합니다. */
+      const 통째 = (AD7.match(/db\.ref\("attendance"\)\.once\("value"\)/g) || []).length;
+      const i = AD7.indexOf("async function loadAttendance");
+      const 끝 = AD7.indexOf("\n  /* ====", i);
+      const 여는길 = AD7.slice(i, 끝 > i ? 끝 : i + 9000);
+      ok(통째 === 2 && /async function 처음온날통째로\(nicks\)/.test(AD7) &&
+         !/db\.ref\("attendance"\)\.once\("value"\)/.test(여는길),
+         "★★★ 출석부를 여는 길에는 attendance 통째 읽기가 없다 — 예전엔 열 때마다 돌았다 (이 페이지에서 제일 큰 읽기)");
+    }
+    ok(/await db\.ref\(`\$\{FIRSTSEEN_PATH\}\/map\/\$\{nick\}`\)\.remove\(\);/.test(AD7),
+       "★★ 멤버를 명단에서 지우면 적어 둔 입장일도 지운다 — 같은 닉으로 다시 들어오면 옛 날짜가 따라붙는다");
+    ok(/orderByKey\(\)\.limitToFirst\(1\)\.once\("value"\)/.test(AD7) &&
+       /async function 처음온날한사람\(n\)/.test(AD7),
+       "★★★ 새로 생긴 닉은 개인 출석맵의 **가장 이른 키 한 줄**만 읽는다 (전체를 훑을 이유가 없다)");
+    ok(/const firstSeen = await loadFirstSeen\(nicks\);/.test(AD7) &&
+       !/loadFirstSeen\(\),/.test(AD7),
+       "★★ 명단이 온 뒤에 부른다 — 새 닉이 누구인지 알아야 그 사람만 채울 수 있다");
+    ok(/users\/\$\{n\}\/vacations`\)\.orderByKey\(\)\s*\n?\s*\.startAt\(`\$\{ymKey\}-01`\)/.test(AD7) &&
+       /users\/\$\{n\}\/leaves`\)\.orderByKey\(\)\s*\n?\s*\.startAt\(`\$\{ymKey\}-01`\)/.test(AD7),
+       "★★★ 휴가·개인사정도 **그 달만** 읽는다 — 표에 그리는 것도 규칙 셈도 그 달뿐인데 전 기간이 쉰두 번 내려왔다");
+    ok(/if \(!isOwner\) return;/.test(AD7.slice(AD7.indexOf("async function 처음온날저장"))),
+       "★★ 운영진 화면에서는 적기를 건너뛴다 (규칙상 방장만 쓸 수 있다)");
+    ok(/id="adm-att-rebuild"/.test(AH7) && /async function rebuildFirstSeen\(\)/.test(AD7),
+       "★★ 값이 이상하면 방장이 통째로 다시 셈할 수 있다");
+    ok(/if \(!ownerOnly\("입장일 다시 셈"\)\) return;/.test(AD7),
+       "★ 다시 셈도 방장만");
+
+    /* ── ② 판을 닫으면 귀를 뗍니다 ── */
+    const PB7 = fs.readFileSync(DIR+"script_pubreview.js","utf8");
+    const HP7 = fs.readFileSync(DIR+"script_help.js","utf8");
+    const QN7 = fs.readFileSync(DIR+"script_qna.js","utf8");
+    const FL7 = fs.readFileSync(DIR+"script_files.js","utf8");
+    ok(/function closePubReview\(\)/.test(PB7) && /_pubRefs\.forEach\(\(\[r, h\]\) => \{ try \{ r\.off\("value", h\); \}/.test(PB7),
+       "★★★ 품평은 닫으면 귀를 뗀다 — **안 시드는** 자리라 계속 자란다 (재접속마다 통째로 다시 받았다)");
+    ok(/_listening = false;/.test(PB7.slice(PB7.indexOf("function closePubReview"))),
+       "★★ 다시 열면 또 붙을 수 있게 표시도 내린다");
+    [["script_help.js", HP7, "closeHelp"], ["script_qna.js", QN7, "closeQna"]].forEach(([이름, 글, fn]) => {
+      ok(new RegExp(`function ${fn}\\(\\) \\{[\\s\\S]{0,140}?_ref && _ref\\.off\\(\\);[\\s\\S]{0,60}?_ref = null;`).test(글),
+         `★★ ${이름} 도 닫으면 귀를 뗀다`);
+    });
+    ok(/function closeFiles\(\) \{[\s\S]{0,400}?_ref && _ref\.off\(\);/.test(FL7),
+       "★★ 자료실도 창을 닫으면 귀를 뗀다");
+    ok(/if \(pid === "pub"\)  window\.closePubReview\?\.\(\);/.test(DK7) &&
+       /if \(pid === "help"\) window\.closeHelp\?\.\(\);/.test(DK7) &&
+       /if \(pid === "qna"\)  window\.closeQna\?\.\(\);/.test(DK7),
+       "★★★ 알약 판을 내릴 때 실제로 불린다 (함수만 만들고 안 부르면 아무 일도 안 일어난다)");
+    ok(!/_rows = \[\];/.test(HP7.slice(HP7.indexOf("function closeHelp"), HP7.indexOf("function closeHelp") + 200)),
+       "★★ 받아 둔 내용은 안 비운다 — 다시 열 때 빈 판이 번쩍이지 않게");
+  }
+
+  /* =====================================================================
+     🔠 Caps Lock 알림 (2026-09-21 — 콩)
+     ---------------------------------------------------------------------
+     "비밀번호가 달라요" 로 헤매는 일의 제일 흔한 범인입니다. 비밀번호 칸은
+     점으로 가려져서 **본인도 대문자로 들어가는지 모릅니다.**
+     ★ 브라우저가 알려 주는 값이라 서버와 무관합니다 (통신량 0).
+     ===================================================================== */
+  {
+    const AU8 = fs.readFileSync(DIR+"script_auth.js","utf8");
+    const IX8 = fs.readFileSync(DIR+"index.html","utf8");
+    const CS8 = fs.readFileSync(DIR+"styles.css","utf8");
+    const MH8 = fs.readFileSync(DIR+"m.html","utf8");
+
+    ok(/getModifierState\?\.\("CapsLock"\)/.test(AU8),
+       "★★ 브라우저가 알려 주는 값을 본다 — 서버에 묻지 않는다");
+    ok(/const CAPS_FIELDS = \["pw-input", "pw-now", "pw-new", "pw-new2"\];/.test(AU8),
+       "★★ 들어올 때 칸과 **비밀번호 바꾸는 칸 셋**에 모두 단다 (새 비밀번호를 대문자로 만들어 놓는 게 더 고약하다)");
+    ok(/칸\.insertAdjacentElement\("afterend", 알림\);/.test(AU8) &&
+       !/id="caps-warn"/.test(IX8),
+       "★★★ 알림을 **그 칸 바로 아래**에 만들어 붙인다 — 한 자리에 박아 두면 설정 창에서 친 경고가 대문에 뜬다");
+    ok(/if \(!칸 \|\| 칸\.dataset\.capsOn\) return;/.test(AU8),
+       "★★ 여러 번 불려도 안전하다 (설정 창은 나중에 그려질 수 있어 두 번 본다)");
+    ok(/칸\.addEventListener\("blur", \(\) => 보이기\(false\)\);/.test(AU8),
+       "★ 칸을 떠나면 내린다 (엉뚱한 자리에 남으면 무엇에 대한 말인지 모른다)");
+    ok(/\["keydown", "keyup"\]\.forEach/.test(AU8),
+       "★★ 켜는 순간에도 끄는 순간에도 따라간다");
+    ok(/\.caps-warn\{/.test(CS8) && !/\.caps-warn\{[^}]*#A33127/.test(CS8),
+       "★★ 붉은 '오류' 색이 아니다 — 틀렸다고 나무라는 게 아니라 알려 주는 것이다");
+    ok(/id="g-caps"/.test(MH8) && /getModifierState\?\.\("CapsLock"\)/.test(MH8),
+       "★ 폰 화면에도 있다 (블루투스 자판을 쓰면 폰에도 Caps Lock 이 있다)");
+  }
+
+  /* =====================================================================
+     🗃️ 관리자 출석부 다이어트 2탄 (2026-09-22 — 콩)
+     ---------------------------------------------------------------------
+     "관리자 페이지 새로고침 몇 번, 개인사정 체크했다 지우기 몇 번" 에
+     사용량이 3.8MB/분까지 치솟았습니다. 까닭이 둘이었어요 —
+       ① 표를 **다시 그릴 때마다** 쉰두 명 몫을 새로 읽었다
+       ② 배지뽑기가 **그릴 때마다** 멤버당 2번씩(총 104번) 더 읽었다
+     ===================================================================== */
+  {
+    const AD9 = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const AH9 = fs.readFileSync(DIR+"admin.html","utf8");
+
+    /* ── ① 한 번 읽은 달은 쥐고 있습니다 ── */
+    /* [고침 2026-09-22] 📊 그래프 접기가 들어오면서 "가볍게 읽어 둔 달을
+       펼칠 때는 다시 읽는다" 는 조건이 한 줄 붙었습니다. 뜻은 그대로예요. */
+    ok(/let _달자료 = null;/.test(AD9) &&
+       /if \(!다시읽기 && _달자료 && _달자료\.ymKey === ymKey &&\s*\n\s*\(!무거운것 \|\| _달자료\.무거운것\)\) \{/.test(AD9),
+       "★★★ 쥐고 있는 달이면 서버를 한 번도 안 읽는다 — 다시 그리는 일이 생각보다 잦다");
+    ok(/async function 그리기\(자, 달\)/.test(AD9) &&
+       !/db\.ref\(/.test(AD9.slice(AD9.indexOf("async function 그리기"),
+                                    AD9.indexOf("async function 그리기") + 1200)),
+       "★★ 그리는 쪽 앞머리에 서버 읽기가 없다 (읽기와 그리기가 갈렸다)");
+    ok(/if \(_달자료 && _달자료\.leaveByNick\) \{/.test(AD9),
+       "★★★ 🌿 개인사정을 찍으면 **쥐고 있는 자료의 그 칸만** 고친다 — 안 고치면 화면이 옛 값으로 되돌아간다");
+    {
+      /* 서버가 바뀌는 자리는 **일부러** 새로 읽어야 합니다 */
+      const 그냥 = (AD9.match(/loadAttendance\(_attOffset\);/g) || []).length;
+      ok(그냥 === 2,
+         "★★★ 캐시로 다시 그리는 곳은 🌿 개인사정과 📊 그래프 접기 둘뿐 — 서버가 바뀌는 자리(멤버 삭제·출석 복구·옛 날짜 채우기)는 다시읽기:true 다");
+    }
+    ok(/id="adm-att-reload"/.test(AH9) && /_굳힌달\.clear\(\);/.test(AD9),
+       "★★ [🔄 새로 읽기] 가 있다 — 다른 창에서 바뀌었을 때 쓸 길은 남겨 둔다");
+
+    /* ── ② 배지는 달마다 한 번만 ── */
+    ok(/const _굳힌달 = new Set\(\);/.test(AD9) &&
+       /if \(!_굳힌달\.has\(ymKey\)\) \{\s*\n\s*_굳힌달\.add\(ymKey\);\s*\n\s*명단굳히기\(/.test(AD9),
+       "★★★ 배지는 그 달을 처음 그릴 때 한 번만 뽑는다 — 멤버당 2번씩(총 104번) 읽는 일이 다시 그릴 때마다 돌고 있었다");
+    ok(/users\/\$\{n\}\/pomoSessions`\)\.once/.test(AD9) && /worklog\/\$\{n\}\/ep`\)\.once/.test(AD9),
+       "★ (배지뽑기가 무엇을 읽는지 — 이 둘이 멤버 수만큼 돕니다)");
+  }
+
+  /* =====================================================================
+     📊 그래프는 접어 둡니다 (2026-09-22 — 콩)
+     ---------------------------------------------------------------------
+     "중순과 월말에 멤버들한테 공유할 때만 열어보도록 할게."
+     ⏱️·🕐 그래프는 멤버별 timeSegs 가 있어야 하고(52번), 🎖️ 배지는 거기에
+     멤버당 두 번을 더 읽습니다(104번). 표만 보는 날에는 안 읽습니다.
+     ===================================================================== */
+  {
+    const ADA = fs.readFileSync(DIR+"script_admin.js","utf8");
+    const AHA = fs.readFileSync(DIR+"admin.html","utf8");
+
+    ok(/await Promise\.all\(\(무거운것 \? nicks : \[\]\)\.map\(async n => \{/.test(ADA),
+       "★★★ 접혀 있으면 멤버별 timeSegs 를 **한 번도 안 읽는다** — 그려 놓고 감추면 아낀 게 없다");
+
+    /* =====================================================================
+       ★★★ [사고 2026-09-22] 접으면서 **휴가까지 같이 접혔습니다**
+       ---------------------------------------------------------------------
+       한 고리 안에 vacations · leaves · timeSegs 가 함께 있었는데, 그 고리를
+       통째로 `무거운것` 으로 감쌌어요. 접힌 채로 열면 찍어 둔 장기 휴가가
+       표에서 **통째로 사라졌습니다** (콩이 바로 잡았습니다).
+       ★ 표에 그려지는 값과 그래프에만 쓰는 값은 **같은 고리에 두지 말 것.**
+       ===================================================================== */
+    {
+      /* ★ **코드**를 기준으로 자릅니다. 주석 글귀로 자르면 토막이 주석 한가운데서
+         시작해, 주석을 걷어내는 정규식이 안 먹어요 (오늘 걸린 자리). */
+      const i = ADA.indexOf("await Promise.all(nicks.map(async n => {");
+      const j = ADA.indexOf("await Promise.all((무거운것 ? nicks : []).map(async n => {");
+      ok(i > 0 && j > i, "★★ 휴가 고리와 그래프 고리가 갈려 있다 (휴가가 먼저)");
+      const 휴가고리 = ADA.slice(i, j);
+      ok(/vacations`\)/.test(휴가고리) && /leaves`\)/.test(휴가고리),
+         "★★★ 🏖️ 휴가·🌿 개인사정은 **접혀 있어도 늘 읽는다** — 표에 바로 그려지는 값이다");
+      ok(!/timeSegs/.test(휴가고리.replace(/\/\*[\s\S]*?\*\//g, "")),
+         "★★★ 그 고리에 timeSegs 가 섞여 있지 않다 (섞여 있던 것이 사고의 원인이었다)");
+    }
+    ok(/if \(!거리 \|\| !거리\.minsByNick \|\| !Object\.keys\(거리\.minsByNick\)\.length\) \{/.test(ADA),
+       "★★★ [⏳ 옛 날짜 채우기] 는 접힌 채로 눌러도 된다 — 재료를 먼저 불러온다 (접혀 있으면 빈손으로 '채울 것이 없어요' 했다)");
+    ok(/const 무거운것 = !!\(opts && opts\.무거운것\) \|\| _펼친달\.has\(_ymKeyOf\(monthOffset\)\);/.test(ADA),
+       "★★ 한 번 펼쳐 둔 달은 계속 읽는다 (보고 있는데 사라지면 이상하다)");
+    ok(/const 펼침 = !!무거운것 && _펼친달\.has\(ymKey\);[\s\S]{0,400}?if \(펼침\) \{/.test(ADA),
+       "★★★ 그리는 일 자체를 건너뛴다 — 📈 흐름·✍️ 글자수도 접힌 칸 안이라 함께 건너뛴다");
+    /* ★★★ [사고 2026-09-23 — 콩 "그래프 보기 안 눌렀는데 열렸고, 다시 눌러도 안 닫혀"]
+       펼침을 `무거운것` 하나로 정하던 것이 원인이었습니다. 그건 "자료를
+       받았나" 이지 "보여 달라고 했나" 가 아니에요. 그래서
+         ① ⏳ 옛 날짜 채우기가 자료를 부르자 그래프가 딸려 펼쳐졌고
+         ② 접는 단추가 아예 없어 새로 고치기 전엔 못 닫았습니다.
+       이제 뜻(_펼친달)과 자료(무거운것)를 갈라 두 조건이 다 맞을 때만 보입니다. */
+    ok(/id="adm-charts-wrap" hidden/.test(AHA) && /id="adm-charts-btn"/.test(AHA) &&
+       /id="adm-charts-fold-btn"/.test(AHA),
+       "★ 접는 칸과 펼치는 단추, 그리고 **접는 단추**가 있다");
+    ok(/el\("adm-charts-fold-btn"\)\?\.addEventListener\("click", \(\) => \{[\s\S]{0,160}?_펼친달\.delete\(_ymKeyOf\(_attOffset\)\);[\s\S]{0,80}?loadAttendance\(_attOffset\);/.test(ADA),
+       "★★★ 접을 수 있다 — 받아 둔 값은 쥔 채 감추기만 하므로 접기·다시 펼치기 모두 서버 요청 0");
+    {
+      const i = ADA.indexOf("async function fillOldStayMins");
+      const 채우기 = i < 0 ? "" : ADA.slice(i, i + 1400).replace(/\/\*[\s\S]*?\*\//g, "");
+      ok(i > 0 && !/_펼친달\.add/.test(채우기),
+         "★★★ [⏳ 옛 날짜 채우기] 는 자료만 부르고 그래프를 펼치지 않는다 (콩이 안 누른 것이 열렸다)");
+      ok(/loadAttendance\(_attOffset, \{ 무거운것: true, 다시읽기: true \}\)/.test(채우기),
+         "★★ 그래도 재료는 제대로 불러온다 (펼치지 않을 뿐)");
+    }
+    ok(/_펼친달\.add\(_ymKeyOf\(_attOffset\)\);[\s\S]{0,120}?loadAttendance\(_attOffset, \{ 무거운것: true \}\)/.test(ADA),
+       "★★ 단추를 누를 때 비로소 읽는다");
+    ok(/\(!무거운것 \|\| _달자료\.무거운것\)/.test(ADA),
+       "★★★ 가볍게 읽어 둔 달을 펼치면 **다시 읽는다** — 안 그러면 빈 그래프가 뜬다");
+    ok(/머문 시간이 안 적힌 날<\/b>은 지금 안 가려져요/.test(ADA) &&
+       /한 번<\/b> 눌러 두면 <b>영영<\/b> 해결됩니다/.test(ADA),
+       "★★ 접힌 동안 ✔ 색이 안 뜨는 까닭과 **영구 해결법**을 범례가 말해 준다 (조용히 사라지면 고장으로 읽힌다)");
+    ok(/btn\.disabled = true; btn\.textContent = "불러오는 중…";/.test(ADA),
+       "★ 누르면 불러오는 중이라고 알려 준다 (쉰두 번 읽는 동안 조용하면 안 눌린 줄 안다)");
+  }
+
+  /* =====================================================================
+     📏 계측기가 잡은 진짜 1등 — 1분마다 timeSegs 통째로 (2026-09-22 — 콩)
+     ---------------------------------------------------------------------
+     콩이 계측기를 붙여 재 보니, 한 창이 12분에 받은 2.4MB 중 **1.36MB(55%)**
+     가 `users/{닉}/timeSegs` 였습니다. 15번 × 90KB.
+     카드 타이머가 **1분마다** loadSummary 를 부르는데, 거기서 그 사람의
+     timeSegs 를 **전 기간** 읽고 있었어요.
+
+     2026-09-08 에 같은 자리를 한 번 고쳤습니다(`users/{닉}` 통째 → 네 칸만).
+     그때 "날짜 범위까지 좁히면 더 줄지만 … 이 사람 것 하나뿐이라 작아요"
+     라고 적어 두었는데, **timeSegs 는 지우는 손이 없어 날마다 자랍니다** —
+     그때 47kB 던 것이 90kB 가 됐어요. 그 판단이 시간이 지나 틀린 것이 됐습니다.
+     ★ 교훈: "작으니까 통째로" 는 **자라는 자리**에서는 언젠가 거짓이 됩니다.
+     ===================================================================== */
+  {
+    const TLB = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const ACB = fs.readFileSync(DIR+"script_achv.js","utf8");
+
+    ok(/const 범위 = \(가지\) => db\.ref\(`users\/\$\{nick\}\/\$\{가지\}`\)\s*\n\s*\.orderByKey\(\)\.startAt\(첫날\)\.endAt\(끝날\);/.test(TLB),
+       "★★★ loadSummary 가 **필요한 날짜만** 읽는다 (1분마다 도는 자리 — 여기가 제일 비쌌다)");
+    ok(/범위\("timeSegs"\)\.once\("value"\)/.test(TLB) &&
+       /범위\("pomoSessions"\)\.once\("value"\)/.test(TLB) &&
+       /범위\("workReset"\)\.once\("value"\)/.test(TLB),
+       "★★ 날짜가 열쇠인 셋(timeSegs·pomoSessions·workReset)을 다 자른다");
+    ok(/db\.ref\(`users\/\$\{nick\}\/timeCur`\)\.once\("value"\)/.test(TLB),
+       "★ timeCur 는 지금 열린 구간 하나뿐이라 그대로 둔다");
+    ok(!/db\.ref\(`users\/\$\{nick\}\/timeSegs`\)\.once\("value"\)/.test(TLB),
+       "★★★ 통째로 읽던 옛 줄이 남아 있지 않다");
+    {
+      /* 첫날/끝날이 아래 고리가 도는 날들과 **꼭 같아야** 합니다 —
+         하루라도 어긋나면 그날 시간이 0 으로 보입니다. */
+      const 하루 = 864e5;
+      const dayStart = (t) => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+      const ymd = (t) => { const d = new Date(t);
+        return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+      const t = Date.now();
+      let 맞나 = true;
+      [[1,0],[7,0],[7,1],[7,3]].forEach(([days, bw]) => {
+        const 첫날 = ymd(dayStart(t) - (days - 1 + bw * 7) * 하루);
+        const 끝날 = ymd(dayStart(t) - (bw * 7) * 하루);
+        const 날들 = [];
+        for (let i = days - 1; i >= 0; i--) 날들.push(ymd(dayStart(t) - (i + bw * 7) * 하루));
+        if (날들[0] !== 첫날 || 날들[날들.length - 1] !== 끝날) 맞나 = false;
+      });
+      ok(맞나, "★★★ 읽는 범위와 셈하는 날들이 꼭 맞는다 (하루라도 어긋나면 그날이 0 으로 보인다)");
+    }
+    ok(/timeSegs`\)\.orderByKey\(\)\.limitToLast\(SCAN_DAYS\)/.test(ACB),
+       "★★ 업적 훑기도 반년치만 읽는다 (하루 한 번이라 덜 급했지만, 그냥 두면 내년에 몇 MB가 된다)");
   }
 
   return checkAchv();

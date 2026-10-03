@@ -1653,7 +1653,7 @@ function renderProfilePanel() {
            보는 모양. 안 만진 모양은 기본 모서리 자리로 보여요.
            ★ 같은 날 저녁, 가로형이 본방에서 빠지면서 이 탭은 🧘 혼자 방에서만
              보입니다(hidden). 본방은 늘 세로형이라 탭이 뜻이 없어요. -->
-      <div class="set-row" id="prof-stk-shape" style="gap:14px; align-items:center; margin:0 0 6px;" hidden><!-- 🃏 세로형 걷어냄 (2026-10-03 콩) — 늘 가로형 -->
+      <div class="set-row" id="prof-stk-shape" style="gap:14px; align-items:center; margin:0 0 6px;; display:none" hidden><!-- 🃏 세로형 걷어냄 (2026-10-03 콩) — 늘 가로형 -->
         <label style="display:flex; gap:5px; align-items:center; cursor:pointer;">
           <input type="radio" name="prof-stk-shape" value="tall"><span>🃏 세로형</span>
         </label>
@@ -1663,7 +1663,7 @@ function renderProfilePanel() {
         <button type="button" class="ghost-btn compact" id="prof-stk-copy" title="다른 모양에서 옮긴 자리를 이 모양으로 가져와요">↔ 자리 가져오기</button>
       </div>
       <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (내 카드 그대로)"></div>
-      <p class="hint" id="prof-stk-shape-hint" style="margin:6px 0 0;" hidden></p>
+      <p class="hint" id="prof-stk-shape-hint" style="margin:6px 0 0;; display:none" hidden></p>
       <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
         <span class="slot-name" style="flex:0 0 44px;">기울기</span>
         <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
