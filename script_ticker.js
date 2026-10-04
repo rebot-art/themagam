@@ -3,8 +3,7 @@
    📢 입퇴장 흐름줄 (script_ticker.js) — 2026-10-04 콩
 
    머리말 바로 아래 한 줄, 배경 없이 글자만 오른쪽 → 왼쪽으로 흐릅니다.
-   평소엔 비어 있어요. 흐르는 폭은 [n명 집필 중] 왼쪽 끝 ~ 🖱️ 자동감지
-   오른쪽 끝까지만 (콩).
+   평소엔 비어 있어요. 흐르는 폭은 화면 가운데 75% (콩).
      "모모 작가님 입장!" / "모모 작가님 퇴장!"
 
    ★ 통신량 0 — 이미 챗으로 오는 입장·퇴장 줄(joinOf · leaveOf)을 받아
@@ -18,7 +17,7 @@
    10초마다 가짜 입퇴장이 흘러갑니다.
    ===================================================================== */
 (function () {
-  const MAIN_ON = false;                  // ★ 혼자 방에서 확인되면 true 로
+  const MAIN_ON = true;                   // [2026-10-04 콩] 본방 ON
   const SPEED = 70;                       // 초당 px
   const 켜짐 = () => !!(window.SOLO || MAIN_ON);
   const 시작 = Date.now();
@@ -30,22 +29,9 @@
 
   function 창() { return document.getElementById("head-ticker"); }
 
-  /* 흐르는 폭을 [n명 집필 중] ~ 🔍 확대·축소 에 맞춥니다 */
-  function 폭맞추기() {
-    const t = 창(); if (!t) return;
-    const a = document.getElementById("head-count");
-    /* [2026-10-04 콩] 오른쪽 끝은 🖱️ 자동감지 단추까지 — 확대·축소까지는 너무 길었어요 */
-    const b = document.getElementById("idle-detect-btn") || document.getElementById("zoom-ctl");
-    const p = t.parentElement;
-    if (!a || !b || !p) return;
-    const pr = p.getBoundingClientRect(), ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
-    if (!ar.width || !br.width) return;
-    /* ★ 화면 확대(html 의 zoom)가 걸려 있으면 재는 값은 확대된 값, 적는 값은
-         확대 전 값이라 그만큼 어긋났어요(130% 에서 오른쪽으로 밀림). 나눠서 맞춥니다. */
-    const 배율 = (a.offsetWidth && ar.width) ? (ar.width / a.offsetWidth) : 1;
-    t.style.left = Math.max(0, (ar.left - pr.left) / 배율) + "px";
-    t.style.width = Math.max(80, (br.right - ar.left) / 배율) + "px";
-  }
+  /* [2026-10-04 콩] 폭은 단추 위치로 재지 않고 **화면 가운데 75%** 로 고정합니다
+       (styles.css .head-ticker). 확대·축소와 상관없고 창마다 어긋나지 않아요. */
+  function 폭맞추기() {}
 
   function 한마디(e) {
     return `<span class="ht-i ${e.in ? "in" : "out"}">${e.in ? "📢" : "👋"} ${esc(e.nick)} 작가님 ${e.in ? "입장" : "퇴장"}!</span>`;
@@ -92,8 +78,6 @@
   }
   window.headTickerPush = push;
 
-  window.addEventListener("resize", 폭맞추기);
-  setInterval(폭맞추기, 5000);
 
   if (/[?&]tickertest=1/.test(location.search)) {
     const N = ["모모", "나디", "감자", "고구마", "비타", "호두"];
