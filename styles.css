@@ -12509,7 +12509,7 @@ html[data-lite] .user-card.share-card,
 
 /* 📢 입퇴장 흐름줄 (script_ticker.js — 2026-10-04 콩)
    머리말 아래 글자 높이만큼 띄우고, 배경 없이 글자만 흐릅니다.
-   폭은 [n명 집필 중] ~ 🔍 확대·축소 (JS 가 left·width 를 맞춥니다). */
+   폭은 [n명 집필 중] ~ 🖱️ 자동감지 (JS 가 left·width 를 맞춥니다). */
 .app-head{ position: relative; }
 .head-ticker{
   position: relative; height: 19px; overflow: hidden; white-space: nowrap;

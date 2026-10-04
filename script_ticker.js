@@ -3,7 +3,7 @@
    📢 입퇴장 흐름줄 (script_ticker.js) — 2026-10-04 콩
 
    머리말 바로 아래 한 줄, 배경 없이 글자만 오른쪽 → 왼쪽으로 흐릅니다.
-   평소엔 비어 있어요. 흐르는 폭은 [n명 집필 중] 왼쪽 끝 ~ 🔍 확대·축소
+   평소엔 비어 있어요. 흐르는 폭은 [n명 집필 중] 왼쪽 끝 ~ 🖱️ 자동감지
    오른쪽 끝까지만 (콩).
      "모모 작가님 입장!" / "모모 작가님 퇴장!"
 
@@ -34,13 +34,17 @@
   function 폭맞추기() {
     const t = 창(); if (!t) return;
     const a = document.getElementById("head-count");
-    const b = document.getElementById("zoom-ctl");
+    /* [2026-10-04 콩] 오른쪽 끝은 🖱️ 자동감지 단추까지 — 확대·축소까지는 너무 길었어요 */
+    const b = document.getElementById("idle-detect-btn") || document.getElementById("zoom-ctl");
     const p = t.parentElement;
     if (!a || !b || !p) return;
     const pr = p.getBoundingClientRect(), ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
     if (!ar.width || !br.width) return;
-    t.style.left = Math.max(0, ar.left - pr.left) + "px";
-    t.style.width = Math.max(80, br.right - ar.left) + "px";
+    /* ★ 화면 확대(html 의 zoom)가 걸려 있으면 재는 값은 확대된 값, 적는 값은
+         확대 전 값이라 그만큼 어긋났어요(130% 에서 오른쪽으로 밀림). 나눠서 맞춥니다. */
+    const 배율 = (a.offsetWidth && ar.width) ? (ar.width / a.offsetWidth) : 1;
+    t.style.left = Math.max(0, (ar.left - pr.left) / 배율) + "px";
+    t.style.width = Math.max(80, (br.right - ar.left) / 배율) + "px";
   }
 
   function 한마디(e) {
