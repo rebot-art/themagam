@@ -12501,3 +12501,6 @@ html[data-lite] .user-card.share-card,
 /* 🌅 날짜 바뀜 알림 (script_newday.js — 2026-10-04 콩) — 공지 팝업 옷을 빌립니다 */
 .nday-p{ margin: 4px 0 16px; text-align: center; font-size: var(--fs-md); line-height: 1.7; color: var(--muted); }
 .nday-p b{ color: inherit; font-weight: 700; }
+
+/* ⏱ 가볍게 보기 작업 시간의 초 — 작게, 옅게 (2026-10-04 콩) 02:13.07 */
+.lite-card .lite-tm > b .lite-sec{ font-size: .6em; font-weight: 700; color: var(--muted); letter-spacing: 0; margin-left: 1px; }

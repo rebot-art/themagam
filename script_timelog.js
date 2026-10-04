@@ -983,6 +983,7 @@
      지금 이 순간 기준 값이라, 받는 쪽은 그대로 그리면 타이머처럼 됩니다. */
   let _todayWork = { ms: 0, at: 0 };
   window.myTodayWorkMs = () => _todayWork.ms;
+  window.myTodayWorkAt = () => _todayWork.at;   // ⏱ 가볍게 보기 초 표시가 씁니다 (2026-10-04)
   async function _refreshTodayWork() {
     if (!myNick) return;
     try {

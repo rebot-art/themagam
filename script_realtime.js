@@ -1249,6 +1249,49 @@
     const h = Math.floor(mins / 60), m = mins % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
+  /* =====================================================================
+     ⏱ 가볍게 보기 — 작업 시간 초까지 (2026-10-04 콩)  02:13.07
+     ---------------------------------------------------------------------
+     ★ 서버로 더 보내는 것은 **없습니다.** status 에는 이미
+       workMs(그 순간의 오늘 작업 시간)와 lastSeen(서버가 찍은 그 시각)이
+       함께 실려 옵니다. 보는 쪽이 "받은 값 + (지금 − 받은 시각) × 무게" 로
+       혼자 초를 흘려요. 1분쯤마다 진짜 값이 오면 거기에 다시 맞춥니다.
+     ★ 무게는 쌓이는 셈과 같습니다 — 🔥WRITE 1초에 1초, 💻JOB·📓multiT 는
+       1초에 0.7초 (콩: B안, 70% 만 쌓이니 느리게 가도 된다).
+       쉬는 중·자리비움·연결 끊김이면 초가 멈춥니다.
+     ★ 3분 넘게 새 값이 안 오면 더 흘리지 않습니다 (잠든 창이 혼자 늘어나지 않게).
+     ★ 1초마다 카드를 다시 그리지 않고 **글자만** 바꿉니다.
+     ===================================================================== */
+  const LITE_SEC_MAIN = false;                 // ★ 혼자 방에서 확인되면 true 로
+  const liteSecOn = () => !!(window.SOLO || LITE_SEC_MAIN);
+  const LITE_SEC_MAX_MS = 3 * 60 * 1000;
+  function liteWhNow(el) {
+    const base = Number(el.dataset.whBase || 0);
+    const w = Number(el.dataset.whW || 0);
+    if (!w) return base;
+    let 흐른;
+    if (el.dataset.whMe === "1") {
+      흐른 = Date.now() - Number(window.myTodayWorkAt?.() || 0);
+    } else {
+      흐른 = (typeof serverNow === "function" ? serverNow() : Date.now()) - Number(el.dataset.whAt || 0);
+    }
+    if (!(흐른 > 0)) return base;
+    return base + Math.min(흐른, LITE_SEC_MAX_MS) * w;
+  }
+  function liteWhHtml(ms) {
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, ss = sec % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}<small class="lite-sec">.${String(ss).padStart(2, "0")}</small>`;
+  }
+  setInterval(() => {
+    if (!liteSecOn() || document.hidden) return;
+    document.querySelectorAll(".lite-wh[data-wh-w]").forEach((el) => {
+      if (Number(el.dataset.whW || 0) <= 0) return;
+      const html = liteWhHtml(liteWhNow(el));
+      if (el.innerHTML !== html) el.innerHTML = html;
+    });
+  }, 1000);
+
   function renderUserCards(data) {
       const list = document.getElementById("user-cards");
       if (!list) return;
@@ -1543,7 +1586,14 @@
                   <!-- 접속점 — 시간 칸 오른쪽 위 (2026-10-04 콩) -->
                   <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
                         title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}"><i></i><i></i><i></i><i></i></span>
-                  <b><small class="lite-clk">⏱</small>${whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
+                  <b><small class="lite-clk">⏱</small>${liteSecOn() ? (() => {
+                    /* ⏱ 초까지 — 위 liteWhNow 주석 참고. 내 카드는 내 손의 값으로 */
+                    const 내것 = isMine && typeof window.myTodayWorkMs === "function";
+                    const base = 내것 ? Number(window.myTodayWorkMs() || 0) : _whMs;
+                    const w = connOk ? Number(window.TimeLog?.WORK_WEIGHT?.[row.status] || 0) : 0;
+                    const tmp = { dataset: { whBase: base, whW: w, whMe: 내것 ? "1" : "0", whAt: Number(row.lastSeen || 0) } };
+                    return `<span class="lite-wh" data-wh-base="${base}" data-wh-w="${w}" data-wh-me="${내것 ? 1 : 0}" data-wh-at="${Number(row.lastSeen || 0)}">${liteWhHtml(liteWhNow(tmp))}</span>`;
+                  })() : whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
                 <!-- 닉 칸: 🚩 디데이는 왼쪽 끝, 화공 말풍선은 닉 바로 왼편 (꾸민 카드와 같은 차례).
                      한 번 누르면 📮 쪽지 (script_note.js) -->
                 <div class="lite-nk">${ddChipHtml(row)}<span class="lite-nm" title="${escapeHtml(u)}">${shareChip}<span>${escapeHtml(u)}</span></span></div>
