@@ -1291,6 +1291,30 @@
               : "패치 전에 열어 둔 창이에요 — 새로고침하면 최신이 돼요") : "연결됨");
   }
 
+  /* =====================================================================
+     🕰 입장 시각을 **서버 시계**로 (2026-10-04 콩 — 소소 재입장 사건)
+     ---------------------------------------------------------------------
+     카드 "접속 순서" 는 joinedAt 으로 줄 세웁니다. 그런데 joinedAt 을
+     **각자 컴퓨터 시계**로 적어서, 시계가 늦은 사람은 방금 들어와도
+     앞에 섰어요 (입장 줄은 떴는데 안 밀림).
+     → 컴퓨터 시계 + 서버와의 차이(.info/serverTimeOffset) = 서버 시각.
+     ★ 차이 값은 입장 직후 조금 늦게 옵니다. 처음엔 0 으로 적었다가, 값이
+       오면 **한 번만** 고쳐 적고 그 뒤로는 굳혀 둡니다 (재접속마다 미세하게
+       흔들려 쓸데없이 보내는 일 없게).
+     ★ 바꾸는 건 카드 순서용 joinedAt 하나뿐 — 챗 기록 거르는 입장 시각은
+       그대로 둡니다.
+     ===================================================================== */
+  let _입장원본 = 0, _입장서버 = 0, _입장차이 = null;
+  function 서버입장시각() {
+    const t = Number(window._myJoinTimestamp?.() || 0);
+    if (!t) return 0;
+    const 차이 = serverNow() - Date.now();
+    if (t !== _입장원본 || (_입장차이 === 0 && 차이 !== 0)) {
+      _입장원본 = t; _입장차이 = 차이; _입장서버 = Math.round(t + 차이);
+    }
+    return _입장서버;
+  }
+
   function whFmt(ms) {
     const mins = Math.max(0, Math.floor(ms / 60000));
     const h = Math.floor(mins / 60), m = mins % 60;
@@ -2002,7 +2026,7 @@
     const 보낼것 = {
       emoji: myEmoji,
       /* [2026-08-13] 언제 들어왔는지 — 카드 정렬(접속 순서)이 씁니다 */
-      joinedAt: Number(window._myJoinTimestamp?.() || 0),
+      joinedAt: 서버입장시각(),
       status: statusChoice,
       statusLabel: statusLabel(statusChoice),
       todayGoalText: goalText,
