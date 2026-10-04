@@ -1263,14 +1263,32 @@
     } catch (e) { return 0; }
   })();
   window.MY_VER = MY_VER;
+  /* ★ [2026-10-04 콩 "본인이 확인할 방법은?"] 내 창이 옛것인지는 내 코드가
+       스스로 알 수 없어요 — 그래서 **남들이 보내는 판 번호**를 봅니다.
+       접속자 중 누구라도 내 것보다 높은 판이면, 내가 옛 창이라는 뜻.
+       그때 **내 카드 접속점도 회색**이 됩니다 (status 는 이미 받고 있어 통신량 0).
+       ★ 이 판부터 들어 있는 기능이라, 이번 패치 뒤 새로고침한 사람부터 됩니다. */
+  function 최신판() {
+    let m = MY_VER;
+    try {
+      const d = _statusCache || {};
+      const now = serverNow();
+      for (const k in d) { const v = Number(d[k]?.ver || 0); if (v > m && isOnline(d[k], now)) m = v; }
+    } catch (e) {}
+    return m;
+  }
   function 옛창(row) {
     if (!MY_VER || !row) return false;           // 단일파일 등 판 번호를 모르면 안 칠함
-    return !(Number(row.ver || 0) >= MY_VER);
+    const 기준 = 최신판();
+    if (row === _statusCache?.[myNick]) return MY_VER < 기준;   // 내 카드 — 더 새 판이 보이면 나는 옛 창
+    return !(Number(row.ver || 0) >= 기준);
   }
   function connCls(row, connOk) { return !connOk ? " off" : (옛창(row) ? " old" : ""); }
   function connTitle(row, connOk) {
     return !connOk ? "연결이 끊겼어요 (곧 돌아올 수 있어요)"
-         : (옛창(row) ? "패치 전에 열어 둔 창이에요 — 새로고침하면 최신이 돼요" : "연결됨");
+         : (옛창(row) ? (row === _statusCache?.[myNick]
+              ? "내 화면이 옛것이에요 — 새로고침(Cmd+Shift+R)하면 최신이 돼요"
+              : "패치 전에 열어 둔 창이에요 — 새로고침하면 최신이 돼요") : "연결됨");
   }
 
   function whFmt(ms) {
