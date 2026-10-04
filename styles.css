@@ -12513,13 +12513,15 @@ html[data-lite] .user-card.share-card,
 .app-head{ position: relative; }
 .head-ticker{
   position: relative; height: 19px; overflow: hidden; white-space: nowrap;
-  pointer-events: none; margin: 2px auto 0;
-  width: 75%;                     /* 화면 가운데 75% 만 흐릅니다 (콩) */
+  pointer-events: none; margin: 2px 0 0;
+  /* [2차] 폭 전체 — 글은 내 카드 가운데에서 출발해 첫 줄 끝 카드 가운데까지 (script_ticker.js) */
 }
 .head-ticker .ht-run{
   position: absolute; left: 0; top: 1px; display: inline-flex; align-items: baseline;
   font-size: 12.5px; font-weight: 700; will-change: transform;
+  opacity: 0; transition: opacity .4s;
 }
+.head-ticker .ht-run.on{ opacity: 1; }
 .head-ticker .ht-i.in{ color: #5d7a4a; }
 .head-ticker .ht-i.out{ color: #a3705f; }
 .head-ticker .ht-dot{ color: var(--muted); opacity: .5; margin: 0 10px; }
