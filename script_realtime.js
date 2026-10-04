@@ -1244,6 +1244,35 @@
      (한때 2:13.07 로 초를 화면에서 흘리는 안도 했지만, 글자가 칸 밖으로
       튀어나갈 걱정에 콩이 이 꼴로 정했습니다. 항상 5자라 폭이 안 변해요.)
      서버는 예전처럼 분이 바뀔 때만 보내므로 통신량 변화 0, 1초 틱도 없습니다. */
+  /* =====================================================================
+     ⚪ 옛 화면 접속점 — 회색 (2026-10-04 콩)
+     ---------------------------------------------------------------------
+     패치 전에 열어 둔 창(옛 코드)인 사람은 접속점이 회색으로 보입니다.
+     · 각자 화면이 **자기 코드의 판 번호**(index.html 의 ?v=…, build-single.py
+       가 올릴 때마다 새로 붙임)를 status 에 한 칸(ver) 실어 보냅니다.
+       바뀐 칸만 보내므로 입장할 때 한 번 — 통신량은 사실상 0.
+     · 보는 쪽은 **내 판 번호보다 낮거나 아예 없으면** 회색으로 칠합니다.
+       그래서 새로고침한 사람 눈에만 "옛 창" 이 보여요 (옛 코드끼리는 서로 모름).
+     · 끊김(붉게 깜빡)이 회색보다 먼저입니다.
+     ===================================================================== */
+  const MY_VER = (() => {
+    try {
+      const el = document.querySelector('script[src*="script_realtime.js"]');
+      const m = el && /[?&]v=(\d+)/.exec(el.getAttribute("src") || "");
+      return m ? Number(m[1]) : 0;
+    } catch (e) { return 0; }
+  })();
+  window.MY_VER = MY_VER;
+  function 옛창(row) {
+    if (!MY_VER || !row) return false;           // 단일파일 등 판 번호를 모르면 안 칠함
+    return !(Number(row.ver || 0) >= MY_VER);
+  }
+  function connCls(row, connOk) { return !connOk ? " off" : (옛창(row) ? " old" : ""); }
+  function connTitle(row, connOk) {
+    return !connOk ? "연결이 끊겼어요 (곧 돌아올 수 있어요)"
+         : (옛창(row) ? "패치 전에 열어 둔 창이에요 — 새로고침하면 최신이 돼요" : "연결됨");
+  }
+
   function whFmt(ms) {
     const mins = Math.max(0, Math.floor(ms / 60000));
     const h = Math.floor(mins / 60), m = mins % 60;
@@ -1602,8 +1631,8 @@
                   <!-- 🏷 작업 스티커 — 시간 칸 왼쪽 위, 꾸민 카드처럼 위로 삐죽 (프사를 살짝 가려도 됨 — 콩) -->
                   ${window.workTagChipHtml?.(row, isMine) || ""}
                   <!-- 접속점 — 시간 칸 오른쪽 위 (2026-10-04 콩) -->
-                  <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
-                        title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}"><i></i><i></i><i></i><i></i></span>
+                  <span class="card-conn${connCls(row, connOk)}" aria-hidden="true"
+                        title="${connTitle(row, connOk)}"><i></i><i></i><i></i><i></i></span>
                   <b><small class="lite-clk">⏱</small>${liteSecOn() ? (() => {
                     /* ⏱ 초까지 — 위 liteWhNow 주석 참고. 내 카드는 내 손의 값으로 */
                     const 내것 = isMine && typeof window.myTodayWorkMs === "function";
@@ -1663,8 +1692,8 @@
               <div class="card-foot"${inkStyle}${isMine
                 ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"`
                 : ""}>
-                <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
-                      title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}">
+                <span class="card-conn${connCls(row, connOk)}" aria-hidden="true"
+                      title="${connTitle(row, connOk)}">
                   <i></i><i></i><i></i><i></i>
                 </span>
                 ${ddChipHtml(row)}
@@ -1974,6 +2003,8 @@
       proom: (typeof window.imInProom === "function") ? !!window.imInProom() : false,
       shareOn,
       onPhone,
+      /* ⚪ [2026-10-04] 내 코드의 판 번호 — 옛 창이면 남들 화면에 회색 접속점 */
+      ver: MY_VER || null,
       /* [2026-08-09] 작업 스티커. 자정 초기화를 그만두면서 날짜 칸
          (tagDay)은 뺐습니다 — 보는 쪽에서 안 쓰는 값이라서요. */
       /* ★ 여기에 || "draft" 를 쓰면 안 됩니다.
@@ -3110,7 +3141,7 @@
     for (const nick in (_statusCache || {})) {
       const row = _statusCache[nick];
       if (!isOnline(row, now)) continue;
-      rows.push({ nick, ok: !Number(row.disconnectedAt || 0), phone: row.onPhone === true });
+      rows.push({ nick, ok: !Number(row.disconnectedAt || 0), phone: row.onPhone === true, row });   // row — ⚪ 옛 창 회색용 (2026-10-04)
     }
     /* 끊긴 사람을 위로 — 살펴보려는 게 바로 그 사람들이라서 */
     rows.sort((a, b) => (a.ok - b.ok) || a.nick.localeCompare(b.nick, "ko"));
@@ -3126,7 +3157,7 @@
       <div class="olist-head">접속 <b>${rows.length}명</b>${끊김 ? ` · 끊김 <b class="olist-off">${끊김}</b>` : ""}</div>
       ${rows.length ? rows.map(r => `
         <div class="olist-row${r.ok ? "" : " is-off"}">
-          <span class="card-conn olist-conn${r.ok ? "" : " off"}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="card-conn olist-conn${connCls(r.row, r.ok)}" aria-hidden="true" title="${connTitle(r.row, r.ok)}"><i></i><i></i><i></i><i></i></span>
           <span class="olist-nick">${escapeHtml(r.nick)}</span>${r.phone ? `<span class="olist-phone" title="폰">📱</span>` : ""}
         </div>`).join("")
       : `<div class="olist-empty">아무도 없어요 🌙</div>`}`;

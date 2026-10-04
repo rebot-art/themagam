@@ -12525,3 +12525,6 @@ html[data-lite] .user-card.share-card,
 .head-ticker .ht-i.in{ color: #5d7a4a; }
 .head-ticker .ht-i.out{ color: #a3705f; }
 .head-ticker .ht-dot{ color: var(--muted); opacity: .5; margin: 0 10px; }
+
+/* ⚪ 옛 화면 접속점 — 패치 전에 열어 둔 창 (2026-10-04 콩, script_realtime.js 옛창) */
+.card-conn.old{ color: #a8a39a; }
