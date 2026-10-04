@@ -11662,7 +11662,9 @@ html[data-lite] .user-card{
 
 /* 배경판의 영구 흐르기 애니메이션도 멈춥니다 — 페이지가 늘 "움직이는 중"
    이면 브라우저가 매 프레임 다시 합성할 기회를 갖거든요. */
-html[data-lite] .rb-hrow{ animation: none; }
+/* [2026-10-04 콩] 개근 줄은 가볍게 보기에서도 흐르게 — 한 줄 옆으로 미는 것(transform)은
+   가벼워서 되살렸습니다. */
+/* html[data-lite] .rb-hrow{ animation: none; } */
 
 /* =====================================================================
    ⏱️ 뽀모방 (2026-08-29, 콩) — script_proom.js
@@ -12504,3 +12506,19 @@ html[data-lite] .user-card.share-card,
 
 /* ⏱ 가볍게 보기 작업 시간의 초 — 작게, 옅게 (2026-10-04 콩) 02:13.07 */
 .lite-card .lite-tm > b .lite-sec{ font-size: .6em; font-weight: 700; color: var(--muted); letter-spacing: 0; margin-left: 1px; }
+
+/* 📢 입퇴장 흐름줄 (script_ticker.js — 2026-10-04 콩)
+   머리말 아래 글자 높이만큼 띄우고, 배경 없이 글자만 흐릅니다.
+   폭은 [n명 집필 중] ~ 🔍 확대·축소 (JS 가 left·width 를 맞춥니다). */
+.app-head{ position: relative; }
+.head-ticker{
+  position: relative; height: 19px; overflow: hidden; white-space: nowrap;
+  pointer-events: none; margin-top: 2px;
+}
+.head-ticker .ht-run{
+  position: absolute; left: 0; top: 1px; display: inline-flex; align-items: baseline;
+  font-size: 12.5px; font-weight: 700; will-change: transform;
+}
+.head-ticker .ht-i.in{ color: #5d7a4a; }
+.head-ticker .ht-i.out{ color: #a3705f; }
+.head-ticker .ht-dot{ color: var(--muted); opacity: .5; margin: 0 10px; }

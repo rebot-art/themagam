@@ -2587,6 +2587,8 @@
 
       window.renderChatMessage?.(document.getElementById("chat-box"), data, key);
       말풍선걷어내기();
+      /* 📢 입퇴장 흐름줄 (2026-10-04 콩) — 받은 줄을 넘겨 줄 뿐, 새로 안 받습니다 */
+      if (data.joinOf || data.leaveOf) { try { window.headTickerPush?.(data); } catch (e) {} }
 
       const isSystemLike = (data.type === "system" || data.type === "fx");
       const isMine = (data.user && data.user === myNick);
