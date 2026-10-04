@@ -1262,7 +1262,7 @@
      ★ 3분 넘게 새 값이 안 오면 더 흘리지 않습니다 (잠든 창이 혼자 늘어나지 않게).
      ★ 1초마다 카드를 다시 그리지 않고 **글자만** 바꿉니다.
      ===================================================================== */
-  const LITE_SEC_MAIN = false;                 // ★ 혼자 방에서 확인되면 true 로
+  const LITE_SEC_MAIN = true;                  // [2026-10-04 콩] 혼자 방 시험 통과 → 본방 ON
   const liteSecOn = () => !!(window.SOLO || LITE_SEC_MAIN);
   const LITE_SEC_MAX_MS = 3 * 60 * 1000;
   function liteWhNow(el) {
