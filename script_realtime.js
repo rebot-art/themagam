@@ -1283,11 +1283,29 @@
     const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, ss = sec % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}<small class="lite-sec">.${String(ss).padStart(2, "0")}</small>`;
   }
+  /* ★ [2026-10-04 콩 "잡·멀티에서 느리게 가다 2~3초 후루룩"] 1분마다 진짜 값이
+       오면 어림값과 2~3초 어긋나 한 번에 뛰었어요. 이제 **한 번에 뛰지 않고**
+       따라잡습니다 — 앞서 있으면 조금 빠르게(최대 1.6배), 뒤처져 있으면
+       거꾸로 안 가고 조금 느리게(최소 0.5배). 10초 넘게 벌어지면 그냥 맞춥니다. */
+  const _secShown = {};                        // 닉 → { v: 보여 준 ms, t: 그때 }
   setInterval(() => {
     if (!liteSecOn() || document.hidden) return;
+    const 지금 = Date.now();
     document.querySelectorAll(".lite-wh[data-wh-w]").forEach((el) => {
-      if (Number(el.dataset.whW || 0) <= 0) return;
-      const html = liteWhHtml(liteWhNow(el));
+      const w = Number(el.dataset.whW || 0);
+      const 닉 = el.dataset.whNick || "";
+      if (w <= 0) { delete _secShown[닉]; return; }
+      const 목표 = liteWhNow(el);
+      const 전 = _secShown[닉];
+      let 보일 = 목표;
+      if (전) {
+        const dt = Math.max(0, 지금 - 전.t);
+        const 예상 = 전.v + dt * w;
+        const 차 = 목표 - 예상;
+        if (Math.abs(차) <= 10000) 보일 = 예상 + Math.max(-0.5 * dt * w, Math.min(0.6 * dt * w, 차));
+      }
+      _secShown[닉] = { v: 보일, t: 지금 };
+      const html = liteWhHtml(보일);
       if (el.innerHTML !== html) el.innerHTML = html;
     });
   }, 1000);
@@ -1592,7 +1610,7 @@
                     const base = 내것 ? Number(window.myTodayWorkMs() || 0) : _whMs;
                     const w = connOk ? Number(window.TimeLog?.WORK_WEIGHT?.[row.status] || 0) : 0;
                     const tmp = { dataset: { whBase: base, whW: w, whMe: 내것 ? "1" : "0", whAt: Number(row.lastSeen || 0) } };
-                    return `<span class="lite-wh" data-wh-base="${base}" data-wh-w="${w}" data-wh-me="${내것 ? 1 : 0}" data-wh-at="${Number(row.lastSeen || 0)}">${liteWhHtml(liteWhNow(tmp))}</span>`;
+                    return `<span class="lite-wh" data-wh-base="${base}" data-wh-w="${w}" data-wh-me="${내것 ? 1 : 0}" data-wh-nick="${escapeHtml(u)}" data-wh-at="${Number(row.lastSeen || 0)}">${liteWhHtml(w > 0 && _secShown[u] ? _secShown[u].v : liteWhNow(tmp))}</span>`;
                   })() : whTxt}</b>${곁 ? `<span class="lite-sub">${곁}</span>` : ""}</div>
                 <!-- 닉 칸: 🚩 디데이는 왼쪽 끝, 화공 말풍선은 닉 바로 왼편 (꾸민 카드와 같은 차례).
                      한 번 누르면 📮 쪽지 (script_note.js) -->
