@@ -160,7 +160,7 @@
           <span class="fl-m">
             <span class="fl-n">${esc(r.name)}</span>
             <span class="fl-s">${곁}</span>
-            ${링크 && r.note ? `<span class="fl-note">${esc(r.note)}</span>` : ""}
+            ${r.note ? `<span class="fl-note">${esc(r.note)}</span>` : ""}
           </span>
           <button type="button" class="fl-dl" data-file-get="${esc(r.id)}">${링크 ? "열기" : "받기"}</button>
           ${지울수 ? `<button type="button" class="fl-x" data-file-del="${esc(r.id)}"
@@ -168,6 +168,10 @@
         </div>`;
     }).join("");
 
+    /* ✏️ [2026-10-04 콩] 목록이 새로 그려질 때 적던 설명·주소가 날아가지 않게 */
+    const 적던 = {};
+    ["files-note", "files-url", "files-lname"].forEach(k => { const x = el(k); if (x) 적던[k] = x.value; });
+    const 링크열림 = !!el("files-linkbox") && !el("files-linkbox").hidden;
     box.innerHTML = `
       <div class="fl-usage">
         <span>${list.length}개 · ${크기글(총량)}</span>
@@ -179,6 +183,9 @@
       <div class="fl-list">${list.length ? 줄
         : `<p class="fl-empty">아직 올라온 자료가 없어요.<br>아래에서 파일을 골라 올려 보세요.</p>`}</div>
       <div class="fl-up">
+        <!-- ✏️ 한 줄 설명 (2026-10-04 콩) — 파일이든 링크든 함께 붙습니다 -->
+        <input type="text" id="files-note" class="fl-in" maxlength="200"
+               placeholder="✏️ 한 줄 설명 (선택) — 올릴 파일·링크에 함께 붙어요">
         <label class="fl-drop" for="files-pick">
           <b>파일을 골라 올리기</b>
           <small>한글 · 워드 · 엑셀 · CSV · 텍스트 · PDF · ZIP · 한 개당 2MB까지</small>
@@ -187,10 +194,19 @@
                accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.csv,.txt,.pdf,.zip">
         ${window.isRoomOwner?.() ? `
           <button type="button" class="fl-link" data-file-link="1">
-            🔗 큰 파일은 링크로 걸기
-          </button>` : ""}
+            🔗 링크 걸기 (유튜브 · 큰 파일 등)
+          </button>
+          <!-- [2026-10-04 콩] 창(prompt) 세 번 대신 여기서 바로 적습니다 —
+               브라우저가 prompt 창을 막아 두면 "아무 일도 안 일어났어요" -->
+          <div class="fl-linkbox" id="files-linkbox" hidden>
+            <input type="url" id="files-url" class="fl-in" maxlength="300" placeholder="https:// 로 시작하는 주소">
+            <input type="text" id="files-lname" class="fl-in" maxlength="120" placeholder="목록에 보일 이름">
+            <button type="button" class="fl-go" data-file-link-go="1">걸기</button>
+          </div>` : ""}
         <p class="fl-msg" id="files-msg"></p>
       </div>`;
+    Object.keys(적던).forEach(k => { const x = el(k); if (x) x.value = 적던[k]; });
+    if (링크열림 && el("files-linkbox")) el("files-linkbox").hidden = false;
   }
 
   function 알림(t, cls) {
@@ -271,7 +287,10 @@
       /* 목록을 먼저 만들고 내용을 붙입니다 — 규칙이 "목록에 있는 id 만
          내용을 쓸 수 있다" 로 잠겨 있어서 순서가 중요해요. */
       const ref = window.db.ref("files").push();
-      await ref.set({ name: file.name.slice(0, 120), size: file.size, by: me(), at: Date.now() });
+      const 설명 = String(el("files-note")?.value || "").trim().slice(0, 200);
+      const 목록줄 = { name: file.name.slice(0, 120), size: file.size, by: me(), at: Date.now() };
+      if (설명) 목록줄.note = 설명;
+      await ref.set(목록줄);
       try {
         await window.db.ref("fileBlob/" + ref.key).set(b64);
       } catch (e) {
@@ -282,6 +301,7 @@
       }
       window.dockMarkNew?.("files");
       알림(`✅ ${file.name} (${크기글(file.size)}) 올렸어요.`, "ok");
+      if (el("files-note")) el("files-note").value = "";
     } catch (e) {
       알림("올리지 못했어요. 연결을 확인해 주세요.", "bad");
     } finally {
@@ -334,23 +354,14 @@
     if (!window.isRoomOwner?.()) {
       알림("링크는 방장만 걸 수 있어요.", "bad"); return;
     }
-    const 주소 = String(prompt(
-      "파일이 있는 주소를 붙여 넣어 주세요.\n\n" +
-      "★ https:// 로 시작해야 합니다.\n" +
-      "★ 큰 설치 파일은 GitHub Releases 에 올리고 그 주소를 쓰세요 —\n" +
-      "   2GB 까지 되고, 요금이 안 나갑니다.") || "").trim();
-    if (!주소) return;
+    const 주소 = String(el("files-url")?.value || "").trim();
+    if (!주소) { 알림("주소를 적어 주세요.", "bad"); el("files-url")?.focus(); return; }
     if (!/^https:\/\//i.test(주소)) {
       알림("❌ https:// 로 시작하는 주소만 걸 수 있어요.", "bad"); return;
     }
-    const 이름 = String(prompt(
-      "목록에 보일 이름을 적어 주세요.", "") || "").trim().slice(0, 120);
-    if (!이름) return;
-    const 안내 = String(prompt(
-      "받는 분께 한 줄 안내 (없으면 비워 두세요)\n\n" +
-      "설치 프로그램이라면 이렇게 적어 두시길 권해요:\n" +
-      "「설치할 때 '알 수 없는 게시자' 경고가 떠요 — 추가 정보 › 실행을 누르시면 됩니다」",
-      "") || "").trim().slice(0, 200);
+    const 이름 = String(el("files-lname")?.value || "").trim().slice(0, 120);
+    if (!이름) { 알림("목록에 보일 이름을 적어 주세요.", "bad"); el("files-lname")?.focus(); return; }
+    const 안내 = String(el("files-note")?.value || "").trim().slice(0, 200);
 
     try {
       const ref = window.db.ref("files").push();
@@ -359,6 +370,8 @@
       await ref.set(짐);
       window.dockMarkNew?.("files");
       알림(`✅ ${이름} 을(를) 걸었어요. (${집(주소)})`, "ok");
+      ["files-url", "files-lname", "files-note"].forEach(k => { if (el(k)) el(k).value = ""; });
+      if (el("files-linkbox")) el("files-linkbox").hidden = true;
     } catch (e) {
       알림("걸지 못했어요 — 방장 계정인지, 보안규칙을 콘솔에 올렸는지 확인해 주세요.", "bad");
     }
@@ -390,7 +403,13 @@
       if (g) { 받기(g.dataset.fileGet); return; }
       const d = e.target.closest("[data-file-del]");
       if (d) { 지우기(d.dataset.fileDel); return; }
-      if (e.target.closest("[data-file-link]")) { 링크걸기(); return; }
+      if (e.target.closest("[data-file-link-go]")) { 링크걸기(); return; }
+      if (e.target.closest("[data-file-link]")) {
+        /* 🔗 누르면 적는 칸이 열리고 닫힙니다 */
+        const bx = el("files-linkbox");
+        if (bx) { bx.hidden = !bx.hidden; if (!bx.hidden) el("files-url")?.focus(); }
+        return;
+      }
     });
     host.addEventListener("change", (e) => {
       if (e.target?.id === "files-pick") 골랐을때(e.target.files?.[0]);

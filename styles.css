@@ -12528,3 +12528,14 @@ html[data-lite] .user-card.share-card,
 
 /* ⚪ 옛 화면 접속점 — 패치 전에 열어 둔 창 (2026-10-04 콩, script_realtime.js 옛창) */
 .card-conn.old{ color: #a8a39a; }
+
+/* ✏️ 자료실 한 줄 설명 · 🔗 링크 적는 칸 (2026-10-04 콩) */
+.fl-in{ display: block; width: 100%; box-sizing: border-box; margin: 0 0 8px; padding: 7px 10px;
+        font: inherit; font-size: 12.5px; color: var(--text-1, inherit);
+        background: var(--panel, #fff); border: 1px solid var(--border); border-radius: 8px; }
+.fl-in:focus{ outline: none; border-color: var(--accent); }
+.fl-linkbox{ margin-top: 8px; padding: 8px; border: 1px dashed #8C78C8; border-radius: 9px; }
+.fl-linkbox[hidden]{ display: none; }
+.fl-go{ width: 100%; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 7px;
+        border: 0; border-radius: 8px; background: #8C78C8; color: #fff; }
+.fl-go:hover{ filter: brightness(1.06); }
