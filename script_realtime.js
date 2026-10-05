@@ -1667,6 +1667,7 @@
                  u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}"
                  data-card-nick="${escapeHtml(u)}">
               <div class="lite-in">
+                ${window.cardMemoHtml?.(row) || ""}
                 <div class="lite-ph${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0" title="프로필 설정"' : ""}>${avatar}</div>
                 <div class="lite-tm">
@@ -1705,6 +1706,7 @@
                    아래에 둡니다 (프사 칸 안에 있으면 프사를 따라다녀요). -->
               ${window.workTagChipHtml?.(row, isMine) || ""}
               ${decoA}${decoC}${decoD}${decoRootExtra}
+              ${window.cardMemoHtml?.(row) || ""}
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0"'
@@ -2047,6 +2049,8 @@
       onPhone,
       /* ⚪ [2026-10-04] 내 코드의 판 번호 — 옛 창이면 남들 화면에 회색 접속점 */
       ver: MY_VER || null,
+      /* 📝 [2026-10-04 콩] 카드 메모 — 붙이고 뗄 때만 바뀌는 칸 (script_cardmemo.js) */
+      memo: window.myCardMemo?.() || null,
       /* [2026-08-09] 작업 스티커. 자정 초기화를 그만두면서 날짜 칸
          (tagDay)은 뺐습니다 — 보는 쪽에서 안 쓰는 값이라서요. */
       /* ★ 여기에 || "draft" 를 쓰면 안 됩니다.

@@ -1473,6 +1473,11 @@ function renderProfilePanel() {
       <button type="button" class="ghost-btn compact" id="prof-target-mine">내 카드로</button>
     </div>` : ""}
     ${window.SOLO ? soloProfileBlockHtml(_tgt) : ""}
+    ${(_tgt === myNick && window.cardMemoOn?.()) ? `<div class="set-block cmemo-block">
+      <div class="set-title">📝 카드 메모</div>
+      <p class="hint">마감 중이거나 답이 늦을 때 카드에 메모를 붙여 두세요 · 내 카드 시간 칸을 더블클릭해도 열려요</p>
+      <button type="button" class="ghost-btn compact" onclick="openCardMemo()">메모 붙이기 · 고치기</button>
+    </div>` : ""}
     <div class="prof-cols">
     <div class="prof-col">
     <div class="set-block">
