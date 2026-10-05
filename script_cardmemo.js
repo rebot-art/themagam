@@ -20,13 +20,15 @@
    [시험] 혼자 방 먼저 (MAIN_ON = false) — 그리기는 늘 켜 두고, 붙이는 손만 막습니다.
    ===================================================================== */
 (function () {
-  const MAIN_ON = false;                  // ★ 혼자 방에서 확인되면 true 로
+  const MAIN_ON = true;                   // [2026-10-04 콩] 혼자 방 시험 통과 → 본방 ON
   const MAX = 30;
   const 켜짐 = () => !!(window.SOLO || MAIN_ON);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const 나 = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
 
   let _memo = "";
+  let _style = "A";       // A 손글씨 · B 포스트잇 · C 마스킹테이프 (2026-10-04 콩: 고를 수 있게)
+  const 모양 = (v) => (["A", "B", "C"].includes(v) ? v : "A");
   let _불러온닉 = "";
 
   function 다듬기(t) {
@@ -39,11 +41,13 @@
     const n = 나();
     if (!n || _불러온닉 === n) return;
     _불러온닉 = n;
-    try { _memo = 다듬기(window.AppStore?.getItem("cardMemo_" + n) || ""); } catch (e) {}
+    try { _memo = 다듬기(window.AppStore?.getItem("cardMemo_" + n) || ""); _style = 모양(window.AppStore?.getItem("cardMemoStyle_" + n)); } catch (e) {}
     try {
       if (window.db) {
         const v = (await window.db.ref(`users/${n}/cardMemo`).once("value")).val();
         if (typeof v === "string") _memo = 다듬기(v);
+        const st = (await window.db.ref(`users/${n}/cardMemoStyle`).once("value")).val();
+        if (st) _style = 모양(st);
       }
     } catch (e) {}
     if (_memo) window.updateStatus?.(true);
@@ -52,19 +56,21 @@
   setTimeout(불러오기, 1500);
 
   window.myCardMemo = () => _memo || null;
+  window.myCardMemoStyle = () => (_memo ? _style : null);
 
-  async function 저장(t) {
+  async function 저장(t, st) {
     const n = 나(); if (!n) return;
     _memo = 다듬기(t);
-    try { window.AppStore?.setItem("cardMemo_" + n, _memo); } catch (e) {}
-    try { if (window.db) await window.db.ref(`users/${n}/cardMemo`).set(_memo || null); } catch (e) {}
+    if (st) _style = 모양(st);
+    try { window.AppStore?.setItem("cardMemo_" + n, _memo); window.AppStore?.setItem("cardMemoStyle_" + n, _style); } catch (e) {}
+    try { if (window.db) { await window.db.ref(`users/${n}/cardMemo`).set(_memo || null); await window.db.ref(`users/${n}/cardMemoStyle`).set(_style); } } catch (e) {}
     window.updateStatus?.(true);
   }
 
   /* 카드에 얹을 조각 — script_realtime.js 가 꾸민 카드·가볍게 보기 둘 다에서 부름 */
   window.cardMemoHtml = (row) => {
     const m = 다듬기(row && row.memo);
-    return m ? `<div class="card-memo" aria-label="메모: ${esc(m)}">${esc(m)}</div>` : "";
+    return m ? `<div class="card-memo s${모양(row.memoStyle)}" aria-label="메모: ${esc(m)}">${esc(m)}</div>` : "";
   };
 
   /* ── 적는 창 ── */
@@ -78,6 +84,12 @@
       <div class="hello-card cmemo-card" role="dialog" aria-modal="true" aria-label="카드 메모">
         <p class="npop-h">📝 카드 메모</p>
         <p class="cmemo-sub">마감 중이거나 답이 늦을 때 카드에 붙여 두세요. 모두에게 바로 보여요.</p>
+        <!-- 🎨 모양 고르기 (2026-10-04 콩) — 입력 칸 바로 위 -->
+        <div class="cmemo-pick" role="radiogroup" aria-label="메모 모양">
+          ${[["A", "손글씨"], ["B", "포스트잇"], ["C", "테이프"]].map(([k, l]) =>
+            `<button type="button" class="cmemo-opt${_style === k ? " on" : ""}" data-st="${k}" role="radio" aria-checked="${_style === k}">
+               <span class="card-memo s${k} cmemo-mini">메모</span><small>${l}</small></button>`).join("")}
+        </div>
         <textarea class="cmemo-in" rows="2" maxlength="${MAX}" placeholder="마감 중…&#10;답변이 느려요 ㅜ^ㅜ">${esc(_memo)}</textarea>
         <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${MAX} · 엔터로 두 줄까지</div>
         <div class="npop-btns">
@@ -88,6 +100,13 @@
     document.body.appendChild(veil);
     requestAnimationFrame(() => veil.classList.add("on"));
     const ta = veil.querySelector(".cmemo-in");
+    let 고른 = _style;
+    veil.querySelectorAll(".cmemo-opt").forEach(b => b.addEventListener("click", () => {
+      고른 = b.dataset.st;
+      veil.querySelectorAll(".cmemo-opt").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-checked", on); });
+      ta.dataset.st = 고른;
+    }));
+    ta.dataset.st = 고른;
     const 세기 = () => { veil.querySelector(".cmemo-n").textContent = ta.value.length; };
     세기();
     ta.addEventListener("input", () => {
@@ -101,7 +120,7 @@
     });
     const 닫기 = () => { veil.classList.remove("on"); setTimeout(() => veil.remove(), 300); };
     veil.addEventListener("click", (e) => { if (e.target === veil) 닫기(); });
-    veil.querySelector(".cmemo-ok").addEventListener("click", async () => { await 저장(ta.value); 닫기(); });
+    veil.querySelector(".cmemo-ok").addEventListener("click", async () => { await 저장(ta.value, 고른); 닫기(); });
     veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_memo) await 저장(""); 닫기(); });
     setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 320);
   }
