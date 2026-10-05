@@ -87,8 +87,8 @@
         <!-- 🎨 모양 고르기 (2026-10-04 콩) — 입력 칸 바로 위 -->
         <div class="cmemo-pick" role="radiogroup" aria-label="메모 모양">
           ${[["A", "손글씨"], ["B", "포스트잇"], ["C", "테이프"]].map(([k, l]) =>
-            `<button type="button" class="cmemo-opt${_style === k ? " on" : ""}" data-st="${k}" role="radio" aria-checked="${_style === k}">
-               <span class="card-memo s${k} cmemo-mini">메모</span><small>${l}</small></button>`).join("")}
+            `<button type="button" class="cmemo-opt d${k}${_style === k ? " on" : ""}" data-st="${k}" role="radio"
+                     aria-checked="${_style === k}" title="${l}" aria-label="${l}"></button>`).join("")}
         </div>
         <textarea class="cmemo-in" rows="2" maxlength="${MAX}" placeholder="마감 중…&#10;답변이 느려요 ㅜ^ㅜ">${esc(_memo)}</textarea>
         <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${MAX} · 엔터로 두 줄까지</div>
