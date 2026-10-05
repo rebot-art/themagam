@@ -394,7 +394,11 @@
      손가락 — 판 안쪽 상자에 답니다 (대숲에서 데인 자리)
      ===================================================================== */
   function bind() {
-    const host = el("files-modal");
+    /* ★★ [2026-10-04 콩 "링크 걸기를 눌러도 아무 변화가 없어"] 손잡이를
+       #files-modal 에 달았는데, 그 안의 .modal-content 가 onclick 으로
+       stopPropagation 을 해서 **클릭이 여기까지 안 올라왔어요.**
+       (8/21 가운데 창으로 옮길 때부터) → 안쪽 판(#files-board)에 답니다. */
+    const host = el("files-board") || el("files-modal");
     if (!host || _bound) return;
     _bound = true;
 
