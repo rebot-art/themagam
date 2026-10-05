@@ -467,7 +467,11 @@
     }
     .adm-dig-cancel{ margin-top: 10px; padding: 9px 11px; border-radius: 9px; background: #FBEAE8;
       color: #8E2B20; font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .adm-dig-cancel-btn{ margin-left: auto; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    .adm-dig-cancel.ok{ background: #E6F2E2; color: #2E6B2B; }
+    .adm-dig-ok-btn{ margin-left: auto; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+      border: 0; border-radius: 7px; padding: 6px 10px; background: #5D8F4E; color: #fff; }
+    .adm-dig-cancel.ok .adm-dig-ok-btn{ background: #fff; color: #2E6B2B; border: 1px solid #9CC28E; }
+    .adm-dig-cancel-btn{ font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
       border: 0; border-radius: 7px; padding: 6px 10px; background: #C0392B; color: #fff; }
     /* 합계 칸의 작은 ✔n — 나온 날 옆에 유효 일수 */
     .adm-att-table td.sum-c .vd-n{
@@ -1019,7 +1023,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610051709"></script>
+  <script src="script_admin.js?v=202610051819"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

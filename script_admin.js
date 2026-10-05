@@ -879,10 +879,11 @@
             if (stay != null) {
               if (stay >= VALID_STAY_MIN) { cls += " full"; validDays++; }
               else cls += " brief";
-              if (stay < SHORT_STAY_MIN && dk !== todayKey) cls += " short20";
+              /* ✅ 방장이 [인정] 한 날(rec.ok)은 긋지 않습니다 — 자정 넘겨 일한 날 등 */
+              if (stay < SHORT_STAY_MIN && dk !== todayKey && !(rec && rec.ok)) cls += " short20";
               tip = ` title="${hhmm(inAt)} 첫 입장 · ${머문글(stay)} 머묾${
                 stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}${
-                stay < SHORT_STAY_MIN && dk !== todayKey ? ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 출석 취소 가능` : ""}"`;
+                stay < SHORT_STAY_MIN && dk !== todayKey ? (rec && rec.ok ? " · ✅ 방장 인정" : ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 인정·취소`) : ""}"`;
             }
           }
           if (dk === todayKey) cls += " today";
@@ -2778,6 +2779,8 @@
       segs = Object.values(best).sort((x, y) => x.a - y.a);
     } catch (e) {}
 
+    let 인정됨 = false;
+    try { 인정됨 = (await db.ref(`attendance/${dk}/${nick}/ok`).once("value")).val() === true; } catch (e) {}
     const GAP_MS = 5 * 60 * 1000;
     let total = 0, rows = "", prevEnd = 0;
     segs.forEach(s => {
@@ -2799,14 +2802,32 @@
                  연결이 바로 끊긴 경우예요.</div>`}
       <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b>
         <span style="font-weight:400; opacity:.7;">— 상태를 안 가린 자리 지킨 시간이에요</span></div>
-      ${(isOwner && dk !== dayKey(new Date()) && total < SHORT_STAY_MIN * 60000) ? `
+      ${(isOwner && dk !== dayKey(new Date()) && total < SHORT_STAY_MIN * 60000) ? (인정됨 ? `
+      <div class="adm-dig-cancel ok">
+        ✅ 방장이 인정한 날이에요.
+        <button type="button" class="adm-dig-ok-btn" data-ok="0">인정 풀기</button>
+      </div>` : `
       <div class="adm-dig-cancel">
         ⛔ ${SHORT_STAY_MIN}분도 안 머문 날이에요.
-        <button type="button" class="adm-dig-cancel-btn">이 날 출석 취소</button>
-      </div>` : ""}
+        <button type="button" class="adm-dig-ok-btn" data-ok="1">인정</button>
+        <button type="button" class="adm-dig-cancel-btn">출석 취소</button>
+      </div>`) : ""}
       <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
         <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분 브라우저나
         회선 쪽을 의심해 보세요 (접속 유지는 입장하면 저절로 켜져요).</div>`;
+    /* ✅ 인정 (2026-10-05 콩) — 11:52 에 들어와 자정 넘겨 새벽까지 쓴 날처럼,
+         그날 몫은 짧아도 실제로 일한 경우. attendance/{날}/{닉}.ok = true 만 얹어요
+         (update — set 하면 firstAt·m 이 날아갑니다). 사선이 사라집니다. */
+    wrap.querySelector(".adm-dig-ok-btn")?.addEventListener("click", async (e) => {
+      const 켬 = e.currentTarget.dataset.ok === "1";
+      try {
+        await db.ref(`attendance/${dk}/${nick}`).update({ ok: 켬 ? true : null });
+        wrap.remove();
+        await loadAttendance(_attOffset, { 다시읽기: true });
+      } catch (err) {
+        alert("바꾸지 못했어요. " + (err.code || err.message || ""));
+      }
+    });
     /* ⛔ 출석 취소 (2026-10-05 콩) — 방장만. 도장·개인 달력 사본·머문 분을 함께 지웁니다.
        ★ 휴가·개인사정 표시는 건드리지 않아요 (다른 자리). */
     wrap.querySelector(".adm-dig-cancel-btn")?.addEventListener("click", async () => {
