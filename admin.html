@@ -461,6 +461,14 @@
        ★ 밑줄도 안 답니다. 밑줄은 ✔ 유효 출석의 표시라, 여기 달면
          둘이 같은 뜻으로 읽혀요. */
     .adm-att-table td.cell.brief{ background: #DCEAF7; color: #2A5E86; }
+    /* ⛔ 20분 미만 머문 날 — 붉은 사선 (2026-10-05 콩). 눌러서 출석 취소 */
+    .adm-att-table td.cell.short20{
+      background-image: linear-gradient(to top right, transparent calc(50% - 1px), #C0392B calc(50% - 1px), #C0392B calc(50% + 1px), transparent calc(50% + 1px));
+    }
+    .adm-dig-cancel{ margin-top: 10px; padding: 9px 11px; border-radius: 9px; background: #FBEAE8;
+      color: #8E2B20; font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .adm-dig-cancel-btn{ margin-left: auto; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+      border: 0; border-radius: 7px; padding: 6px 10px; background: #C0392B; color: #fff; }
     /* 합계 칸의 작은 ✔n — 나온 날 옆에 유효 일수 */
     .adm-att-table td.sum-c .vd-n{
       margin-left: 3px; color: #2E6B2B; font-size: 10px; font-weight: 700;
@@ -1011,7 +1019,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610051032"></script>
+  <script src="script_admin.js?v=202610051709"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

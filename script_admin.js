@@ -349,6 +349,11 @@
         weekly.html 에도 있습니다 (checks.js 가 넷이 같은지 지킵니다).
      ===================================================================== */
   const VALID_STAY_MIN = 60;  // 이 분 넘게 머문 날이 ✔ 유효 출석
+  /* ⛔ [2026-10-05 콩] 이 분 미만 머문 날은 붉은 사선 — "흔적만 남기고 사라진" 날.
+       눌러서 돋보기를 열면 방장은 [출석 취소] 를 할 수 있어요.
+       ★ 자동으로 빼지는 않습니다 (운영진과 상의 중) — 눈으로 보고 손으로만.
+       ★ 오늘 칸은 아직 진행 중이라 긋지 않아요. */
+  const SHORT_STAY_MIN = 20;
 
   /** 한 사람의 이 달 규칙 셈 */
   function ruleOf({ daysInMonth, beforeN, vacInMonth, attended, daysLeft }) {
@@ -874,8 +879,10 @@
             if (stay != null) {
               if (stay >= VALID_STAY_MIN) { cls += " full"; validDays++; }
               else cls += " brief";
+              if (stay < SHORT_STAY_MIN && dk !== todayKey) cls += " short20";
               tip = ` title="${hhmm(inAt)} 첫 입장 · ${머문글(stay)} 머묾${
-                stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}"`;
+                stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}${
+                stay < SHORT_STAY_MIN && dk !== todayKey ? ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 출석 취소 가능` : ""}"`;
             }
           }
           if (dk === todayKey) cls += " today";
@@ -2792,9 +2799,28 @@
                  연결이 바로 끊긴 경우예요.</div>`}
       <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b>
         <span style="font-weight:400; opacity:.7;">— 상태를 안 가린 자리 지킨 시간이에요</span></div>
+      ${(isOwner && dk !== dayKey(new Date()) && total < SHORT_STAY_MIN * 60000) ? `
+      <div class="adm-dig-cancel">
+        ⛔ ${SHORT_STAY_MIN}분도 안 머문 날이에요.
+        <button type="button" class="adm-dig-cancel-btn">이 날 출석 취소</button>
+      </div>` : ""}
       <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
         <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분 브라우저나
         회선 쪽을 의심해 보세요 (접속 유지는 입장하면 저절로 켜져요).</div>`;
+    /* ⛔ 출석 취소 (2026-10-05 콩) — 방장만. 도장·개인 달력 사본·머문 분을 함께 지웁니다.
+       ★ 휴가·개인사정 표시는 건드리지 않아요 (다른 자리). */
+    wrap.querySelector(".adm-dig-cancel-btn")?.addEventListener("click", async () => {
+      if (!confirm(`${nick} 님의 ${dk} 출석을 취소할까요?\n출석부에서 빠지고, 되돌리려면 손으로 다시 넣어야 해요.`)) return;
+      try {
+        await db.ref(`attendance/${dk}/${nick}`).remove();
+        try { await db.ref(`users/${nick}/attend/days/${dk}`).remove(); } catch (e) {}
+        try { await db.ref(`users/${nick}/attend/mins/${dk}`).remove(); } catch (e) {}
+        wrap.remove();
+        await loadAttendance(_attOffset, { 다시읽기: true });
+      } catch (e) {
+        alert("취소하지 못했어요. " + (e.code || e.message || ""));
+      }
+    });
   }
 
   function stayText(ms) {
