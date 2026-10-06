@@ -417,10 +417,16 @@
       let 말;
       if (f.kind === "done")       말 = `<b>${escapeHtml(화글(f.ep || "", f.u))} 마침</b>${f.snap ? " · " + comma(f.snap) + "자" : ""} 🎉`;
       else if (f.kind === "start") 말 = `<b>${escapeHtml(화글(f.ep || "", f.u))}</b> 시작`;
-      else                         말 = `+${comma(f.add)}자`;
-      return `<span class="rb-fl${내것 ? " me" : ""}">
+      else if (Number(f.add) > 0)  말 = `+${comma(f.add)}자`;
+      else                         말 = "";          // 🏷️ 작업 글만 올린 줄 (2026-10-06)
+      /* 🏷️ 무슨 작업? (2026-10-06 — 콩) — Work Log 의 #wc-what 칸에 적은 글.
+         글자수 옆 한 줄에 서고, 닉이 길어 모자라면 아랫줄로 내려갑니다(CSS .has-note). */
+      const 작업 = String(f.note == null ? "" : f.note).replace(/\s+/g, " ").trim().slice(0, 20);
+      if (!말 && !작업) return "";
+      return `<span class="rb-fl${내것 ? " me" : ""}${작업 ? " has-note" : ""}">
         <span class="rb-who">${escapeHtml(f.nick)}</span>
-        <span class="rb-what">${말}</span>
+        ${말 ? `<span class="rb-what">${말}</span>` : ""}
+        ${작업 ? `<span class="rb-note" title="${escapeHtml(작업)}">${escapeHtml(작업)}</span>` : ""}
         <span class="rb-ago">${언제글(f.at)}</span></span>`;
     }).join("");
   }

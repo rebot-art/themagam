@@ -756,14 +756,19 @@
       /* "시작" 은 더 이상 만들지 않습니다 (2026-08-21 콩). 오늘 이미
          쌓인 옛 줄이 있을 수 있어 읽기만 남겨 둡니다. */
       else if (f.kind === "start") 말 = `<b>${esc(화(f.ep || "", f.u))}</b> 시작`;
-      else                         말 = `+${콤마(f.add)}자`;
+      else if (Number(f.add) > 0)  말 = `+${콤마(f.add)}자`;
+      else                         말 = "";          // 🏷️ 작업 글만 올린 줄 (2026-10-06)
+      /* 🏷️ 무슨 작업? (2026-10-06 — 콩) — 글자수 옆에 붙고, 자리가 모자라면 아랫줄로 */
+      const 작업 = String(f.note == null ? "" : f.note).replace(/\s+/g, " ").trim().slice(0, 20);
+      if (!말 && !작업) return "";
       /* [2026-08-21 콩 — B안] 내 줄에는 왼쪽에 가는 색 띠 하나.
          일부러 얌전하게 둡니다 — 이 자리는 "남이 쓰는 게 보여서 나도
          쓰게 되는" 곳이라, 내 줄이 너무 튀면 남의 줄이 배경처럼
          보여서 그 효과가 되레 줄어요. */
-      return `<div class="wl-fl${f.kind === "done" ? " big" : ""}${내것 ? " me" : ""}">
+      return `<div class="wl-fl${f.kind === "done" ? " big" : ""}${내것 ? " me" : ""}${작업 ? " has-note" : ""}">
         <span class="wl-who${내것 ? " me" : ""}">${esc(f.nick)}</span>
-        <span class="wl-what">${말}</span>
+        ${말 ? `<span class="wl-what">${말}</span>` : ""}
+        ${작업 ? `<span class="wl-note" title="${esc(작업)}">${esc(작업)}</span>` : ""}
         <span class="wl-ago">${언제(f.at)}</span></div>`;
     }).join("");
     return `<div class="wl-feed"><div class="wl-fh">${흐름이름표()}</div>

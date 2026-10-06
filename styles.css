@@ -9941,6 +9941,24 @@ html[data-theme-style="studio"] .user-card{
 .wc-inputline input{ flex: 1 1 auto; min-width: 118px; }
 .wc-inputline #wc-send{ flex: 0 0 auto; white-space: nowrap; }
 .wc-inputline .wc-yday-btn{ flex: 0 0 auto; padding-left: 9px; padding-right: 9px; }
+/* 🏷️ 무슨 작업? (2026-10-06 — 콩) — 글자수 칸은 "전체 글자수" 문구만큼만,
+   남는 폭은 전부 작업 칸으로. 🕛 는 아래 작은 단추 줄로 내려갔습니다. */
+.wc-inputline #wc-input{ flex: 0 0 auto; width: calc(6em + 48px); min-width: 0; }
+.wc-inputline #wc-what{ flex: 1 1 0; min-width: 0; }
+.wc-minirow .wc-yday-btn{ flex: 0 0 auto; padding-left: 9px; padding-right: 9px; }
+/* 흐름에 뜨는 작업 글 — Work Log(.wl-note) · 바탕화면(.rb-note) 같은 모양.
+   글자수와 한 줄에 서되(A안), 자리가 모자라면 **아랫줄로 내려갑니다** (닉이 긴 사람). */
+.wl-note, .rb-note{
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  padding: 0 6px; border-radius: 6px; background: var(--fill-1); color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wl-fl.has-note, .rb-fl.has-note{ flex-wrap: wrap; row-gap: 1px; }
+.wl-fl.has-note .wl-what, .rb-fl.has-note .rb-what{ flex: 0 0 auto; }
+.wl-fl.has-note .wl-ago, .rb-fl.has-note .rb-ago{ margin-left: auto; }
+.wl-fl.has-note.me .wl-ago, .rb-fl.has-note.me .rb-ago{ margin-left: 0; margin-right: auto; }
+/* 오늘 탭(말풍선 흐름)에서는 대괄호 줄 안에 이어 붙습니다 */
+.wc-feed-sys .wc-note{ font-weight: 700; }
 
 /* =====================================================================
    🍅 뽀모 타이머 모양 고르기 (2026-08-12)

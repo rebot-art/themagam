@@ -767,6 +767,14 @@
       const tm = (f.at && window.formatHHMM)
         ? `<span class="wc-said-t">${window.formatHHMM(f.at)}</span>` : "";
 
+      /* 🏷️ 작업 글 (2026-10-06) — 글자수 없이 이것만 올라온 줄도 있습니다 */
+      const 작업 = 작업글(f.note);
+      if (!(Number(f.add) > 0)) {
+        if (!작업) return "";
+        return `<div class="wc-feed${isMe ? " me" : ""}">
+          <div class="wc-feed-sys">[<b>${nick}</b>님 🏷️ <span class="wc-note">${esc(작업)}</span>]</div>
+        </div>`;
+      }
       return `<div class="wc-feed${isMe ? " me" : ""}">
         ${snap === null ? "" : `
         <div class="wc-said-line">
@@ -779,7 +787,8 @@
         </div>`}
         <div class="wc-feed-sys">
           [<b>${nick}</b>님 <b>+${fmt(f.add)}자</b>${
-            snap === null ? "" : ` / 전체 ${fmt(snap)}자`}]
+            snap === null ? "" : ` / 전체 ${fmt(snap)}자`}${
+            작업 ? ` · <span class="wc-note">${esc(작업)}</span>` : ""}]
         </div>
       </div>`;
     }).join("");
@@ -909,11 +918,19 @@
      합계와 따로 두는 이유: 합계는 덮어쓰는 값이라 "언제 얼마나
      올렸는지"가 남지 않습니다. 채팅처럼 보여주려면 순간마다 한 줄이
      따로 있어야 해요. */
-  async function pushFeed(add, snap) {
-    if (!me() || !window.db || !(add > 0)) return;
+  /* 🏷️ [2026-10-06 — 콩] note = "무슨 작업?" 칸의 글 (방 전체가 봅니다).
+     글자수 없이 **작업 글만** 올릴 수도 있어요 — 그때는 add·snap 이 없는 줄입니다.
+     ★ 그래서 이 흐름을 읽는 쪽(오늘 탭 · Work Log 흐름 · 바탕화면)은
+       add 가 없는 줄을 만나도 "+NaN자" 를 찍지 않게 되어 있어야 합니다. */
+  async function pushFeed(add, snap, note) {
+    const 글 = 작업글(note);
+    if (!me() || !window.db || (!(add > 0) && !글)) return;
+    const 짐 = { nick: me(), at: Date.now() };
+    if (add > 0) { 짐.add = Number(add); 짐.snap = Number(snap); }
+    if (글) 짐.note = 글;
     try {
       await window.db.ref(`wordfeed/${dayKey()}`)
-        .push({ nick: me(), add: Number(add), snap: Number(snap), at: Date.now() });
+        .push(짐);
     } catch (e) {
       say(denyMsg(e));
       console.warn("[wordfeed push failed]", e);
@@ -938,6 +955,12 @@
   }
   function clearInput() { const i = el("wc-input"); if (i) i.value = ""; }
 
+  /* 🏷️ 무슨 작업? — 한 줄, 스무 자. 줄바꿈·겹친 빈칸은 폅니다. */
+  const NOTE_MAX = 20;
+  const NOTE_KEY = "wcWhat";
+  function 작업글(t) { return String(t == null ? "" : t).replace(/\s+/g, " ").trim().slice(0, NOTE_MAX); }
+  function whatVal() { return 작업글(el("wc-what")?.value); }
+
   /* ---------------------------------------------------------------
      버튼이 하는 일
      --------------------------------------------------------------- */
@@ -950,9 +973,23 @@
     /* ✍️ [2026-08-16] 숫자가 없으면 메모칸만 처리합니다.
        콩트와 같은 동작이에요 — 숫자만·글만·둘 다 전부 됩니다.
        ★ 메모는 나만 보는 줄이라 서버로 안 나갑니다(메모처리 참고). */
+    /* 🏷️ [2026-10-06 — 콩] 무슨 작업? — 숫자 없이 이것만 올릴 수 있습니다.
+       칸의 글은 **안 지웁니다** (같은 작업을 이어 가면 숫자만 고쳐 적으면 되게). */
+    const what = whatVal();
+    try { window.AppStore?.setItem(NOTE_KEY, what); } catch (e) {}
+    const 작업만 = async () => {
+      if (!what) return false;
+      if (!me()) { say("잠시만요, 아직 준비 중이에요."); return true; }
+      /* [2026-10-06 콩] 같은 글을 또 올려도 막지 않습니다 — "시간이 지나도 여전히 퇴고 중" 일 수 있어요. */
+      await pushFeed(0, 0, what);
+      say(`🏷️ ${what} — 방에 올렸어요`);
+      return true;
+    };
     if (v === null) {
-      if (메모처리()) return;
-      say("숫자를 적어주세요.");
+      const 메모함 = 메모처리();
+      if (await 작업만()) return;
+      if (메모함) return;
+      say("글자수나 작업 내용을 적어주세요.");
       return;
     }
     /* 숫자와 글을 함께 적었으면, 글은 나만 보는 줄로 따로 남깁니다 */
@@ -967,6 +1004,7 @@
       await save({ base: v, total: Number(mine.total || 0) });
       clearInput();
       say(`출발선을 ${fmt(v)}자로 잡았어요`);
+      await 작업만();
       return;
     }
 
@@ -977,17 +1015,18 @@
          한쪽만 남으면 숫자와 기록이 어긋나 보입니다. */
       const okSave = await save({ base: v, total: next });
       if (okSave === false) { clearInput(); return; }
-      await pushFeed(diff, v);
+      await pushFeed(diff, v, what);
       /* [2026-08-22 — 콩] 기준을 함께 보여 줍니다. 안 보이니 자꾸
          [▶ 기준] 을 눌러 되짚어 보게 되더라고요.
          기준 = 방금 적은 값(v) — 다음엔 여기서부터 셉니다. */
       say(`+${fmt(diff)}자 · 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
     } else if (diff === 0) {
-      say("그대로예요");
+      if (!(await 작업만())) say("그대로예요");
     } else {
       /* 줄었을 때는 누적을 깎지 않고 기준만 옮깁니다 */
       await save({ base: v });
       say(`글자수가 줄었네요. 기준만 ${fmt(v)}자로 옮겼어요`);
+      await 작업만();
     }
     clearInput();
   }
@@ -1335,6 +1374,20 @@
       memo.addEventListener("blur", () => {
         setTimeout(() => { const b = el("wc-slash"); if (b) b.hidden = true; }, 120);
       });
+    }
+
+    /* 🏷️ 무슨 작업? — 엔터로 바로 기록. 지난번에 적은 글을 칸에 되살려 둡니다. */
+    {
+      const w = el("wc-what");
+      if (w && !w._wcBound) {
+        w._wcBound = true;
+        try { if (!w.value) w.value = 작업글(window.AppStore?.getItem(NOTE_KEY) || ""); } catch (e) {}
+        w.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter" || e.isComposing || e.keyCode === 229) return;
+          e.preventDefault();
+          send();
+        });
+      }
     }
 
     el("wc-input")?.addEventListener("keydown", (e) => {
