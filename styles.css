@@ -12520,7 +12520,9 @@ html:not([data-lite]) .share-cheers .card-heart svg{ width: 32px; height: 30px; 
 }
 .lite-card.is-helper .lite-in::after{
   content: ""; position: absolute; inset: -1px; z-index: 3;
-  border: 2.5px solid #3FA974; border-radius: 6px; pointer-events: none;
+  /* [2026-10-07 콩] 왼쪽 두 모서리는 각지게 — 단순 카드가 왼쪽은 각, 오른쪽만 둥글어서요
+     (방장·부방장 테두리와 같은 값) */
+  border: 2.5px solid #3FA974; border-radius: 0 6px 6px 0; pointer-events: none;
 }
 
 /* 🪶 가볍게 보기에서도 프로필 꾸미기 미리보기 카드는 기본 카드 그대로 (2026-10-03) */
