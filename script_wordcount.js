@@ -957,7 +957,6 @@
 
   /* 🏷️ 무슨 작업? — 한 줄, 스무 자. 줄바꿈·겹친 빈칸은 폅니다. */
   const NOTE_MAX = 20;
-  const NOTE_KEY = "wcWhat";
   function 작업글(t) { return String(t == null ? "" : t).replace(/\s+/g, " ").trim().slice(0, NOTE_MAX); }
   function whatVal() { return 작업글(el("wc-what")?.value); }
 
@@ -974,14 +973,16 @@
        콩트와 같은 동작이에요 — 숫자만·글만·둘 다 전부 됩니다.
        ★ 메모는 나만 보는 줄이라 서버로 안 나갑니다(메모처리 참고). */
     /* 🏷️ [2026-10-06 — 콩] 무슨 작업? — 숫자 없이 이것만 올릴 수 있습니다.
-       칸의 글은 **안 지웁니다** (같은 작업을 이어 가면 숫자만 고쳐 적으면 되게). */
+       [2026-10-06 콩 — 뒤집음] 올리고 나면 칸을 **비웁니다** — 다음에 내용이 달라져도
+       지우는 수고 없이 바로 새로 적을 수 있게. (처음엔 남겨 뒀었어요) */
     const what = whatVal();
-    try { window.AppStore?.setItem(NOTE_KEY, what); } catch (e) {}
+    const 작업칸비우기 = () => { const w = el("wc-what"); if (w) w.value = ""; };
     const 작업만 = async () => {
       if (!what) return false;
       if (!me()) { say("잠시만요, 아직 준비 중이에요."); return true; }
       /* [2026-10-06 콩] 같은 글을 또 올려도 막지 않습니다 — "시간이 지나도 여전히 퇴고 중" 일 수 있어요. */
       await pushFeed(0, 0, what);
+      작업칸비우기();
       say(`🏷️ ${what} — 방에 올렸어요`);
       return true;
     };
@@ -1016,6 +1017,7 @@
       const okSave = await save({ base: v, total: next });
       if (okSave === false) { clearInput(); return; }
       await pushFeed(diff, v, what);
+      if (what) 작업칸비우기();
       /* [2026-08-22 — 콩] 기준을 함께 보여 줍니다. 안 보이니 자꾸
          [▶ 기준] 을 눌러 되짚어 보게 되더라고요.
          기준 = 방금 적은 값(v) — 다음엔 여기서부터 셉니다. */
@@ -1376,12 +1378,11 @@
       });
     }
 
-    /* 🏷️ 무슨 작업? — 엔터로 바로 기록. 지난번에 적은 글을 칸에 되살려 둡니다. */
+    /* 🏷️ 무슨 작업? — 엔터로 바로 기록 */
     {
       const w = el("wc-what");
       if (w && !w._wcBound) {
         w._wcBound = true;
-        try { if (!w.value) w.value = 작업글(window.AppStore?.getItem(NOTE_KEY) || ""); } catch (e) {}
         w.addEventListener("keydown", (e) => {
           if (e.key !== "Enter" || e.isComposing || e.keyCode === 229) return;
           e.preventDefault();
