@@ -212,7 +212,6 @@
     loadHistoryConfig();
     loadForest();
     loadAllowList();
-    loadBanList();
     loadHello();
     if (isOwner) { loadStaffList(); loadShareLimit(); }
   }
@@ -2457,61 +2456,10 @@
     }
   }
 
-  async function loadBanList() {
-    const box = el("adm-ban-list");
-    if (!box) return;
-    try {
-      const v = (await db.ref("config/ban").once("value")).val() || {};
-      const nicks = Object.keys(v).sort();
-      box.innerHTML = nicks.length
-        ? nicks.map(n => `
-            <div class="adm-row">
-              <span class="n">${escapeHtml(n)}</span>
-              <button class="adm-btn ghost" data-ban-del="${escapeHtml(n)}">다시 들이기</button>
-            </div>`).join("")
-        : "내보낸 사람이 없어요.";
-    } catch (e) {
-      box.textContent = "불러오지 못했어요.";
-    }
-  }
-
-  async function addBan(nickRaw) {
-    const nick = String(nickRaw || "").trim();
-    if (!nick) { msg("adm-ban-msg", "닉네임을 적어 주세요.", true); return; }
-    if (!confirm(`${nick} 님을 내보낼까요?\n\n· 접속자 명단에서 곧바로 사라집니다\n` +
-                 `· 채팅·수다방에 글을 쓸 수 없습니다\n· 다시 들어와도 아무것도 못 합니다\n\n` +
-                 `기록은 지우지 않아요. 되돌릴 수 있습니다.`)) return;
-    msg("adm-ban-msg", "내보내는 중…");
-    try {
-      /* ① 문을 먼저 잠급니다 — 잠그기 전에 지우면 그 사이에 다시 씁니다 */
-      await db.ref("config/ban/" + nick).set(true);
-      /* ② 승인 명단에서도 빼서, 닉네임을 새로 만드는 길도 막습니다 */
-      await db.ref("config/allow/" + nick).remove();
-      /* ③ 지금 떠 있는 접속 표시를 지웁니다 (방장은 남의 status 도 지울 수 있어요) */
-      await db.ref("status/" + nick).remove();
-      /* ④ 공유 중이던 화면도 함께 내립니다 */
-      await db.ref("screens/" + nick).remove();
-
-      const inp = el("adm-ban-nick"); if (inp) inp.value = "";
-      await Promise.all([loadBanList(), loadAllowList()]);
-      msg("adm-ban-msg", `🚫 ${nick} 님을 내보냈어요. 접속자 명단에서 사라집니다.`);
-    } catch (e) {
-      msg("adm-ban-msg", "내보내지 못했어요. " + (e.code || e.message || ""), true);
-    }
-  }
-
-  async function delBan(nick) {
-    if (!nick) return;
-    if (!confirm(`${nick} 님을 다시 들일까요?`)) return;
-    try {
-      await db.ref("config/ban/" + nick).remove();
-      await db.ref("config/allow/" + nick).set(true);
-      await Promise.all([loadBanList(), loadAllowList()]);
-      msg("adm-ban-msg", `${nick} 님을 다시 들였어요.`);
-    } catch (e) {
-      msg("adm-ban-msg", "풀지 못했어요.", true);
-    }
-  }
+  /* [철거 2026-10-06 — 콩] 🚫 내보내기(loadBanList · addBan · delBan) — 관리자 화면의
+     칸을 걷으면서 함께 뺐습니다. ★ 막는 장치는 그대로예요 — config/ban 을 읽는
+     script_auth.js · script_realtime.js · 보안규칙은 안 건드렸습니다. 예전에 내보낸
+     닉을 풀려면 파이어베이스 콘솔에서 config/ban/{닉} 을 지우세요. */
 
   // ------------------------------------------------- ③-2 공지
   // [철거 2026-08-14] 머리말 한줄 공지(config/notice) — 자리에 시계가
@@ -3013,14 +2961,7 @@
   /* [철거 2026-08-14] 접속자 명단 미리보기(previewCardHtml·openMemberPreview·
      closeMemberPreview) — 그 카드 자리를 ✨ 성실 멤버가 물려받으며 걷었습니다. */
 
-  // ------------------------------------------------- ③-3.9 ✨ 성실 멤버
-  /* 최근 7일 출석부(attendance)와 작업시간(timeSegs)으로 자동 선정.
-     기준(콩): 출석 5일 이상 + 하루 5시간 넘게 작업한 날 3일 이상.
-       · "작업"은 카드의 작업시간과 같은 셈 — WRITE 전액 + JOB·multiT 70%
-       · 휴가일은 출석에 안 들어갑니다 (출석부에 입장 기록이 없으니 저절로)
-       · 중복 구간 흉터는 돋보기와 같은 규칙으로 걸러 셉니다
-     읽기량: 출석부 7번 + 후보×출석일 만큼의 timeSegs — 방장 페이지에서
-     단추를 눌렀을 때만 도니 부담 없습니다. */
+  // ------------------------------------------------- ③-3.8 ⏱ 작업 시간 무게
   /* =====================================================================
      ⏱ 작업 시간 무게 — ★★★ script_timelog.js 의 WORK_WEIGHT 와 **같아야** 합니다
      ---------------------------------------------------------------------
@@ -3029,7 +2970,7 @@
      들어 있는 것과 같은 사정이에요.
 
      ★ 대신 checks.js 가 **두 표를 직접 견줘서** 다르면 실패합니다.
-       한쪽만 고치면 방에서 본 숫자와 성실 멤버 기준이 조용히 어긋나요.
+       한쪽만 고치면 방에서 본 숫자와 관리자 돋보기가 조용히 어긋나요.
      ===================================================================== */
   const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7, repair: 0.3 };
   function 작업ms(status, ms) {
@@ -3037,276 +2978,116 @@
     return w ? Math.round((Number(ms) || 0) * w) : 0;
   }
 
-  const DIL_DAYS = 7;
-  const DIL_NEED_ATT = 5;        // 출석 5일 이상
-  const DIL_NEED_5H = 3;         // 5시간 넘게 일한 날 3일 이상
-  const DIL_5H_MS = 5 * 60 * 60 * 1000;
+  /* [철거 2026-10-06 — 콩] ✨ 성실 멤버(runDiligent) · 📊 사용 현황(runUsage) —
+     칸과 함께 걷었습니다. 위 WORK_WEIGHT·작업ms 는 출석부 돋보기가 계속 씁니다. */
 
-  function dilDayKeys() {
+  // ------------------------------------------------- ③-3.9 📋 출석 관리
+  /* =====================================================================
+     📋 출석 관리 (2026-10-06 — 콩)
+     ---------------------------------------------------------------------
+     "일주일 이상 출석 안 한 멤버 보기. 휴가 및 장기 휴가 표시 시 제외."
+
+     [어떻게 세나]
+       ① 멤버마다 **마지막 출석일 한 줄** (users/{닉}/attend/days 의 맨 끝 키)
+       ② 그 다음 날부터 **어제까지**가 빈 날 — 오늘은 아직 안 끝났으니 안 셉니다
+       ③ 빈 날이 7일이 안 되면 거기서 끝 (더 안 읽어요)
+       ④ 7일 이상이면 그 구간의 🏖️ 휴가(vacations)·🌿 개인사정(leaves)을 읽어
+          **찍힌 날은 건너뜁니다.** 빼고도 7일 이상이면 명단에 올려요.
+     ★ "장기 휴가" = 🌿 개인사정입니다 (콩 확정). 새 표시는 안 만들었어요.
+     ★ 휴가가 끝났는데도 계속 안 오는 분은 다시 잡힙니다 — 그래서 "휴가 중이면
+       통째로 제외" 가 아니라 "휴가 날만 건너뛰기" 예요.
+     ★ 보기만 합니다. 서버에 적는 것은 하나도 없어요.
+     ★ 출석이 한 번도 없는 닉은 입장일(firstSeen)부터 세고, 그것도 없으면
+       "출석 기록 없음" 으로 따로 적습니다.
+     ===================================================================== */
+  const ABSENT_DAYS = 7;
+
+  /** "YYYY-MM-DD" 에 n일을 더한 날 */
+  function 날더하기(dk, n) {
+    const p = String(dk).split("-").map(Number);
+    return dayKey(new Date(p[0], p[1] - 1, p[2] + n));
+  }
+  /** a 부터 b 까지(둘 다 포함)의 날짜 키 목록. a > b 면 빈 목록 */
+  function 날사이(a, b) {
     const out = [];
-    for (let i = 0; i < DIL_DAYS; i++) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      out.push(dayKey(d));
-    }
+    for (let d = a; d <= b && out.length < 2000; d = 날더하기(d, 1)) out.push(d);
     return out;
   }
-
-  /* ---------------------------------------------------------------------
-     ⏱ "5시간 넘게 일한 날" 을 어디서 세는가 (2026-09-23 — 통신량 점검)
-     ---------------------------------------------------------------------
-     [무엇이 문제였나]
-     예전에는 사람마다 × 날마다 users/{닉}/timeSegs/{날} 을 하나씩 열었습니다.
-     쉰세 명 × 나온 날 이레면 **337번, 1.28MB**. 계측기로 재보니 관리자
-     페이지가 쓰는 통신량의 73% 가 이 단추 하나였어요. 단추 한 번에.
-
-     [그런데 그 값은 이미 방 안에 있었습니다]
-     script_timelog.js 의 공개시간올리기() 가 날마다
-         worktime/{날}/{닉} = 그날 작업 분(分)   ← 무게를 **친** 숫자
-     을 올려둡니다. 여기서 세려던 것과 정확히 같은 셈이에요.
-     그래서 날마다 한 번씩, 이레면 **일곱 번**만 읽습니다.
-
-     [왜 이게 더 정직한가]
-     무게 치는 일을 여기서 다시 하지 않으니, 저쪽 규칙이 바뀌어도 여기가
-     엇나갈 일이 없습니다. 중복 구간 걸러내기도 저쪽에서 이미 끝났고요.
-
-     ★ worktime 은 2026-08-30 부터 쌓입니다 — 이레 창에는 넉넉합니다.
-     ★ 다만 "쌓이기 시작한 날보다 앞" 을 세는 창으로 넓힌다면, 그때는
-       이 선반이 비어 있다는 걸 기억해 주세요.
-  --------------------------------------------------------------------- */
-  const DIL_5H_MIN = DIL_5H_MS / 60000;   // 문턱은 한 군데서만 (분으로 견줍니다)
-
-  async function 날작업분(dk) {
-    try {
-      return (await db.ref(`worktime/${dk}`).once("value")).val() || {};
-    } catch (e) { return {}; }
+  function 짧은날(dk) {
+    const p = String(dk).split("-");
+    return `${Number(p[1])}/${Number(p[2])}`;
+  }
+  /** 빈 날 목록에서 쉬는 날(휴가·개인사정)을 뺀 "안 나온 날" 수 — 셈은 여기 한 곳 */
+  function 안나온날셈(빈날, vac, leave) {
+    let 쉰 = 0;
+    빈날.forEach(d => { if ((vac && vac[d] === true) || (leave && leave[d] === true)) 쉰++; });
+    return { 안나온: 빈날.length - 쉰, 쉰 };
   }
 
-  /* =====================================================================
-     📊 사용 현황 (2026-08-23 — 콩)
-     ---------------------------------------------------------------------
-     [무엇을 묻는 것인가]
-     "어떤 걸 많이 쓰고 어떤 걸 아무도 안 쓰는지. 누가 뭘 쓰는지가 아니라
-      전체 통계. 아무도 안 쓰는 기능을 유지할 이유는 없으니까."
-     그래서 **적게 쓰는 것이 위로** 옵니다 — 찾으려는 게 그것이니까요.
-
-     ★★★ [방 코드는 한 줄도 안 건드립니다]
-     새로 기록을 남기기 시작하면 그날부터 세는 셈이라 지금은 아무 답도
-     안 나옵니다. 대신 **이미 서버에 쌓여 있는 흔적**만 읽어요. 덕분에
-     멤버 쪽에서 달라지는 것이 하나도 없고, 이 단추를 안 누르면 통신량도 0.
-
-     ★★★ [읽으면 안 되는 것 — 돈이 됩니다]
-     2026-08-22 에 Blaze 로 바뀌어 무료치를 넘으면 **잠기는 게 아니라
-     청구**됩니다. 그래서 큰 노드는 일부러 피합니다.
-       · messages / messages2  ← 채팅 전체. 대신 achv 의 cChat 을 씁니다
-       · wordlog / wordfeed    ← 이미 위 그래프가 보여 줍니다
-       · users/{닉} 통째로     ← 안에 timeSegs 가 들어 있어 무겁습니다.
-                                 **작은 자식만 골라** 읽어요 (아래 잔가지).
-     작은 것을 여러 번 읽는 건 괜찮습니다 — RTDB 요금은 **주고받은 바이트**
-     이지 요청 횟수가 아니라서요.
-
-     ★ [못 세는 것은 못 센다고 적습니다]
-       · 판 여닫기·방 배경·접속 유지·카드 정렬·확대축소 → 각자 브라우저에만
-       · 대숲·표현 공부·품평 → 익명이라 글 수만 (그게 이 기능들이 굴러가는 조건)
-       · 📮 쪽지 → 보안규칙이 주인에게만 열려 있어 방장도 못 읽음
-     ===================================================================== */
-
-  /** 큰 노드를 건드리지 않고 통째로 읽어도 되는 것들 */
-  async function 통째로(경로) {
-    try { return (await db.ref(경로).once("value")).val() || {}; }
-    catch (e) { return null; }              // null = 못 읽음 (권한·오류)
-  }
-
-  /** users/{닉} 아래 **작은 잔가지 하나**만 (timeSegs 를 안 끌고 오려고) */
-  async function 잔가지(닉, 가지) {
-    try { return (await db.ref(`users/${닉}/${가지}`).once("value")).val(); }
-    catch (e) { return null; }
-  }
-
-  async function runUsage() {
-    const box = el("adm-usage");
+  async function runAbsent() {
+    const box = el("adm-absent");
     if (!box) return;
-    box.innerHTML = `<div class="adm-msg">훑는 중…</div>`;
-    msg("adm-usage-msg", "");
-
+    box.innerHTML = `<div class="adm-msg">찾는 중…</div>`;
+    msg("adm-absent-msg", "");
     try {
-      /* ── ① 통째로 읽어도 되는 것 (요청 여덟 번) ── */
-      const [ownerMap, achv, music, files, forest, help, pubs, pubrev] =
-        await Promise.all([
-          통째로("nickOwner"), 통째로("achv"), 통째로("music"), 통째로("files"),
-          통째로("forest"), 통째로("help"), 통째로("pubs"), 통째로("pubreview")
-        ]);
-      const 명단 = Object.keys(ownerMap || {});
-      const 총원 = 명단.length;
-      if (!총원) { box.innerHTML = `<div class="adm-msg">명단을 못 읽었어요.</div>`; return; }
+      const nicks = Object.keys((await db.ref("nickOwner").once("value")).val() || {})
+        .sort((a, b) => a.localeCompare(b, "ko"));
+      /* 예전에 내보낸 닉은 명단에서 뺍니다 (못 읽어도 그냥 갑니다) */
+      let ban = {};
+      try { ban = (await db.ref("config/ban").once("value")).val() || {}; } catch (e) {}
+      const firstSeen = (await loadFirstSeen(nicks)) || {};
+      const 오늘 = dayKey(new Date());
+      const 어제 = 날더하기(오늘, -1);
 
-      /* ── ② 잔가지 — 닉마다 작은 것만 골라서 ── */
-      const 잔 = {};
-      await Promise.all(명단.map(async n => {
-        const [prof, prefs, idle, start, pomoP, mine] = await Promise.all([
-          잔가지(n, "profile"), 잔가지(n, "prefs"), 잔가지(n, "idleDetect"),
-          잔가지(n, "startStatus"), 잔가지(n, "pomoParticipation"), 잔가지(n, "musicMine")
-        ]);
-        잔[n] = { prof: prof || {}, prefs: prefs || {}, idle, start, pomoP, mine: mine || {} };
+      const 안온 = [], 쉬는중 = [], 기록없음 = [];
+      await Promise.all(nicks.filter(n => !ban[n]).map(async n => {
+        let last = null;
+        try {
+          const s = await db.ref(`users/${n}/attend/days`)
+            .orderByKey().limitToLast(1).once("value");
+          s.forEach(c => { last = c.key; });
+        } catch (e) {}
+        const 시작 = last ? 날더하기(last, 1) : (firstSeen[n] || null);
+        if (!시작) { 기록없음.push(n); return; }
+        const 빈날 = 날사이(시작, 어제);
+        if (빈날.length < ABSENT_DAYS) return;          // ③ 여기서 끝 — 더 안 읽습니다
+
+        const 읽기 = async 칸 => {
+          try {
+            return (await db.ref(`users/${n}/${칸}`).orderByKey()
+              .startAt(시작).endAt(어제).once("value")).val() || {};
+          } catch (e) { return {}; }
+        };
+        const [vac, leave] = await Promise.all([읽기("vacations"), 읽기("leaves")]);
+        const 셈 = 안나온날셈(빈날, vac, leave);
+        if (셈.안나온 >= ABSENT_DAYS) 안온.push({ n, last, 안나온: 셈.안나온, 쉰: 셈.쉰 });
+        else if (셈.쉰 > 0) 쉬는중.push(n);
       }));
 
-      /* ── ③ 세기 ── */
-      const 셈 = (거르개) => 명단.filter(거르개).length;
-      const c = (n, k) => Number((achv?.[n]?.c || {})[k] || 0);
-      /* achv 의 c 에는 `cha_2026-08-20` 처럼 **날짜별 열쇠**로 쌓이는 것이
-         있습니다 — 접두어로 세면 "며칠 썼나" 가 나옵니다 */
-      const 접두 = (n, pre) => Object.keys(achv?.[n]?.c || {})
-        .filter(k => k.indexOf(pre) === 0).length;
+      안온.sort((a, b) => b.안나온 - a.안나온 || a.n.localeCompare(b.n, "ko"));
+      쉬는중.sort((a, b) => a.localeCompare(b, "ko"));
+      기록없음.sort((a, b) => a.localeCompare(b, "ko"));
 
-      const 꾸밈칸 = ["photo", "cardBg", "cardPattern", "nickColor", "snowBg", "shareImg"];
-
-      const 줄 = [
-        /* [이름, 쓴 사람 수, 곁말] */
-        /* ✍️ 글자수는 계량기가 따로 없습니다. 대신 **글자수 업적을 하나라도
-           땄나**로 봅니다 — 첫 배지가 "하루 1,000자" 라 한 번이라도 제대로
-           적은 사람은 잡히고, 이건 지난 기록까지 소급돼요. */
-        ["✍️ Work Log 글자수", 셈(n => Object.keys(achv?.[n]?.got || {}).some(g => g.indexOf("wc") === 0)), "글자수 배지를 하나라도"],
-        ["💬 Chat", 셈(n => c(n, "cChat") > 0), "8/11부터 센 것"],
-        ["📌 할 일 완료", 셈(n => c(n, "cTodo") > 0), "8/11부터"],
-        ["☕ 수다방", 셈(n => 접두(n, "cha_") > 0), "참여한 날이 하루라도"],
-        ["🎋 대숲 글쓰기", 셈(n => c(n, "cForest") > 0), "익명이지만 업적이 셉니다"],
-        ["🖥 화면 공유", 셈(n => 접두(n, "shr_") > 0), "하루 2시간 넘긴 날만 잡힘"],
-        ["😊 감정 스티커", 셈(n => c(n, "cGreet") + c(n, "cPat") + c(n, "cCheer") > 0), ""],
-        ["🏷 카드 스티커", 셈(n => 접두(n, "stk_") > 0), ""],
-        ["🔖 작업 스티커", 셈(n => 접두(n, "tag_") > 0), ""],
-        ["📝 퇴고·수정 딱지", 셈(n => 접두(n, "rew_") + 접두(n, "rev_") > 0), ""],
-        ["👤 프로필 꾸미기", 셈(n => 꾸밈칸.some(k => 잔[n].prof[k])), "하나라도 만졌으면"],
-        ["🖼 프사 올리기", 셈(n => !!(잔[n].prof.photo || 잔[n].prof.photoUrl)), ""],
-        /* 🗄️ [2026-09-21] 프사 창고 이전 진척 — 입장할 때 각자 저절로 옮겨집니다.
-           아래 숫자가 0 이 되면 이전이 끝난 거예요 (통신량이 확 줄어듭니다). */
-        ["🗄 프사 창고로 옮김", 셈(n => !!잔[n].prof.photoUrl), "새 방식 — 브라우저가 캐시해요"],
-        ["⏳ 아직 옛 방식", 셈(n => !!잔[n].prof.photo && !잔[n].prof.photoUrl),
-         "들어오면 저절로 옮겨져요 · 0 이 되면 끝"],
-        ["🎨 카드 색·무늬", 셈(n => !!(잔[n].prof.cardBg || 잔[n].prof.cardPattern)), ""],
-        ["🎨 테마 바꾸기", 셈(n => !!잔[n].prefs.themeName), "기본 테마면 안 잡힘"],
-        ["🎯 목표 시간 정하기", 셈(n => Number(잔[n].prefs.goalHours) > 0), ""],
-        ["🖱 자리비움 자동감지", 셈(n => 잔[n].idle?.enabled === true), "크롬·엣지·웨일만 됨"],
-        ["🚪 들어올 때 상태 고르기", 셈(n => !!잔[n].start), "8/23에 생긴 것"],
-        ["🍅 뽀모 참가", 셈(n => 잔[n].pomoP?.participating === true), ""],
-        ["♪ 나의 BGM 리스트", 셈(n => Object.keys(잔[n].mine).length > 0), ""],
-        ["♪ BGM 추천 올리기", 새사람수(music, "nick"), "곡 " + 개수(music) + "개"],
-        ["📁 자료실 올리기", 새사람수(files, "by"), "파일 " + 개수(files) + "개"],
-      ];
-
-      /* 익명이라 사람 수를 못 세는 것 — 개수만 */
-      const 익명줄 = [
-        ["🎋 대숲", 개수(forest), "쪽지"],
-        ["📓 표현 공부", 개수(help), "글"],
-        ["🏢 출판사 품평", 개수(pubs), "명패"],
-        ["🏢 품평 글", 품평수(pubrev), "품평"],
-      ];
-
-      /* ── ④ 그리기 — 적은 것이 위로 ── */
-      줄.sort((a, b) => a[1] - b[1]);
-      const 칸 = (이름, 명, 곁) => {
-        const p = 총원 ? Math.round(명 / 총원 * 100) : 0;
-        const 빛 = 명 === 0 ? "bad" : (p < 25 ? "maybe" : "ok");
-        return `<div class="adm-use-row">
-          <span class="adm-use-n">${escapeHtml(이름)}</span>
-          <span class="adm-use-bar"><i class="${빛}" style="width:${Math.max(p, 명 ? 3 : 0)}%"></i></span>
-          <span class="adm-use-v ${빛}">${명}명 <small>${p}%</small></span>
-          <span class="adm-use-c">${escapeHtml(곁 || "")}</span>
-        </div>`;
-      };
-      const 안쓰는것 = 줄.filter(r => r[1] === 0);
-
-      box.innerHTML = `
-        <p class="adm-use-head">멤버 <b>${총원}명</b> 가운데 몇 명이 쓰고 있나</p>
-        ${안쓰는것.length ? `<p class="adm-use-warn">🕳 <b>아무도 안 쓰는 것 ${안쓰는것.length}가지</b> — ${
-          안쓰는것.map(r => escapeHtml(r[0])).join(" · ")}</p>` : ""}
-        ${줄.map(r => 칸(r[0], r[1], r[2])).join("")}
-        <p class="adm-use-head" style="margin-top:14px;">익명이라 <b>사람 수는 못 세는 것</b> — 글 수만</p>
-        ${익명줄.map(([이름, n, 단위]) =>
-          `<div class="adm-use-row"><span class="adm-use-n">${escapeHtml(이름)}</span>
-             <span class="adm-use-v ${n ? "ok" : "bad"}">${n}${escapeHtml(단위)}</span>
-             <span class="adm-use-c"></span></div>`).join("")}
-        <p class="adm-use-foot">
-          ★ <b>여기 안 나오는 것</b>은 서버에 흔적이 없어서예요 —
-          판 여닫기·🖼방 배경·🔌접속 유지·🎲카드 정렬·🔍확대축소·채팅 글자 크기는
-          각자 브라우저에만 남습니다. 📮쪽지는 보안규칙이 주인에게만 열려 있어 방장도 못 읽어요.<br>
-          ★ 업적으로 세는 줄(💬Chat·📌할 일·🎋대숲·😊스티커·🖥공유)은
-          <b>2026-08-11부터</b>라 그 전에 쓴 것은 안 잡힙니다.
-        </p>`;
-      msg("adm-usage-msg", `${총원}명을 훑었어요.`);
-    } catch (e) {
-      console.warn("[adm usage]", e);
-      box.innerHTML = `<div class="adm-msg">불러오지 못했어요.</div>`;
-    }
-  }
-
-  /** 목록에서 서로 다른 사람이 몇 명인가 (닉이 든 칸 이름을 알려주세요) */
-  function 새사람수(뭉치, 칸) {
-    if (!뭉치) return 0;
-    const s = new Set();
-    Object.values(뭉치).forEach(v => { const n = v && v[칸]; if (n) s.add(String(n)); });
-    return s.size;
-  }
-  function 개수(뭉치) { return 뭉치 ? Object.keys(뭉치).length : 0; }
-  /** pubreview 는 {명패: {품평id: …}} 라 두 겹입니다 */
-  function 품평수(뭉치) {
-    if (!뭉치) return 0;
-    let n = 0;
-    Object.values(뭉치).forEach(v => { n += Object.keys(v || {}).length; });
-    return n;
-  }
-
-  async function runDiligent() {
-    const box = el("adm-diligent");
-    if (!box) return;
-    box.innerHTML = `<div class="adm-msg">최근 ${DIL_DAYS}일을 세는 중…</div>`;
-    msg("adm-diligent-msg", "");
-    try {
-      const days = dilDayKeys();
-      /* 날마다 두 번 — 출석부 한 장, 작업 분 한 장. 그게 전부입니다.
-         사람 수가 늘어도 읽는 횟수는 그대로 이레 × 2 예요. */
-      const attByNick = {};
-      const 분표 = {};                       // 분표[날][닉] = 그날 작업 분 (무게 침)
-      await Promise.all(days.map(async dk => {
-        const [att, 분] = await Promise.all([
-          db.ref(`attendance/${dk}`).once("value"),
-          날작업분(dk)
-        ]);
-        Object.keys(att.val() || {}).forEach(n => { (attByNick[n] = attByNick[n] || []).push(dk); });
-        분표[dk] = 분;
-      }));
-
-      const rows = [];
-      Object.entries(attByNick).forEach(([n, dks]) => {
-        const 분들 = dks.map(dk => Number((분표[dk] || {})[n]) || 0);
-        const total = 분들.reduce((a, b) => a + b, 0) * 60000;   // 보여줄 때는 다시 ms
-        const d5 = 분들.filter(x => x >= DIL_5H_MIN).length;
-        rows.push({ n, att: dks.length, d5, total });
-      });
-
-      const pass = rows.filter(r => r.att >= DIL_NEED_ATT && r.d5 >= DIL_NEED_5H)
-        .sort((a, b) => b.d5 - a.d5 || b.att - a.att || b.total - a.total);
-      const near = rows.filter(r => !pass.includes(r) && (r.att >= DIL_NEED_ATT - 1 || r.d5 >= DIL_NEED_5H - 1))
-        .sort((a, b) => b.d5 - a.d5 || b.att - a.att).slice(0, 3);
-
-      const medal = (i) => ["🥇", "🥈", "🥉"][i] || "✨";
-      const hh = (ms) => {
-        const m = Math.round(ms / 60000), h = Math.floor(m / 60);
-        return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
-      };
-      box.innerHTML = (pass.length
-        ? pass.map((r, i) => `
+      box.innerHTML = (안온.length
+        ? `<div class="adm-absent-list">` + 안온.map(r => `
           <div class="adm-row">
-            <span>${medal(i)}</span><span class="n">${escapeHtml(r.n)}</span>
-            <span class="s">출석 ${r.att}일 · 5h+ <b>${r.d5}일</b> · 총 ${hh(r.total)}</span>
-          </div>`).join("")
-        : `<div class="adm-msg">이번 주는 기준을 넘긴 멤버가 없어요.</div>`)
-        + (near.length
-          ? `<div class="adm-vac-dates" style="margin-top:8px;">아깝게 놓침 — ${
-              near.map(r => `${escapeHtml(r.n)} (출석 ${r.att}·5h+ ${r.d5})`).join(" · ")}</div>`
+            <span class="n">${escapeHtml(r.n)}</span>
+            <span class="s">${r.last ? `마지막 출석 ${짧은날(r.last)}` : "출석한 적 없음"} · 안 나온 날 <b>${r.안나온}일</b>${
+              r.쉰 ? ` (쉰 날 ${r.쉰}일 뺌)` : ""}</span>
+          </div>`).join("") + `</div>`
+        : `<div class="adm-msg">일주일 이상 안 나온 멤버가 없어요 🎉</div>`)
+        + (쉬는중.length
+          ? `<div class="adm-vac-dates" style="margin-top:8px;">🏖️🌿 휴가·개인사정이라 뺀 분 — ${
+              쉬는중.map(escapeHtml).join(" · ")}</div>`
+          : "")
+        + (기록없음.length
+          ? `<div class="adm-vac-dates">❔ 출석 기록이 아예 없는 분 — ${
+              기록없음.map(escapeHtml).join(" · ")}</div>`
           : "");
-      msg("adm-diligent-msg", `${rows.length}명을 살펴 ${pass.length}명을 뽑았어요.`);
+      msg("adm-absent-msg", `${nicks.length}명을 살펴 ${안온.length}명을 찾았어요 (${짧은날(어제)}까지 기준).`);
     } catch (e) {
-      console.warn("[adm diligent]", e);
-      box.innerHTML = `<div class="adm-msg">세지 못했어요. 연결을 확인해 주세요.</div>`;
+      console.warn("[adm absent]", e);
+      box.innerHTML = `<div class="adm-msg">찾지 못했어요. 연결을 확인해 주세요.</div>`;
     }
   }
 
@@ -3458,8 +3239,7 @@
     el("adm-chat-clear")?.addEventListener("click", clearChat);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
-    el("adm-diligent-run")?.addEventListener("click", runDiligent);
-    el("adm-usage-run")?.addEventListener("click", runUsage);
+    el("adm-absent-run")?.addEventListener("click", runAbsent);
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));
@@ -3502,14 +3282,6 @@
     el("adm-allow-list")?.addEventListener("click", e => {
       const b = e.target.closest("[data-allow-del]");
       if (b) delAllow(b.getAttribute("data-allow-del"));
-    });
-    el("adm-ban-add")?.addEventListener("click", () => addBan(el("adm-ban-nick")?.value));
-    el("adm-ban-nick")?.addEventListener("keydown", e => {
-      if (e.key === "Enter" && !e.isComposing) addBan(el("adm-ban-nick")?.value);
-    });
-    el("adm-ban-list")?.addEventListener("click", e => {
-      const b = e.target.closest("[data-ban-del]");
-      if (b) delBan(b.getAttribute("data-ban-del"));
     });
 
 
@@ -3734,195 +3506,9 @@
     }
   }
 
-  /* =====================================================================
-     👤 탈퇴자 자료 정리 (2026-08-22 — 콩)
-     ---------------------------------------------------------------------
-     방을 떠난 분의 자취를 지웁니다. 승인을 풀고 출석부에서 빼도
-     프로필·기록·쪽지는 서버에 그대로 남아 있어서요.
-
-     ★★★ **되돌릴 수 없습니다.** 문지기가 셋입니다 —
-       ① 승인이 **풀린** 닉만 목록에 뜹니다 (현역은 아예 안 보임)
-       ② 지우기 전에 **무엇이 얼마나 있는지 세어서** 보여줍니다
-       ③ 닉네임을 **손으로 한 번 더** 적어야 단추가 열립니다
-
-     ★★★ **세는 목록과 지우는 목록이 같아야 합니다.** 둘을 따로 적으면
-       "보여준 것보다 더 지우는" 일이 생겨요 — 되돌릴 수 없는 기능에서
-       그건 가장 나쁜 고장입니다. 그래서 아래 자리들 한 벌로 둘 다 합니다.
-     ===================================================================== */
-
-  /* 지울 자리 — **닉 하나로 곧장 찾아가는 것만.**
-     kind:"직접" → 그 경로를 통째로
-     kind:"날짜" → {날}/{닉} 이라 날짜를 훑어야 함 */
-  const 지울자리 = [
-    { p: "users",     kind: "직접", 이름: "프로필·할 일·목표·꾸밈·작업 시간" },
-    { p: "achv",      kind: "직접", 이름: "업적" },
-    { p: "worklog",   kind: "직접", 이름: "회차 기록" },
-    { p: "workname",  kind: "직접", 이름: "작품 이름" },
-    { p: "notes",     kind: "직접", 이름: "받은 쪽지" },
-    { p: "notesOut",  kind: "직접", 이름: "보낸 쪽지" },
-    { p: "status",    kind: "직접", 이름: "접속 상태" },
-    { p: "attendance", kind: "날짜", 이름: "출석" },
-    { p: "wordlog",    kind: "날짜", 이름: "글자수" },
-    { p: "todostat",   kind: "날짜", 이름: "할 일 집계" },
-  ];
-
-  /* ⚠️ 일부러 **안 지우는** 것들 — 지우려다 마음이 흔들릴 때 여기를 보세요.
-       messages·messages2·wordfeed  그 사람 말만 빼면 대화에 구멍이 납니다
-       forest·help·pubreview        누가 썼는지 서버에 **없습니다** (익명)
-       nickOwner                    지우면 그 닉을 아무나 새로 가져갑니다
-       music                        방 전체가 함께 쓰는 추천 목록입니다 */
-
-  let _지울후보 = [];
-
-  async function loadPurgeList() {
-    const box = el("adm-purge-list");
-    if (!box) return;
-    box.textContent = "훑는 중…";
-    try {
-      /* ★★★ [다시 만듦 2026-08-22 — 콩 신고 "명단이 안 뜬다"]
-         처음엔 "승인이 풀린 사람" 을 목록으로 삼았습니다. 그런데 이 방에는
-         **이미 지우는 기능이 있었어요** — 출근부 이름 옆 [✕](removeMember).
-         그게 `nickOwner` 까지 지웁니다. 콩은 그걸로 탈퇴자를 정리해 왔고요.
-         그래서 명단에 뜰 사람이 애초에 없었습니다. 제가 기존 기능을
-         살펴보지 않고 새로 만든 탓입니다.
-
-         진짜로 남아 있는 것은 **떠도는 자취**입니다. [✕] 는 2026-08 이전에
-         만들어져서 그때 있던 자리만 지웁니다. 그 뒤에 생긴 업적·회차 기록·
-         작품 이름·할 일 집계는 그대로 남았어요. nickOwner 가 지워졌으니
-         **누구 것인지도 알 수 없는 채로** 떠돕니다.
-
-         그래서 이 카드는 이제 그걸 줍습니다 — 자료에는 있는데 명단
-         (nickOwner)에는 없는 닉을 찾아냅니다.
-         ★ [✕] 쪽도 새 자리를 함께 지우도록 넓혔으니, 앞으로는 여기에
-           새로 쌓이지 않습니다. 이 카드는 **지난 것을 치우는 빗자루**예요. */
-      const [ownerSnap, ...조각들] = await Promise.all([
-        db.ref("nickOwner").once("value"),
-        ...지울자리.map(z => db.ref(z.p).once("value").catch(() => null)),
-      ]);
-      const 명단 = new Set(Object.keys(ownerSnap.val() || {}));
-
-      /* 자료에 이름이 보이는 닉을 모읍니다 */
-      const 자취 = new Map();          // 닉 → [자리 이름…]
-      지울자리.forEach((자리, i) => {
-        const snap = 조각들[i];
-        const v = snap && snap.val ? (snap.val() || {}) : {};
-        const 닉들 = 자리.kind === "직접"
-          ? Object.keys(v)
-          : [...new Set(Object.values(v).flatMap(byNick => Object.keys(byNick || {})))];
-        닉들.forEach(n => {
-          if (명단.has(n) || n === ADMIN_NICK) return;   // 아직 있는 사람·방장은 뺌
-          if (!자취.has(n)) 자취.set(n, []);
-          자취.get(n).push(자리.이름);
-        });
-      });
-
-      _지울후보 = [...자취.keys()].sort();
-      box.innerHTML = _지울후보.length
-        ? _지울후보.map(n => `
-            <div class="adm-row">
-              <span class="n">${escapeHtml(n)}</span>
-              <span class="s">${escapeHtml(자취.get(n).length)}곳</span>
-              <button class="adm-btn ghost" data-purge-pick="${escapeHtml(n)}">자취 보기</button>
-            </div>`).join("")
-        : "떠도는 자취가 없어요. 깨끗합니다. 👏";
-    } catch (e) {
-      box.textContent = "훑지 못했어요. " + (e.code || e.message || "");
-    }
-  }
-
-  /** 그 닉의 자취를 **세어서** 지울 경로 목록과 함께 돌려줍니다.
-      ★ 세기와 지우기가 같은 목록을 쓰도록, 여기서 경로까지 만들어 둡니다. */
-  async function 자취세기(nick) {
-    const 경로 = [];      // 실제로 지울 곳
-    const 요약 = [];      // 사람에게 보여줄 줄
-
-    /* ★ 읽기가 막힌 자리가 있습니다 — 📮 쪽지(notes·notesOut)는 보안규칙이
-       **주인에게만** 열려 있어서 방장도 못 읽고 못 지웁니다. 한 자리가
-       막혔다고 나머지까지 통째로 실패하면 안 되니 건너뜁니다.
-       ★ 다만 **조용히 넘어가지는 않습니다.** "지웠다" 고 했는데 실은 남아
-         있는 것이 이 기능에서 가장 나쁜 거짓말이라, 화면에 적어 보여줍니다. */
-    const 못본것 = [];
-
-    for (const 자리 of 지울자리) {
-      try {
-        if (자리.kind === "직접") {
-          const snap = await db.ref(`${자리.p}/${nick}`).once("value");
-          if (!snap.exists()) continue;
-          경로.push(`${자리.p}/${nick}`);
-          const n = snap.numChildren();
-          요약.push(`${자리.이름} ${n ? `(${n}칸)` : "있음"}`);
-        } else {
-          const snap = await db.ref(자리.p).once("value");
-          const v = snap.val() || {};
-          const 날들 = Object.keys(v).filter(d => v[d] && v[d][nick] !== undefined);
-          if (!날들.length) continue;
-          날들.forEach(d => 경로.push(`${자리.p}/${d}/${nick}`));
-          요약.push(`${자리.이름} ${날들.length}일치`);
-        }
-      } catch (e) {
-        못본것.push(자리.이름);
-      }
-    }
-    return { 경로, 요약, 못본것 };
-  }
-
-  async function showPurgeDetail(nick) {
-    const box = el("adm-purge-detail");
-    if (!box) return;
-    box.style.display = "";
-    box.innerHTML = `<b>${escapeHtml(nick)}</b> — 세는 중…`;
-    let 것;
-    try { 것 = await 자취세기(nick); }
-    catch (e) { box.innerHTML = "세지 못했어요. " + escapeHtml(e.code || e.message || ""); return; }
-
-    if (!것.경로.length) {
-      box.innerHTML = `<b>${escapeHtml(nick)}</b> — 지울 자료가 없어요.`
-        + (것.못본것.length
-            ? ` <span style="color:#B3372B">(다만 ${것.못본것.map(escapeHtml).join("·")} 은 읽을 수 없어 확인 못 했어요)</span>`
-            : " 이미 깨끗합니다.");
-      return;
-    }
-    /* ③ 닉을 손으로 한 번 더 — 목록에서 잘못 누르는 것을 막습니다.
-       되돌릴 수 없는 일이라 "확인" 한 번으로는 부족해요. */
-    box.innerHTML = `
-      <div style="line-height:1.9">
-        <b>${escapeHtml(nick)}</b> 님의 자취 — 모두 <b>${것.경로.length}곳</b>
-        <div style="margin:6px 0 10px">${것.요약.map(escapeHtml).join(" · ")}</div>
-        <div class="adm-inline">
-          <input type="text" id="adm-purge-confirm" autocomplete="off"
-                 placeholder="지우려면 ${escapeHtml(nick)} 을(를) 그대로 적어주세요">
-          <button class="adm-btn danger" id="adm-purge-go" disabled>완전히 지우기</button>
-        </div>
-        <div style="margin-top:6px;font-size:12px;color:#6B5F52">
-          ⚠️ 되돌릴 수 없어요. 채팅·대숲·표현 공부·품평 글과 로그인 계정은 남습니다.
-          ${것.못본것.length ? `<br><b style="color:#B3372B">· 못 지우는 것: ${것.못본것.map(escapeHtml).join(" · ")}</b>
-             — 보안규칙이 주인에게만 열어 둔 자리라 방장도 못 읽어요.` : ""}
-        </div>
-      </div>`;
-    const 칸 = el("adm-purge-confirm"), 단추 = el("adm-purge-go");
-    칸?.addEventListener("input", () => { 단추.disabled = (칸.value.trim() !== nick); });
-    단추?.addEventListener("click", () => purgeMember(nick, 것.경로));
-    칸?.focus();
-  }
-
-  async function purgeMember(nick, 경로) {
-    if (!nick || !경로?.length) return;
-    const 단추 = el("adm-purge-go");
-    if (단추) { 단추.disabled = true; 단추.textContent = "지우는 중…"; }
-    try {
-      /* 한 번에 지웁니다 — 중간에 끊겨 절반만 지워지는 일이 없게.
-         ★ 파이어베이스는 update 의 값이 null 이면 그 자리를 지웁니다. */
-      const 뭉치 = {};
-      경로.forEach(p => { 뭉치[p] = null; });
-      await db.ref().update(뭉치);
-      el("adm-purge-detail").style.display = "none";
-      await loadPurgeList();
-      msg("adm-purge-msg", `✅ ${nick} — ${경로.length}곳을 지웠어요.`);
-    } catch (e) {
-      if (단추) { 단추.disabled = false; 단추.textContent = "완전히 지우기"; }
-      msg("adm-purge-msg", "지우지 못했어요. " + (e.code || e.message || ""), true);
-    }
-  }
+  /* [철거 2026-10-06 — 콩] 🧹 떠도는 자취 줍기(지울자리 · loadPurgeList · showPurgeDetail ·
+     purgeMember) — 칸과 함께 걷었습니다. 멤버를 지우는 길은 출근부 [✕](removeMember)
+     하나로 남습니다 — 그쪽이 새 자리까지 함께 지웁니다. */
 
 
     /* 🩹 출석 복구 */
@@ -3938,12 +3524,6 @@
     el("adm-fix-day")?.addEventListener("click", () => findMissingAttendance(1));
     el("adm-fix-week")?.addEventListener("click", () => findMissingAttendance(7));
 
-    /* 👤 탈퇴자 정리 — 목록은 다시 그려지므로 위임으로 답니다 */
-    el("adm-purge-list")?.addEventListener("click", e => {
-      const b = e.target.closest("[data-purge-pick]");
-      if (b) showPurgeDetail(b.getAttribute("data-purge-pick"));
-    });
-    loadPurgeList();
 
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);

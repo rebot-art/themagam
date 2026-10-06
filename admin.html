@@ -156,7 +156,7 @@
     .adm-btn.danger:hover{ background: #C74334; }
     .adm-btn.w-full{ display: block; width: 100%; }
     .adm-msg{ font-size: 12.5px; color: #6B5F52; margin-top: 8px; min-height: 1em; }
-    /* 입력칸 + 단추를 한 줄로 (승인·내보내기) */
+    /* 입력칸 + 단추를 한 줄로 (승인) */
     .adm-inline{ display: flex; gap: 6px; align-items: center; }
     .adm-inline input{ flex: 1; min-width: 0; margin: 0; }
     .adm-inline .adm-btn{ flex: 0 0 auto; white-space: nowrap; }
@@ -516,37 +516,10 @@
     .adm-gap{ height: 10px; }
     #adm-dash{ display: none; }
 
-  /* 📊 사용 현황 (2026-08-23) */
-  .adm-use-head{ font-size:12px; color:#8A7B68; margin:0 0 8px; }
-  .adm-use-warn{
-    font-size:12.5px; line-height:1.6; margin:0 0 10px;
-    padding:8px 10px; border-radius:8px;
-    background:rgba(200,60,50,.08); border:1px solid rgba(200,60,50,.20); color:#7A2018;
-  }
-  .adm-use-row{
-    display:flex; align-items:center; gap:8px;
-    padding:4px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:12.5px;
-  }
-  .adm-use-row:last-of-type{ border-bottom:none; }
-  .adm-use-n{ flex:0 0 148px; font-weight:700; }
-  .adm-use-bar{
-    flex:1 1 auto; min-width:40px; height:8px; border-radius:999px;
-    background:rgba(0,0,0,.07); overflow:hidden;
-  }
-  .adm-use-bar i{ display:block; height:100%; border-radius:999px; }
-  .adm-use-bar i.ok{ background:#3FA974; }
-  .adm-use-bar i.maybe{ background:#E0A62E; }
-  .adm-use-bar i.bad{ background:#C8564A; }
-  .adm-use-v{ flex:0 0 74px; text-align:right; font-weight:700; }
-  .adm-use-v small{ font-weight:400; opacity:.65; }
-  .adm-use-v.ok{ color:#2E7D5B; }
-  .adm-use-v.maybe{ color:#9A6E12; }
-  .adm-use-v.bad{ color:#B03A2E; }
-  .adm-use-c{ flex:0 0 132px; font-size:11px; color:#9A8C78; }
-  @media (max-width:640px){
-    .adm-use-n{ flex-basis:110px; }
-    .adm-use-c{ display:none; }
-  }
+  /* [철거 2026-10-06] 📊 사용 현황 꾸밈(.adm-use-*) — 칸과 함께 걷었습니다. */
+  /* 📋 출석 관리 (2026-10-06) — 명단이 길어지면 칸 안에서만 굴립니다 */
+  .adm-absent-list{ max-height: 264px; overflow-y: auto; }
+  .adm-absent-list .adm-row .s b{ color:#8A4B12; }
   </style>
 </head>
 <body>
@@ -695,10 +668,29 @@
       <!-- 출석부 아래 카드들 — 좁은 창에서는 자동으로 세로로 흐릅니다.
            순서: 공지 · 핀 메시지 · 글자수 · 할 일 · 대숲 · 채팅 · uid -->
       <div class="adm-grid">
-      <!-- 🔐 입장 승인 · 🚫 내보내기 — 2026-08-11
+      <!-- 🔐 입장 승인 (· 🚫 내보내기 — 칸은 2026-10-06 철거) — 2026-08-11
            모르는 닉네임이 들어와 멤버들이 불안해한 일이 있었습니다.
            [2026-08-11 손봄] 처음엔 폭을 다 쓰는 큰 칸 둘로 뒀는데 너무
            길었습니다. 다른 카드들과 같은 격자 안으로 옮기고 설명을 줄였어요. -->
+      <!-- =====================================================================
+           📋 출석 관리 (2026-10-06 — 콩)
+           ---------------------------------------------------------------------
+           "일주일 이상 출석 안 한 멤버 보기. 휴가·장기 휴가 표시는 제외."
+           ★ 🏖️ 휴가 · 🌿 개인사정(= 장기 휴가)을 찍은 날은 **건너뛰고** 셉니다 —
+             그 날들을 빼고도 안 나온 날이 7일 이상이어야 명단에 떠요.
+           ★ 단추를 눌렀을 때만 읽습니다 (멤버마다 마지막 출석일 한 줄씩).
+           ★ 보기만 합니다 — 여기서 지우거나 내보내는 것은 없어요.
+           ===================================================================== -->
+      <div class="adm-card" id="adm-absent-card">
+        <h2>📋 출석 관리 <span style="font-size:12px; color:#8A7B68; font-weight:400;">일주일 이상 안 나온 멤버</span></h2>
+        <p class="adm-sub">마지막 출석 뒤로 <b>7일 이상</b> 안 나온 멤버를 찾아요 (오늘은 아직 안 끝나서 <b>어제까지</b>만 셉니다).<br>
+          🏖️ 휴가 · 🌿 개인사정(장기 휴가)을 찍어 둔 날은 <b>건너뛰고</b> 세요.</p>
+        <div id="adm-absent"><div class="adm-msg">아래 [찾기]를 눌러 주세요.</div></div>
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-absent-run">🔍 찾기</button>
+        <div class="adm-msg" id="adm-absent-msg"></div>
+      </div>
+
       <div class="adm-card" id="adm-allow-card">
         <h2>🔐 입장 승인</h2>
         <p class="adm-sub">여기 있는 닉네임만 <b>처음</b> 들어올 수 있어요. 쓰던 분들은 그대로예요.</p>
@@ -718,44 +710,13 @@
         <div class="adm-msg" id="adm-allow-msg"></div>
       </div>
 
-      <div class="adm-card" id="adm-ban-card">
-        <h2>🚫 내보내기</h2>
-        <p class="adm-sub">명단에서 곧바로 사라지고 채팅도 막혀요. 기록은 안 지웁니다.</p>
-        <div class="adm-inline">
-          <input type="text" id="adm-ban-nick" placeholder="내보낼 닉네임" autocomplete="off">
-          <button class="adm-btn danger" id="adm-ban-add">내보내기</button>
-        </div>
-        <div id="adm-ban-list" class="adm-msg adm-scroll">불러오는 중…</div>
-        <div class="adm-msg" id="adm-ban-msg"></div>
-      </div>
+      <!-- [철거 2026-10-06 — 콩] 🚫 내보내기 칸 — 관리자 화면에서 **칸만** 걷었습니다.
+           ★ 막는 장치(config/ban · script_auth.js · script_realtime.js · 보안규칙)는
+             그대로 둡니다. 예전에 내보낸 닉이 있다면 계속 막혀 있어요.
+             풀려면 파이어베이스 콘솔에서 config/ban/{닉} 을 지우면 됩니다. -->
 
-      <!-- =====================================================================
-           🧹 떠도는 자취 줍기 (2026-08-22 — 콩)
-           ---------------------------------------------------------------------
-           ★★★ 이 방에는 **이미 지우는 기능이 있었습니다** — 출근부 이름 옆
-           [✕](removeMember, 2026-08 이전). 처음엔 그걸 못 보고 새로 만들어서
-           "명단이 안 뜬다" 는 말을 들었어요. [✕] 가 nickOwner 까지 지우니
-           목록에 뜰 사람이 애초에 없었던 것입니다.
-
-           그래서 이 카드는 **[✕] 가 못 지운 것**을 줍습니다. 그 기능이
-           만들어진 뒤에 생긴 자리(업적·회차 기록·작품 이름·할 일 집계)가
-           명단 없이 떠돌고 있어서요.
-           ★ 새로 만들기 전에 **이미 있는지 먼저 볼 것.** 오늘 배운 값비싼 교훈.
-
-           ★★★ **되돌릴 수 없습니다.** 그래서 문지기를 세 겹 뒀어요 —
-             ① 승인이 **풀린** 닉만 목록에 뜹니다 (현역은 아예 안 보임)
-             ② 지우기 전에 **무엇이 얼마나 있는지 세어서** 보여줍니다
-             ③ 닉네임을 **손으로 한 번 더** 적어야 단추가 열립니다
-
-           ★ 안 지우는 것 셋 (콩 확정 2026-08-22):
-             · 채팅·흐름 — 그 사람 말만 빼면 대화에 구멍이 납니다
-             · 대숲·표현 공부·품평 — 애초에 **누가 썼는지 서버에 없습니다**
-               (익명이 그 기능의 뼈대예요)
-             · nickOwner — 지우면 그 닉을 **아무나 새로 가져갑니다**
-           ★ 파이어베이스 **계정(Auth)은 여기서 못 지웁니다** — 브라우저에서
-             도는 코드에는 남의 계정을 지울 권한이 없어요. 콘솔에서 해야 합니다.
-             승인이 풀려 있으면 로그인해도 방에는 못 들어옵니다.
-           ===================================================================== -->
+      <!-- [철거 2026-10-06 — 콩] 🧹 떠도는 자취 줍기 — 칸과 코드를 함께 걷었습니다.
+           출근부 [✕](removeMember)가 새 자리까지 함께 지우게 된 뒤로는 새로 쌓이지 않아서요. -->
       <!-- =====================================================================
            🩹 출석 복구 (2026-08-22 — 콩)
            ---------------------------------------------------------------------
@@ -809,23 +770,6 @@
           </p>
         </div>
         <div class="adm-msg" id="adm-fix-msg"></div>
-      </div>
-
-      <div class="adm-card" id="adm-purge-card">
-        <h2>🧹 떠도는 자취 줍기</h2>
-        <p class="adm-sub">출근부에서 <b>[✕] 로 이미 지운 분</b>들이 남긴 자료를 찾아 치웁니다.
-          그 기능은 2026-08 이전에 만들어져서, 그 뒤에 생긴 <b>업적·회차 기록·작품 이름·할 일 집계</b>는
-          지우지 못했어요. 명단에도 없어서 <b>누구 것인지 알 수 없는 채로</b> 떠돕니다.
-          <br>★ [✕] 쪽도 새 자리를 함께 지우도록 고쳤으니, 앞으로는 여기에 새로 쌓이지 않아요.</p>
-        <div id="adm-purge-list" class="adm-msg adm-scroll">불러오는 중…</div>
-        <div id="adm-purge-detail" class="adm-msg" style="display:none"></div>
-        <p class="adm-sub" style="margin-top:6px">
-          ★ 채팅·대숲·표현 공부·품평 글은 <b>남습니다</b> — 대화에 구멍이 나거나,
-          애초에 누가 썼는지 서버에 없어서요.<br>
-          ★ 📮 쪽지는 보안규칙이 <b>주인에게만</b> 열려 있어 방장도 못 지웁니다.<br>
-          ★ 로그인 계정 자체는 파이어베이스 콘솔에서만 지울 수 있어요.
-        </p>
-        <div class="adm-msg" id="adm-purge-msg"></div>
       </div>
 
       <!-- [철거 2026-08-14] 📌 공지 관리 — 머리말 한줄 공지가 사라지고
@@ -925,13 +869,7 @@
         <div class="adm-msg" id="adm-staff-msg"></div>
       </div>
 
-      <div class="adm-card" data-owner-only>
-        <h2>✍️ 글자수 관리</h2>
-        <p class="adm-sub">오늘 날짜의 글자수 기록·말풍선을 모두 지워요.</p>
-        <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
-        <div class="adm-msg" id="adm-wc-msg"></div>
-      </div>
-
+      <!-- [2026-10-06 — 콩] ✍️ 글자수 관리 칸은 아래 💬 채팅 및 글자수 관리 안으로 옮겼습니다. -->
 
       <!-- [2026-08-06] 🎋 대숲 — 완전 익명 게시판(forest).
            쪽지에는 글쓴이 정보가 아예 없어서, 여기서도 "누가 썼는지"는
@@ -953,7 +891,7 @@
       </div>
 
       <div class="adm-card">
-        <h2>💬 채팅 관리</h2>
+        <h2>💬 채팅 및 글자수 관리</h2>
         <p class="adm-sub">히스토리 노출 설정과 전체 삭제예요.</p>
         <label class="adm-radio"><input type="radio" name="adm-hist" value="on"> 🕘 전체 공개 — 모두에게 이전 대화가 보여요</label>
         <label class="adm-radio"><input type="radio" name="adm-hist" value="admin"> 🛡️ 관리자만 — 관리자만 볼 수 있어요</label>
@@ -969,46 +907,18 @@
           <button class="adm-btn danger" id="adm-chat-clear">🧹 채팅 전체 삭제</button>
         </div>
         <div class="adm-msg" id="adm-chat-msg"></div>
+        <!-- ✍️ 글자수 (2026-10-06 — 콩) — 따로 있던 칸을 이리로 들였습니다. 방장만 보입니다. -->
+        <div data-owner-only>
+          <div style="border-top:1px dashed rgba(150,120,80,.45); margin-top:12px; padding-top:12px;">
+            <div class="adm-sub" style="margin-bottom:8px"><b>✍️ 글자수</b> — 오늘 날짜의 글자수 기록·말풍선을 모두 지워요.</div>
+            <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
+            <div class="adm-msg" id="adm-wc-msg"></div>
+          </div>
+        </div>
       </div>
 
       <!-- [2026-08-06] 🆔 내 계정 uid — 보안규칙에 관리자를 박아 넣을 때 씁니다. -->
-      <!-- ✨ 성실 멤버 (2026-08-14) — 접속자 명단 미리보기 자리를 물려받음.
-           최근 7일 출석부 + 작업시간(timeSegs)으로 자동 선정합니다.
-           이 명단은 관리자 페이지에만 보여요 — 작업시간은 비공개 자료라서. -->
-      <div class="adm-card">
-        <h2>✨ 성실 멤버 <span style="font-size:12px; color:#8A7B68; font-weight:400;">최근 7일</span></h2>
-        <p class="adm-sub">출석 <b>5일 이상</b> + 하루 <b>5시간 넘게</b> 작업한 날 <b>3일 이상</b>.
-          휴가일은 출석에서 빼고 셉니다.<br>
-          여기서 <b>작업</b>은 카드의 ⏱ 과 같은 셈이에요 — <b>🔥WRITE는 전액, 💻JOB·📓multiT는 70%</b>.
-          ☕BREAK·💤AWAY는 안 셉니다.</p>
-        <div id="adm-diligent"><div class="adm-msg">아래 [뽑기]를 눌러 주세요.</div></div>
-        <div class="adm-gap"></div>
-        <button class="adm-btn" id="adm-diligent-run">✨ 뽑기</button>
-        <div class="adm-msg" id="adm-diligent-msg"></div>
-      </div>
-
-      <!-- =====================================================================
-           📊 사용 현황 (2026-08-23 — 콩)
-           "어떤 걸 많이 쓰고 어떤 걸 아무도 안 쓰는지. 누가 뭘 쓰는지가
-            아니라 전체 통계. 아무도 안 쓰는 기능을 유지할 이유는 없으니까."
-
-           ★ 방 코드는 한 줄도 안 건드립니다 — **이미 서버에 남아 있는 흔적**
-             만 읽어요. 그래서 새로 기록되기 시작하는 것도 없고, 멤버 쪽에서
-             달라지는 것도 없습니다.
-           ★ 안 쓰는 것이 **위로** 옵니다. 찾으려는 게 그것이니까요.
-           ===================================================================== -->
-      <div class="adm-card">
-        <h2>📊 사용 현황</h2>
-        <p class="adm-sub">기능마다 <b>몇 명이 쓰고 있나</b>. 적게 쓰는 것이 위로 옵니다.<br>
-          지금 서버에 남아 있는 흔적만 읽어요 — <b>새로 기록하는 것은 없습니다.</b>
-          그래서 <b>판을 열어만 보고 닫은 것</b>은 알 수 없고,
-          🎋대숲·📓표현 공부·🏢품평은 <b>익명</b>이라 글 수만 셉니다.</p>
-        <div id="adm-usage"><div class="adm-msg">아래 [훑기]를 눌러 주세요.</div></div>
-        <div class="adm-gap"></div>
-        <button class="adm-btn" id="adm-usage-run">📊 훑기</button>
-        <div class="adm-msg" id="adm-usage-msg"></div>
-      </div>
-
+      <!-- [철거 2026-10-06 — 콩] ✨ 성실 멤버 · 📊 사용 현황 — 칸과 코드를 함께 걷었습니다. -->
       <div class="adm-card">
         <h2>🆔 내 계정 uid</h2>
         <p class="adm-sub">보안규칙에 관리자 uid 를 직접 적을 때 쓰는 값이에요.</p>
@@ -1023,7 +933,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610051819"></script>
+  <script src="script_admin.js?v=202610060638"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
@@ -1048,8 +958,7 @@
   </div>
 </div>
 
-<!-- [철거 2026-08-14] 👥 접속자 명단 미리보기 — 그 카드 자리를
-     ✨ 성실 멤버가 물려받으면서 이 창도 함께 걷었습니다. -->
+<!-- [철거 2026-08-14] 👥 접속자 명단 미리보기 — 이 창도 함께 걷었습니다. -->
 
 </body>
 </html>
