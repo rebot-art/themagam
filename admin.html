@@ -928,6 +928,27 @@
         <div class="adm-msg" id="adm-hello-msg"></div>
       </div>
 
+      <!-- 📌 배경판 공지 (2026-10-07 — 콩) — 방 배경의 현황판 바로 위에 한 줄.
+           config/boardNotice = { text, style, at }. 걸면 지금 방에 있는 모두에게 곧바로.
+           ★ 방장만 (data-owner-only) — config 는 방장만 쓸 수 있습니다. -->
+      <span data-owner-only>
+      <div class="adm-card" id="adm-bnotice-card">
+        <h2>📌 배경판 공지</h2>
+        <p class="adm-sub">방 배경의 현황판(접속 현황·개근·지금 방에서) <b>바로 위</b>에 한 줄로 붙어요.
+          걸면 <b>지금 방에 있는 사람들에게 곧바로</b> 보이고, 내리면 바로 사라져요.</p>
+        <input type="text" id="adm-bnotice" maxlength="50" autocomplete="off"
+               placeholder="이번 주 금요일 밤 10시, 다 같이 뽀모 달려요 🍅">
+        <p class="adm-sub" style="margin:6px 0 8px;">한 줄 · 50자까지</p>
+        <label class="adm-radio"><input type="radio" name="adm-bnotice-style" value="A" checked> ✍️ 손글씨 — 흰 글씨에 검은 테두리</label>
+        <label class="adm-radio"><input type="radio" name="adm-bnotice-style" value="B"> 🟨 포스트잇</label>
+        <label class="adm-radio"><input type="radio" name="adm-bnotice-style" value="C"> 🎀 마스킹테이프</label>
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-bnotice-save">공지 걸기</button>
+        <button class="adm-btn ghost" id="adm-bnotice-clear">내리기</button>
+        <div class="adm-msg" id="adm-bnotice-msg"></div>
+      </div>
+      </span>
+
       <!-- =====================================================================
            🖥️ 화면 공유 제한 (2026-09-21 — 콩)
            ---------------------------------------------------------------------
@@ -1058,7 +1079,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610061742"></script>
+  <script src="script_admin.js?v=202610061812"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

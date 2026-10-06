@@ -764,6 +764,52 @@
     return `${_총원}명 중 ${_오늘출석}명 출석`;
   }
 
+  /* =====================================================================
+     📌 배경판 공지 (2026-10-07 — 콩)
+     ---------------------------------------------------------------------
+     "배경판 바로 위에 언제든 공지를. 평소엔 아무것도 없고, 관리자 페이지에서
+      넣으면 그때 뜨게. 카드 메모처럼, 기울기는 없게. 실시간으로 다 보게."
+         config/boardNotice = { text, style: "A"|"B"|"C", at }
+     ★ config 는 누구나 읽고 방장만 써서 보안규칙을 안 고칩니다.
+     ★ **한 줄 · 50자.** 넘치면 … 으로 줄어듭니다 (줄이 바뀌면 판이 카드를 가려요).
+     ★ 듣고 있다가 값이 바뀌면 그 자리에서 고칩니다 — 새로고침 없이 모두에게.
+     ★ 공지가 없으면 요소 자체를 안 만듭니다 (빈자리도 안 생깁니다).
+     ===================================================================== */
+  const NOTICE_MAX = 50;
+  let _boardNotice = null, _boardNoticeOn = false;
+  function 공지듣기() {
+    if (_boardNoticeOn) return;
+    _boardNoticeOn = true;
+    try {
+      db.ref("config/boardNotice").on("value", s => {
+        _boardNotice = s.val() || null;
+        try { 공지그리기(); } catch (e) {}
+      }, () => {});
+    } catch (e) {}
+  }
+  function 공지글() {
+    return String((_boardNotice && _boardNotice.text) || "").replace(/\s+/g, " ").trim().slice(0, NOTICE_MAX);
+  }
+  function 공지그리기() {
+    const box = document.getElementById("room-board");
+    if (!box) return;
+    let 줄 = document.getElementById("rb-notice");
+    const 글 = 공지글();
+    if (!글) { 줄?.remove(); return; }
+    const 모양 = ["A", "B", "C"].includes(_boardNotice.style) ? _boardNotice.style : "A";
+    if (!줄) {
+      줄 = document.createElement("div");
+      줄.id = "rb-notice";
+    }
+    /* ★ 늘 뼈대(.rb-inner) **앞**에 — 뼈대가 아직 없으면 넣지 않습니다
+         (drawBoard 는 "첫 자식이 없으면 뼈대를 세운다" 로 판단하거든요) */
+    const 뼈대 = box.querySelector(".rb-inner");
+    if (!뼈대) return;
+    if (줄.nextSibling !== 뼈대) box.insertBefore(줄, 뼈대);
+    줄.className = "rb-notice s" + 모양;
+    if (줄.textContent !== 글) 줄.textContent = 글;     // textContent — 글자 그대로만
+  }
+
   let _board재시도 = 0;
   function drawBoard() {
     const host = document.querySelector(".cards-area");
@@ -828,6 +874,8 @@
       글자수칸.textContent = 합 > 0 ? `오늘 ${comma(합)}자` : "";
     }
     if (흐름) 흐름.innerHTML = 흐름줄들();
+    공지듣기();
+    try { 공지그리기(); } catch (e) {}   // 📌 배경판 공지 — 있으면 판 바로 위에
 
     const 개근 = 개근HTML();
     /* ★ 개근 칸은 **왼쪽 줄기 안**으로 들어갑니다 (2026-09-19).

@@ -213,7 +213,7 @@
     loadForest();
     loadAllowList();
     loadHello();
-    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); }
+    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); }
   }
 
   /* =====================================================================
@@ -2313,6 +2313,42 @@
     }
   }
 
+  /* 📌 배경판 공지 (2026-10-07 — 콩) — config/boardNotice = { text, style, at }
+     방 쪽은 script_realtime.js 의 공지듣기() 가 듣고 있다가 그 자리에서 고칩니다. */
+  const BNOTICE_MAX = 50;
+  async function loadBoardNotice() {
+    try {
+      const v = (await db.ref("config/boardNotice").once("value")).val() || {};
+      const t = el("adm-bnotice"); if (t) t.value = String(v.text || "");
+      const 모양 = ["A", "B", "C"].includes(v.style) ? v.style : "A";
+      const r = document.querySelector(`input[name="adm-bnotice-style"][value="${모양}"]`);
+      if (r) r.checked = true;
+      msg("adm-bnotice-msg", v.text ? "지금 걸려 있는 공지예요." : "");
+    } catch (e) {}
+  }
+  async function saveBoardNotice() {
+    if (!ownerOnly("배경판 공지")) return;
+    const t = String(el("adm-bnotice")?.value || "").replace(/\s+/g, " ").trim().slice(0, BNOTICE_MAX);
+    if (!t) { msg("adm-bnotice-msg", "공지를 적어 주세요. (내리려면 [내리기])", true); return; }
+    const style = document.querySelector('input[name="adm-bnotice-style"]:checked')?.value || "A";
+    try {
+      await db.ref("config/boardNotice").set({ text: t, style, at: Date.now() });
+      msg("adm-bnotice-msg", "📌 걸었어요 — 지금 방에 있는 분들에게 바로 보여요.");
+    } catch (e) {
+      msg("adm-bnotice-msg", "걸지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+  async function clearBoardNotice() {
+    if (!ownerOnly("배경판 공지")) return;
+    try {
+      await db.ref("config/boardNotice").remove();
+      const t = el("adm-bnotice"); if (t) t.value = "";
+      msg("adm-bnotice-msg", "내렸어요.");
+    } catch (e) {
+      msg("adm-bnotice-msg", "내리지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   async function loadStaffList() {
     const box = el("adm-staff-list");
     if (!box) return;
@@ -3445,6 +3481,11 @@
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
+    el("adm-bnotice-save")?.addEventListener("click", saveBoardNotice);
+    el("adm-bnotice-clear")?.addEventListener("click", clearBoardNotice);
+    el("adm-bnotice")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.isComposing) saveBoardNotice();
+    });
 
     /* ⏳ 옛 날짜 채우기 · 📌 입장일 다시 셈 (방장에게만 보이는 칸) */
     el("adm-att-fill")?.addEventListener("click", fillOldStayMins);
