@@ -3254,7 +3254,6 @@
       if (!상자) return;
       상자.hidden = !상자.hidden;
       단추.setAttribute("aria-expanded", String(!상자.hidden));
-      단추.textContent = 상자.hidden ? "❔ 설명" : "✕ 설명 닫기";
     });
 
     /* ☰ 출석부 메뉴 (2026-10-06 — 콩) — 가끔 쓰는 단추는 평소엔 숨깁니다 */
@@ -3263,7 +3262,6 @@
       if (!메뉴) return;
       메뉴.hidden = !메뉴.hidden;
       단추.setAttribute("aria-expanded", String(!메뉴.hidden));
-      단추.textContent = 메뉴.hidden ? "☰ 메뉴" : "✕ 메뉴 닫기";
     });
 
     /* =====================================================================
@@ -3283,7 +3281,8 @@
       제목.appendChild(단추);
       const 칠하기 = () => {
         const 접힘 = 칸.classList.contains("folded");
-        단추.textContent = 접힘 ? "▸ 펴기" : "▾ 접기";
+        단추.setAttribute("aria-label", 접힘 ? "펴기" : "접기");   // 모양(꺾쇠)은 CSS 가 그립니다
+        단추.title = 접힘 ? "펴기" : "접기";
         단추.setAttribute("aria-expanded", String(!접힘));
       };
       칸.classList.add("folded");
