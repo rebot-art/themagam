@@ -2316,6 +2316,11 @@
   /* 📌 배경판 공지 (2026-10-07 — 콩) — config/boardNotice = { text, style, at }
      방 쪽은 script_realtime.js 의 공지듣기() 가 듣고 있다가 그 자리에서 고칩니다. */
   const BNOTICE_MAX = 50;
+  /** 📌 nn/50자 — 적는 대로 셉니다 (2026-10-07 콩) */
+  function 공지글자수() {
+    const n = el("adm-bnotice-n");
+    if (n) n.textContent = String((el("adm-bnotice")?.value || "").length);
+  }
   async function loadBoardNotice() {
     try {
       const v = (await db.ref("config/boardNotice").once("value")).val() || {};
@@ -2323,6 +2328,7 @@
       const 모양 = ["A", "B", "C"].includes(v.style) ? v.style : "A";
       const r = document.querySelector(`input[name="adm-bnotice-style"][value="${모양}"]`);
       if (r) r.checked = true;
+      공지글자수();
       msg("adm-bnotice-msg", v.text ? "지금 걸려 있는 공지예요." : "");
     } catch (e) {}
   }
@@ -2343,6 +2349,7 @@
     try {
       await db.ref("config/boardNotice").remove();
       const t = el("adm-bnotice"); if (t) t.value = "";
+      공지글자수();
       msg("adm-bnotice-msg", "내렸어요.");
     } catch (e) {
       msg("adm-bnotice-msg", "내리지 못했어요. " + (e.code || e.message || ""), true);
@@ -3483,6 +3490,7 @@
     el("adm-hello-clear")?.addEventListener("click", clearHello);
     el("adm-bnotice-save")?.addEventListener("click", saveBoardNotice);
     el("adm-bnotice-clear")?.addEventListener("click", clearBoardNotice);
+    el("adm-bnotice")?.addEventListener("input", 공지글자수);
     el("adm-bnotice")?.addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.isComposing) saveBoardNotice();
     });
