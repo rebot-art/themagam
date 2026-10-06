@@ -12441,7 +12441,8 @@ html[data-lite] .share-card .share-foot{
 
 /* 🔥 화공 응원 스티커 — 가볍게 보기일 때만 80% (2026-10-04 콩, 작업 스티커와 같은 비율).
    꾸민 카드에선 원래 크기 그대로. 줄어든 만큼 윗변에 걸치는 자리도 맞춥니다. */
-html[data-lite] .share-cheers{ zoom: .8; top: -15px; }
+/* [2026-10-06 콩] 한 번 더 80% — .8 → .64 (원래 크기의 64%). */
+html[data-lite] .share-cheers{ zoom: .64; top: -15px; }
 
 /* =====================================================================
    💘 하트 · 🔥 화공 응원 스티커 80% — 꾸민 카드에서만 (2026-10-04 콩)
@@ -12450,7 +12451,7 @@ html[data-lite] .share-cheers{ zoom: .8; top: -15px; }
    두고 그림만 40×38 → 32×30 으로 줄입니다.
      · 하트      : 오른쪽 변 기준(right:-22px 그대로) → 카드 밖으로 22px 그대로
      · 화공 응원 : 윗변 기준(top:-14px 그대로)        → 위로 14px 그대로
-   ★ 가볍게 보기는 따로 정한 크기(하트 21px · 응원 zoom .8)라 건드리지 않아요.
+   ★ 가볍게 보기는 따로 정한 크기(하트 21px · 응원 zoom .64)라 건드리지 않아요.
    ===================================================================== */
 html:not([data-lite]) .card-avatar-wrap > .card-heart svg,
 html:not([data-lite]) .share-cheers .card-heart svg{ width: 32px; height: 30px; }
@@ -12545,7 +12546,9 @@ html[data-lite] .user-card.share-card,
   position: absolute; left: 50%; top: 50%; z-index: 6;
   transform: translate(-50%, -50%) rotate(-6deg);
   pointer-events: none; text-align: center; white-space: pre-line;
-  max-width: 92%; line-height: 1.05;
+  /* [2026-10-06 콩] 폭을 넓혀 두 줄까지만 — 예전엔 92% 에 갇혀 "반응이 느려 / 요…" 처럼
+     세 줄로 꺾였습니다. 글 길이만큼 벌어지되(max-content) 140% 에서 멈춥니다. */
+  width: max-content; max-width: 140%; line-height: 1.05;
   font-family: "Nanum Pen Script", "Gaegu", cursive; font-size: 30px; color: #fff;
   -webkit-text-stroke: 5px #222; paint-order: stroke fill;
   text-shadow: 0 2px 0 rgba(0,0,0,.25);
