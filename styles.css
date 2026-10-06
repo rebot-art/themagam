@@ -12475,6 +12475,28 @@ html[data-lite] .share-cheers{ zoom: .64; top: -15px; }
 html:not([data-lite]) .card-avatar-wrap > .card-heart svg,
 html:not([data-lite]) .share-cheers .card-heart svg{ width: 32px; height: 30px; }
 
+/* =====================================================================
+   🤝 지원군 카드 (2026-10-07 — 콩) — script_realtime.js 의 지원군얹기
+   ---------------------------------------------------------------------
+   카드 모양은 진짜 멤버와 **똑같습니다.** 구분은 딱 하나씩만 —
+     · 꾸민 카드   : 방장 딱지 자리에 **초록** 「지원군」 딱지 (방장은 검정)
+     · 가볍게 보기 : 방장·부방장처럼 테두리를 덧그리되 **초록**
+   ★ 눌러도 아무 일도 안 일어납니다 — 프로필·쪽지·하트·응원 전부.
+   ===================================================================== */
+.user-card.is-helper{ pointer-events: none; }
+.user-card.is-helper .card-heart{ display: none !important; }
+.card-admin-stamp.is-helper{
+  background: rgba(63, 169, 116, .94);
+  color: #fff;
+  font-size: calc(var(--fs-sm) * .72);
+  padding: 3.5px 5px;
+  letter-spacing: -.01em;
+}
+.lite-card.is-helper .lite-in::after{
+  content: ""; position: absolute; inset: -1px; z-index: 3;
+  border: 2.5px solid #3FA974; border-radius: 6px; pointer-events: none;
+}
+
 /* 🪶 가볍게 보기에서도 프로필 꾸미기 미리보기 카드는 기본 카드 그대로 (2026-10-03) */
 html[data-lite] .stk-clone .card-avatar-wrap > .card-heart svg{ width:32px; height:30px; }
 /* ⏱ 시간 앞 시계 · 뽀모방 ⏱️ 딱지 — 꾸민 카드와 같은 모양 (2026-10-03 콩) */

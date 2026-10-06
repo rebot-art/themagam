@@ -213,7 +213,7 @@
     loadForest();
     loadAllowList();
     loadHello();
-    if (isOwner) { loadStaffList(); loadShareLimit(); }
+    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); }
   }
 
   /* =====================================================================
@@ -3098,6 +3098,114 @@
     }
   }
 
+  // ------------------------------------------------- ③-3.95 🤝 지원군
+  /* =====================================================================
+     🤝 지원군 (2026-10-07 — 콩) — 방에 사람이 적을 때 빈자리를 채우는 가상 멤버
+     ---------------------------------------------------------------------
+     방 쪽 셈(몇 명일 때 몇 장)은 script_realtime.js 의 지원군수() 에 있습니다.
+     여기는 **넷의 생김새**만 고칩니다: 이름 · 목표 · 카드 배경 · 프사.
+         config/helpers = { on, list: [{ name, goal, bg, photo } × 4], at }
+     ★ 처음 값(HELPER_DEFAULT)은 script_realtime.js 의 것과 **같아야** 합니다 —
+       checks.js 가 두 표를 견줍니다.
+     ★ 프사는 160px 정사각으로 줄여 글자(data:)로 넣습니다. 창고(Storage)를 안 쓰는
+       까닭: 넷뿐이고, 방 쪽에서 닉마다 창고 주소를 따로 풀 길이 없어서예요.
+     ===================================================================== */
+  const HELPER_DEFAULT = [
+    { name: "밤샘러", goal: "오늘도 끝까지",   bg: "#FFF6E4" },
+    { name: "마감러", goal: "마감은 지킨다",   bg: "#F3F0FF" },
+    { name: "새벽반", goal: "조용히 한 장 더", bg: "#EEF7F1" },
+    { name: "올빼미", goal: "밤이 내 시간",    bg: "#FDF0EE" }
+  ];
+  const HELPER_PHOTO_PX = 160;
+  let _helperPhotos = ["", "", "", ""];
+  let _helperPick = -1;                    // 지금 사진을 고르는 줄
+
+  function 지원군사진칸(i) {
+    const p = _helperPhotos[i];
+    return `<button type="button" class="adm-helper-ph" data-helper-photo="${i}" title="프사 고르기"
+              style="${p ? `background-image:url('${p}')` : ""}">${p ? "" : "📷"}${
+              p ? `<span class="adm-helper-x" data-helper-nophoto="${i}" title="사진 빼기">✕</span>` : ""}</button>`;
+  }
+  function 지원군줄그리기(list) {
+    const box = el("adm-helper-rows");
+    if (!box) return;
+    box.classList.remove("adm-msg");
+    box.innerHTML = HELPER_DEFAULT.map((d, i) => {
+      const c = (list && list[i]) || {};
+      const bg = /^#[0-9a-fA-F]{6}$/.test(String(c.bg || "")) ? c.bg : d.bg;
+      return `<div class="adm-helper-row" data-helper-row="${i}">
+        ${지원군사진칸(i)}
+        <input type="text" data-helper-name maxlength="8" value="${escapeHtml(c.name || d.name)}" placeholder="${escapeHtml(d.name)}" autocomplete="off">
+        <input type="text" data-helper-goal maxlength="20" value="${escapeHtml(c.goal == null ? d.goal : c.goal)}" placeholder="목표 한 줄" autocomplete="off">
+        <input type="color" data-helper-bg value="${bg}" title="카드 배경색">
+      </div>`;
+    }).join("");
+  }
+  function 지원군읽어오기() {
+    /* 화면에 적힌 값 그대로 — 사진을 바꿔 줄을 다시 그릴 때 적던 글이 안 날아가게 */
+    return HELPER_DEFAULT.map((d, i) => {
+      const r = document.querySelector(`[data-helper-row="${i}"]`);
+      const 글 = (sel, max, 기본) => {
+        const v = String(r?.querySelector(sel)?.value || "").replace(/\s+/g, " ").trim().slice(0, max);
+        return v || 기본;
+      };
+      return {
+        name: 글("[data-helper-name]", 8, d.name),
+        goal: 글("[data-helper-goal]", 20, ""),
+        bg: r?.querySelector("[data-helper-bg]")?.value || d.bg,
+        photo: _helperPhotos[i] || ""
+      };
+    });
+  }
+  async function loadHelpers() {
+    try {
+      const v = (await db.ref("config/helpers").once("value")).val() || {};
+      const list = Array.isArray(v.list) ? v.list : Object.values(v.list || {});
+      _helperPhotos = HELPER_DEFAULT.map((d, i) => String((list[i] && list[i].photo) || ""));
+      const on = el("adm-helper-on"); if (on) on.checked = v.on === true;
+      지원군줄그리기(list);
+    } catch (e) {
+      const box = el("adm-helper-rows"); if (box) box.textContent = "불러오지 못했어요.";
+    }
+  }
+  /** 고른 사진을 160px 정사각으로 — 가운데를 잘라 냅니다 */
+  function 지원군사진줄이기(file) {
+    return new Promise((ok, no) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const 변 = Math.min(img.naturalWidth, img.naturalHeight);
+          const cv = document.createElement("canvas");
+          cv.width = cv.height = HELPER_PHOTO_PX;
+          cv.getContext("2d").drawImage(img,
+            (img.naturalWidth - 변) / 2, (img.naturalHeight - 변) / 2, 변, 변,
+            0, 0, HELPER_PHOTO_PX, HELPER_PHOTO_PX);
+          ok(cv.toDataURL("image/jpeg", 0.82));
+        } catch (e) { no(e); }
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error("사진을 못 읽었어요")); };
+      img.src = url;
+    });
+  }
+  async function saveHelpers() {
+    if (!ownerOnly("지원군 설정")) return;
+    msg("adm-helper-msg", "저장하는 중…");
+    try {
+      const list = 지원군읽어오기();
+      const 이름들 = list.map(x => x.name);
+      if (new Set(이름들).size !== 이름들.length) { msg("adm-helper-msg", "이름이 겹쳐요 — 넷이 서로 달라야 해요.", true); return; }
+      const on = !!el("adm-helper-on")?.checked;
+      await db.ref("config/helpers").set({ on, list, at: Date.now() });
+      msg("adm-helper-msg", on ? "✅ 저장했어요 — 방에 다섯 명이 안 되면 지원군이 떠요."
+                               : "✅ 저장했어요 — 지금은 꺼 둔 상태라 아무에게도 안 떠요.");
+    } catch (e) {
+      msg("adm-helper-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
@@ -3247,6 +3355,39 @@
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-absent-run")?.addEventListener("click", runAbsent);
+
+    /* 🤝 지원군 — 줄은 다시 그려지므로 상자에 위임합니다 */
+    el("adm-helper-save")?.addEventListener("click", saveHelpers);
+    el("adm-helper-reset")?.addEventListener("click", () => {
+      _helperPhotos = ["", "", "", ""];
+      지원군줄그리기(null);
+      msg("adm-helper-msg", "처음 값으로 돌렸어요 — [저장] 을 눌러야 방에 반영돼요.");
+    });
+    el("adm-helper-rows")?.addEventListener("click", e => {
+      const x = e.target.closest("[data-helper-nophoto]");
+      if (x) {
+        e.stopPropagation();
+        const 적던것 = 지원군읽어오기();
+        _helperPhotos[Number(x.getAttribute("data-helper-nophoto"))] = "";
+        지원군줄그리기(적던것);
+        return;
+      }
+      const b = e.target.closest("[data-helper-photo]");
+      if (b) { _helperPick = Number(b.getAttribute("data-helper-photo")); el("adm-helper-file")?.click(); }
+    });
+    el("adm-helper-file")?.addEventListener("change", async e => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f || _helperPick < 0) return;
+      try {
+        const 적던것 = 지원군읽어오기();
+        _helperPhotos[_helperPick] = await 지원군사진줄이기(f);
+        지원군줄그리기(적던것);
+        msg("adm-helper-msg", "사진을 넣었어요 — [저장] 을 눌러야 방에 반영돼요.");
+      } catch (err) {
+        msg("adm-helper-msg", "사진을 못 읽었어요. 다른 사진으로 해 보세요.", true);
+      }
+    });
 
     /* ❔ 출석부 설명 모음 (2026-10-06 — 콩) — 필요할 때만 펴 봅니다 */
     el("adm-att-help-btn")?.addEventListener("click", () => {

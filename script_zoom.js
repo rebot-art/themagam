@@ -6,7 +6,7 @@
      옛 방식은 뒤집힌방() 아래 else 가지에 그대로 살아 있습니다.
 
    [지금 무엇이 어떻게 커지나 — 셋이 따로 놉니다]
-     ① 접속자 카드 마당  머리말의 [− 100% +]  70~130% · 5% · 사람이 고름
+     ① 접속자 카드 마당  머리말의 [− 100% +]  70~150% · 5% · 사람이 고름
      ② 하단 메뉴 창(판)  설정 › ⚙️ 기본 설정 슬라이더 70~130% · 사람이 고름
      ③ 머리말 메뉴 창    **늘 105% 고정** (CSS --modal-zoom)
    머리말·알약 줄은 어느 쪽도 안 따라갑니다 — 늘 100% 입니다.
@@ -44,6 +44,9 @@
   "use strict";
 
   const MIN = 70, MAX = 130, STEP = 5;
+  /* [2026-10-07 — 콩] 카드 마당만 150% 까지 — 하단 판(설정 슬라이더)은 130% 그대로예요.
+     판은 화면 높이에 묶여 있어 더 키우면 밖으로 나가지만, 카드 마당은 스크롤이 됩니다. */
+  const CARD_MAX = 150;
 
   /* 🧘 혼자 방과 진짜 방은 값을 따로 기억합니다 — 같은 브라우저에서
      둘을 오갈 때 한쪽에서 줄인 게 다른 쪽까지 따라가면 당황스러워요 */
@@ -52,7 +55,7 @@
 
   function 배율() {
     const v = Number(곳간()?.getItem(KEY()));
-    return (v >= MIN && v <= MAX) ? v : 100;
+    return (v >= MIN && v <= CARD_MAX) ? v : 100;
   }
 
   /* =====================================================================
@@ -162,7 +165,7 @@
   }
 
   function 배율적용(v) {
-    const z = Math.max(MIN, Math.min(MAX, Math.round(v / STEP) * STEP));
+    const z = Math.max(MIN, Math.min(CARD_MAX, Math.round(v / STEP) * STEP));
     try { 곳간()?.setItem(KEY(), String(z)); } catch (e) {}
     const f = z / 100;
     const h = document.documentElement;

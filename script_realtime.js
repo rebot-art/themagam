@@ -1387,6 +1387,114 @@
     });
   }, 1000);
 
+
+  /* =====================================================================
+     🤝 지원군 — 사람이 적을 때 빈자리를 채우는 가상 멤버 카드 (2026-10-07 — 콩)
+     ---------------------------------------------------------------------
+     "혼자 남으면 쓸쓸하니까." 방에 카드가 늘 **다섯 장** 떠 있게 합니다.
+         진짜 4명 → 지원군 1 · 3명 → 2 · 2명 → 3 · 1명 → 4 · 5명 이상 → 0
+     시간대와 상관없이 **언제든** 돕니다 (처음엔 심야만 얘기했다가 콩이 넓힘).
+
+     [어떻게 끼우나]
+     카드를 그리는 바로 그 순간에만, 그리는 명단의 **사본**에 가짜 줄을 얹습니다.
+     ★★★ _statusCache 는 손대지 않습니다 — 그래서 "n명 집필 중"·접속자 명단·
+       뽀모방 인원·출석·글자수 어디에도 안 섞이고, 서버로는 한 글자도 안 나갑니다.
+     ★ "진짜" 는 **지금 접속 중인 사람**(isOnline)만 셉니다 — 나도 포함 (콩 확정).
+     ★ 이름·목표·배경·프사는 방장이 관리자 페이지에서 정합니다 (config/helpers —
+       config 는 누구나 읽고 방장만 써서 보안규칙을 안 고칩니다). 그래서 모두가
+       **같은 지원군**을 봅니다.
+     ★ 상태와 작업 시간은 **시계로 셈합니다** — 서버에 안 물어도 모두 같은 값.
+     ★ 방장이 관리자 칸에서 [켜기] 를 하기 전에는 아무에게도 안 뜹니다.
+       각자 설정의 "🤝 지원군 카드 보기" 로 자기 화면에서만 끌 수도 있어요.
+     ★ 🧘 혼자 방은 가짜 멤버가 이미 있어서 안 돕니다. 다만 모양을 미리 볼 수
+       있게 주소에 ?solo=1&helpers=2 처럼 적으면 "진짜 2명인 셈" 으로 띄워 줍니다.
+     ===================================================================== */
+  const HELPER_TOTAL = 5;                 // 방에 떠 있을 카드 수
+  const HELPER_KEY = "helperCards";       // 각자 끄고 켜기 ("0" 이면 끔)
+  const HELPER_DEFAULT = [
+    { name: "밤샘러", goal: "오늘도 끝까지",   bg: "#FFF6E4" },
+    { name: "마감러", goal: "마감은 지킨다",   bg: "#F3F0FF" },
+    { name: "새벽반", goal: "조용히 한 장 더", bg: "#EEF7F1" },
+    { name: "올빼미", goal: "밤이 내 시간",    bg: "#FDF0EE" }
+  ];
+  /* 스무 분마다 한 칸씩 넘어가는 상태 무늬 — 대체로 쓰고, 가끔 쉽니다 */
+  const HELPER_STATUS = ["writing", "writing", "focus", "writing", "rest", "writing", "multi", "writing"];
+  let _helperCfg = null, _helperOn = false;
+
+  function 지원군시험수() {
+    if (!window.SOLO) return 0;
+    try { return Math.max(0, Number(new URLSearchParams(location.search).get("helpers")) || 0); }
+    catch (e) { return 0; }
+  }
+  function 지원군듣기() {
+    if (_helperOn || window.SOLO) return;
+    _helperOn = true;
+    try {
+      db.ref("config/helpers").on("value", s => {
+        _helperCfg = s.val() || null;
+        try { renderUserCards(); } catch (e) {}
+      }, () => {});
+    } catch (e) {}
+  }
+  function 지원군켜짐() {
+    try { if (window.AppStore?.getItem(HELPER_KEY) === "0") return false; } catch (e) {}
+    if (window.SOLO) return 지원군시험수() > 0;
+    return !!_helperCfg && _helperCfg.on === true;
+  }
+  function 지원군목록() {
+    const L = (_helperCfg && _helperCfg.list) || [];
+    return HELPER_DEFAULT.map((d, i) => {
+      const c = L[i] || {};
+      return {
+        name: String(c.name == null ? "" : c.name).replace(/\s+/g, " ").trim().slice(0, 8) || d.name,
+        goal: String(c.goal == null ? d.goal : c.goal).replace(/\s+/g, " ").trim().slice(0, 20),
+        bg: window.sanitizeHexColor?.(c.bg) || d.bg,
+        photo: window.sanitizePhoto?.(c.photo) || ""
+      };
+    });
+  }
+  /** 진짜가 몇 명일 때 지원군이 몇 장인가 — 셈은 여기 한 곳 */
+  function 지원군수(진짜) {
+    return (진짜 >= 1 && 진짜 < HELPER_TOTAL) ? HELPER_TOTAL - 진짜 : 0;
+  }
+  function 지원군얹기(data, now) {
+    if (!data || !myNick) return data;
+    지원군듣기();
+    if (!지원군켜짐()) return data;
+    let 진짜 = 0;
+    for (const n in data) if (isOnline(data[n], now)) 진짜++;
+    const 몇 = 지원군수(지원군시험수() || 진짜);
+    if (!몇) return data;
+    const out = Object.assign({}, data);
+    const 분 = Math.floor(now / 60000);
+    지원군목록().slice(0, 몇).forEach((h, i) => {
+      if (out[h.name]) return;                       // 같은 닉의 진짜 멤버가 있으면 양보
+      out[h.name] = {
+        _helper: true,
+        _prof: { cardBg: h.bg, photo: h.photo },
+        status: HELPER_STATUS[(Math.floor(분 / 20) + i * 3) % HELPER_STATUS.length],
+        workMs: (((분 + i * 83) % 420) + 12) * 60000,
+        todayGoalText: h.goal,
+        lastSeen: 분 * 60000,                        // 분 단위로만 바뀌게 (카드를 초마다 갈지 않게)
+        joinedAt: 8e15 + i                           // 늘 맨 뒤, 정해진 차례로
+      };
+    });
+    return out;
+  }
+  window.setHelperCards = function (on) {
+    try { window.AppStore?.setItem(HELPER_KEY, on ? "1" : "0"); } catch (e) {}
+    try { renderUserCards(); } catch (e) {}
+  };
+  function 지원군체크칸() {
+    const box = document.getElementById("set-helper");
+    if (!box) return;
+    let 끔 = false;
+    try { 끔 = window.AppStore?.getItem(HELPER_KEY) === "0"; } catch (e) {}
+    box.checked = !끔;
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", 지원군체크칸);
+  else 지원군체크칸();
+
   function renderUserCards(data) {
       const list = document.getElementById("user-cards");
       if (!list) return;
@@ -1408,6 +1516,9 @@
         }
         return;
       }
+
+      /* 🤝 지원군 — 사람이 적으면 그리는 명단의 **사본**에 가짜 줄을 얹습니다 (위 설명) */
+      data = 지원군얹기(data, now);
 
       const parts = [];
 
@@ -1463,7 +1574,10 @@
           const nameBadges = "";
 
           // ✅ [프로필] users/{닉}/profile 값을 병합 (없으면 전부 기본값)
-          const prof = (window._profileCache && window._profileCache[u]) || {};
+          /* 🤝 지원군은 프로필이 서버에 없습니다 — 얹을 때 함께 실어 온 것을 씁니다 */
+          const 지원 = row._helper === true;
+          const prof = 지원 ? (row._prof || {})
+                     : ((window._profileCache && window._profileCache[u]) || {});
 
           // 카드 강조색 — 좌측 보더. 미설정이면 CSS 기본 토큰 사용
 
@@ -1670,7 +1784,7 @@
             const 곁 = `${proomChip}${pomoChip}`.trim();
             단순 = (`
             <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}${
-                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}"
+                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}${지원 ? " is-helper" : ""}"
                  data-card-nick="${escapeHtml(u)}">
               <div class="lite-in">
                 ${window.cardMemoHtml?.(row) || ""}
@@ -1705,7 +1819,7 @@
           }
 
           parts.push(`
-            <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"
+            <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}${지원 ? " is-helper" : ""}"
                  data-card-nick="${escapeHtml(u)}"${cardStyle}>
               <!-- [2026-08-09] 오늘의 작업 스티커 — 프사가 아니라 **카드**
                    왼쪽 위 구석입니다. 그래서 .card-body 바깥, 카드 바로
@@ -1720,6 +1834,7 @@
                   ${avatar}
                   ${editBtn}
                   ${decoAvatar}
+                  ${지원 ? `<span class="card-admin-stamp is-helper" aria-label="지원군">지원군</span>` : ""}
                   ${stampHtml(u)}
                 </div>
 

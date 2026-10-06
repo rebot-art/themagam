@@ -205,6 +205,22 @@
     .adm-att-help .adm-att-legend:last-child{ margin-bottom: 2px; }
     /* 긴 글 범례는 낱말마다 흩어지지 않게 줄글로 (flex 면 굵은 글씨마다 끊깁니다) */
     .adm-att-help p.adm-att-legend{ display: block; line-height: 1.9; }
+    /* 🤝 지원군 칸 (2026-10-07) — 한 줄에 프사 · 이름 · 목표 · 배경색 */
+    .adm-helper-row{
+      display: grid; grid-template-columns: 46px 88px 1fr 30px; gap: 8px; align-items: center;
+      padding: 7px 0; border-top: 1px dashed rgba(150,120,80,.4);
+    }
+    .adm-helper-ph{
+      width: 46px; height: 46px; border-radius: 6px; position: relative; cursor: pointer; padding: 0;
+      border: 1px solid rgba(150,120,80,.5); background: #EDE6D8 center/cover no-repeat;
+      font-size: 18px; color: #A99C88;
+    }
+    .adm-helper-x{
+      position: absolute; right: -6px; top: -6px; width: 18px; height: 18px; border-radius: 50%;
+      border: 1px solid rgba(150,120,80,.6); background: #fff; color: #4A140D;
+      font-size: 10px; line-height: 16px; text-align: center; cursor: pointer; padding: 0;
+    }
+    .adm-helper-row input[type="color"]{ width: 28px; height: 28px; padding: 0; border: 1px solid rgba(150,120,80,.5); border-radius: 6px; background: none; }
     /* ☰ 출석부 메뉴 (2026-10-06) — 펼치면 단추들이 제자리에 나란히 섭니다 */
     .adm-att-menu{ display: contents; }
     .adm-att-menu[hidden]{ display: none; }
@@ -771,6 +787,35 @@
         <div class="adm-msg" id="adm-absent-msg"></div>
       </div>
 
+      <!-- =====================================================================
+           🤝 지원군 (2026-10-07 — 콩)
+           ---------------------------------------------------------------------
+           방에 사람이 다섯이 안 되면 빈자리를 채우는 가상 멤버 넷.
+           config/helpers = { on, list:[{name, goal, bg, photo}×4], at }
+           ★ config 는 누구나 읽고 방장만 써서 보안규칙을 안 고칩니다.
+           ★ 프사는 여기서 160px 로 줄여 글자(data:)로 넣습니다 — 넷 합쳐 수십 KB.
+           ★ 방장만 보입니다 (data-owner-only).
+           ===================================================================== -->
+      <span data-owner-only>
+      <div class="adm-card" id="adm-helper-card">
+        <h2>🤝 지원군</h2>
+        <p class="adm-sub">방에 접속한 사람이 <b>다섯 명이 안 되면</b> 빈자리를 채우는 가상 멤버예요
+          (4명 → 1 · 3명 → 2 · 2명 → 3 · 1명 → 4). <b>위에서부터 차례로</b> 나옵니다.<br>
+          접속 인원·출석·글자수에는 안 들어가요. 서버에 남는 것은 이 칸의 설정뿐입니다.</p>
+        <label class="adm-radio"><input type="checkbox" id="adm-helper-on"> 지원군 켜기
+          <span class="adm-role-why">— 꺼 두면 아무에게도 안 떠요</span></label>
+        <div class="adm-gap"></div>
+        <div id="adm-helper-rows" class="adm-msg">불러오는 중…</div>
+        <input type="file" id="adm-helper-file" accept="image/*" hidden>
+        <p class="adm-sub" style="margin:8px 0 0;">프사를 <b>누르면 사진 고르기</b> · ✕ 는 사진 빼기(눈사람으로) ·
+          이름 8자 · 목표 20자 · 맨 오른쪽은 카드 배경색</p>
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-helper-save">저장</button>
+        <button class="adm-btn ghost" id="adm-helper-reset">처음 값으로</button>
+        <div class="adm-msg" id="adm-helper-msg"></div>
+      </div>
+      </span>
+
       <div class="adm-card" id="adm-allow-card">
         <h2>🔐 입장 승인</h2>
         <p class="adm-sub">여기 있는 닉네임만 <b>처음</b> 들어올 수 있어요. 쓰던 분들은 그대로예요.</p>
@@ -1013,7 +1058,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610061323"></script>
+  <script src="script_admin.js?v=202610061742"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
