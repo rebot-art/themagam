@@ -435,6 +435,9 @@
       margin-left: auto; padding-left: 6px;
       font-size: 12px; font-weight: 800; color: #8A7B68; white-space: nowrap;
     }
+    /* [2026-10-06 — 콩] 제목 줄의 인원수는 제목 옆에 붙입니다 (📋 출석 관리의 곁글과 같은 결).
+       margin-left:auto 를 그대로 두면 제목과 꺾쇠 사이 한가운데로 떠밀려요. */
+    .adm-card > h2 .adm-count{ margin-left: 0; padding-left: 0; font-weight: 400; }
     /* [2026-08-15] 인원 칸의 총원 — 날짜별 인원과 헷갈리지 않게 한 톤 진하게 */
     .adm-att-table th.name-h.cnt-h .cnt-total{
       font-weight: 800; color: #6B5B48; margin-left: 2px;
@@ -1010,7 +1013,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610060704"></script>
+  <script src="script_admin.js?v=202610060709"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
