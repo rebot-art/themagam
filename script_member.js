@@ -19,7 +19,12 @@
    [어떻게 읽나 — REST]
    firebase.database() 가 가짜라 SDK 로는 진짜 서버에 못 닿습니다. 그래서
    주소 하나를 fetch 로 그냥 읽어요: {databaseURL}/status.json
-   판이 **열려 있을 때만** 30초마다. 닫으면 멈춥니다. 12명이면 몇 KB.
+   판이 열려 있으면 30초마다, **닫혀 있으면 1분마다**. 12명이면 몇 KB.
+
+   [2026-10-06 콩] 알약에 인원수 — [🙋‍♂️Member - n명 접속 중]
+   판을 안 열어도 몇 명인지 보이게 해 달라는 요청. 그래서 닫혀 있을 때도
+   읽습니다 — 다만 느리게(1분), 프사는 안 읽고, 탭이 가려져 있으면 쉽니다.
+   못 읽었거나 아직 안 읽었으면 숫자 없이 그냥 [🙋‍♂️Member] 예요 (0 을 안 보여줍니다).
 
    [본방에는 안 뜹니다] script_dock.js 의 DOCK 항목에 solo:true — 본방은
    카드밭이 있으니까요.
@@ -30,6 +35,7 @@
   /* script_core.js 의 firebaseConfig 와 같은 주소 (m.html 도 이 값) */
   const DB_URL = "https://themagam-ec0e4-default-rtdb.asia-southeast1.firebasedatabase.app";
   const TICK_MS = 30 * 1000;
+  const PILL_TICK_MS = 60 * 1000;   // 판이 닫혀 있을 때 — 알약 숫자만 고치면 되니 느리게
 
   const el = (id) => document.getElementById(id);
   function esc(s) { return window.escapeHtml ? window.escapeHtml(s) : String(s == null ? "" : s); }
@@ -82,16 +88,25 @@
         .filter(x => (typeof window.isOnline === "function") ? window.isOnline(x.row, now) : true)
         .sort((a, b) => Number(b.row.workMs || 0) - Number(a.row.workMs || 0) || a.nick.localeCompare(b.nick, "ko"));
       _err = "";
-      _rows.forEach(x => loadPhoto(x.nick));
     } catch (e) {
       _err = "본방을 못 읽었어요 — " + (e.message || e);
     }
     render();
   }
 
+  /* 알약 글자 — [🙋‍♂️Member - n명 접속 중]. 못 읽었으면 숫자를 뺍니다 */
+  function paintPill() {
+    const 글 = document.querySelector("#dock-pill-member .dock-pill-label");
+    if (!글) return;
+    글.textContent = (_rows && !_err) ? `🙋‍♂️Member - ${_rows.length}명 접속 중` : "🙋‍♂️Member";
+  }
+
   function render() {
+    paintPill();
     const host = el("dock-body-member");
     if (!host) return;
+    /* 프사는 판이 열려 있을 때만 읽습니다 (알약 숫자에는 필요 없어요) */
+    if (_rows && isOpen()) _rows.forEach(x => loadPhoto(x.nick));
     if (_rows === null) { host.innerHTML = `<div class="member-empty">본방을 들여다보는 중…</div>`; return; }
     if (_err) { host.innerHTML = `<div class="member-empty">${esc(_err)}</div>`; return; }
     if (!_rows.length) { host.innerHTML = `<div class="member-empty">지금 본방엔 아무도 없어요 🌙</div>`; return; }
@@ -111,13 +126,17 @@
   function isOpen() {
     try { return (window.dockOpened?.() || []).includes("member"); } catch (e) { return false; }
   }
-  /* 판이 열려 있을 때만 읽습니다 — 알약을 누르는 순간을 잡을 손잡이가
-     따로 없어서, 1초마다 열렸나만 보고 열려 있으면 30초마다 읽어요. */
-  let _lastFetch = 0;
+  /* 알약을 누르는 순간을 잡을 손잡이가 따로 없어서 1초마다 열렸나만 봅니다.
+     열려 있으면 30초마다, 닫혀 있으면 1분마다 읽어요 (알약 숫자용).
+     탭이 가려져 있으면 안 읽습니다 — 안 보는 숫자를 고칠 이유가 없으니까요. */
+  let _lastFetch = 0, _wasOpen = false;
   setInterval(() => {
-    if (!isOpen()) return;
+    const open = isOpen();
+    if (open && !_wasOpen) render();          // 막 열었을 때 — 쥐고 있던 명단을 바로 그립니다
+    _wasOpen = open;
+    if (document.hidden) return;
     const now = Date.now();
-    if (now - _lastFetch < TICK_MS) return;
+    if (now - _lastFetch < (open ? TICK_MS : PILL_TICK_MS)) return;
     _lastFetch = now;
     fetchStatus();
   }, 1000);
