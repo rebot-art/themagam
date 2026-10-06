@@ -1107,7 +1107,14 @@
         접어 둔 채로도 보이고, 주간 기록·멤버 달력에도 보여요.
         <br>한 달 <b>${RULE_DAYS}일</b> 규칙은 예전처럼 <b>나온 날</b>로 셉니다 — 유효 출석은 눈으로만 구분해요.
       </p>`;
-      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>${범례}`;
+      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
+      /* ❔ [2026-10-06 — 콩] 범례는 표 아래가 아니라 **설명 모음 상자**로 갑니다
+         (admin.html 의 #adm-att-help). 상자가 없으면 예전처럼 표 아래에 붙여요. */
+      {
+        const 자리 = el("adm-att-help-dyn");
+        if (자리) 자리.innerHTML = 범례;
+        else body.insertAdjacentHTML("beforeend", 범례);
+      }
       bindDig(body);
     } catch (e) {
       console.warn("[adm attendance]", e);
@@ -3240,6 +3247,49 @@
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-absent-run")?.addEventListener("click", runAbsent);
+
+    /* ❔ 출석부 설명 모음 (2026-10-06 — 콩) — 필요할 때만 펴 봅니다 */
+    el("adm-att-help-btn")?.addEventListener("click", () => {
+      const 상자 = el("adm-att-help"), 단추 = el("adm-att-help-btn");
+      if (!상자) return;
+      상자.hidden = !상자.hidden;
+      단추.setAttribute("aria-expanded", String(!상자.hidden));
+      단추.textContent = 상자.hidden ? "❔ 설명" : "✕ 설명 닫기";
+    });
+
+    /* ☰ 출석부 메뉴 (2026-10-06 — 콩) — 가끔 쓰는 단추는 평소엔 숨깁니다 */
+    el("adm-att-menu-btn")?.addEventListener("click", () => {
+      const 메뉴 = el("adm-att-menu"), 단추 = el("adm-att-menu-btn");
+      if (!메뉴) return;
+      메뉴.hidden = !메뉴.hidden;
+      단추.setAttribute("aria-expanded", String(!메뉴.hidden));
+      단추.textContent = 메뉴.hidden ? "☰ 메뉴" : "✕ 메뉴 닫기";
+    });
+
+    /* =====================================================================
+       🗂️ 칸 접기 (2026-10-06 — 콩)
+       "필요한 거만 그때그때 펴서 볼 수 있도록. 기본은 접혀 있는 거고."
+       출석부 아래 칸(.adm-grid 안의 .adm-card)마다 제목 줄에 단추를 답니다.
+       ★ 칸을 새로 만들어도 여기는 안 고쳐도 됩니다 — 격자 안에 있으면 저절로 붙어요.
+       ★ 감추기만 합니다. 접힌 칸도 속은 그대로 살아 있어서, 펴면 바로 보입니다.
+       ★ 접힘 여부는 기억하지 않습니다 — 열 때마다 전부 접힌 채로 시작해요.
+       ===================================================================== */
+    document.querySelectorAll(".adm-grid .adm-card").forEach(칸 => {
+      const 제목 = 칸.querySelector(":scope > h2");
+      if (!제목) return;
+      const 단추 = document.createElement("button");
+      단추.type = "button";
+      단추.className = "adm-fold-btn";
+      제목.appendChild(단추);
+      const 칠하기 = () => {
+        const 접힘 = 칸.classList.contains("folded");
+        단추.textContent = 접힘 ? "▸ 펴기" : "▾ 접기";
+        단추.setAttribute("aria-expanded", String(!접힘));
+      };
+      칸.classList.add("folded");
+      칠하기();
+      제목.addEventListener("click", () => { 칸.classList.toggle("folded"); 칠하기(); });
+    });
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));

@@ -190,6 +190,41 @@
       margin-left: 14px; font-size: 12.5px; padding: 4px 12px;
       width: auto; height: auto; white-space: nowrap; font-weight: 600;
     }
+    /* ❔ 출석부 설명 모음 (2026-10-06) — 평소엔 접혀 있습니다 */
+    .adm-att-help{
+      margin: 4px 0 12px; padding: 12px 14px 10px; border-radius: 10px;
+      background: rgba(150,120,80,.07); border: 1px dashed rgba(150,120,80,.45);
+    }
+    .adm-att-help[hidden]{ display: none; }
+    /* [고침 2026-10-06] 단추는 display 를 직접 정해 둬서 hidden 이 안 먹었습니다 —
+       📊 그래프 보기/접기 두 단추가 늘 같이 보이던 까닭이에요. */
+    .adm-btn[hidden]{ display: none; }
+    .adm-att-help-t{ font-size: 12.5px; font-weight: 800; color: #4A140D; margin: 0 0 4px; }
+    .adm-att-help .adm-sub{ margin: 0 0 12px; }
+    .adm-att-help .adm-att-legend{ margin: 0 0 12px; }
+    .adm-att-help .adm-att-legend:last-child{ margin-bottom: 2px; }
+    /* 긴 글 범례는 낱말마다 흩어지지 않게 줄글로 (flex 면 굵은 글씨마다 끊깁니다) */
+    .adm-att-help p.adm-att-legend{ display: block; line-height: 1.9; }
+    /* ☰ 출석부 메뉴 (2026-10-06) — 펼치면 단추들이 제자리에 나란히 섭니다 */
+    .adm-att-menu{ display: contents; }
+    .adm-att-menu[hidden]{ display: none; }
+    .adm-nav{ flex-wrap: wrap; row-gap: 8px; }
+    /* 🗂️ 칸 접기 (2026-10-06 — 콩) — 출석부 아래 칸은 **접힌 채로** 열립니다.
+       제목 줄을 누르면 펴지고, 한 번 더 누르면 접혀요. 접힌 칸은 제목만 보입니다. */
+    .adm-grid .adm-card > h2{
+      cursor: pointer; user-select: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .adm-grid .adm-card > h2 .adm-fold-btn{
+      margin-left: auto; flex: 0 0 auto;
+      font-family: inherit; font-size: 11.5px; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px; cursor: pointer;
+      background: transparent; color: #6B5F52;
+      border: 1px solid rgba(150,120,80,.5);
+    }
+    .adm-grid .adm-card.folded > h2{ margin-bottom: 0; }
+    .adm-grid .adm-card.folded > :not(h2){ display: none !important; }
+    .adm-grid .adm-card.folded{ padding-bottom: 18px; }
     .adm-modal{
       position: fixed; inset: 0; z-index: 900;
       background: rgba(40,30,20,.42);
@@ -565,16 +600,20 @@
 
       <div class="adm-card full" id="adm-att-card">
         <h2>📅 출석·휴가 현황</h2>
-        <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.
-          맨 윗줄은 그날 출석한 인원 수, 이름 옆 ✕ 는 명단에서 지우기예요(방장만).<br>
-          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🌿 개인사정 켜고 끄기(방장만)<br>
-          <span class="adm-role-why">— <b>›</b> 로 <b>다음 달·다다음 달</b>까지 넘길 수 있어요. 미리 알려 온 사정을 그때 가서 찍지 않아도 됩니다.</span></p>
         <div class="adm-nav">
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
           <button type="button" id="adm-att-next" title="다음 달 (다다음 달까지)">›</button>
           <!-- 🔄 [2026-09-22] 한 번 읽은 달은 손에 쥐고 있어서, 표를 다시 그려도
                서버를 안 읽습니다. 다른 창에서 뭔가 바뀌었을 때만 이걸 누르세요. -->
+          <!-- ☰ 메뉴 (2026-10-06 — 콩) — 아래 단추들은 평소엔 안 보입니다.
+               "평소엔 안 보이면 좋겠어" — 가끔 쓰는 것들이라 메뉴 뒤로 숨겼어요.
+               한 번 더 누르면 도로 접힙니다. -->
+          <button type="button" id="adm-att-help-btn" class="adm-btn ghost adm-nav-side"
+                  aria-expanded="false" title="출석부 쓰는 법과 색·표시의 뜻을 펼칩니다">❔ 설명</button>
+          <button type="button" id="adm-att-menu-btn" class="adm-btn ghost adm-nav-side"
+                  aria-expanded="false" title="새로 읽기 · 입장 기록 등 가끔 쓰는 단추를 펼칩니다">☰ 메뉴</button>
+          <span id="adm-att-menu" class="adm-att-menu" hidden>
           <button type="button" id="adm-att-reload" class="adm-btn ghost adm-nav-side"
                   title="쥐고 있던 자료를 버리고 서버에서 새로 읽습니다">🔄 새로 읽기</button>
           <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
@@ -592,9 +631,24 @@
             <button type="button" id="adm-att-rebuild" class="adm-btn ghost adm-nav-side"
                     title="'입장 전' 빗금이 이상할 때만 — 출석 기록 전체를 한 번 읽어 다시 셈합니다">📌 입장일 다시 셈</button>
           </span>
+          </span><!-- /adm-att-menu -->
         </div>
-        <div class="adm-msg" id="adm-att-fill-msg"></div>
-        <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
+        <!-- =====================================================================
+             ❔ 설명 모음 (2026-10-06 — 콩)
+             "설명들도 한 곳에 모아 놓고, 필요할 때 열어보고 싶어."
+             제목 아래 안내문 · 표 아래 ✔ 유효 출석 범례 · 색 범례 — 흩어져 있던
+             셋을 이 상자 하나에 모았습니다. 평소엔 접혀 있고 [❔ 설명] 으로 엽니다.
+             ★ 가운데(#adm-att-help-dyn)는 script_admin.js 가 표를 그릴 때 채웁니다.
+             ===================================================================== -->
+        <div id="adm-att-help" class="adm-att-help" hidden>
+          <div class="adm-att-help-t">🖱️ 쓰는 법</div>
+        <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.
+          맨 윗줄은 그날 출석한 인원 수, 이름 옆 ✕ 는 명단에서 지우기예요(방장만).<br>
+          <b>클릭</b> — 그날 작업 시간표(출석한 칸만) · <b>더블 클릭</b> — 🌿 개인사정 켜고 끄기(방장만)<br>
+          <span class="adm-role-why">— <b>›</b> 로 <b>다음 달·다다음 달</b>까지 넘길 수 있어요. 미리 알려 온 사정을 그때 가서 찍지 않아도 됩니다.</span></p>
+          <div class="adm-att-help-t">🎨 칸 색 읽는 법</div>
+          <div id="adm-att-help-dyn"></div>
+          <div class="adm-att-help-t">📏 규칙 칸 · 표시</div>
         <div class="adm-att-legend">
           <span><b>규칙 칸</b> — 한 달 18일 출석. 늦게 들어오거나 휴가를 낸 만큼 기준이 낮아져요.</span>
           <span>✅ 달성</span>
@@ -607,6 +661,9 @@
           <span><span class="sw" style="background:repeating-linear-gradient(-45deg,#EFEAE3 0 3px,#E4DED5 3px 6px)"></span>입장 전 (아직 멤버가 아니던 날)</span>
           <span><span class="sw" style="background:#EEF4F9"></span>날짜 위 숫자 = 그날 출석 인원</span>
         </div>
+        </div>
+        <div class="adm-msg" id="adm-att-fill-msg"></div>
+        <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
         <!-- [2026-08-16] 📈 한 달 흐름 — 총원과 출석 두 줄.
              값은 위 머리글 두 줄이 쓰는 것과 **같은 것**입니다
              (script_admin.js 의 cntByDay · totalByDay). 서버에 더 묻지
@@ -933,7 +990,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610060638"></script>
+  <script src="script_admin.js?v=202610060648"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
