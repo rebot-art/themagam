@@ -12659,6 +12659,26 @@ html[data-lite] .user-card.share-card,
   white-space: pre-line; color: var(--text); padding: 0 10px; max-width: 100%; overflow-wrap: anywhere;
 }
 .memo-card-by{ font-size: var(--fs-2xs, 11px); color: var(--muted); }
+/* 🖼 그림 메모 (2026-10-07 콩) — 닉 없이, 카드에 맞춰 **그림 전체**(자르지 않음) */
+.memo-card.memo-pic{ padding: 0; min-height: 120px; }
+.memo-card-img{
+  position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px);
+  object-fit: contain; border-radius: 4px;
+}
+.lite-card.memo-card .memo-lite{ position: relative; }
+.lite-card.memo-pic .memo-card-img{ inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+/* 적는 창의 그림 줄 */
+.cmemo-imgrow{ display: flex; align-items: center; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
+.cmemo-imgrow[hidden], .cmemo-imgprev[hidden]{ display: none; }
+.cmemo-imgpick{ padding: 5px 12px; font-size: 12px; }
+.cmemo-imgprev{ position: relative; display: inline-block; line-height: 0; }
+.cmemo-imgprev img{ height: 64px; max-width: 150px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border); background: var(--fill-1); }
+.cmemo-imgx{
+  position: absolute; right: -7px; top: -7px; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--panel, #fff); color: var(--text);
+  font-size: 10px; line-height: 16px; cursor: pointer;
+}
+.cmemo-imghint{ font-size: 11px; color: var(--muted); }
 /* 가볍게 보기 — 단순 카드와 같은 키(54+32+30)·같은 테두리 */
 .lite-card.memo-card{ min-height: 0; align-self: flex-start; }   /* 단순 카드는 키가 정해져 있어 늘리지 않습니다 */
 /* ★ 단순 카드는 .lite-in 이 아닌 자식을 전부 감춥니다(!important) — 그보다 센 선택자로 엽니다 */

@@ -2227,6 +2227,8 @@
       /* 📝 [2026-10-04 콩] 카드 메모 — 붙이고 뗄 때만 바뀌는 칸 (script_cardmemo.js) */
       memo: window.myCardMemo?.() || null,
       memoStyle: window.myCardMemoStyle?.() || null,
+      /* 🖼 [2026-10-07 콩] 새 카드 메모의 그림 — **주소 한 줄만** (그림 자체는 창고에) */
+      memoImg: window.myCardMemoImg?.() || null,
       /* [2026-08-09] 작업 스티커. 자정 초기화를 그만두면서 날짜 칸
          (tagDay)은 뺐습니다 — 보는 쪽에서 안 쓰는 값이라서요. */
       /* ★ 여기에 || "draft" 를 쓰면 안 됩니다.
