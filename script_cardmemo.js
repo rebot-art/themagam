@@ -28,7 +28,12 @@
 
   let _memo = "";
   let _style = "A";       // A 손글씨 · B 포스트잇 · C 마스킹테이프 (2026-10-04 콩: 고를 수 있게)
-  const 모양 = (v) => (["A", "B", "C"].includes(v) ? v : "A");
+  /* [2026-10-07 콩] N = **새 카드** — 내 카드 위에 얹지 않고, 내 카드 옆에 빈 카드를 한 장
+     더 띄워 거기에 메모만 적습니다. ("화공, 워크로그 많관부 🙏" 처럼 알리고 싶은 말)
+     ★ 그리기는 늘 켜 두고, **고르는 단추만** 혼자 방에 먼저 냅니다 (NEW_MAIN_ON). */
+  const NEW_MAIN_ON = false;              // 혼자 방 시험 통과하면 true 로
+  const 새카드켜짐 = () => !!(window.SOLO || NEW_MAIN_ON);
+  const 모양 = (v) => (["A", "B", "C", "N"].includes(v) ? v : "A");
   let _불러온닉 = "";
 
   function 다듬기(t) {
@@ -70,7 +75,20 @@
   /* 카드에 얹을 조각 — script_realtime.js 가 꾸민 카드·가볍게 보기 둘 다에서 부름 */
   window.cardMemoHtml = (row) => {
     const m = 다듬기(row && row.memo);
+    if (m && 모양(row.memoStyle) === "N") return "";       // 새 카드로 따로 뜹니다 (아래)
     return m ? `<div class="card-memo s${모양(row.memoStyle)}" aria-label="메모: ${esc(m)}">${esc(m)}</div>` : "";
+  };
+
+  /* 🆕 새 카드 메모 — 그 사람 카드 **바로 뒤**에 한 장. 빈 카드에 메모와 닉만.
+     ★ data-card-nick 을 안 답니다 — 하트·쪽지·프로필이 이 카드를 사람 카드로 세지 않게.
+     ★ 눌러도 아무 일도 안 일어납니다 (styles.css .memo-card). */
+  window.memoCardHtml = (nick, row, lite) => {
+    const m = 다듬기(row && row.memo);
+    if (!m || 모양(row.memoStyle) !== "N") return "";
+    const 속 = `<div class="memo-card-t">${esc(m)}</div><div class="memo-card-by">— ${esc(nick)}</div>`;
+    return lite
+      ? `<div class="user-card lite-card memo-card" data-memo-of="${esc(nick)}" aria-label="${esc(nick)} 님의 메모: ${esc(m)}"><div class="memo-lite">${속}</div></div>`
+      : `<div class="user-card memo-card" data-memo-of="${esc(nick)}" aria-label="${esc(nick)} 님의 메모: ${esc(m)}">${속}</div>`;
   };
 
   /* ── 적는 창 ── */
@@ -88,7 +106,9 @@
         <div class="cmemo-pick" role="radiogroup" aria-label="메모 모양">
           ${[["A", "손글씨"], ["B", "포스트잇"], ["C", "테이프"]].map(([k, l]) =>
             `<button type="button" class="cmemo-opt d${k}${_style === k ? " on" : ""}" data-st="${k}" role="radio"
-                     aria-checked="${_style === k}" title="${l}" aria-label="${l}"></button>`).join("")}
+                     aria-checked="${_style === k}" title="${l}" aria-label="${l}"></button>`).join("")}${
+            새카드켜짐() ? `<button type="button" class="cmemo-opt dN${_style === "N" ? " on" : ""}" data-st="N" role="radio"
+                     aria-checked="${_style === "N"}" title="새 카드로 띄우기 — 내 카드 옆에 메모만 적힌 카드가 한 장 더 떠요" aria-label="새 카드">new</button>` : ""}
         </div>
         <textarea class="cmemo-in" rows="2" maxlength="${MAX}" placeholder="마감 중…&#10;답변이 느려요 ㅜ^ㅜ">${esc(_memo)}</textarea>
         <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${MAX} · 엔터로 두 줄까지</div>

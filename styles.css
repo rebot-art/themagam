@@ -12642,6 +12642,33 @@ html[data-lite] .user-card.share-card,
 .cmemo-opt.dA{ background: linear-gradient(135deg, #fff 50%, #222 50%); }
 .cmemo-opt.dB{ background: linear-gradient(135deg, #fff6c2 50%, #f5d94a 50%); }
 .cmemo-opt.dC{ background: linear-gradient(135deg, #fbe0e0 50%, #e99a9a 50%); }
+/* 🆕 new — 새 카드로 띄우기 (2026-10-07 콩). 동그라미 셋 옆에 글자 알약 하나 */
+.cmemo-opt.dN{
+  width: auto; padding: 0 9px; border-radius: 999px; background: var(--panel, #fff);
+  font: inherit; font-size: 11px; font-weight: 700; line-height: 18px; color: var(--text);
+}
+/* 🆕 새 카드 메모 — 빈 카드에 메모와 닉만. 옆 카드와 키를 맞춰 섭니다. */
+.user-card.memo-card{
+  pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 6px; min-height: 96px;
+  align-self: stretch;            /* 카드 마당이 위로 붙여 세우는 줄이라, 옆 카드 키만큼 늘립니다 */
+}
+.memo-card-t{
+  font-family: "Nanum Pen Script", "Gaegu", cursive; font-size: 28px; line-height: 1.15;
+  white-space: pre-line; color: var(--text); padding: 0 10px; max-width: 100%; overflow-wrap: anywhere;
+}
+.memo-card-by{ font-size: var(--fs-2xs, 11px); color: var(--muted); }
+/* 가볍게 보기 — 단순 카드와 같은 키(54+32+30)·같은 테두리 */
+.lite-card.memo-card{ min-height: 0; }
+/* ★ 단순 카드는 .lite-in 이 아닌 자식을 전부 감춥니다(!important) — 그보다 센 선택자로 엽니다 */
+.user-card.lite-card.memo-card > .memo-lite{
+  width: 100%; height: 118px; box-sizing: border-box;
+  display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg);
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.lite-card.memo-card .memo-card-t{ font-size: 24px; line-height: 1.1; }
 .cmemo-card{ max-width: 340px; }
 .cmemo-sub{ margin: 2px 0 10px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.6; }
 .cmemo-in{ width: 100%; box-sizing: border-box; resize: none; padding: 10px 12px;

@@ -1930,6 +1930,12 @@
             (window._fullCardHtml = window._fullCardHtml || {})[u] = 꾸민;   // 🧘 혼자 방은 유령 카드도 꾸미니 닉별로
             parts.push(단순);
           }
+          /* 🆕 새 카드 메모 (2026-10-07 콩) — 메모를 "new" 로 붙인 사람은 카드 바로 뒤에 한 장 더.
+             ★ 지원군에는 메모가 없습니다. 새로 읽는 자료 0 — status 에 이미 온 memo 를 그릴 뿐. */
+          {
+            const 메모카드 = 지원 ? "" : (window.memoCardHtml?.(u, row, !!단순) || "");
+            if (메모카드) parts.push(메모카드);
+          }
         }
       }
 
