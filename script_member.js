@@ -26,8 +26,17 @@
    읽습니다 — 다만 느리게(1분), 프사는 안 읽고, 탭이 가려져 있으면 쉽니다.
    못 읽었거나 아직 안 읽었으면 숫자 없이 그냥 [🙋‍♂️Member] 예요 (0 을 안 보여줍니다).
 
-   [본방에는 안 뜹니다] script_dock.js 의 DOCK 항목에 solo:true — 본방은
-   카드밭이 있으니까요.
+   [본방에는 안 뜹니다] 맨 위에서 window.SOLO 가 아니면 바로 돌아갑니다 —
+   본방은 카드밭이 있으니까요.
+
+   [2026-10-07 콩] 알약 → **오른쪽 옆 탭**
+   아래 줄의 알약이던 것을 화면 오른쪽 끝의 세로 탭으로 옮겼습니다.
+     · 탭은 카드 마당이 시작되는 높이에 **딱 붙습니다** (가운데가 아니라 위).
+       열리는 명단의 윗변과 탭의 윗변이 같은 높이예요.
+     · 누르면 명단(250px)이 열리고, 카드 마당이 그만큼 좁아져 카드가 **다시 줄을 맞춥니다.**
+     · 색은 아래 알약들과 같은 결 — 닫힘은 옅은 바탕, 열림은 강조색.
+     · 좁은 화면은 신경 쓰지 않습니다 (혼자 방에서만 보는 것이라 — 콩).
+     · 열어 둔 채 새로고침하면 열린 채로 다시 뜹니다 (이 기기에 기억).
    ===================================================================== */
 (function () {
   if (!window.SOLO) return;   // 본방에서는 아무것도 안 합니다
@@ -53,6 +62,7 @@
   }
 
   let _timer = null, _rows = null, _err = "";
+  let _lastFetch = 0;
 
   /* 프사 — users/{닉}/profile 은 누구나 읽을 수 있어서 REST 로 한 사람씩.
      한 번 읽은 건 이 창이 살아 있는 동안 다시 안 읽습니다 (옛 글자 사진은
@@ -96,14 +106,56 @@
 
   /* 알약 글자 — [🙋‍♂️Member - n명 접속 중]. 못 읽었으면 숫자를 뺍니다 */
   function paintPill() {
-    const 글 = document.querySelector("#dock-pill-member .dock-pill-label");
+    const 글 = document.querySelector("#member-tab .member-tab-t");
     if (!글) return;
     글.textContent = (_rows && !_err) ? `🙋‍♂️Member - ${_rows.length}명 접속 중` : "🙋‍♂️Member";
   }
 
+  /* ── 옆 탭과 명단 칸 ─────────────────────────────────────────── */
+  const OPEN_KEY = "soloMemberOpen";
+  let _open = false;
+  try { _open = window.AppStore?.getItem(OPEN_KEY) === "1"; } catch (e) {}
+
+  function 옆칸만들기() {
+    if (el("member-side")) return true;
+    if (!document.body) return false;
+    const box = document.createElement("aside");
+    box.id = "member-side";
+    box.className = "member-side";
+    box.setAttribute("aria-label", "본방 접속자");
+    box.innerHTML = `
+      <button type="button" id="member-tab" class="member-tab" aria-expanded="false" aria-controls="member-side-body"
+              title="본방에 지금 누가 있나"><span class="member-tab-t">🙋‍♂️Member</span></button>
+      <div class="member-side-list" id="member-side-body"></div>`;
+    document.body.appendChild(box);
+    el("member-tab").addEventListener("click", () => 여닫기(!_open));
+    여닫기(_open, true);
+    return true;
+  }
+  function 여닫기(on, 처음) {
+    _open = !!on;
+    if (!처음) { try { window.AppStore?.setItem(OPEN_KEY, _open ? "1" : "0"); } catch (e) {} }
+    document.documentElement.classList.toggle("member-open", _open);
+    el("member-tab")?.setAttribute("aria-expanded", String(_open));
+    자리맞추기();
+    if (_open) { render(); _lastFetch = 0; }       // 열자마자 쥐고 있던 명단을 그리고, 곧바로 새로 읽습니다
+    /* 카드 마당 폭이 달라졌으니 화면 공유 카드 키도 다시 잽니다 */
+    try { window.syncShareCardHeights?.(); } catch (e) {}
+  }
+  /* 탭·명단의 위아래를 **카드 마당**에 맞춥니다 — 머리말 아래에서 시작해 알약 줄 위에서 끝나요 */
+  function 자리맞추기() {
+    const box = el("member-side"), 마당 = document.querySelector(".cards-area");
+    if (!box || !마당) return;
+    const r = 마당.getBoundingClientRect();
+    if (r.height < 40) return;                        // 아직 배치 전
+    box.style.top = Math.round(r.top) + "px";
+    box.style.height = Math.round(r.height) + "px";
+  }
+  window.addEventListener("resize", 자리맞추기);
+
   function render() {
     paintPill();
-    const host = el("dock-body-member");
+    const host = el("member-side-body");
     if (!host) return;
     /* 프사는 판이 열려 있을 때만 읽습니다 (알약 숫자에는 필요 없어요) */
     if (_rows && isOpen()) _rows.forEach(x => loadPhoto(x.nick));
@@ -123,14 +175,14 @@
       </ul>`;
   }
 
-  function isOpen() {
-    try { return (window.dockOpened?.() || []).includes("member"); } catch (e) { return false; }
-  }
+  function isOpen() { return _open; }
   /* 알약을 누르는 순간을 잡을 손잡이가 따로 없어서 1초마다 열렸나만 봅니다.
      열려 있으면 30초마다, 닫혀 있으면 1분마다 읽어요 (알약 숫자용).
      탭이 가려져 있으면 안 읽습니다 — 안 보는 숫자를 고칠 이유가 없으니까요. */
-  let _lastFetch = 0, _wasOpen = false;
+  let _wasOpen = false;
   setInterval(() => {
+    if (!옆칸만들기()) return;
+    자리맞추기();                              // 배치가 바뀌어도(머리말 줄 수·창 크기) 따라갑니다 — 값 두 개 적는 일
     const open = isOpen();
     if (open && !_wasOpen) render();          // 막 열었을 때 — 쥐고 있던 명단을 바로 그립니다
     _wasOpen = open;

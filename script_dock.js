@@ -145,13 +145,9 @@
        "글자수" 보다 넓어졌습니다. 콩트에서 쓰던 이름을 그대로 씁니다.
        ★ resize: true — 일지가 길어지니 챗처럼 위 가장자리를 잡아
          키울 수 있어야 합니다 (2026-08-16 방장 요청). */
-    { id: "wc",     label: "✍️ Work Log",        stay: true,  size: 1.23, move: "#wordcount-block", drag: true, resize: true },
-    /* 🙋‍♂️ Member (2026-10-01 콩) — **혼자 방에서만** 뜨는 알약. 본방에 지금
-       누가 있는지(온라인만) 닉·상태·오늘 시간을 보여줍니다. 본방에는
-       카드밭이 이미 있으니 안 뜨고, solo:true 로 걸러 냅니다.
-       내용은 script_member.js 가 채워요 — 혼자 방은 파이어베이스를 가짜로
-       갈아끼워 두어서, 진짜 status 는 REST 로 읽습니다 (읽기만). */
-    { id: "member", label: "🙋‍♂️Member", stay: true, size: 0.9, move: null, drag: true, resize: true, solo: true }
+    { id: "wc",     label: "✍️ Work Log",        stay: true,  size: 1.23, move: "#wordcount-block", drag: true, resize: true }
+    /* [옮김 2026-10-07 — 콩] 🙋‍♂️ Member 알약은 여기서 빠졌습니다 — 혼자 방 화면 **오른쪽 끝의
+       세로 탭**으로 갔어요 (script_member.js 가 탭과 명단을 직접 만듭니다). */
   ];
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */

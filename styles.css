@@ -7648,6 +7648,51 @@ html[data-theme-style="studio"] .user-card{
 
 /* 🙋‍♂️ Member 판 (혼자 방 전용 · 2026-10-01) — 본방 접속자 목록
    [2026-10-01 콩] 폭은 기본 판(460px)의 80% = 368px · 글씨 키움 · 프사 붙임 */
+/* =====================================================================
+   🙋‍♂️ Member 옆 탭 (2026-10-07 — 콩) — 혼자 방 화면 오른쪽 끝
+   ---------------------------------------------------------------------
+   · 탭과 명단은 한 줄기(flex) — 탭이 왼쪽, 명단이 오른쪽. 둘 다 **윗변을 맞춥니다.**
+   · 위·키는 script_member.js 가 카드 마당(.cards-area)에 맞춰 px 로 넣습니다.
+   · 색은 아래 알약(.dock-pill)과 같은 값 — 닫힘 fill-1 / 열림 accent-soft.
+   · 열리면 카드 마당이 250px 좁아져 카드가 다시 줄을 맞춥니다 (배경판도 같이 비켜요).
+   ===================================================================== */
+.member-side{
+  position: fixed; right: 0; top: 60px; height: 60vh; z-index: 30;
+  display: flex; align-items: flex-start; pointer-events: none;
+}
+.member-side > *{ pointer-events: auto; }
+.member-tab{
+  flex: 0 0 auto; cursor: pointer; font: inherit; font-size: var(--fs-sm, 13px); font-weight: 700;
+  writing-mode: vertical-rl; text-orientation: sideways; transform: rotate(180deg);   /* 아래에서 위로 읽힙니다 */
+  padding: 13px 7px; white-space: nowrap;
+  /* 뒤집어 돌린 상자라 좌우가 바뀝니다 — "왼쪽 테두리 없음" 이 화면에서는 오른쪽(붙는 쪽) */
+  border: 1px solid var(--border); border-left: 0; border-radius: 0 14px 14px 0;
+  background: linear-gradient(var(--fill-1), var(--fill-1)), var(--bg, #fff);
+  color: var(--muted-strong);
+}
+.member-tab:hover{ color: var(--text); background: linear-gradient(var(--fill-2), var(--fill-2)), var(--bg, #fff); }
+.member-tab[aria-expanded="true"]{
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg, #fff);
+  border-color: var(--accent); color: var(--text);
+}
+.member-side-list{
+  width: 0; height: 100%; overflow: hidden;
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
+  border-left: 0 solid var(--border);
+}
+html.member-open .member-side-list{ width: 250px; overflow-y: auto; border-left-width: 1px; }
+html.member-open .cards-area{ padding-right: 250px; }
+html.member-open .room-board{ right: 250px; }
+/* 250px 칸에 맞춘 명단 — 판(368px)일 때보다 한 치수 작게 */
+.member-side-list .member-head{ font-size: 12px; padding: 8px 10px 6px; }
+.member-side-list .member-when{ float: none; display: block; }
+.member-side-list .member-list{ padding: 2px 6px 8px; }
+.member-side-list .member-row{ gap: 6px; padding: 5px 2px; }
+.member-side-list .member-ava{ flex-basis: 26px; width: 26px; height: 26px; border-radius: 8px; }
+.member-side-list .member-ava-txt{ font-size: 12px; }
+.member-side-list .member-nick{ font-size: 13px; }
+.member-side-list .member-state{ font-size: 9.5px; padding: 1px 5px; }
+.member-side-list .member-wh{ min-width: 0; font-size: 12px; }
 #dock-panel-member{ width: min(368px, calc(100vw - 24px)); }
 .member-empty{ padding: 18px 12px; text-align: center; color: var(--muted, #8A7B68); font-size: 14px; }
 .member-head{ padding: 8px 12px 6px; font-size: 13px; color: var(--muted, #8A7B68); border-bottom: 1px dashed rgba(0,0,0,.12); }
