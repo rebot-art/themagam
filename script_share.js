@@ -1425,7 +1425,11 @@
          여기만 못 갈면 70% 에서 공유 카드가 **1.4배 길어집니다.** */
     const z = (window.cardZoom?.() || window.uiZoom?.() || 1);
     let h = 0;
-    list.querySelectorAll(".user-card:not(.share-card)").forEach(el => {
+    /* ★★ [고침 2026-10-07 — 콩 "새 카드 메모를 붙이니 화공 카드가 난리"]
+       🆕 메모 카드(.memo-card)는 **재지 않습니다.** 메모 카드는 옆 카드 키만큼
+       늘어나는 카드라, 그걸 자로 쓰면 "공유 카드가 큼 → 메모 카드가 따라 큼 →
+       그 키를 재서 공유 카드에 입힘" 으로 서로를 키웁니다. 사람 카드만 잽니다. */
+    list.querySelectorAll(".user-card:not(.share-card):not(.memo-card)").forEach(el => {
       /* ★★★ [고침 2026-09-07 — 콩 "화면공유 카드만 높이가 달라"]
          가로형(정사각) 카드부터는 **카드 한 장 한 장에 zoom(90.25%)** 이
          걸립니다(styles.css 의 카드 칸 규칙). 화면 값(rect)에는 그 축소가
