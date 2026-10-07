@@ -56,6 +56,10 @@
   const IMG_SIDE = 480;                   // 긴 변 — 카드에 넉넉하고 수십 KB 안팎
   const IMG_IN_MAX = 12 * 1024 * 1024;
   let _img = "";
+  /* [2026-10-07 콩] 그림 놓는 법 — "전체 보기"(자르지 않고 다 보임 · 기본) / "채우기"(카드를 꽉 채우고 넘치면 잘림).
+     붙이는 사람이 고릅니다. status 에는 채우기일 때만 memoFit:"fill" 한 칸이 더 실려요. */
+  let _fit = "";                          // "" = 전체 보기 · "fill" = 채우기
+  const 맞춤 = (v) => (v === "fill" ? "fill" : "");
   function 그림주소(v) {
     const u = window.sanitizePhotoUrl ? window.sanitizePhotoUrl(v) : "";
     if (u) return u;
@@ -117,7 +121,7 @@
     if (!n || _불러온닉 === n) return;
     _불러온닉 = n;
     try { _memo = 다듬기(window.AppStore?.getItem("cardMemo_" + n) || ""); _style = 모양(window.AppStore?.getItem("cardMemoStyle_" + n)); } catch (e) {}
-    try { _img = 그림주소(window.AppStore?.getItem("cardMemoImg_" + n) || ""); } catch (e) {}
+    try { _img = 그림주소(window.AppStore?.getItem("cardMemoImg_" + n) || ""); _fit = 맞춤(window.AppStore?.getItem("cardMemoFit_" + n)); } catch (e) {}
     try {
       if (window.db) {
         const v = (await window.db.ref(`users/${n}/cardMemo`).once("value")).val();
@@ -127,6 +131,7 @@
         if (!window.SOLO) {
           const im = (await window.db.ref(`users/${n}/cardMemoImg`).once("value")).val();
           _img = 그림주소(im);
+          _fit = 맞춤((await window.db.ref(`users/${n}/cardMemoFit`).once("value")).val());
         }
       }
     } catch (e) {}
@@ -139,20 +144,22 @@
   window.myCardMemoStyle = () => ((_memo || _img) ? _style : null);
   /* 그림은 **새 카드(N)** 일 때만 나갑니다 */
   window.myCardMemoImg = () => ((_style === "N" && _img) ? _img : null);
+  window.myCardMemoFit = () => ((_style === "N" && _img && _fit) ? _fit : null);
 
   /* img: undefined = 그림은 그대로 · "" = 그림 떼기 · 주소 = 그 그림으로 */
-  async function 저장(t, st, img) {
+  async function 저장(t, st, img, fit) {
     const n = 나(); if (!n) return;
     _memo = 다듬기(t);
     if (st) _style = 모양(st);
     const 옛그림 = _img;
     if (img !== undefined) _img = 그림주소(img);
+    if (fit !== undefined) _fit = 맞춤(fit);
     if (_style !== "N" || _memo) _img = "";        // 그림은 새 카드에서만, 그리고 글이 있으면 그림은 뗍니다 (그림만 또는 글만)
     if (_img) _memo = "";
     if (옛그림 && 옛그림 !== _img) 옛그림지우기(옛그림);
-    try { window.AppStore?.setItem("cardMemo_" + n, _memo); window.AppStore?.setItem("cardMemoStyle_" + n, _style); window.AppStore?.setItem("cardMemoImg_" + n, _img); } catch (e) {}
+    try { window.AppStore?.setItem("cardMemo_" + n, _memo); window.AppStore?.setItem("cardMemoStyle_" + n, _style); window.AppStore?.setItem("cardMemoImg_" + n, _img); window.AppStore?.setItem("cardMemoFit_" + n, _fit); } catch (e) {}
     try { if (window.db) { await window.db.ref(`users/${n}/cardMemo`).set(_memo || null); await window.db.ref(`users/${n}/cardMemoStyle`).set(_style);
-          if (!window.SOLO) await window.db.ref(`users/${n}/cardMemoImg`).set(_img || null); } } catch (e) {}
+          if (!window.SOLO) { await window.db.ref(`users/${n}/cardMemoImg`).set(_img || null); await window.db.ref(`users/${n}/cardMemoFit`).set((_img && _fit) || null); } } } catch (e) {}
     window.updateStatus?.(true);
   }
 
@@ -172,7 +179,8 @@
     /* 🖼 그림 메모 — 닉네임 없이, 카드에 맞춰 그림 전체 (콩) */
     const 그림 = 그림주소(row && row.memoImg);
     if (그림) {
-      const 태그 = `<img class="memo-card-img" src="${esc(그림)}" alt="${esc(nick)} 님이 붙인 그림" decoding="async">`;
+      const 채움 = 맞춤(row && row.memoFit) === "fill";
+      const 태그 = `<img class="memo-card-img${채움 ? " fill" : ""}" src="${esc(그림)}" alt="${esc(nick)} 님이 붙인 그림" decoding="async">`;
       return lite
         ? `<div class="user-card lite-card memo-card memo-pic" data-memo-of="${esc(nick)}"><div class="memo-lite">${태그}</div></div>`
         : `<div class="user-card memo-card memo-pic" data-memo-of="${esc(nick)}">${태그}</div>`;
@@ -208,6 +216,10 @@
           <button type="button" class="npop-later cmemo-imgpick">🖼 그림 넣기</button>
           <span class="cmemo-imgprev" hidden><img alt="고른 그림"><button type="button" class="cmemo-imgx" title="그림 빼기" aria-label="그림 빼기">✕</button></span>
           <input type="file" class="cmemo-file" accept="image/png,image/jpeg,image/webp" hidden>
+          <span class="cmemo-fit" role="radiogroup" aria-label="그림 놓는 법" hidden>
+            <button type="button" class="cmemo-fitb" data-fit="" role="radio" title="자르지 않고 그림 전체가 보여요">전체 보기</button>
+            <button type="button" class="cmemo-fitb" data-fit="fill" role="radio" title="카드를 꽉 채워요 — 넘치는 부분은 잘려요">채우기</button>
+          </span>
           <span class="cmemo-imghint">그림을 넣으면 글 대신 그림만 떠요</span>
         </div>
         <textarea class="cmemo-in" rows="2" maxlength="${MAX}" placeholder="마감 중…&#10;답변이 느려요 ㅜ^ㅜ">${esc(_memo)}</textarea>
@@ -234,11 +246,24 @@
     const 파일 = veil.querySelector(".cmemo-file"), 세는줄 = veil.querySelector(".cmemo-cnt");
     let 새그림 = null;                 // 방금 고른 것 { blob | data }
     let 그림있음 = !!_img && _style === "N";
+    let 고른맞춤 = _fit;
+    const 맞춤줄 = veil.querySelector(".cmemo-fit");
+    function 맞춤칠하기() {
+      맞춤줄.querySelectorAll(".cmemo-fitb").forEach(b => {
+        const on = b.dataset.fit === 고른맞춤; b.classList.toggle("on", on); b.setAttribute("aria-checked", on);
+      });
+      미리.querySelector("img").style.objectFit = 고른맞춤 === "fill" ? "cover" : "contain";
+    }
+    맞춤줄.addEventListener("click", (e) => {
+      const b = e.target.closest(".cmemo-fitb"); if (!b) return;
+      고른맞춤 = 맞춤(b.dataset.fit); 맞춤칠하기();
+    });
     function 그림칸맞추기() {
       const N = 고른 === "N";
       줄.hidden = !N;
       const 보임 = N && 그림있음;
       미리.hidden = !보임;
+      맞춤줄.hidden = !보임; 맞춤칠하기();
       veil.querySelector(".cmemo-imgpick").textContent = 보임 ? "🖼 그림 바꾸기" : "🖼 그림 넣기";
       ta.hidden = 보임; 세는줄.hidden = 보임;
       if (보임) 미리.querySelector("img").src = 새그림 ? (새그림.data || 새그림.미리) : _img;
@@ -274,9 +299,9 @@
       try {
         if (그림으로 && 새그림) {
           단추.disabled = true; 단추.textContent = "올리는 중…";
-          await 저장("", 고른, await 그림올리기(새그림));
+          await 저장("", 고른, await 그림올리기(새그림), 고른맞춤);
         } else if (그림으로) {
-          await 저장("", 고른);                      // 걸려 있던 그림 그대로
+          await 저장("", 고른, undefined, 고른맞춤);  // 걸려 있던 그림 그대로 (놓는 법만 바꿀 수도)
         } else {
           await 저장(ta.value, 고른, "");            // 글만 — 그림은 뗍니다
         }
