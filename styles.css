@@ -12673,7 +12673,8 @@ html[data-lite] .user-card.share-card,
 }
 /* 채우기 (2026-10-07 콩) — 여백 없이 카드를 꽉, 넘치면 잘림. 모서리는 카드 모양을 따릅니다 */
 .memo-card-img.fill{ inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
-.lite-card.memo-pic .memo-card-img.fill{ inset: 0; width: 100%; height: 100%; border-radius: 5px; }
+/* [2026-10-07 콩] 왼쪽 두 모서리는 각지게 — 단순 카드가 왼쪽은 각, 오른쪽만 둥글어서요 */
+.lite-card.memo-pic .memo-card-img.fill{ inset: 0; width: 100%; height: 100%; border-radius: 0 5px 5px 0; }
 .cmemo-fit{ display: inline-flex; gap: 4px; }
 .cmemo-fit[hidden]{ display: none; }
 .cmemo-fitb{
@@ -12702,7 +12703,7 @@ html[data-lite] .user-card.share-card,
   width: 100%; height: 118px; box-sizing: border-box;
   display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   background: linear-gradient(var(--panel), var(--panel)), var(--bg);
-  border: 1px solid var(--border); border-radius: 6px;
+  border: 1px solid var(--border); border-radius: 0 6px 6px 0;
 }
 .lite-card.memo-card .memo-card-t{ font-size: 24px; line-height: 1.1; }
 .cmemo-card{ max-width: 340px; }
