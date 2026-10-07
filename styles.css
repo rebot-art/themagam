@@ -7654,7 +7654,7 @@ html[data-theme-style="studio"] .user-card{
    · 탭과 명단은 한 줄기(flex) — 탭이 왼쪽, 명단이 오른쪽. 둘 다 **윗변을 맞춥니다.**
    · 위·키는 script_member.js 가 카드 마당(.cards-area)에 맞춰 px 로 넣습니다.
    · 색은 아래 알약(.dock-pill)과 같은 값 — 닫힘 fill-1 / 열림 accent-soft.
-   · 열리면 카드 마당이 250px 좁아져 카드가 다시 줄을 맞춥니다 (배경판도 같이 비켜요).
+   · 열리면 카드 마당이 250px 좁아져 카드가 다시 줄을 맞춥니다 (배경판은 제자리).
    ===================================================================== */
 .member-side{
   position: fixed; right: 0; top: 60px; height: 60vh; z-index: 30;
@@ -7682,7 +7682,8 @@ html[data-theme-style="studio"] .user-card{
 }
 html.member-open .member-side-list{ width: 250px; overflow-y: auto; border-left-width: 1px; }
 html.member-open .cards-area{ padding-right: 250px; }
-html.member-open .room-board{ right: 250px; }
+/* [2026-10-07 콩] 배경판(접속 현황·개근·지금 방에서)은 **제자리에 둡니다** — 처음엔 명단만큼
+   같이 비키게 했는데, 아래 알약 줄과 가운데가 어긋나 보였어요. 밀리는 건 카드뿐입니다. */
 /* 250px 칸에 맞춘 명단 — 판(368px)일 때보다 한 치수 작게 */
 .member-side-list .member-head{ font-size: 12px; padding: 8px 10px 6px; }
 .member-side-list .member-when{ float: none; display: block; }
