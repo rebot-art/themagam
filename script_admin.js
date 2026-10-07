@@ -1622,7 +1622,10 @@
         ? ` stroke="#2B2620" stroke-width="1" stroke-dasharray="3 2"` : "";
       막대 += `<rect x="${(x + 1.5).toFixed(1)}" y="${(H - B - 높이).toFixed(1)}" width="${(bw - 3).toFixed(1)}" height="${높이.toFixed(1)}" rx="2.5" fill="${색}"${오늘점선}>`
             + `<title>${h}시 ~ ${h + 1}시 · 평균 ${v.toFixed(1)}명</title></rect>`;
+      /* [2026-10-07 — 콩] 막대마다 인원을 숫자로. "명" 은 **최대치에만** 붙입니다 (나머지는 숫자만).
+         막대가 좁으면(칸 28px 아래) 숫자끼리 겹쳐서, 그때는 예전처럼 최대치만 적어요. */
       if (h === 피크) 라벨 += `<text x="${(x + bw / 2).toFixed(1)}" y="${(H - B - 높이 - 7).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="#B3372B" font-weight="700">${v.toFixed(1)}명</text>`;
+      else if (v >= 0.05 && bw >= 28) 라벨 += `<text x="${(x + bw / 2).toFixed(1)}" y="${(H - B - 높이 - 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="#8A6A60">${v.toFixed(1)}</text>`;
       if (h % 3 === 0) 라벨 += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#A0917E">${h}시</text>`;
     });
 

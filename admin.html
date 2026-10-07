@@ -406,8 +406,11 @@
     .adm-charts-fold{ margin-top: 12px; }
     .adm-charts-open{ width: 100%; text-align: left; }
     .adm-charts-why{ color: #A0917E; font-weight: 400; font-size: 11.5px; }
+    /* [2026-10-07 — 콩] 다시 **한 줄에 하나씩** — 한 달 흐름 / 글자수 / 작업 시간 / 시간대별 접속.
+       2×2 로 좁혔던 까닭은 "페이지가 한없이 길어서" 였는데, 이제 그래프를 통째로
+       접어 둘 수 있어서(📊 그래프 접기) 넓게 보는 쪽이 낫습니다. */
     .adm-chart-grid{
-      display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px;
+      display: grid; grid-template-columns: 1fr; row-gap: 6px;
     }
     .adm-chart-grid .adm-chart{ min-width: 0; }
     @media (max-width: 900px){ .adm-chart-grid{ grid-template-columns: 1fr; } }
@@ -1079,7 +1082,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610070457"></script>
+  <script src="script_admin.js?v=202610070607"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
