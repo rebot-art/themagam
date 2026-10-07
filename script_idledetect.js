@@ -301,10 +301,31 @@
     }
 
     /* 켜기 — 권한부터 */
-    let perm = "denied";
-    try { perm = await IdleDetector.requestPermission(); } catch (e) {}
-    if (perm !== "granted") {
-      alert("자리비움 감지 권한이 거부됐어요. 주소창 자물쇠 → 사이트 설정에서 허용해 주세요.");
+    /* [고침 2026-10-07 — 콩] "기기 사용을 허용했는데도 거부됐다고 뜬다" 는 신고.
+       예전 안내는 이유가 뭐든 같은 말만 해서 원인을 알 수 없었습니다. 그래서 —
+         ① 브라우저가 던진 오류를 삼키지 않고 쥐어 둡니다
+         ② 설정이 이미 '허용' 이면 요청 결과와 상관없이 **일단 시작해 봅니다**
+            (요청만 거절하고 실제로는 되는 브라우저가 있을 수 있어서)
+         ③ 그래도 안 되면 **무엇이 막았는지**를 그대로 보여 줍니다 —
+            항목 이름("기기 사용")과 브라우저, 설정 상태, 오류 문구까지. */
+    let perm = "denied", 요청오류 = null;
+    try { perm = await IdleDetector.requestPermission(); } catch (e) { 요청오류 = e; }
+    let 설정 = "";
+    try { 설정 = (await navigator.permissions.query({ name: "idle-detection" })).state; } catch (e) { 설정 = "확인 못 함"; }
+    if (perm !== "granted" && !(설정 === "granted" && await _startDetector())) {
+      const ua = navigator.userAgent || "";
+      const 브라우저 = /Whale/i.test(ua) ? "네이버 웨일" : /Edg\//.test(ua) ? "엣지"
+                     : (navigator.brave ? "브레이브" : (/Chrome\//.test(ua) ? "크롬" : "기타"));
+      const 설정글 = ({ granted: "허용", denied: "차단", prompt: "아직 안 정함" })[설정] || 설정;
+      const 시작오류 = window._idleLastErr;
+      alert("자리비움 감지를 켜지 못했어요.\n\n"
+        + (설정 === "granted"
+            ? "설정은 '허용' 인데 브라우저가 막고 있어요. 이 브라우저에서는 이 기능이 안 될 수 있어요 — 크롬에서 한 번 해 봐 주세요."
+            : "주소창 자물쇠 → 사이트 설정 → 「기기 사용」 을 '허용' 으로 바꾼 뒤 새로고침해 주세요.\n(「움직임 감지 센서」 가 아니에요)")
+        + `\n\n─ 알려 주실 때 이 부분을 캡쳐해 주세요 ─`
+        + `\n브라우저: ${브라우저}\n기기 사용 설정: ${설정글}\n요청 결과: ${perm}`
+        + (요청오류 ? `\n요청 오류: ${요청오류.name || ""} ${요청오류.message || 요청오류}` : "")
+        + (시작오류 ? `\n시작 오류: ${시작오류.name || ""} ${시작오류.message || 시작오류}` : ""));
       return;
     }
     /* [고침 2026-08-05] 첫 시작이 간혹 거절되는 경우가 있어 1초 뒤 한 번 더.
