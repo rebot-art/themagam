@@ -163,6 +163,8 @@
   .nt-b{ display:none; margin-top:9px; font-size:12px; line-height:1.9; }
   .nt.open .nt-b{ display:block; }
   .nt-b .lb{ font-weight:700; color:var(--sub); margin-right:6px; }
+  .nt-h .tg{ font-size:10.5px; font-weight:700; color:var(--red); background:rgba(179,55,43,.1);
+             border-radius:99px; padding:2px 7px; white-space:nowrap; }
   .nt-b .no{ color:var(--deep); }
   .nt-b .gray{ color:var(--dim); }
   .pick-hr{ border:0; border-top:1px dashed var(--line); margin:13px 0 0; }
@@ -222,6 +224,7 @@
       <!-- 열흘 리포트는 이 둘뿐 — 주간 리포트의 출석2·그래프2 와 같은 것입니다 -->
       <button type="button" class="tab on" data-tab="att10" role="tab">📅 출석</button>
       <button type="button" class="tab" data-tab="ch10" role="tab">📊 그래프</button>
+      <button type="button" class="tab" data-tab="nt10" role="tab">📢 공지</button>
       <!-- 아래는 코드가 id 로 찾는 자리라 숨긴 채 남겨 둡니다 (안 보임) -->
       <button type="button" class="tab" data-tab="nt" role="tab" id="tab-nt" style="display:none">📢 공지 읽음</button>
     </div>
@@ -262,6 +265,9 @@
       열흘 단위(1–10 · 11–20 · 21–말일) 출석표예요 · ● 은 그날 나온 날 · 가나다순<br>
       <b>자주 만나요❣️</b> 는 이 열흘 동안 나온 날이 적은 순으로 열 명 — 🏖️ 휴가 · 🌿 개인사정이 찍힌 사람은 괄호로 표시
       (휴가·개인사정 표시는 운영진 화면에서만 보여요)
+    </p>
+    <p class="foot" id="foot-nt10" style="display:none">
+      이 열흘에 <b>새로 올라온 공지</b>만 모았어요 · 제목을 누르면 내용이 펼쳐집니다 (사진은 방 안 공지판에서)
     </p>
     <p class="foot" id="foot-ch10" style="display:none">
       열흘 단위 그래프예요 · 옅은 세로 띠는 주말<br>
@@ -472,14 +478,14 @@
   async function 그리기() {
     document.querySelectorAll(".tab").forEach((b) =>
       b.classList.toggle("on", b.dataset.tab === _탭));
-    ["wc", "att", "wt", "ch", "pick", "nt", "att10", "ch10"].forEach((k) => {
+    ["wc", "att", "wt", "ch", "pick", "nt", "att10", "ch10", "nt10"].forEach((k) => {
       el("foot-" + k).style.display = _탭 === k ? "block" : "none";
     });
     /* 📢 공지 읽음은 주와 상관없어서 주 넘기기 줄을 숨깁니다 */
     document.querySelector(".bar").style.visibility = _탭 === "nt" ? "hidden" : "";
     if (_탭 === "nt") return 공지읽음그리기();
     /* 📅📊 열흘 탭은 주 대신 열흘 틀을 씁니다 — 넘기기 단추의 글씨도 바뀝니다 */
-    const 열흘 = _탭 === "att10" || _탭 === "ch10";
+    const 열흘 = _탭 === "att10" || _탭 === "ch10" || _탭 === "nt10";
     el("prev").textContent = 열흘 ? "‹ 지난 열흘" : "‹ 지난주";
     el("next").textContent = 열흘 ? "다음 열흘 ›" : "다음주 ›";
     el("thisw").textContent = 열흘 ? "이번 열흘" : "이번 주";
@@ -496,6 +502,7 @@
     if (_탭 === "ch")  return 그래프탭(날들);
     if (_탭 === "att10") return 출석2그리기(날들);
     if (_탭 === "ch10")  return 그래프2탭(날들);
+    if (_탭 === "nt10")  return 공지열흘그리기(날들);
     글자수그리기(날들);
   }
 
@@ -1119,6 +1126,38 @@
     if (상자 && _탭 === "att10") el("scroll").insertAdjacentHTML("afterbegin", 상자);
   }
 
+  /* ── 📢 공지 (열흘) (2026-10-09 — 콩 "그 기간에 새로 올라온 공지만") ──
+     notice/list 는 제목·본문·딱지·시각만 든 작은 목록이라 한 번 받아 손에 듭니다 (사진은 안 받아요).
+     이 열흘에 **올라간**(at) 공지만 골라 최신이 위로. 제목을 누르면 본문이 펼쳐집니다. */
+  let _공지목록 = null;
+  const 공지딱지 = { feat: "새 기능", fix: "고침", info: "안내" };
+  async function 공지열흘그리기(날들) {
+    const box = el("scroll");
+    if (!_공지목록) {
+      box.innerHTML = `<p class="empty">공지를 모으는 중…</p>`;
+      try {
+        const raw = (await firebase.database().ref("notice/list").once("value")).val() || {};
+        _공지목록 = Object.keys(raw).map((id) => ({
+          id, title: String(raw[id]?.title || ""), body: String(raw[id]?.body || ""),
+          tag: String(raw[id]?.tag || "info"), at: Number(raw[id]?.at || 0)
+        })).sort((a, b) => b.at - a.at);
+      } catch (e) {
+        box.innerHTML = `<p class="empty">공지를 가져오지 못했어요.<br>잠시 뒤 다시 눌러 주세요.</p>`;
+        return;
+      }
+    }
+    const 첫 = new Date(날들[0].d); 첫.setHours(0, 0, 0, 0);
+    const 끝 = new Date(날들[날들.length - 1].d); 끝.setHours(23, 59, 59, 999);
+    const 고른 = _공지목록.filter((n) => n.at >= 첫.getTime() && n.at <= 끝.getTime());
+    if (!고른.length) { box.innerHTML = `<p class="empty">이 열흘에 올라온 공지가 없어요.</p>`; return; }
+    const 날 = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
+    box.innerHTML = 고른.map((n) => `<div class="nt">
+        <div class="nt-h"><span class="tg">${esc(공지딱지[n.tag] || "안내")}</span><b>${esc(n.title || "(제목 없음)")}</b><span class="d">${날(n.at)}</span></div>
+        <div class="nt-b">${esc(n.body).replace(/\n/g, "<br>")}</div></div>`).join("");
+    box.querySelectorAll(".nt-h").forEach((h) =>
+      h.addEventListener("click", () => h.parentElement.classList.toggle("open")));
+  }
+
   /* ── 📢 공지 읽음 탭 (2026-10-03 — 콩) ─────────────────
      읽음 = users/{닉}/noticeRead/{id} 가 있거나(펼침),
             users/{닉}/noticeSeenAt 이 그 공지 시각보다 같거나 뒤(다 읽음 기준선).
@@ -1185,7 +1224,7 @@
   }));
   document.querySelectorAll(".tab").forEach((b) =>
     b.addEventListener("click", () => { _탭 = b.dataset.tab; 그리기(); }));
-  const 열흘탭 = () => _탭 === "att10" || _탭 === "ch10";
+  const 열흘탭 = () => _탭 === "att10" || _탭 === "ch10" || _탭 === "nt10";
   el("prev").addEventListener("click", () => 열흘탭() ? 열흘옮기기(-1) : 옮기기(-1));
   el("next").addEventListener("click", () => 열흘탭() ? 열흘옮기기(1) : 옮기기(1));
   el("thisw").addEventListener("click", () => {
