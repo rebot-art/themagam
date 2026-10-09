@@ -12765,3 +12765,50 @@ html[data-lite] .user-card.share-card,
   border: 1px solid var(--border); border-radius: 10px; background: var(--panel, #fff); color: var(--text); }
 .cmemo-in:focus{ outline: none; border-color: var(--accent); }
 .cmemo-cnt{ margin: 4px 2px 12px; text-align: right; font-size: 11px; color: var(--muted); }
+
+/* =====================================================================
+   📑 옆 탭 (2026-10-09 — 콩) — 공지 · 표현 공부 · Q&A 를 오른쪽 세로 탭으로 (혼자 방 먼저)
+   ---------------------------------------------------------------------
+   · 탭 모양은 .member-tab 을 그대로 씁니다. Member 탭 아래로 쌓여요 (윗여백은 script_sidetabs.js 가 px 로).
+   · 칸은 400px. 열리면 카드 마당이 400px 좁아집니다. 한 번에 하나만 열려요.
+   · 어느 한쪽이 열리면 다른 쪽 탭도 **같이 왼쪽으로** 비켜 섭니다 — 탭 줄이 끊기지 않게.
+   ===================================================================== */
+.side-tabs{
+  position: fixed; right: 0; top: 60px; height: 60vh; z-index: 30;
+  display: flex; align-items: flex-start; pointer-events: none;
+}
+.side-tabs > *{ pointer-events: auto; }
+.side-tabs-col{ display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.side-tab{ position: relative; }
+.side-tab-dot{ position: absolute; right: -3px; bottom: -3px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--danger); box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+.side-tab-dot.hidden{ display: none; }
+.side-pane{
+  width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column;
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
+  border-left: 0 solid var(--border);
+}
+html.side-open .side-pane{ width: 400px; border-left-width: 1px; }
+html.side-open .cards-area{ padding-right: 400px; }
+html.side-open .member-side{ right: 400px; }
+html.member-open .side-tabs{ right: 250px; }
+.side-pane-head{ flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px 6px 14px;
+  font-size: var(--fs-sm, 13px); border-bottom: 1px solid var(--border); }
+.side-pane-head b{ flex: 1; }
+.side-pane-body{ flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.side-pane-body > .dock-body{ flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+/* 옮겨 간 메뉴의 아래 알약은 감춥니다 */
+html.sidetabs-on #dock-pill-notice,
+html.sidetabs-on #dock-pill-help,
+html.sidetabs-on #dock-pill-qna{ display: none !important; }
+/* 📢 공지 — 가운데 창을 오른쪽 칸 자리에 앉힙니다 (머리줄 아래) */
+html.side-notice #notice-modal{
+  inset: auto; right: 0; top: calc(var(--side-top, 60px) + 37px); width: 400px;
+  height: calc(var(--side-h, 60vh) - 37px);
+  padding: 0; background: none; align-items: stretch; justify-content: stretch; z-index: 31;
+}
+html.side-notice #notice-modal .modal-content{
+  width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; border: 0;
+  background: transparent; zoom: 1;
+}
+html.side-notice #notice-modal .modal-x{ display: none; }

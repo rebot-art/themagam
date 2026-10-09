@@ -1104,6 +1104,8 @@
     start();
   }
 
+  /* [2026-10-09] 옆 탭(script_sidetabs.js)이 판 대신 읽어 줄 때 — 붉은 점을 끄고 '봤다' 를 적습니다 */
+  window.dockSeen = (id) => { dot(id, false); if (NEW_BOARDS.indexOf(id) >= 0) 봤다(id, _newAt[id] || Date.now()); };
   window.dockOpen  = open;
   window.dockClose = closeAll;
   window.dockCloseOne = close;
