@@ -10816,6 +10816,10 @@ html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-
   padding: 10px 12px; background: none; border: none; cursor: pointer;
   color: var(--text); text-align: left; font-size: var(--fs-sm);
 }
+/* 🔴 명패마다 새 품평 점 (2026-10-09 콩) — 알약의 점(--danger)보다 한 톤 부드럽게 포인트색으로.
+   목록 안에서 여러 개가 켜질 수 있어, 빨강이면 경고처럼 보여요. */
+.pub-dot{ flex: none; width: 7px; height: 7px; border-radius: var(--r-full); background: var(--accent);
+          box-shadow: 0 0 0 2px var(--bg); margin-right: -2px; }
 .pub-name{ font-weight: var(--fw-bold); }
 .pub-genre{ font-size: var(--fs-xs); color: var(--muted); }
 .pub-count{ margin-left: auto; font-size: var(--fs-xs); color: var(--muted-strong); }
@@ -12862,6 +12866,9 @@ html.side-notice #notice-modal .modal-content{
   background: transparent; zoom: 1;
 }
 html.side-notice #notice-modal .modal-x{ display: none; }
+/* [2026-10-09 콩] 옆 칸 머리에 이미 "📢 공지" 라고 적혀 있어 "— NOTICE —" 가 겹칩니다 — 뺍니다
+   (알약 판 시절 #dock-body-notice 에도 같은 이유로 뺐었어요) */
+html.side-notice #notice-modal .nt-eyebrow{ display: none; }
 /* 📁 자료실 — 공지와 똑같이 오른쪽 칸 자리에 앉힙니다 (2026-10-09 콩, Q&A 아래) */
 html.side-files #files-modal{
   inset: auto; right: 0; top: calc(var(--side-top, 60px) + 37px); width: 400px;

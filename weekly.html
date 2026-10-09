@@ -1052,47 +1052,70 @@
        운영진이 볼 때만 붙고, 남이 열면 조용히 안 붙습니다. 열 명 것만, 이 열흘 범위만 읽어요
        (스무 번의 작은 읽기). 한 번 읽은 열흘은 손에 들고 있습니다.
      ────────────────────────────────────────────────── */
+  /* [2026-10-09 콩 — A안 "운영진이 열면 발행"]
+     🏖️🌿 는 운영진만 읽을 수 있어, 멤버가 링크로 열면 "왜 못 왔는지" 가 안 보여 "휴가 냈는데 왜 올라갔지" 가 됩니다.
+     그래서 **운영진이 이 탭을 열면** 그때 셈한 열 명(아이콘 포함)을 report/meet/{첫날} 에 **발행**하고,
+     멤버는 그 발행본을 봅니다. 휴가 기록 자체는 그대로 운영진만 읽는 자리에 있어요 — 공개되는 건
+     어차피 공유하려던 "열 명 이름 + 아이콘" 한 줄뿐입니다. 멤버 화면엔 "운영진 확인 n월 n일" 이 작게 붙어요.
+     ★ 이 페이지가 서버에 쓰는 유일한 곳입니다 (checks.js 가 report/meet 만 허용). */
   const _사정캐시 = {};
   async function 자주만나요(날들) {
     const 지난 = 날들.filter(({ key }) => key <= 오늘키);
     if (!지난.length) return "";
-    const 명단 = await 명단읽기();
-    if (!명단.length) return "";
-    const 나온날 = {};
-    명단.forEach((닉) => { 나온날[닉] = 0; });
-    지난.forEach(({ key }) => {
-      Object.keys(_att[key] || {}).forEach((닉) => { if (닉 in 나온날) 나온날[닉]++; });
-    });
-    const 하위 = 명단.slice().sort((a, b) => (나온날[a] - 나온날[b]) || a.localeCompare(b, "ko")).slice(0, 10);
-
-    /* 🏖️🌿 — 읽을 수 있을 때만 */
     const 첫 = 날들[0].key, 끝 = 날들[날들.length - 1].key;
-    const 열쇠 = 첫 + "|" + 하위.join(",");
-    let 사정 = _사정캐시[열쇠];
-    if (!사정) {
-      사정 = {};
-      const db = firebase.database();
-      await Promise.all(하위.map(async (닉) => {
-        const r = { v: false, l: false };
+    const db = firebase.database();
+    const 칩들 = (목록) => 목록.map((r) => {
+      const 아이콘 = (r.v ? "🏖️" : "") + (r.l ? "🌿" : "");
+      return `<span class="mchip">${esc(r.n)}${아이콘 ? ` (<span class="ic">${아이콘}</span>)` : ""}<small>${r.d}일</small></span>`;
+    }).join("");
+    const 상자 = (목록, 꼬리) =>
+      `<div class="meet"><div class="meet-h"><b>자주 만나요❣️</b><small>이 열흘 동안 나온 날이 적은 순 · ${지난.length}일 중${꼬리 || ""}</small></div>
+       <div class="meet-l">${칩들(목록)}</div></div>`;
+
+    let 결과 = _사정캐시[첫];
+    if (!결과) {
+      const 명단 = await 명단읽기();
+      if (!명단.length) return "";
+      const 나온날 = {};
+      명단.forEach((닉) => { 나온날[닉] = 0; });
+      지난.forEach(({ key }) => {
+        Object.keys(_att[key] || {}).forEach((닉) => { if (닉 in 나온날) 나온날[닉]++; });
+      });
+      const 하위 = 명단.slice().sort((a, b) => (나온날[a] - 나온날[b]) || a.localeCompare(b, "ko")).slice(0, 10);
+
+      /* 🏖️🌿 — 열 명 것만, 이 열흘 범위만. 하나라도 읽혔으면 운영진입니다 */
+      let 운영진 = false;
+      const 목록 = await Promise.all(하위.map(async (닉) => {
+        const r = { n: 닉, d: 나온날[닉], v: false, l: false };
         try {
           const a = await db.ref(`users/${닉}/vacations`).orderByKey().startAt(첫).endAt(끝).once("value");
-          r.v = !!(a.val() && Object.keys(a.val()).length);
+          r.v = !!(a.val() && Object.keys(a.val()).length); 운영진 = true;
         } catch (e) {}
         try {
           const b = await db.ref(`users/${닉}/leaves`).orderByKey().startAt(첫).endAt(끝).once("value");
-          r.l = !!(b.val() && Object.keys(b.val()).length);
+          r.l = !!(b.val() && Object.keys(b.val()).length); 운영진 = true;
         } catch (e) {}
-        사정[닉] = r;
+        return r;
       }));
-      _사정캐시[열쇠] = 사정;
+
+      if (운영진) {
+        /* 발행 — 멤버가 볼 한 줄. 못 써도(권한) 화면은 그대로 */
+        try { await db.ref(`report/meet/${첫}`).set({ at: Date.now(), by: _나, list: 목록 }); } catch (e) {}
+        결과 = { 목록, 꼬리: "" };
+      } else {
+        /* 멤버 — 운영진이 발행해 둔 것이 있으면 그걸, 없으면 아이콘 없는 셈 */
+        let 발행 = null;
+        try { 발행 = (await db.ref(`report/meet/${첫}`).once("value")).val(); } catch (e) {}
+        if (발행 && Array.isArray(발행.list)) {
+          const d = new Date(Number(발행.at) || 0);
+          결과 = { 목록: 발행.list, 꼬리: ` · 운영진 확인 ${d.getMonth() + 1}월 ${d.getDate()}일` };
+        } else {
+          결과 = { 목록, 꼬리: "" };
+        }
+      }
+      _사정캐시[첫] = 결과;
     }
-    const 칩 = 하위.map((닉) => {
-      const r = 사정[닉] || {};
-      const 아이콘 = (r.v ? "🏖️" : "") + (r.l ? "🌿" : "");
-      return `<span class="mchip">${esc(닉)}${아이콘 ? ` (<span class="ic">${아이콘}</span>)` : ""}<small>${나온날[닉]}일</small></span>`;
-    }).join("");
-    return `<div class="meet"><div class="meet-h"><b>자주 만나요❣️</b><small>이 열흘 동안 나온 날이 적은 순 · ${지난.length}일 중</small></div>
-      <div class="meet-l">${칩}</div></div>`;
+    return 상자(결과.목록, 결과.꼬리);
   }
 
   async function 출석2그리기(날들) {

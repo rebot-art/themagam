@@ -118,6 +118,50 @@
   let _pubs = {};        // pid → { name, genre, at }
   let _revs = {};        // pid → { rid → { text, at, hearts } }
   let _openPub = null;   // 펼쳐진 명패 — 한 번에 하나 (목록이 길어지니까)
+
+  /* =====================================================================
+     🔴 출판사마다 "새 품평" 점 (2026-10-09 — 콩)
+     ---------------------------------------------------------------------
+     알약의 점은 "품평 어딘가에 새 글" 까지만 알려 줍니다. 수십 개 명패 중
+     **어느 회사**에 새 글이 달렸는지를 명패 이름 앞 점으로 보여 줘요.
+       · 읽음 = 그 명패를 펼친 것. 펼치는 순간 그 회사의 "본 시각" 을 적습니다.
+       · 저장은 이 기기(AppStore)에만 — 서버엔 아무것도 안 올라가요 (익명 자리니까).
+       · 처음 온 기기는 **다 본 것으로** 치고 조용히 시작합니다 (알약 점과 같은 규칙).
+         안 그러면 첫 날 수십 개 점이 한꺼번에 켜져 "새 글" 이라는 말이 무의미해져요.
+       · 통신량 0 — 판을 열 때 이미 받는 자료(_pubs·_revs)로만 셉니다.
+     ===================================================================== */
+  const SEEN_KEY = "pubSeen";                 // { pid: 본 시각 ms }
+  let _seen = null;
+  function seenMap() {
+    if (_seen) return _seen;
+    try { _seen = JSON.parse(window.AppStore?.getItem(SEEN_KEY) || "null"); } catch (e) { _seen = null; }
+    if (!_seen || typeof _seen !== "object") _seen = null;
+    return _seen;
+  }
+  function seenSave() {
+    try { window.AppStore?.setItem(SEEN_KEY, JSON.stringify(_seen || {})); } catch (e) {}
+  }
+  /** 그 명패의 가장 늦은 시각 — 명패 등록 시각과 품평 시각 중 큰 것 */
+  function latestAt(pid) {
+    const revs = _revs[pid] || {};
+    return Object.keys(revs).reduce((m, rid) => Math.max(m, Number(revs[rid].at) || 0),
+                                    Number(_pubs[pid] && _pubs[pid].at) || 0);
+  }
+  function markSeen(pid) {
+    const m = seenMap() || (_seen = {});
+    const at = latestAt(pid);
+    if ((m[pid] || 0) < at) { m[pid] = at; seenSave(); }
+  }
+  /** 자료가 도착할 때마다 — 처음 온 기기면 지금 것을 전부 본 것으로, 펼쳐 둔 명패는 곧 읽은 것 */
+  function seenSettle() {
+    if (!seenMap()) {
+      _seen = {};
+      Object.keys(_pubs).forEach(pid => { _seen[pid] = latestAt(pid); });
+      seenSave();
+    }
+    if (_openPub) markSeen(_openPub);
+  }
+  const isNew = (pid) => { const m = seenMap(); return !!m && latestAt(pid) > (m[pid] || 0); };
   let _listening = false;
 
   const el = (id) => document.getElementById(id);
@@ -200,7 +244,7 @@
       <article class="pub-item${open ? " is-open" : ""}" data-pid="${esc(pid)}">
         <button type="button" class="pub-head" data-pub-open="${esc(pid)}"
                 aria-expanded="${open}">
-          <b class="pub-name">${esc(표시이름 || p.name)}</b>
+          ${isNew(pid) ? `<i class="pub-dot" aria-label="새 품평" title="새 품평이 있어요"></i>` : ""}<b class="pub-name">${esc(표시이름 || p.name)}</b>
           ${p.genre ? `<span class="pub-genre">${esc(p.genre)}</span>` : ""}
           <span class="pub-count">💬 ${rids.length}</span>
           <span class="pub-arrow" aria-hidden="true">${open ? "▾" : "▸"}</span>
@@ -228,6 +272,7 @@
   function render() {
     const box = el("pub-board");
     if (!box) return;
+    seenSettle();                                  // 🔴 새 품평 점 — 자료 기준으로 정리
 
     /* 쓰던 글은 다시 그려도 살아 있어야 합니다 (공지판과 같은 수법) */
     const ta = box.querySelector("[data-pub-input]");
@@ -467,6 +512,7 @@
       if (openBtn) {
         const pid = openBtn.dataset.pubOpen;
         _openPub = _openPub === pid ? null : pid;   // 한 번에 하나
+        if (_openPub) markSeen(_openPub);           // 펼치면 읽은 것
         render();
         return;
       }
