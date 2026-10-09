@@ -130,7 +130,8 @@
          안 그러면 첫 날 수십 개 점이 한꺼번에 켜져 "새 글" 이라는 말이 무의미해져요.
        · 통신량 0 — 판을 열 때 이미 받는 자료(_pubs·_revs)로만 셉니다.
      ===================================================================== */
-  const SEEN_KEY = "pubSeen";                 // { pid: 본 시각 ms }
+  /* 이름 뒤 2 — 첫 판(pubSeen)은 빈 상태에 도장이 찍힌 기기가 있어, 이름을 바꿔 모두 새로 시작합니다 */
+  const SEEN_KEY = "pubSeen2";                // { pid: 본 시각 ms }
   let _seen = null;
   function seenMap() {
     if (_seen) return _seen;
@@ -141,20 +142,23 @@
   function seenSave() {
     try { window.AppStore?.setItem(SEEN_KEY, JSON.stringify(_seen || {})); } catch (e) {}
   }
-  /** 그 명패의 가장 늦은 시각 — 명패 등록 시각과 품평 시각 중 큰 것 */
+  /** 그 명패의 가장 늦은 **품평** 시각 — 품평이 없으면 0 (명패 등록만으론 새 글이 아닙니다.
+      ★ 처음엔 명패 등록 시각도 셌더니 댓 0인 레이블에 전부 점이 붙었어요 — 콩 2026-10-09) */
   function latestAt(pid) {
     const revs = _revs[pid] || {};
-    return Object.keys(revs).reduce((m, rid) => Math.max(m, Number(revs[rid].at) || 0),
-                                    Number(_pubs[pid] && _pubs[pid].at) || 0);
+    return Object.keys(revs).reduce((m, rid) => Math.max(m, Number(revs[rid].at) || 0), 0);
   }
   function markSeen(pid) {
     const m = seenMap() || (_seen = {});
     const at = latestAt(pid);
     if ((m[pid] || 0) < at) { m[pid] = at; seenSave(); }
   }
-  /** 자료가 도착할 때마다 — 처음 온 기기면 지금 것을 전부 본 것으로, 펼쳐 둔 명패는 곧 읽은 것 */
+  /** 자료가 도착할 때마다 — 처음 온 기기면 지금 것을 전부 본 것으로, 펼쳐 둔 명패는 곧 읽은 것
+      ★★ 명패와 품평이 **둘 다 도착한 뒤에만** 첫 도장을 찍습니다. 빈 상태에서 찍으면 그 뒤 들어오는
+         품평이 전부 "새 글" 이 돼요 — 실제로 그랬습니다 (콩 2026-10-09 "점이 다 붙었어"). */
   function seenSettle() {
     if (!seenMap()) {
+      if (!_revsLoaded || !Object.keys(_pubs).length) return;
       _seen = {};
       Object.keys(_pubs).forEach(pid => { _seen[pid] = latestAt(pid); });
       seenSave();
@@ -194,6 +198,7 @@
        것보다, 옛 내용이 보이다가 새것으로 바뀌는 편이 낫습니다.
      ===================================================================== */
   let _pubRefs = [];
+  let _revsLoaded = false;   // 품평이 한 번이라도 도착했나 — 새 글 점의 첫 도장은 그 뒤에
 
   function listenPub() {
     if (_listening || !window.db) return;
@@ -206,6 +211,7 @@
     const r2 = window.db.ref("pubreview");
     const h2 = r2.on("value", snap => {
       _revs = snap.val() || {};
+      _revsLoaded = true;
       render();
     }, err => console.warn("[품평] 품평을 못 받아왔어요", err));
     _pubRefs = [[r1, h1], [r2, h2]];
@@ -360,7 +366,7 @@
         <section class="pub-group${펼침 ? " is-open" : ""}">
           <button type="button" class="pub-co-head" data-pub-co="${esc(coKey)}"
                   aria-expanded="${펼침}">
-            <b class="pub-name">🏢 ${esc(u.co)}</b>
+            ${u.pids.some(isNew) ? `<i class="pub-dot" aria-label="새 품평" title="안에 새 품평이 있어요"></i>` : ""}<b class="pub-name">🏢 ${esc(u.co)}</b>
             <span class="pub-genre">레이블 ${u.labels}</span>
             <span class="pub-count">💬 ${u.talk}</span>
             <span class="pub-arrow" aria-hidden="true">${펼침 ? "▾" : "▸"}</span>
