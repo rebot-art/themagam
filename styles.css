@@ -9469,6 +9469,43 @@ html.member-open .cards-area{ padding-right: 250px; }
   .sticker-pop{ gap: 2px; padding: 6px; }
   .sticker-pop .sticker-opt{ padding: 2px; }
 }
+/* 🕓 최근 쓴 스티커 줄 (2026-10-09 콩) — 판 맨 아래, 점선으로 갈라서.
+   격자 전체 폭을 차지하고(grid-column 1/-1), 판을 굴려도 **바닥에 붙어 따라옵니다**(sticky).
+   ★ 콩 "절대 두 줄로 넘어가지 않게" — script 가 칸 수만큼만 넣고, 여기서도
+     nowrap + overflow hidden 으로 한 번 더 막습니다. 넘치면 잘릴지언정 안 접힙니다. */
+.sticker-recent{
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: -8px;                 /* 판 padding 만큼 — 바닥에 딱 붙게 */
+  margin: 2px -8px -8px;
+  padding: 11px 8px 8px;        /* 위 11px — 점선 위에 얹힌 "최근 쓴" 글씨 자리 */
+  /* 판 색(--panel)은 반투명이라 굴린 스티커가 비쳐 보였어요 — 두 겹 깔아 거의 불투명하게 */
+  background: linear-gradient(var(--panel), var(--panel)), linear-gradient(var(--panel), var(--panel));
+  border-top: 1.5px dashed var(--border);
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  gap: 4px;
+  align-items: center;
+}
+/* "최근 쓴" — 칸을 안 잡아먹게 점선 **위에** 얹습니다 (넓은 화면 10칸이 그대로 다 들어가게).
+   예전엔 줄 왼쪽에 뒀더니 열 번째가 잘렸어요. */
+.sticker-recent-lbl{
+  position: absolute;
+  top: -7px;
+  left: 10px;
+  padding: 0 4px;
+  background: linear-gradient(var(--panel), var(--panel)), linear-gradient(var(--panel), var(--panel));
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sticker-recent .sticker-opt{ flex: 0 0 auto; }
+@media (max-width: 400px){
+  .sticker-recent{ margin: 2px -6px -6px; padding: 9px 6px 6px; gap: 2px; bottom: -6px; }
+}
+
 .sticker-opt{
   border: 1px solid transparent;
   border-radius: var(--r-sm);
@@ -12805,12 +12842,14 @@ html.member-open .side-tabs{ right: 250px; }
 html.sidetabs-on #dock-pill-notice,
 html.sidetabs-on #dock-pill-help,
 html.sidetabs-on #dock-pill-pub,
-html.sidetabs-on #dock-pill-qna{ display: none !important; }
+html.sidetabs-on #dock-pill-qna,
+html.sidetabs-on #dock-pill-files{ display: none !important; }
 /* 좁은 화면(900px 아래) — 카드를 밀면 한 줄에 한 장도 안 남아서, 그때만 칸이 카드 **위로 덮습니다** */
 @media (max-width: 900px){
   html.side-open .cards-area{ padding-right: 0; }
   html.side-open .side-pane{ width: min(400px, calc(100vw - 44px)); }
   html.side-notice #notice-modal{ width: min(400px, calc(100vw - 44px)); }
+  html.side-files #files-modal{ width: min(400px, calc(100vw - 44px)); }
 }
 /* 📢 공지 — 가운데 창을 오른쪽 칸 자리에 앉힙니다 (머리줄 아래) */
 html.side-notice #notice-modal{
@@ -12823,3 +12862,17 @@ html.side-notice #notice-modal .modal-content{
   background: transparent; zoom: 1;
 }
 html.side-notice #notice-modal .modal-x{ display: none; }
+/* 📁 자료실 — 공지와 똑같이 오른쪽 칸 자리에 앉힙니다 (2026-10-09 콩, Q&A 아래) */
+html.side-files #files-modal{
+  inset: auto; right: 0; top: calc(var(--side-top, 60px) + 37px); width: 400px;
+  height: calc(var(--side-h, 60vh) - 37px);
+  padding: 0; background: none; align-items: stretch; justify-content: stretch; z-index: 31;
+}
+html.side-files #files-modal .modal-content{
+  width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; border: 0;
+  background: transparent; zoom: 1;
+}
+html.side-files #files-modal .modal-x{ display: none; }
+html.side-files #files-modal .modal-title{ display: none; }   /* 칸 머리에 이미 "📁 자료실" 이 있어요 */
+/* 폭 400 안에서는 긴 파일 이름을 **줄바꿈** (콩) — 가운데 창에서는 … 으로 자르던 것 */
+html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text-overflow: clip; word-break: break-all; line-height: 1.3; }

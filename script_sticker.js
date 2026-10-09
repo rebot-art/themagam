@@ -3,8 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 쉰여덟 개. 채팅과 수다방 양쪽에서 씁니다.
-   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나)
+   말풍선 대신 크게 뜨는 손그림 예순 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나 → 10-09 예순)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -132,6 +132,20 @@
       textColor: "#2F6191"
     },
     {
+      /* [2026-10-09 콩] 바이바이 — 잘가요(흔드는 손)와 **따로**. 손을 또 그리면
+         겹치니 **휙 날아가는 종이비행기**로. 미리보기 A(뒷모습)·B(종이비행기) 중 B. */
+      id: "byebye", cmd: "바이바이", label: "바이바이",
+      cmdRe: /^\/(바이바이|빠이|빠이빠이)$/,
+      svg: `<path d="M10 44q10-6 14-16M14 48q12-5 18-12" stroke="#C9BCA8" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/>
+            <path d="M26 30L62 14 44 42l-6-10z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M62 14L38 32M38 32l6 10" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M26 30l12 2" fill="none" stroke="#3A2A22" stroke-width="1.2" opacity=".5"/>
+            <path d="M38 32l-2 8" fill="none" stroke="#8FB8E0" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M60 30l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#F0C674"/>
+            <path d="M14 20l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#F0A0B8"/>`,
+      textColor: "#2F6191"
+    },
+    {
       /* 낼 봐요 — 잘가요(오늘 그만) 바로 뒤. 손을 또 그리면 잘가요와
          겹치니까 **달력**으로 갔습니다. 내일 칸에 동그라미가 쳐 있어요. */
       id: "seeya", cmd: "낼봐", label: "낼 봐요",
@@ -160,6 +174,23 @@
             <path d="M60 10a7 7 0 1 0 4 12 8.4 8.4 0 0 1-4-12z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.4"/>
             <text x="43" y="24" font-family="'Gamja Flower',cursive" font-size="15" fill="#8FB8E0">zZ</text>
             <path d="M14 16l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#AFA9EC"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* [2026-10-09 콩] 좋은 꿈꿔 — 굿밤 바로 뒤. 굿밤이 누운 얼굴·이불·달·zZ 를
+         다 썼으므로 **울타리 넘는 양**(양 세기)으로. 미리보기 A(꿈구름+베개)·B(양) 중 B.
+         이름이 다섯 자라 fs 17 (참잘했어요와 같음). */
+      id: "dream", cmd: "좋은꿈", label: "좋은 꿈꿔", fs: 17,
+      cmdRe: /^\/(좋은꿈|좋은꿈꿔|꿈꿔|굿드림)$/,
+      svg: `<path d="M10 52h52" stroke="#3A2A22" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M42 52V40M50 52V40M58 52V40M40 44h20" stroke="#B3372B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M20 24a7 7 0 0 1 11-5 6 6 0 0 1 10 3 5 5 0 0 1 1 10H19a5 5 0 0 1 1-8z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M24 32v8M31 32v9" stroke="#3A2A22" stroke-width="2" stroke-linecap="round"/>
+            <ellipse cx="40" cy="27" rx="5.5" ry="4.5" fill="#3A2A22"/>
+            <circle cx="42" cy="26" r="1.1" fill="#fff"/>
+            <path d="M36 22l-2-3M44 22l2-3" stroke="#3A2A22" stroke-width="2" stroke-linecap="round"/>
+            <path d="M60 10a6 6 0 1 0 3.5 10 7.2 7.2 0 0 1-3.5-10z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M12 12l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#AFA9EC"/>`,
       textColor: "#4A3F9E"
     },
         {
@@ -352,6 +383,15 @@
                   fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round" transform="translate(59 17) scale(.75)"/>
             <path d="M0 0c-1.6-2.4-5-1.6-5 .8 0 2.1 3 3.7 5 5.2 2-1.5 5-3.1 5-5.2 0-2.4-3.4-3.2-5-.8z"
                   fill="#F0A0B8" stroke="#3A2A22" stroke-width="2.1" stroke-linejoin="round" transform="translate(45 13) scale(.55)"/>`,
+      textColor: "#C2557A"
+    },
+    {
+      /* [2026-10-09 콩] 축하 — 배열 맨 끝(기분 무리 뒤)에 외따로 있어 눈에 안 띈다고
+         해서 칭찬해요 바로 뒤로 옮겼습니다. id·그림은 그대로 — 지난 채팅 안 깨집니다. */
+      id: "cheer", cmd: "축하", label: "축하",
+      svg: `<path d="M36 44 20 24h32z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M20 24h32l-6-8H26z" fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M12 14l3 4M60 14l-3 4M36 8v4" stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>`,
       textColor: "#C2557A"
     },
         {
@@ -949,13 +989,6 @@
                   stroke-linecap="round" stroke-dasharray="3 3"/>
             <circle cx="58" cy="16" r="4.5" fill="#EDE9F5" stroke="#A79FC4" stroke-width="1.4"/>`,
       textColor: "#5A5175"
-    },
-    {
-      id: "cheer", cmd: "축하", label: "축하",
-      svg: `<path d="M36 44 20 24h32z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M20 24h32l-6-8H26z" fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
-            <path d="M12 14l3 4M60 14l-3 4M36 8v4" stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>`,
-      textColor: "#C2557A"
     }
   ];
 
@@ -1035,6 +1068,36 @@
      과 제 보내기를 쓰므로, **어디에 쓸지**를 받아 둡니다.
      ★ 기본값은 그대로 챗이에요 — 부르는 쪽을 안 고쳐도 예전처럼 돕니다.
      ===================================================================== */
+  /* =====================================================================
+     🕓 최근 쓴 스티커 (2026-10-09 콩)
+     ---------------------------------------------------------------------
+     판을 열면 **맨 아래, 점선 아래**에 내가 최근 쓴 것들이 한 줄 뜹니다.
+     판은 보통 단추 위로 뜨니, 아래 줄이 손에 제일 가까운 자리예요.
+       · 저장은 **이 기기 안(AppStore = 방 이름표 붙은 localStorage)** 에만 — 서버 통신 0.
+         ★ localStorage 를 바로 쓰면 checks 의 "원본 저장소" 검사에 걸립니다 (방끼리 섞여서).
+       · 판에서 고른 것도, /토닥 처럼 쳐서 보낸 것도 다 들어갑니다.
+       · 같은 걸 또 쓰면 맨 앞으로. 최대 열 개만 기억합니다.
+       · ★ 절대 두 줄로 안 넘어가게 — 보여 주는 개수는 그때 판의 **칸 수**만큼만
+         (5칸이면 5개, 10칸이면 10개). styles.css 도 nowrap + overflow hidden 으로
+         한 번 더 막습니다.
+       · 한 번도 안 쓴 사람은 줄 자체가 없어서 예전 판과 똑같이 보입니다.
+     ===================================================================== */
+  const RECENT_KEY = "themagam.stickerRecent";
+  const RECENT_MAX = 10;
+  function recentList() {
+    try {
+      const a = JSON.parse((window.AppStore || localStorage).getItem(RECENT_KEY) || "[]");
+      return Array.isArray(a) ? a.filter(id => byId(id)) : [];   // 없어진 스티커는 거릅니다
+    } catch (e) { return []; }
+  }
+  function recentPush(id) {
+    try {
+      const a = recentList().filter(x => x !== id);
+      a.unshift(id);
+      (window.AppStore || localStorage).setItem(RECENT_KEY, JSON.stringify(a.slice(0, RECENT_MAX)));
+    } catch (e) {}
+  }
+
   let _곳 = { btnId: "sticker-btn", inputId: "message", send: () => window.send?.() };
 
   function pick(id) {
@@ -1045,6 +1108,7 @@
     try { _곳.send?.(); } catch (e) {}
     el.focus();
     countForAchv(id);
+    recentPush(id);                                 // 🕓 최근
   }
 
   /* 🏅 업적에 알리기 — 인사왕·토닥이·스티커 수집가가 이 숫자를 봅니다.
@@ -1063,7 +1127,7 @@
            써도 배지가 안 붙어서 "왜 나만 안 되지" 가 됩니다. */
         /* ★ 한 줄에 하나씩 — checks.js 가 줄 단위로 읽습니다 (여러 줄로
            나누면 "아예 없음" 으로 잡혀요). */
-        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "morning", "seeya", "gnight"], // 👋 인사왕 (웰컴 2026-09-30)
+        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "byebye", "morning", "seeya", "gnight", "dream"], // 👋 인사왕 (웰컴 2026-09-30 · 바이바이·좋은 꿈꿔 2026-10-09)
         cPat:   ["pat", "cheerup", "praise"],                                   // 🫶 토닥이
         cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]           // 📣 응원왕
       };
@@ -1094,6 +1158,23 @@
               title="${s.label} (/${s.cmd})" aria-label="${s.label}"
       >${window.stickerHtml(`[[스티커:${s.id}]]`, 58)}</button>`).join("");
     doc.body.appendChild(pop);
+
+    /* 🕓 최근 쓴 스티커 — 점선 아래 한 줄. 칸 수만큼만 보여 **두 줄로 안 넘어갑니다**.
+       칸 수는 CSS 가 화면 폭으로 정하므로(5·9·10), 그려진 뒤 격자에서 읽어 옵니다. */
+    const 최근 = recentList();
+    if (최근.length) {
+      const cols = (view.getComputedStyle(pop).gridTemplateColumns || "").split(" ").filter(Boolean).length || 5;
+      const row = doc.createElement("div");
+      row.className = "sticker-recent";
+      row.innerHTML = `<span class="sticker-recent-lbl">최근 쓴</span>` +
+        최근.slice(0, cols).map(id => {
+          const s = byId(id);
+          return `<button type="button" class="sticker-opt" data-sticker="${id}"
+                   title="${s.label} (/${s.cmd})" aria-label="${s.label}"
+                 >${window.stickerHtml(`[[스티커:${id}]]`, 58)}</button>`;
+        }).join("");
+      pop.appendChild(row);
+    }
 
     const r = btn.getBoundingClientRect();
     /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1)
@@ -1159,6 +1240,7 @@
     if (!hit) return null;
     /* 판을 안 열고 슬래시로 친 것도 같은 값으로 셉니다 */
     countForAchv(hit.id);
+    recentPush(hit.id);                             // 🕓 최근 — 쳐서 보낸 것도
     return `[[스티커:${hit.id}]]`;
   };
 

@@ -17,6 +17,7 @@
        닫으면 듣기를 끊습니다(closeHelp/closeQna) — 알약 판과 같은 통신량 원칙.
      · 공지 : 가운데 창(#notice-modal)을 옮기지 않고 **CSS 로 오른쪽 칸 자리에 앉힙니다**
        (html.side-notice). 공지 CSS 가 #notice-modal 밑으로 묶여 있어 떼어 내면 모양이 깨져요.
+     · 자료실 : 공지와 같은 방식 (html.side-files) — [2026-10-09 콩] Q&A 아래 다섯째 탭
 
    ★ SIDE_MAIN_ON — 지금은 **혼자 방에서만** 켭니다 (새 기능은 혼자 방 먼저 — 콩).
      본방에 켤 때는 이 값을 true 로, 그리고 TABS 에 pub 을 넣습니다.
@@ -32,7 +33,10 @@
        (혼자 방엔 품평이 없고, 그 자리에 Member 탭이 끼어듭니다 — 자리맞추기 가 틈을 벌려요) */
     { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
     { id: "help",   label: "📓 표현 공부", open: "openHelp", close: "closeHelp" },
-    { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" }
+    { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" },
+    /* [2026-10-09 콩] 📁 자료실 — Q&A 아래. 공지와 같은 **가운데 창**(#files-modal)이라
+       공지와 똑같이 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시입니다. */
+    { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" }
   ].filter(t => !(t.main && window.SOLO));
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;
@@ -126,6 +130,11 @@
     if (id === "notice") {
       root.classList.add("side-notice");
       _nOpen?.();
+    } else if (t.seat) {
+      /* 가운데 창을 옆 칸에 앉히는 쪽(자료실) — 창은 그대로 두고 CSS 만 */
+      root.classList.add(t.seat);
+      window[t.open]?.();
+      window.dockSeen?.(id);
     } else {
       try { window.dockCloseOne?.(id); } catch (e) {}
       const body = el("dock-body-" + id);
@@ -146,6 +155,10 @@
     if (id === "notice") {
       _nClose?.();
       root.classList.remove("side-notice");
+    } else if (t.seat) {
+      window[t.close]?.();
+      root.classList.remove(t.seat);
+      window.dockSeen?.(id);
     } else {
       window[t.close]?.();
       window.dockSeen?.(id);
@@ -158,6 +171,19 @@
     try { window.AppStore?.setItem(OPEN_KEY, ""); } catch (e) {}
     카드다시();
   }
+
+  /* 📁 자료실 — 창의 ✕·바깥 클릭이 closeFiles() 를 직접 부르면 칸만 비고 탭은 열린 채 남습니다.
+     closeFiles 를 감싸서, 자료실 탭이 열려 있을 때 불리면 이쪽도 같이 닫습니다. */
+  (function 자료실가로채기(n) {
+    if (typeof window.closeFiles !== "function") { if (n < 40) setTimeout(() => 자료실가로채기(n + 1), 250); return; }
+    const orig = window.closeFiles;
+    if (orig.__sideHooked) return;
+    const wrapped = function () { const r = orig.apply(this, arguments); if (_cur === "files") 닫기(); return r; };
+    wrapped.__sideHooked = true;
+    window.closeFiles = wrapped;
+    TABS.find(x => x.id === "files").close = "__sideCloseFilesOrig";
+    window.__sideCloseFilesOrig = orig;
+  })(0);
 
   /* Esc — 공지 쪽 손가락은 창만 감추고 가서, 이쪽 칸도 같이 닫아 줍니다 */
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && _cur === "notice") setTimeout(() => { if (_cur === "notice") 닫기(); }, 0); });
