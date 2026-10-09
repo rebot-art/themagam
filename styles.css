@@ -12682,7 +12682,8 @@ html[data-lite] .user-card.share-card,
 }
 .lite-card .card-memo{ font-size: 27px; }
 /* B — 포스트잇 */
-.card-memo.sB{ font-family: "Gaegu", cursive; font-weight: 700; font-size: 17px; color: #4a3b16;
+/* [2026-10-09 콩] 포스트잇 글씨체를 배경판 공지와 같은 싱글데이로 */
+.card-memo.sB{ font-family: "Single Day", "Gaegu", cursive; font-weight: 400; font-size: 17px; color: #4a3b16;
   -webkit-text-stroke: 0; text-shadow: none; background: #fff1a6; padding: 9px 12px; border-radius: 2px;
   box-shadow: 0 4px 10px rgba(0,0,0,.18); transform: translate(-50%, -50%) rotate(-4deg); }
 .lite-card .card-memo.sB{ font-size: 16px; }
