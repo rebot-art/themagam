@@ -12800,7 +12800,14 @@ html.member-open .side-tabs{ right: 250px; }
 /* 옮겨 간 메뉴의 아래 알약은 감춥니다 */
 html.sidetabs-on #dock-pill-notice,
 html.sidetabs-on #dock-pill-help,
+html.sidetabs-on #dock-pill-pub,
 html.sidetabs-on #dock-pill-qna{ display: none !important; }
+/* 좁은 화면(900px 아래) — 카드를 밀면 한 줄에 한 장도 안 남아서, 그때만 칸이 카드 **위로 덮습니다** */
+@media (max-width: 900px){
+  html.side-open .cards-area{ padding-right: 0; }
+  html.side-open .side-pane{ width: min(400px, calc(100vw - 44px)); }
+  html.side-notice #notice-modal{ width: min(400px, calc(100vw - 44px)); }
+}
 /* 📢 공지 — 가운데 창을 오른쪽 칸 자리에 앉힙니다 (머리줄 아래) */
 html.side-notice #notice-modal{
   inset: auto; right: 0; top: calc(var(--side-top, 60px) + 37px); width: 400px;

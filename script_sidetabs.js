@@ -22,15 +22,18 @@
      본방에 켤 때는 이 값을 true 로, 그리고 TABS 에 pub 을 넣습니다.
    ===================================================================== */
 (function () {
-  const SIDE_MAIN_ON = false;
+  const SIDE_MAIN_ON = true;   // [2026-10-09 콩] 혼자 방 시험을 마치고 본방에도 켰습니다
   if (!window.SOLO && !SIDE_MAIN_ON) return;
 
   const W = 400;
   const TABS = [
     { id: "notice", label: "📢 공지" },
+    /* [2026-10-09 콩] 차례 — 본방: 공지·품평·표현 공부·Q&A / 혼자 방: 공지·Member·표현 공부·Q&A
+       (혼자 방엔 품평이 없고, 그 자리에 Member 탭이 끼어듭니다 — 자리맞추기 가 틈을 벌려요) */
+    { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
     { id: "help",   label: "📓 표현 공부", open: "openHelp", close: "closeHelp" },
     { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" }
-  ];
+  ].filter(t => !(t.main && window.SOLO));
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;
   const OPEN_KEY = "sideTabOpen";
@@ -96,9 +99,13 @@
     box.style.top = top + "px"; box.style.height = h + "px";
     root.style.setProperty("--side-top", top + "px");
     root.style.setProperty("--side-h", h + "px");
-    /* Member 탭 아래로 쌓습니다 */
-    const m = el("member-tab"), col = el("side-tabs-col");
-    if (col) col.style.marginTop = (m ? Math.round(m.getBoundingClientRect().height) + 6 : 0) + "px";
+    /* 혼자 방 — 공지 탭 **아래에 Member 탭**이 끼어듭니다. Member 탭을 공지 키만큼 내리고,
+       그다음 탭(표현 공부)을 Member 키만큼 더 내려서 틈을 벌려요. */
+    const m = el("member-tab"), n = el("side-tab-notice"), 다음 = el("side-tab-" + (TABS[1] || {}).id);
+    if (m && n && 다음) {
+      m.style.marginTop = (Math.round(n.getBoundingClientRect().height) + 6) + "px";
+      다음.style.marginTop = (Math.round(m.getBoundingClientRect().height) + 6) + "px";
+    }
   }
   window.addEventListener("resize", 자리맞추기);
 
@@ -151,6 +158,9 @@
     try { window.AppStore?.setItem(OPEN_KEY, ""); } catch (e) {}
     카드다시();
   }
+
+  /* Esc — 공지 쪽 손가락은 창만 감추고 가서, 이쪽 칸도 같이 닫아 줍니다 */
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && _cur === "notice") setTimeout(() => { if (_cur === "notice") 닫기(); }, 0); });
 
   const 기다림 = setInterval(() => {
     공지가로채기();
