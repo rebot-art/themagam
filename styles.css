@@ -12779,6 +12779,9 @@ html[data-lite] .user-card.share-card,
 }
 .side-tabs > *{ pointer-events: auto; }
 .side-tabs-col{ display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+/* [고침 2026-10-09] 탭 줄 상자가 Member 탭 자리(벌려 둔 틈)를 덮어 눌림을 가로챘습니다 — 상자는 비켜 주고 탭만 눌리게 */
+.side-tabs > .side-tabs-col{ pointer-events: none; }
+.side-tabs-col > .side-tab{ pointer-events: auto; }
 .side-tab{ position: relative; }
 .side-tab-dot{ position: absolute; right: -3px; bottom: -3px; width: 8px; height: 8px; border-radius: 50%;
   background: var(--danger); box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
