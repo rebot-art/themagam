@@ -218,7 +218,17 @@
 
     const pill = document.getElementById("zoom-pill");
     if (pill) pill.textContent = z + "%";
+    /* ★ [2026-10-09 — 콩] 배율이 바뀌면 한 줄에 서는 카드 수가 달라집니다 — 줄을 다시 세워요.
+       (예전엔 여기서 안 불러서 150% → 140% 같은 때 줄이 어긋난 채로 남았습니다) */
+    배열다시();
     return z;
+  }
+
+  /** 카드 줄을 다시 세웁니다 — 새 배율이 화면에 그려진 **뒤에** 재야 해서 두 박자 늦춥니다 */
+  function 배열다시() {
+    const 한번 = () => { try { window.relayoutCards?.(); } catch (e) {} };
+    requestAnimationFrame(() => requestAnimationFrame(한번));
+    setTimeout(한번, 250);          // 느린 기기에서 한 번 더
   }
 
   /* =====================================================================
@@ -320,7 +330,11 @@
             aria-live="polite" aria-label="현재 화면 배율"
             title="눌러서 100% 로">100%</span>
       <button class="font-btn" type="button" id="zoom-in"
-              aria-label="화면 확대" title="화면을 5% 키워요">+</button>`;
+              aria-label="화면 확대" title="화면을 5% 키워요">+</button>
+      <!-- ↻ 카드 배열 새로고침 (2026-10-09 콩 — B안: 가는 선으로 살짝 띄움 · 이름표 없이 아이콘만) -->
+      <span class="zoom-sep" aria-hidden="true"></span>
+      <button class="font-btn zoom-re" type="button" id="zoom-re"
+              aria-label="카드 배열 새로고침" title="카드 배열을 다시 맞춰요 (접속은 그대로)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>`;
   }
 
   function 손가락() {
@@ -334,6 +348,12 @@
     pill.onclick = () => 배율적용(100);
     pill.onkeydown = (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); 배율적용(100); }
+    };
+    /* ↻ 카드 배열 새로고침 — 줄만 다시 세웁니다 (페이지를 새로 열지 않아요) */
+    const re = document.getElementById("zoom-re");
+    if (re) re.onclick = () => {
+      배열다시();
+      re.classList.remove("spin"); void re.offsetWidth; re.classList.add("spin");   // 눌렸다는 표시로 한 바퀴
     };
     배율적용(배율());
     판배율적용(판배율());     // 🪟 판 크기도 기억해 둔 값으로 (2026-08-22)

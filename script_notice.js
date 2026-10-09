@@ -248,7 +248,7 @@
      사람은 새 공지가 온 줄 모릅니다. */
   function paintDot() {
     const 없음 = unreadCount() === 0;
-    ["notice-dot", "notice-dot-head"].forEach(id => {
+    ["notice-dot", "dock-dot-notice"].forEach(id => {
       el(id)?.classList.toggle("hidden", 없음);
     });
   }
@@ -733,6 +733,7 @@
   });
 
   window.openNoticeBoard   = openNoticeBoard;
+  window.repaintNoticeDot  = paintDot;   // [2026-10-09] 알약 줄이 늦게 만들어져도 점을 다시 칠할 수 있게
   window.closeNoticeBoard  = closeNoticeBoard;
   window.closeNoticeBoardZoom = closeZoom;
   window.listenNoticeBoard = listenNoticeBoard;

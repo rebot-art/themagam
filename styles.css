@@ -3931,6 +3931,12 @@ input[type="range"]:focus{ box-shadow: none; }
 /* 🔍 화면 확대·축소 — 글자 크기 조절 바로 오른쪽.
    하는 일이 다르니 살짝 띄워서 "다른 단추"임을 눈에 보이게 합니다. */
 .zoom-ctl{ margin-left: 6px; }
+/* ↻ 카드 배열 새로고침 (2026-10-09 콩) — + 오른쪽, 가는 선 하나 건너 */
+.zoom-ctl .zoom-sep{ display: inline-block; width: 1px; height: 16px; margin: 0 3px; background: var(--border-strong, rgba(0,0,0,.2)); vertical-align: middle; align-self: center; }
+.zoom-ctl .zoom-re svg{ width: 15px; height: 15px; display: block; margin: auto; }
+.zoom-ctl .zoom-re.spin svg{ animation: zoom-re-spin .5s ease; }
+@keyframes zoom-re-spin{ to{ transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .zoom-ctl .zoom-re.spin svg{ animation: none; } }
 .zoom-ctl .font-pill{ min-width: 44px; text-align: center; cursor: pointer; }
 
 /* -------- 채팅 접힘 -------- */

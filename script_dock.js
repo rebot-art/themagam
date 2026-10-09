@@ -66,6 +66,11 @@
     /* ⚙️ minRatio: 0.6 — [2026-10-03 콩] 기본 키(516px)의 60%(≈310px)까지 줄일 수 있게.
        기본으로 열리는 키는 그대로이고, 손잡이로 **내릴 수 있는 바닥**만 낮춥니다. */
     { id: "sroom",  label: "⚙️",      stay: true, size: 1.2, minRatio: 0.6, move: null, drag: true, resize: true },
+    /* [2026-10-09 자리 옮김 — 콩] 📢 공지 · 📁 자료실이 머리말에서 **다시 아래 줄로** 내려왔습니다.
+       공지는 챗 바로 왼쪽, 자료실은 Q&A 와 업적 사이. 뜨는 모양은 그대로 **가운데 창**이에요
+       (modal 에 적힌 이름의 함수를 부릅니다 — 판을 안 만듭니다).
+       ★ 안 읽은 공지 붉은 점은 #dock-dot-notice — script_notice.js 의 paintDot 이 칠합니다. */
+    { id: "notice", label: "📢 공지", stay: false, size: 0, move: null, modal: "openNoticeBoard" },
     { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
        ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
@@ -135,6 +140,7 @@
        ★ 표현 공부 **바로 옆**에 둡니다. 둘 다 "묻고 답하는" 자리라
          나란히 있어야 "여긴 표현, 저긴 업계" 로 갈래가 읽혀요. */
     { id: "qna",    label: "🤔 Q&A",             stay: true,  size: 1.35, move: null, drag: true, resize: true },
+    { id: "files",  label: "📁 자료실", stay: false, size: 0, move: null, modal: "openFiles" },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
@@ -346,7 +352,7 @@
         b.disabled = true;
         return;
       }
-      if (d.modal) return;   // 가운데 창은 판을 안 만듭니다
+      if (d.modal) { b.removeAttribute("aria-expanded"); return; }   // 가운데 창은 판을 안 만듭니다
       if (d.panel) return;   // 남의 판을 같이 쓰는 알약 (수다방)
 
       /* 판 */
@@ -584,7 +590,7 @@
     /* 📓 전체 기록은 가운데 창 — 판을 안 씁니다.
        ★ 다른 판은 닫지 않습니다. 가운데 창이 뜬 동안 뒤에 뽀모가
          켜져 있어도 아쉬울 게 없어요. */
-    if (d.modal) { window.openWcAll?.(); return; }
+    if (d.modal) { (typeof d.modal === "string" ? window[d.modal] : window.openWcAll)?.(); return; }
 
     const pid = panelOf(id);
 
@@ -827,8 +833,7 @@
     };
     /* ★ 판이 떠 있으면 대화가 보이는 것이니 곧 읽은 것입니다 */
     badge("chat", _open.has("chat") ? 0 : 읽기("chat-tab-badge-main"));
-    /* [2026-08-21] 공지 빨간 점은 이제 머리말이 직접 켭니다
-       (script_notice.js 의 paintDot 이 #notice-dot-head 를 함께 칠해요). */
+    /* [2026-10-09] 공지 붉은 점은 script_notice.js 의 paintDot 이 #dock-dot-notice 를 직접 칠합니다. */
   }
 
   function watchBadges() {
@@ -1081,6 +1086,7 @@
 
   function start() {
     build();
+    try { window.repaintNoticeDot?.(); } catch (e) {}   // [2026-10-09] 공지 붉은 점
     relocate();
     bind();
     bindDrag();
