@@ -182,10 +182,14 @@
   .meet{ padding:12px 14px 10px; border-bottom:1px dashed var(--line); }
   .meet-h{ font-size:13px; color:var(--ink); margin-bottom:8px; }
   .meet-h small{ font-size:11px; font-weight:400; color:var(--dim); margin-left:6px; }
-  .meet-l{ display:flex; flex-wrap:wrap; gap:6px; }
-  .mchip{ font-size:12px; border-radius:99px; padding:4px 11px; border:1px solid rgba(179,55,43,.3);
-          background:rgba(179,55,43,.07); color:var(--ink); }
-  .mchip small{ color:var(--dim); margin-left:4px; font-variant-numeric:tabular-nums; }
+  .meet-l{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  /* ★ 알약 키를 못박습니다 (콩 2026-10-09 "글자 높이가 들쭉날쭉") — 🏖️🌿 이모지가 글자보다 커서
+     이모지 든 알약만 키가 자라고 글줄이 내려앉았어요. 높이를 고정하고 안을 세로 가운데로. */
+  .mchip{ display:inline-flex; align-items:center; height:26px; line-height:1; box-sizing:border-box;
+          font-size:12px; border-radius:99px; padding:0 11px; border:1px solid rgba(179,55,43,.3);
+          background:rgba(179,55,43,.07); color:var(--ink); white-space:nowrap; }
+  .mchip .ic{ font-size:11px; line-height:1; margin:0 1px; }
+  .mchip small{ color:var(--dim); margin-left:4px; font-variant-numeric:tabular-nums; line-height:1; }
   .ch-h span{ margin-left:auto; font-size:11px; color:var(--dim);
               font-variant-numeric:tabular-nums; }
   .ch svg{ width:100%; height:auto; display:block; }
@@ -1085,7 +1089,7 @@
     const 칩 = 하위.map((닉) => {
       const r = 사정[닉] || {};
       const 아이콘 = (r.v ? "🏖️" : "") + (r.l ? "🌿" : "");
-      return `<span class="mchip">${esc(닉)}${아이콘 ? ` (${아이콘})` : ""}<small>${나온날[닉]}일</small></span>`;
+      return `<span class="mchip">${esc(닉)}${아이콘 ? ` (<span class="ic">${아이콘}</span>)` : ""}<small>${나온날[닉]}일</small></span>`;
     }).join("");
     return `<div class="meet"><div class="meet-h"><b>자주 만나요❣️</b><small>이 열흘 동안 나온 날이 적은 순 · ${지난.length}일 중</small></div>
       <div class="meet-l">${칩}</div></div>`;
