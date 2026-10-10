@@ -112,6 +112,50 @@
     return "n" + hex + "@themagam.local";
   }
 
+  /* =====================================================================
+     🔑 비밀번호 초기화 (2026-10-10 — 콩)  — 방장에게만
+     ---------------------------------------------------------------------
+     이 방은 이메일을 안 써서 "비밀번호 찾기" 메일이 없습니다. 파이어베이스는
+     **남의 비밀번호**를 브라우저(이 페이지)에서 못 바꾸게 막아요 — 콘솔이나
+     유료 서버(Admin)만 가능합니다. 그래서 **반자동**입니다:
+       ① 콘솔 Authentication 에서 그 사람 이메일 삭제   ← 여기서 이메일을 대신 계산
+       ② nickOwner/{닉} 삭제                          ← 이 버튼이 함(방장 권한으로 됨)
+       ③ 같은 닉으로 다시 입장해 새 비번                ← 그 사람이
+     글자수·출석·채팅은 **닉네임**에 붙어 있어 그대로 남습니다 (uid 아님). */
+  let _pwresetNick = "";
+  function pwresetFind(raw) {
+    const nick = String(raw || "").trim();
+    if (!nick) { msg("adm-pwreset-msg", "닉네임을 적어 주세요.", true); return; }
+    if (/[.$#\[\]/]/.test(nick)) { msg("adm-pwreset-msg", "닉네임에 . $ # [ ] / 는 쓸 수 없어요.", true); return; }
+    _pwresetNick = nick;
+    const email = nickToEmail(nick);
+    const em = el("adm-pwreset-email"); if (em) em.value = email;
+    const lk = el("adm-pwreset-link");
+    if (lk) lk.href = "https://console.firebase.google.com/project/" + firebaseConfig.projectId + "/authentication/users";
+    el("adm-pwreset-steps")?.removeAttribute("hidden");
+    msg("adm-pwreset-msg", "");
+  }
+  async function pwresetCopy() {
+    const email = el("adm-pwreset-email")?.value || "";
+    try { await navigator.clipboard.writeText(email); msg("adm-pwreset-msg", "이메일을 복사했어요."); }
+    catch (e) { msg("adm-pwreset-msg", "복사가 안 됐어요 — 칸을 눌러 직접 복사해 주세요.", true); }
+  }
+  async function pwresetClear() {
+    const nick = _pwresetNick;
+    if (!nick) { msg("adm-pwreset-msg", "먼저 [찾기] 로 닉네임을 정해 주세요.", true); return; }
+    if (!confirm(`「${nick}」 의 방 안 흔적(nickOwner)을 지울까요?\n\n콘솔 Authentication 에서 이 사람 계정을 **먼저** 지웠는지 확인하세요. 안 지우면 그분이 새 비번으로 못 들어와요.`)) return;
+    try {
+      await firebase.database().ref("nickOwner/" + nick).remove();
+      /* 승인 명단에는 그대로 둡니다 — 같은 닉으로 다시 들어와야 하니까요.
+         (allow 가 지워졌으면 다시 승인해야 입장돼서, 없으면 넣어 줍니다) */
+      const ok = (await firebase.database().ref("config/allow/" + nick).once("value")).val();
+      if (ok !== true) { try { await firebase.database().ref("config/allow/" + nick).set(true); } catch (e) {} }
+      msg("adm-pwreset-msg", `✅ ${nick} — 방 안 흔적을 지웠어요. 이제 그분이 같은 닉으로 다시 입장해 새 비번을 정하면 돼요.`);
+    } catch (e) {
+      msg("adm-pwreset-msg", "지우지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   // ------------------------------------------------- ① 로그인
   async function doLogin() {
     const nick = (el("adm-nick")?.value || "").trim();
@@ -3515,6 +3559,14 @@
       const b = e.target.closest("[data-staff-del]");
       if (b) delStaff(b.getAttribute("data-staff-del"));
     });
+
+    /* 🔑 비밀번호 초기화 */
+    el("adm-pwreset-find")?.addEventListener("click", () => pwresetFind(el("adm-pwreset-nick")?.value));
+    el("adm-pwreset-nick")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.isComposing) pwresetFind(el("adm-pwreset-nick")?.value);
+    });
+    el("adm-pwreset-copy")?.addEventListener("click", pwresetCopy);
+    el("adm-pwreset-clear")?.addEventListener("click", pwresetClear);
 
     el("adm-allow-add")?.addEventListener("click", () => addAllow(el("adm-allow-nick")?.value));
     el("adm-allow-nick")?.addEventListener("keydown", e => {
