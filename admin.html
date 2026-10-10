@@ -1018,6 +1018,40 @@
         <div class="adm-msg" id="adm-staff-msg"></div>
       </div>
 
+      <!-- 🔑 비밀번호 초기화 (2026-10-10 — 콩) — 방장에게만.
+           이 방은 이메일을 안 써서 "비밀번호 찾기" 메일이 없습니다. 잊은 분은 스스로 못 되찾아요.
+           ★ 파이어베이스는 **남의 비밀번호**를 브라우저에서 못 바꾸게 막습니다(콘솔·유료 서버만 가능).
+             그래서 이 칸은 **반자동**이에요 — 콘솔에서 지울 이메일을 대신 계산해 주고(①),
+             DB 흔적(nickOwner)은 이 버튼이 지웁니다(②). 그 사람이 같은 닉으로 다시 입장해 새 비번을 정하면 끝(③).
+           ★ 글자수·출석·채팅은 다 **닉네임**에 붙어 있어 그대로 남습니다 (계정 번호에 안 붙음). -->
+      <div class="adm-card" id="adm-pwreset-card" data-owner-only>
+        <h2>🔑 비밀번호 초기화</h2>
+        <p class="adm-sub">비밀번호를 잊은 분을 되살려요. 이 방은 이메일을 안 써서
+          "비밀번호 찾기"가 없거든요. <b>세 단계</b>인데, 가운데 한 번만 콘솔에서 손봐요.</p>
+        <div class="adm-inline">
+          <input type="text" id="adm-pwreset-nick" placeholder="비밀번호 잊은 닉네임" autocomplete="off">
+          <button class="adm-btn" id="adm-pwreset-find">찾기</button>
+        </div>
+        <div id="adm-pwreset-steps" hidden>
+          <div class="adm-gap"></div>
+          <p class="adm-sub" style="margin:0 0 4px"><b>①</b> 아래 이메일을 콘솔
+            <a id="adm-pwreset-link" href="#" target="_blank" rel="noopener">Authentication</a>
+            에서 찾아 <b>삭제</b>하세요 (오른쪽 ⋮ → 사용자 삭제).</p>
+          <div class="adm-inline">
+            <input type="text" id="adm-pwreset-email" readonly onclick="this.select()" style="font-family:monospace;">
+            <button class="adm-btn ghost" id="adm-pwreset-copy">복사</button>
+          </div>
+          <div class="adm-gap"></div>
+          <p class="adm-sub" style="margin:0 0 4px"><b>②</b> 콘솔에서 지웠으면, 아래 버튼으로
+            <b>방 안의 흔적</b>도 지워요 (닉네임 도장 · nickOwner).</p>
+          <button class="adm-btn" id="adm-pwreset-clear">② 방 안 흔적 지우기</button>
+          <div class="adm-gap"></div>
+          <p class="adm-sub" style="margin:0"><b>③</b> 그분이 <b>같은 닉네임</b>으로 다시 입장해
+            새 비밀번호를 정하면 끝이에요. 글자수·출석·채팅은 그대로 남아요.</p>
+        </div>
+        <div class="adm-msg" id="adm-pwreset-msg"></div>
+      </div>
+
       <!-- [2026-10-06 — 콩] ✍️ 글자수 관리 칸은 아래 💬 채팅 및 글자수 관리 안으로 옮겼습니다. -->
 
       <!-- [2026-08-06] 🎋 대숲 — 완전 익명 게시판(forest).
@@ -1082,7 +1116,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610100852"></script>
+  <script src="script_admin.js?v=202610101339"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
