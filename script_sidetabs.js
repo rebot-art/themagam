@@ -36,7 +36,10 @@
     { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" },
     /* [2026-10-09 콩] 📁 자료실 — Q&A 아래. 공지와 같은 **가운데 창**(#files-modal)이라
        공지와 똑같이 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시입니다. */
-    { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" }
+    { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
+    /* [2026-10-10 콩] 🔗 LINK — **맨 아래, 다른 탭들과 떨어져서** (bottom → CSS margin-top:auto).
+       알맹이는 script_links.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. */
+    { id: "links",  label: "🔗 LINK",    open: "openLinks", close: "closeLinks", bottom: true }
   ].filter(t => !(t.main && window.SOLO));
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;
@@ -59,8 +62,11 @@
     box.id = "side-tabs"; box.className = "side-tabs";
     box.innerHTML =
       `<div class="side-tabs-col" id="side-tabs-col">` +
-      TABS.map(t => `<button type="button" class="member-tab side-tab" id="side-tab-${t.id}" data-side="${t.id}"
+      TABS.map(t => `<button type="button" class="member-tab side-tab${t.bottom ? " side-tab-bottom" : ""}" id="side-tab-${t.id}" data-side="${t.id}"
           aria-expanded="false"><span>${t.label}</span><i class="side-tab-dot hidden" id="side-dot-${t.id}"></i></button>`).join("") +
+      /* 🔗 LINK 는 알약이 없어 점의 원본(#dock-dot-links)이 없습니다 — 숨은 자리를 하나 만들어
+         script_dock.js 의 dot()/newmark 가 그대로 칠하게 하고, 아래 비추기가 탭으로 옮깁니다. */
+      `<span class="dock-dot hidden" id="dock-dot-links" hidden aria-hidden="true"></span>` +
       `</div>
        <div class="side-pane" id="side-pane">
          <div class="side-pane-head"><b id="side-pane-title"></b>

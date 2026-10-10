@@ -62,6 +62,18 @@
   let _today = {};        // { 닉네임: {total, base} }
   let _week  = {};        // { 날짜: { 닉네임: {total} } }
   let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
+  let _feedY = [];        // 어제 것 — 기록 탭을 볼 때 한 번만 받습니다 (2026-10-10)
+  let _feedYDay = "";     // 어느 날짜 것을 받아 뒀나 — 자정이 지나면 다시
+  function loadYdayFeed() {
+    const k = ydayKey();
+    if (_feedYDay === k || !window.db) return;
+    _feedYDay = k;
+    window.db.ref(`wordfeed/${k}`).orderByChild("at").limitToLast(FEED_MAX).once("value").then(snap => {
+      _feedY = Object.values(snap.val() || {}).filter(f => f && f.type !== "pomo")
+        .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+      if (_tab === "me") render();
+    }).catch(() => {});
+  }
   let _ref   = null;
   let _feedRef = null;
   let _weekRefs = [];
@@ -372,6 +384,38 @@
 
   function myRow() { return _today[me()] || { total: 0, base: null }; }
 
+  /* =====================================================================
+     🌙 어제 마지막 기준 이어받기 (2026-10-10 — 콩)
+     ---------------------------------------------------------------------
+     자정이 지나면 "오늘 칸" 이 새로 열려 기준이 비어 버렸습니다. 11:30 에 마지막으로
+     적고 12:30 에 또 적으려던 사람은 "출발선부터 잡으라" 는 말에 당황했어요 —
+     어디서부터 썼는지 기억이 안 나니까요. 어제 기준은 서버에 그대로 있습니다.
+       ① 자정에 창을 열어 둔 채였으면(이어 쓰던 중) → **자동으로** 오늘 기준에 옮깁니다.
+       ② 다음 날 새로 들어온 사람 → 자동으로는 안 옮기고(밤새 새 편일 수도), 안내 줄에
+          "어제 마지막 기준 N자" 를 보여 주고 [↪ 이어쓰기] 단추 하나로 옮깁니다.
+     ★ 어제 칸은 주간 그래프 때문에 이미 듣고 있어서(_week) 추가 읽기가 없습니다.
+     ★ 자정 전 마지막 기록 뒤에 쓴 분량은 오늘 쪽으로 잡힙니다 — 정확히 가르고 싶은
+       사람은 🕛 어제 채우기로 스스로 (콩: "그것까진 챙겨줄 순 없으니까"). */
+  function ydayBase() {
+    const r = _week[ydayKey()]?.[me()];
+    const b = r && r.base;
+    return (b === null || b === undefined) ? null : Number(b);
+  }
+  async function carryBase(b, 자동) {
+    const mine = myRow();
+    const ok = await save({ base: b, total: Number(mine.total || 0) });
+    if (ok === false) return false;
+    await pushBaseLine(b, 자동 ? "carry" : "yday");
+    return true;
+  }
+  /** 📝 기준이 잡힌 것도 "기록" 탭에 남깁니다 — 방 흐름에는 안 보이고 내 줄에만 */
+  async function pushBaseLine(b, how) {
+    if (!me() || !window.db) return;
+    try {
+      await window.db.ref(`wordfeed/${dayKey()}`).push({ nick: me(), kind: "base", base: Number(b), how: how || "set", at: Date.now() });
+    } catch (e) {}
+  }
+
   /* ---------------------------------------------------------------
      화면 그리기
      --------------------------------------------------------------- */
@@ -438,8 +482,13 @@
       unit.textContent = "자 · 이번 주 내 합계";
       /* [추가 2026-08-02] 요일별 그래프 아래에 "오늘 내 기록"을 붙입니다.
          오늘 탭과 같은 흐르는 기록이지만, 내가 올린 것만 골라 보여줍니다. */
-      const myFeed = _feed.filter(f => f.nick === me() && f.type !== "pomo");
+      /* 📝 [2026-10-10 콩] 어제 것까지 — 자정이 되면 그제 것이 밀려나고 어제 것은 남습니다.
+         어제 흐름은 이 탭을 처음 볼 때 한 번만 받아요(아래 loadYdayFeed). */
+      const 내것 = (arr) => { const a = arr.filter(f => f.nick === me() && f.type !== "pomo"); a.__mine = true; return a; };
+      const myFeed = 내것(_feed), myY = 내것(_feedY);
+      loadYdayFeed();
       rows.innerHTML = drawRows(vals, vals.length - 1)
+        + (myY.length ? `<div class="wc-me-h">어제 내 기록</div>` + drawFeed(myY) : "")
         + `<div class="wc-me-h">오늘 내 기록</div>`
         + (myFeed.length
             ? drawFeed(myFeed)
@@ -492,9 +541,17 @@
     }
 
     if (hint) {
-      hint.textContent = (mine.base === null || mine.base === undefined)
-        ? "지금 원고의 전체 글자수를 적고 기록을 누르세요. 그 숫자가 출발선이 됩니다."
-        : `기준 ${fmt(mine.base)}자 · 다음에도 그때의 전체 글자수를 적으면 차이만 쌓여요.`;
+      const yb = (mine.base === null || mine.base === undefined) ? ydayBase() : null;
+      if (yb !== null) {
+        /* 🌙 어제 마지막 기준을 보여 주고 한 번에 이어받게 (콩 2026-10-10) */
+        hint.innerHTML = `아직 오늘 출발선이 없어요. <b>어제 마지막 기준</b>은 <b>${fmt(yb)}자</b>였어요 —
+          같은 원고를 이어 쓰면 아래를 누르고, 새 편이면 🆕 새 편.<br>
+          <button type="button" class="wc-carry" id="wc-carry" data-base="${yb}">↪ 어제 마지막 기준 ${fmt(yb)}자 이어쓰기</button>`;
+      } else {
+        hint.textContent = (mine.base === null || mine.base === undefined)
+          ? "지금 원고의 전체 글자수를 적고 기록을 누르세요. 그 숫자가 출발선이 됩니다."
+          : `기준 ${fmt(mine.base)}자 · 다음에도 그때의 전체 글자수를 적으면 차이만 쌓여요.`;
+      }
     }
   }
 
@@ -760,6 +817,16 @@
       }
       const isMe = f.nick === me();
       const nick = esc(f.nick);
+      /* 📝 기준이 잡힌 줄 (2026-10-10 콩) — 방 흐름에는 안 보이고 **기록 탭(내 것)** 에만 */
+      if (f.kind === "base") {
+        if (!isMe || !list.__mine) return "";
+        const how = f.how === "carry" ? "어제 마지막 기준을 자정에 이어받음"
+                  : f.how === "yday"  ? "어제 마지막 기준을 이어받음"
+                  : f.how === "fresh" ? "🆕 새 편 시작"
+                  : "출발선";
+        const tm3 = (f.at && window.formatHHMM) ? `<span class="wc-priv-t">${window.formatHHMM(f.at)}</span>` : "";
+        return `<div class="wc-feed me"><div class="wc-feed-sys wc-base-line">${tm3}▶ 기준 <b>${fmt(f.base)}자</b> · ${how}</div></div>`;
+      }
       /* 옛 기록에는 snap 이 없습니다. 그럴 땐 윗줄을 생략합니다. */
       const snap = (f.snap === undefined || f.snap === null) ? null : Number(f.snap);
       /* [추가 2026-08-02] 채팅처럼 말풍선 안쪽 옆에 시각을 붙입니다.
@@ -1003,6 +1070,7 @@
 
     if (base === null || base === undefined) {
       await save({ base: v, total: Number(mine.total || 0) });
+      pushBaseLine(v, "set");
       clearInput();
       say(`출발선을 ${fmt(v)}자로 잡았어요`);
       await 작업만();
@@ -1038,6 +1106,7 @@
     const v = inputVal();
     if (v === null) { say("먼저 지금 글자수를 적어주세요."); return; }
     await save({ base: v });
+    pushBaseLine(v, "set");
     clearInput();
     say(`기준을 ${fmt(v)}자로`);
   }
@@ -1183,6 +1252,7 @@
   async function freshStart() {
     rolloverIfNeeded();
     await save({ base: 0 });
+    pushBaseLine(0, "fresh");
     clearInput();
     say("새 편 시작 · 기준 0자");
   }
@@ -1238,6 +1308,7 @@
     detach();
     _day = dayKey();
     _today = {}; _feed = []; _week = {}; _pomoLines = [];
+    _feedY = []; _feedYDay = "";
 
     _ref = window.db.ref(`wordlog/${_day}`);
     _ref.on("value", snap => {
@@ -1303,8 +1374,16 @@
   function rolloverIfNeeded() {
     if (!_started) return false;
     if (_day === dayKey()) return false;
+    /* 🌙 갈아타기 **전**의 내 줄이 곧 어제 마지막 기준입니다 — attach() 가 비우기 전에 챙깁니다 */
+    const 전 = myRow().base;
+    const yb = (전 === null || 전 === undefined) ? null : Number(전);
     attach();
-    say("자정이 지나 오늘 기록으로 넘어왔어요. 전체 글자수를 적어 출발선부터 잡아주세요.");
+    if (yb !== null) {
+      carryBase(yb, true);
+      say(`자정이 지나 오늘 기록으로 넘어왔어요 · 어제 마지막 기준 ${fmt(yb)}자를 그대로 이어받았어요 — 계속 쓰면 돼요`);
+    } else {
+      say("자정이 지나 오늘 기록으로 넘어왔어요. 전체 글자수를 적어 출발선부터 잡아주세요.");
+    }
     return true;
   }
 
@@ -1328,6 +1407,14 @@
     el("wc-base")?.addEventListener("click", setBase);
     el("wc-reset")?.addEventListener("click", resetTotal);
     el("wc-fresh")?.addEventListener("click", freshStart);
+    /* 🌙 [↪ 어제 마지막 기준 이어쓰기] — 안내 줄 안에 그때그때 생기는 단추라 위임으로 */
+    el("wc-hint")?.addEventListener("click", async (e) => {
+      const b = e.target.closest("#wc-carry");
+      if (!b) return;
+      rolloverIfNeeded();
+      const v = Number(b.dataset.base);
+      if (await carryBase(v, false)) say(`어제 마지막 기준 ${fmt(v)}자를 오늘 출발선으로 이어받았어요`);
+    });
 
     /* 🕛 어제 채우기 */
     el("wc-yday-btn")?.addEventListener("click", toggleYdayBox);

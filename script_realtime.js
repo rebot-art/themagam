@@ -407,7 +407,7 @@
 
   function 흐름줄들() {
     let feed = [];
-    try { feed = (window.Wordcount?._state?.().feed || []).filter(f => f && f.type !== "pomo"); }
+    try { feed = (window.Wordcount?._state?.().feed || []).filter(f => f && f.type !== "pomo" && f.kind !== "base"); }   // 기준 줄은 기록 탭 전용 (2026-10-10)
     catch (e) { return ""; }
     if (!feed.length) {
       return `<p class="rb-empty">아직 조용해요 — 첫 줄을 올려 보세요</p>`;

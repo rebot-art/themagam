@@ -4610,6 +4610,12 @@ body.side-collapsed .side-rail{
 .wc-log{ margin:0; min-height:16px; font-size: var(--fs-2xs);
          font-weight: var(--fw-medium); color:#2FA36B; flex:none; }
 
+/* 🌙 [↪ 어제 마지막 기준 이어쓰기] (2026-10-10 콩) — 안내 줄 안의 알약 단추 */
+.wc-carry{ display:inline-flex; align-items:center; gap:4px; margin-top:6px; font: inherit; font-size: var(--fs-xs);
+  font-weight: var(--fw-bold); color: var(--accent); background: var(--accent-softer, rgba(179,55,43,.07));
+  border: 1px dashed var(--accent); border-radius: var(--r-full); padding: 4px 11px; cursor: pointer; }
+.wc-carry:hover{ background: var(--accent-soft, rgba(179,55,43,.14)); }
+.wc-base-line{ color: var(--muted-strong); }
 .wc-inputline{ display:flex; gap:5px; flex:none; }
 .wc-inputline input{
   flex:1 1 auto; min-width:0; font: inherit; font-size: var(--fs-sm);
@@ -12820,7 +12826,34 @@ html[data-lite] .user-card.share-card,
   display: flex; align-items: flex-start; pointer-events: none;
 }
 .side-tabs > *{ pointer-events: auto; }
-.side-tabs-col{ display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.side-tabs-col{ display: flex; flex-direction: column; gap: 6px; align-items: flex-end; height: 100%; }
+/* 🔗 LINK — 맨 아래, 다른 탭들과 떨어져서 (2026-10-10 콩) */
+.side-tabs-col > .side-tab-bottom{ margin-top: auto; }
+/* 🔗 LINK 칸 */
+.links-board{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
+.lk-row{ display: flex; align-items: center; gap: 10px; padding: 9px 11px; margin-bottom: 7px; text-decoration: none; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--fill-1, rgba(255,255,255,.5)); }
+.lk-row:hover{ border-color: var(--accent); }
+.lk-ic{ flex: none; width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; background: var(--accent-softer, rgba(179,55,43,.08)); }
+.lk-m{ flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.lk-t{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.lk-u{ font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lk-memo{ font-size: var(--fs-xs); color: var(--muted-strong); margin-top: 2px; }
+.lk-go{ flex: none; color: var(--accent); font-size: 13px; }
+.lk-x{ flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; }
+.lk-x:hover{ color: var(--danger); }
+.lk-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 20px 0; }
+.lk-add{ border: 1.5px dashed var(--border); border-radius: var(--r-md); padding: 10px 11px; margin-top: 6px; }
+.lk-add-h{ font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--muted-strong); margin-bottom: 6px; }
+.lk-add input{ display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 6px 11px; margin-bottom: 6px;
+  border: 1px solid var(--border); border-radius: var(--r-full); background: var(--bg); color: var(--text); }
+.lk-add-r{ display: flex; gap: 6px; align-items: center; }
+.lk-add-r input{ margin-bottom: 0; flex: 1 1 auto; }
+.lk-add-r .ghost-btn{ flex: none; white-space: nowrap; }
+.lk-msg{ font-size: var(--fs-xs); color: var(--muted); min-height: 1.3em; margin: 6px 0 0; }
+.lk-msg.bad{ color: var(--danger); }
+
 /* [고침 2026-10-09] 탭 줄 상자가 Member 탭 자리(벌려 둔 틈)를 덮어 눌림을 가로챘습니다 — 상자는 비켜 주고 탭만 눌리게 */
 .side-tabs > .side-tabs-col{ pointer-events: none; }
 .side-tabs-col > .side-tab{ pointer-events: auto; }

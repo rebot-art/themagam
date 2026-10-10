@@ -746,7 +746,7 @@
 
   function 흐름HTML() {
     const st = window.Wordcount?._state?.();
-    const feed = (st?.feed || []).filter(f => f && f.type !== "pomo");
+    const feed = (st?.feed || []).filter(f => f && f.type !== "pomo" && f.kind !== "base");   // 기준 줄은 기록 탭 전용 (2026-10-10)
     if (!feed.length) return `<div class="wl-feed"><div class="wl-fh">${흐름이름표()}</div>
       <div class="wl-fempty">아직 조용해요. 첫 줄을 올려 보세요.</div></div>`;
     const 줄 = feed.slice(-14).reverse().map(f => {

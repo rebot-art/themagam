@@ -771,7 +771,10 @@
      ===================================================================== */
   /* [2026-08-28] qna 를 더했습니다 — 표현 공부와 같은 이유로, 판을
      열 때만 듣는 게시판이라 표식(newmark/qna) 숫자 하나만 봅니다. */
-  const NEW_BOARDS = ["pub", "help", "music", "qna"];
+  /* [2026-10-09 콩] files 를 더했습니다 — script_files.js 는 진작 dockMarkNew("files") 를
+     찍고 있었는데 이 목록에 없어서 점이 안 켜졌어요. newmark 는 한 묶음으로 이미 듣고
+     있으니 숫자 하나 더 오는 것뿐 — 통신량은 사실상 그대로입니다. 보안규칙도 $board 라 그대로. */
+  const NEW_BOARDS = ["pub", "help", "music", "qna", "files", "links"];   // links: 🔗 LINK (2026-10-10)
   const SEEN_KEY = (id) => "dockSeen:" + id;
   const _newAt = {};
 
