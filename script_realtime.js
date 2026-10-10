@@ -389,8 +389,18 @@
   /** 오늘 글자수를 올린 사람 수 — 이미 받아 둔 wordlog 를 셉니다 */
   function 오늘참여자수() {
     try {
-      const t = window.Wordcount?._state?.().today || {};
-      return Object.values(t).filter(v => Number(v?.total) > 0).length;
+      const st = window.Wordcount?._state?.() || {};
+      const t = st.today || {};
+      const 이름 = new Set();
+      /* 글자수를 올린 사람 — 닉네임 하나로 세니 겹침 없음 (숫자는 원래 제대로였어요) */
+      Object.keys(t).forEach(n => { if (Number(t[n]?.total) > 0) 이름.add(n); });
+      /* [2026-10-11 콩] 🏷️ 작업 내용만 올린 사람도 참여로 — feed 의 note 가 있는 줄.
+         (add>0 는 이미 위 글자수에 들어 있지만 Set 이라 겹쳐도 됩니다) */
+      (st.feed || []).forEach(f => {
+        if (f && f.nick && f.type !== "pomo" && f.kind !== "base" &&
+            (Number(f.add) > 0 || (f.note && String(f.note).trim()))) 이름.add(f.nick);
+      });
+      return 이름.size;
     } catch (e) { return 0; }
   }
 
@@ -1270,7 +1280,22 @@
      옛 <img> 가 있고 주소가 같으면 옛 것을 옮겨 심고, 아니면 그때 src 를 켭니다. */
   /* (글자를 쪼개 적은 까닭: build-single.py 가 img 의 주소 속성 꼴을 "밖에 둔 파일" 로 오해해서) */
   const _프사태그 = new RegExp('(<div class="card-avatar has-photo"><img )' + 's' + 'rc="', "g");
-  const 프사src끄기 = (html) => html.replace(_프사태그, '$1data-' + 's' + 'rc="');
+  /* 🖼 [2026-10-11 콩] 카드 메모 **그림**도 프사와 똑같이 — 통째로 다시 그릴 때 새 <img> 로
+     원격 그림을 또 받아서 "오른쪽이 간헐적으로 깜빡" 였어요. 프사만 옮겨 심고 메모 그림은
+     빠져 있었습니다. src 를 꺼 두고(아래) 옛 <img> 를 옮겨 심습니다 — 통신량 0. */
+  const _메모태그 = new RegExp('(<img class="memo-card-img[^"]*" )' + 's' + 'rc="', "g");
+  const 프사src끄기 = (html) => html
+    .replace(_프사태그, '$1data-' + 's' + 'rc="')
+    .replace(_메모태그, '$1data-' + 's' + 'rc="');
+  function 메모그림옮겨심기(옛img, 새카드) {
+    const 새img = 새카드?.querySelector?.(".memo-card-img");
+    if (!새img) return;
+    const 주소 = 새img.dataset.src;
+    if (주소 === undefined) return;                       // 이미 src 가 켜진 그림
+    if (옛img && 옛img.getAttribute("src") === 주소) { 새img.replaceWith(옛img); return; }
+    새img.removeAttribute("data-src");
+    새img.src = 주소;                                      // 새 그림 — 이때 한 번은 받습니다
+  }
   function 프사옮겨심기(옛img, 새카드) {
     const 새img = 새카드?.querySelector?.(".card-avatar > img");
     if (!새img) return;
@@ -1291,6 +1316,7 @@
     const 새카드 = 틀.firstElementChild;
     if (!새카드) { 옛카드.outerHTML = html; return; }
     프사옮겨심기(옛카드.querySelector(".card-avatar > img"), 새카드);
+    메모그림옮겨심기(옛카드.querySelector(".memo-card-img"), 새카드);
     옛카드.replaceWith(새카드);
   }
 
@@ -1963,15 +1989,19 @@
           /* 들어오거나 나가서 구성이 달라졌을 때만 통째로.
              [2026-08-10] 이때는 공유 카드도 함께 지워지므로 다시 끼웁니다
              [2026-10-03] 통째로 갈 때도 프사 <img> 는 옮겨 심습니다 (아래 참고) */
-          const 옛프사 = {};
+          const 옛프사 = {}, 옛메모 = {};
           list.querySelectorAll(":scope > .user-card:not(.share-card)").forEach(c => {
             const img = c.querySelector(".card-avatar > img");
             const n = c.dataset.cardNick;
             if (img && n) 옛프사[n] = img;
+            const mi = c.querySelector(".memo-card-img");
+            const mn = c.dataset.memoOf;
+            if (mi && mn) 옛메모[mn] = mi;                 // 🖼 메모 그림도 (2026-10-11)
           });
           list.innerHTML = 프사src끄기(html);
           list.querySelectorAll(":scope > .user-card:not(.share-card)").forEach(c => {
             프사옮겨심기(옛프사[c.dataset.cardNick], c);
+            메모그림옮겨심기(옛메모[c.dataset.memoOf], c);
           });
           window.renderShareCards?.();
         }
