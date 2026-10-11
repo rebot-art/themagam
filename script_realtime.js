@@ -1066,6 +1066,26 @@
        (대시보드를 열 때 staff 를 보고 저절로 맞추기도 합니다)
      ===================================================================== */
   let _vice = {};
+  let _pickSet = null;   // ⭐ 고른 멤버 Set — 렌더 한 번마다 다시 계산 (아래)
+
+  /* =====================================================================
+     ⭐ 내가 고른 멤버 테두리 (2026-10-11 콩) — **방장(나)만**, 가볍게 보기에서만
+     ---------------------------------------------------------------------
+     위클리 리포트의 👥 고른 사람에서 고른 그 명단을 **그대로** 씁니다. 리포트와
+     본방이 같은 주소라, 리포트가 적어 둔 localStorage("tm:weeklyPick") 를 여기서
+     읽기만 하면 돼요 — 서버로 아무것도 안 나가고, 다른 사람 화면엔 안 보입니다.
+       · 테두리 = 보라(--pick). 모양은 본인·운영진 테두리와 같은 오버레이(전체 감싸기·왼편 직각).
+       · 겹치면 **운영진 테두리가 우선** — 이미 포인트1(is-vice/is-owner)·내 카드(is-me)인
+         사람에게는 보라를 안 붙입니다. 그래서 색이 섞이지 않아요.
+     ★ AppStore 가 "tm:" 를 붙이므로 AppStore.getItem("weeklyPick") == localStorage["tm:weeklyPick"]. */
+  function 고른멤버Set() {
+    if (myNick !== ADMIN_NICK) return null;            // 방장(나)만
+    try {
+      const raw = window.AppStore?.getItem("weeklyPick") || "[]";   /* AppStore 가 "tm:" 를 붙입니다 = tm:weeklyPick */
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? new Set(arr.filter(x => typeof x === "string")) : null;
+    } catch (e) { return null; }
+  }
   function listenVice() {
     try {
       db.ref("config/vice").on("value", s => {
@@ -1570,6 +1590,7 @@
   else 지원군체크칸();
 
   function renderUserCards(data) {
+    _pickSet = null;   // ⭐ 이번 렌더에서 고른 멤버 명단을 한 번만 읽습니다
       const list = document.getElementById("user-cards");
       if (!list) return;
 
@@ -1858,7 +1879,9 @@
             const 곁 = `${proomChip}${pomoChip}`.trim();
             단순 = (`
             <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}${
-                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}${지원 ? " is-helper" : ""}"
+                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}${
+                 /* ⭐ 내가 고른 멤버 — 방장만, 이미 색이 있는 사람(본인·방장·부방장)은 빼고 (운영진 우선) */
+                 (u !== ADMIN_NICK && _vice[u] !== true && !isMine && (_pickSet ||= (고른멤버Set() || new Set())).has(u)) ? " is-pick" : ""}${지원 ? " is-helper" : ""}"
                  data-card-nick="${escapeHtml(u)}">
               <div class="lite-in">
                 ${window.cardMemoHtml?.(row) || ""}

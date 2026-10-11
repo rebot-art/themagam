@@ -74,6 +74,7 @@
   --text:#141618;
 
   --me:#0A84FF;
+  --pick:#7C5CD6;   /* ⭐ 내가 고른 멤버 테두리 — 방장만 보는 보라 (2026-10-11 콩) */
   --other:#E9E9EB;
   --me-text:#ffffff;
   --other-text:#141618;
@@ -12582,12 +12583,15 @@ html[data-lite] .share-card .share-foot{
 .lite-card.is-me .lite-in{ border-color: var(--border); box-shadow: none; }
 .lite-card.is-me .lite-in::after,
 .lite-card.is-owner .lite-in::after,
-.lite-card.is-vice .lite-in::after{
+.lite-card.is-vice .lite-in::after,
+.lite-card.is-pick .lite-in::after{
   content: ""; position: absolute; inset: -1px; z-index: 3;
   border: 2.5px solid var(--me); border-radius: 6px; pointer-events: none;
 }
 /* [2026-10-04 콩 — 거꾸로] 내 카드 = 둘째 포인트(--accent), 방장·부방장 = 첫 포인트(--me) */
 .lite-card.is-me .lite-in::after{ border-color: var(--accent); }
+/* ⭐ 내가 고른 멤버 = 보라(--pick). 방장만 is-pick 이 붙고, 운영진·본인에겐 안 붙어 겹치지 않음 (2026-10-11 콩) */
+.lite-card.is-pick .lite-in::after{ border-color: var(--pick); }
 
 /* 🔥 화공 응원 스티커 — 가볍게 보기일 때만 80% (2026-10-04 콩, 작업 스티커와 같은 비율).
    꾸민 카드에선 원래 크기 그대로. 줄어든 만큼 윗변에 걸치는 자리도 맞춥니다. */
@@ -12662,7 +12666,8 @@ html[data-lite] .user-card.share-card,
 .lite-card .lite-in,
 .lite-card.is-me .lite-in::after,
 .lite-card.is-owner .lite-in::after,
-.lite-card.is-vice .lite-in::after{ border-radius: 0 6px 6px 0; }
+.lite-card.is-vice .lite-in::after,
+.lite-card.is-pick .lite-in::after{ border-radius: 0 6px 6px 0; }
 .lite-card .lite-ph .card-avatar{ border-top-left-radius: 0; }
 .lite-card .lite-st{ border-bottom-left-radius: 0; }
 /* 🎖️ 가볍게 보기 배지 — 카드 아랫변 가운데, 반은 낱장에 걸치게 (2026-10-03 콩) */
