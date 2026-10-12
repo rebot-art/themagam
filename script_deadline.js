@@ -14,7 +14,7 @@
      u 'ep'(화수×글자) | 'ch'(총 글자수) · e 화수 · p 화당 글자 · c 총 글자수
      w 요일별 { 0~6: 'h'(적게=절반) | 'o'(쉼) }  — 없으면 보통
      done 지금까지 쓴 글자(전체) · d0 오늘 아침(그날 첫 접속) 때의 done · sn 마지막 계산 때의 done
-     k0 d0 를 잡은 날짜 · bs 워크로그 기준(출발선, 알파벳별) }
+     k0 d0 를 잡은 날짜 · bs 워크로그 기준(출발선, 알파벳별) · cl 작업 마감한 날짜 }
 
    [알파벳] 작품을 만들면 A, B, C… 가 자동으로 붙습니다. 지운 알파벳은 다시 안 씁니다
      (예전 워크로그 기록과 섞이지 않게). 워크로그 연동은 **알파벳으로만** — 제목은 나만 보는 꼬리표.
@@ -24,6 +24,9 @@
      같은 상태에서 몇 번 돌려도 결과가 같아요(접종 후 재접속해도 그대로).
      언제 도나:  ① 접속할 때 한 번 자동  ② 탭의 [🔄 지금 계산하기]  ③ 접속한 채 자정이 지나면 새 날 첫 계산
                 ④ 그 작품의 오늘 쓴 글이 **오늘 몫을 넘긴 순간**(눈으로 바로 확인) — 모자란 입력은 중간일 수 있어 안 돕니다.
+     ⑤ [🌙 작업 마감] — 오늘 못 채운 몫도 "안 쓴 것"으로 확정하고 내일부터 나눕니다(cl = 마감한 날짜).
+        마감한 날은 글이 더해질 때마다 바로 다시 계산해요. [☀️ 재개]를 누르면 "못 채운 몫은 오늘 안에 쓸 것"으로 되돌립니다.
+        날짜·오늘 몫(d0)·쓴 글자(done)는 마감/재개에 관계없이 그대로 이어져요 — 같은 날 다시 출근해도 이전 수치에 더해집니다.
      ★ 창을 닫을 때(접종) 자동 계산은 없습니다 — 닫는 순간 저장이 끝까지 간다는 보장이 없어서요.
 
    [통신량] 입장할 때 한 번 읽고(once), 탭을 열 때 한 번 더 읽습니다. 쓰기는 고칠 때만.
@@ -99,12 +102,13 @@
     else T = sum > 0 ? left0 * (days[t] ? days[t].w : 0) / sum : 0;
     const wT = days[t] ? days[t].w : 0;
     const leftS = Math.max(0, total - sn);
-    const rem = Math.max(0, T - (sn - d0));                     // 오늘 몫 중 계산 때까지 못 채운 만큼
+    const closed = w.cl === t;                                   // 오늘 작업 마감함
+    const rem = closed ? 0 : Math.max(0, T - (sn - d0));        // 오늘 몫 중 못 채운 만큼 — 마감하면 "안 쓴 것"이라 내일부터 나눔
     const sumF = sum - wT;
     const pool = Math.max(0, leftS - rem);
     Object.keys(days).forEach((k) => { days[k].q = k === t ? T : (sumF > 0 ? pool * days[k].w / sumF : 0); });
     const wrote = done - d0;
-    return { t, total, done, d0, sn, left: Math.max(0, total - done), T, state, days, wrote,
+    return { t, total, done, d0, sn, closed, noRoom: sumF <= 0, left: Math.max(0, total - done), T, state, days, wrote,
              over: state !== "none" && wrote > 0 && wrote > T, fresh: done - sn,
              tom: days[shift(t, 1)] ? days[shift(t, 1)].q : null };
   }
@@ -179,6 +183,37 @@
     draw(); 카드에알리기();
   }
 
+  /** 🌙 작업 마감 — 못 채운 몫까지 내일부터 다시 나눕니다. 날짜는 그대로. */
+  async function 마감하기() {
+    if (!me() || !window.db || !letters().length) return;
+    const t = today();
+    const upd = await 새날맞추기();
+    letters().forEach((L) => { const w = W_(L); w.cl = t; w.sn = num(w.done); upd[`works/${L}/cl`] = t; upd[`works/${L}/sn`] = w.sn; });
+    try { await window.db.ref(base()).update(upd); } catch (e) { console.warn("[deadline close]", e); }
+    _day = t;
+    const parts = [], stuck = [];
+    letters().forEach((L) => {
+      const c = calc(W_(L));
+      if (c.state === "ok" && c.tom !== null) parts.push(`${L} ${comma(c.tom)}자`);
+      else if (c.left > 0 && c.state !== "none") stuck.push(L);
+    });
+    _msg = `🌙 오늘 작업을 마감했어요.` + (parts.length ? ` 내일 몫 — ${parts.join(" · ")}` : "") +
+      (stuck.length ? ` (${stuck.join("·")} 은 내일로 나눌 날이 없어요)` : "");
+    draw(); 카드에알리기();
+  }
+  /** ☀️ 재개 — 마감만 풀어요. 쓴 글자·오늘 몫은 그대로, 이어서 더해집니다. */
+  async function 재개하기() {
+    if (!me() || !window.db) return;
+    const t = today(), upd = await 새날맞추기();
+    let n = 0;
+    letters().forEach((L) => { const w = W_(L); if (w && w.cl === t) { n++; delete w.cl; w.sn = num(w.done); upd[`works/${L}/cl`] = null; upd[`works/${L}/sn`] = w.sn; } });
+    if (n) { try { await window.db.ref(base()).update(upd); } catch (e) { console.warn("[deadline reopen]", e); } }
+    _msg = n ? "☀️ 다시 시작! 쓴 글자는 그대로 이어서 더해져요." : "";
+    draw(); 카드에알리기();
+  }
+  const 마감중 = (w) => !!w && w.cl === today();
+  const 바로계산해야 = (L) => { const w = W_(L); return !!w && (마감중(w) || calc(w).over); };
+
   /* =====================================================================
      워크로그가 부르는 문 — 알파벳 연결
      ===================================================================== */
@@ -200,7 +235,7 @@
   }
   const loneLetter = (what) => { const m = LONE.exec(what || ""); return m ? m[1].toUpperCase() : ""; };
   const listText = () => letters().join(" / ");
-  function msgNeed() { return `어느 작품의 글자수인지 알려 주세요 — 작업 내용 맨 앞에 ${listText()} 중 하나를 적어 주세요. (아직 아무것도 올리지 않았어요 · 데드라인과 상관없는 글이면 맨 앞에 - 를 적어요)`; }
+  function msgNeed() { return `어느 작품의 글자수인지 알려 주세요 — ${listText()} 중 하나를 같이 적어 주세요. 예) 글자수 / ${letters()[0] || "A"} (아직 아무것도 올리지 않았어요 · 데드라인과 상관없는 글이면 - 를 적어요)`; }
   function msgUnknown(L) { return `「${L}」 작품은 없어요 — ${listText()} 중에서 골라 주세요. (아직 아무것도 올리지 않았어요)`; }
   function msgNoNum(L) { return `${L} 작품에 몇 자 썼는지 글자수가 빠졌어요. 글자수를 적고 다시 눌러 주세요. (아직 아무것도 올리지 않았어요)`; }
 
@@ -214,7 +249,7 @@
     const ok = await 더하기(L, add, !!(opt && opt.yday));
     if (!ok) return false;
     if (bs !== undefined && bs !== null) await 칸쓰기(L, { bs: num(bs) });
-    if (!(opt && opt.yday) && calc(W_(L)).over) { 계산하기(L); }      // 초과 → 바로 (그 작품만)
+    if (!(opt && opt.yday) && 바로계산해야(L)) { 계산하기(L); }      // 초과(또는 마감한 날) → 바로 (그 작품만)
     else { draw(); 카드에알리기(); }
     return true;
   }
@@ -279,7 +314,7 @@
       <div class="dl-ed">
         <label>제목 (나만 보여요)</label>
         <div class="dl-nm"><span class="dl-badge">${L}</span><input type="text" maxlength="${MAX_TITLE}" data-dl-f="t" data-dl-l="${L}" value="${esc(w.t || "")}" placeholder="비워도 돼요"></div>
-        <p class="dl-hint">워크로그에는 <b>${L}</b> 로 적어요 — 예) “${L} 3장 초고”</p>
+        <p class="dl-hint">워크로그에는 <b>${L}</b>로 적어요. 예) 글자수 / ${L}</p>
         <div class="dl-two"><div><label>시작일</label><input type="date" data-dl-f="s" data-dl-l="${L}" value="${esc(w.s || "")}"></div>
           <div><label>마감일</label><input type="date" data-dl-f="d" data-dl-l="${L}" value="${esc(w.d || "")}"></div></div>
         <label>분량</label>
@@ -303,7 +338,7 @@
     return `
       <div class="dl-card${open ? " is-open" : ""}" data-dl-card="${L}">
         <div class="dl-hd" data-dl-open="${L}" role="button" tabindex="0">
-          <span class="dl-badge">${L}</span><span class="dl-t">${esc(w.t || "(제목 없음)")}</span>${pillHtml(w)}<span class="dl-chev">${open ? "▲" : "▼"}</span>
+          <span class="dl-badge">${L}</span><span class="dl-t">${esc(w.t || "(제목 없음)")}</span>${pillHtml(w)}${c.closed ? `<span class="dl-pill is-closed">🌙 마감</span>` : ""}<span class="dl-chev">${open ? "▲" : "▼"}</span>
         </div>
         <div class="dl-bd">
           ${big}
@@ -315,6 +350,24 @@
       </div>`;
   }
 
+  let _help = false;
+  function helpHtml() {
+    return `<div class="dl-help">
+      <ol>
+        <li><b>＋ 작품 추가</b>를 누르면 <b>A, B…</b> 이름표가 붙어요.</li>
+        <li>카드를 눌러 펼치고 <b>시작일 · 마감일 · 분량</b>을 넣어요.</li>
+        <li>그러면 <b>오늘 몇 자</b> 쓰면 되는지(오늘 몫)가 나와요.</li>
+        <li>글을 쓰면 <b>워크로그</b>에 적어요. 예) <b>글자수 / A</b><br>작품이 하나면 글자수만 써도 돼요.</li>
+        <li>워크로그를 안 쓰면 카드의 <b>오늘 쓴 글자</b> 칸에 직접 적어요.</li>
+        <li>오늘 몫보다 많이 쓰면 <b>바로</b> 내일 몫이 줄어요 🎉</li>
+        <li>적게 썼을 땐 <b>🔄 지금 계산하기</b>. 못 쓴 건 오늘 안에 쓸 거라고 보고 계산해요.</li>
+        <li>오늘 일을 끝낼 땐 <b>🌙 작업 마감</b>. 못 쓴 글자가 내일부터 나뉘어요.</li>
+        <li>다시 일하려면 <b>☀️ 재개</b>. 쓴 글자는 그대로 이어져요.</li>
+      </ol>
+      <p>· 오늘 몫은 하루 종일 안 바뀌어요.<br>· 워크로그 작업 칸을 <b>-</b>로 시작하면 데드라인과 상관없는 글이에요.<br>· 제목·글자수는 나만 봐요. 다른 사람 카드에는 연한 바만 보여요.</p>
+    </div>`;
+  }
+
   function draw() {
     if (!_box) return;
     const ks = letters();
@@ -322,9 +375,14 @@
     const fresh = ks.reduce((n, L) => n + Math.max(0, calc(W_(L)).fresh), 0);
     let h = "";
     if (ks.length) {
-      h += `<div class="dl-sync"><span>오늘 진척 <b>${comma(st.wrote)}</b> / ${comma(st.T)}자</span><button type="button" class="ghost-btn compact" id="dl-recalc">🔄 지금 계산하기</button></div>`;
+      const nClosed = ks.filter((L) => 마감중(W_(L))).length;
+      h += `<div class="dl-sync"><span>오늘 진척 <b>${comma(st.wrote)}</b> / ${comma(st.T)}자</span><button type="button" class="dl-q${_help ? " on" : ""}" id="dl-help" title="쓰는 법">❓ 쓰는 법</button></div>`;
       h += barHtml(st.pct, 9);
-      h += `<p class="dl-hint">${fresh > 0 ? `● 마지막 계산 뒤에 쓴 글 +${comma(fresh)}자 — 내일 몫엔 아직 안 반영됐어요. ` : ""}오늘 몫은 하루 종일 그대로예요. 몫을 넘기면 바로 계산되고, 아니면 [지금 계산하기]를 눌러야 내일 몫이 바뀌어요.</p>`;
+      h += `<div class="dl-btns"><button type="button" class="ghost-btn compact" id="dl-recalc" title="초과한 만큼만 반영해요">🔄 지금 계산하기</button>` +
+           `<button type="button" class="ghost-btn compact" id="dl-close"${nClosed === ks.length ? " disabled" : ""} title="못 채운 몫까지 내일부터 다시 나눠요">🌙 작업 마감</button>` +
+           `<button type="button" class="ghost-btn compact" id="dl-reopen"${nClosed ? "" : " disabled"} title="마감을 풀고 이어서 써요">☀️ 재개</button></div>`;
+      if (_help) h += helpHtml();
+      h += `<p class="dl-hint">${nClosed ? "🌙 오늘은 마감했어요 — 못 채운 몫은 내일부터 나뉘어 있어요. 더 쓰면 바로 반영돼요. " : (fresh > 0 ? `● 마지막 계산 뒤에 쓴 글 +${comma(fresh)}자 — 내일 몫엔 아직 안 반영됐어요. ` : "")}오늘 몫은 하루 종일 그대로예요. 몫을 넘기면 바로 계산되고, 아니면 [지금 계산하기]나 [작업 마감]을 눌러야 내일 몫이 바뀌어요.</p>`;
     } else {
       h += `<p class="dl-empty">아직 데드라인이 없어요.<br>작품을 추가하면 A부터 알파벳이 붙어요.</p>`;
     }
@@ -374,7 +432,7 @@
     if (f === "wrote") {
       /* 오늘 쓴 글자 = d0 + 입력 — 워크로그가 더한 것까지 포함한 오늘 총량을 직접 고치는 칸 */
       await 칸쓰기(L, { done: num(w.d0) + num(v) });
-      if (calc(W_(L)).over) 계산하기(L);            // 초과일 때만 바로
+      if (바로계산해야(L)) 계산하기(L);            // 초과일 때만 바로 (마감한 날은 늘 바로)
       else { draw(); 카드에알리기(); }
       return;
     }
@@ -399,6 +457,9 @@
       const o = e.target.closest("[data-dl-open]");
       if (o && !e.target.closest("input,button:not([data-dl-open])")) { _open = _open === o.dataset.dlOpen ? "" : o.dataset.dlOpen; draw(); return; }
       if (e.target.closest("#dl-recalc")) { _msg = ""; 계산하기(); return; }
+      if (e.target.closest("#dl-close")) { 마감하기(); return; }
+      if (e.target.closest("#dl-reopen")) { 재개하기(); return; }
+      if (e.target.closest("#dl-help")) { _help = !_help; draw(); return; }
       if (e.target.closest("#dl-add")) { 작품추가(); return; }
       const u = e.target.closest("[data-dl-u]");
       if (u) { 칸쓰기(u.dataset.dlL, { u: u.dataset.dlU }).then(() => { draw(); 카드에알리기(); }); return; }
@@ -451,7 +512,7 @@
   window.listenDeadline = listenDeadline;
   window.detachDeadline = detachDeadline;
   window.Deadline = { route, loneLetter, msgNeed, msgUnknown, msgNoNum, letterBase, setLetterBase, addWritten,
-    count: () => (enabled() && _loaded ? letters().length : 0), _calc: calc, _state: () => _d };
+    count: () => (enabled() && _loaded ? letters().length : 0), _calc: calc, _state: () => _d, close: 마감하기, reopen: 재개하기, calcNow: 계산하기 };
 
   (function install() {
     const _leave = window.leaveRoom;

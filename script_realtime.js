@@ -1966,7 +1966,7 @@
                      ? `<span class="card-device" title="폰으로 접속 중">📱</span>` : ""}
                 ${배지HTML(u)}
                 <div class="card-name">${shareChip}<span class="card-nick">${escapeHtml(u)}</span></div>
-                <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line">🎯 ${goalText}</div></div>
+                <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line${dlBar(row) ? " has-dl" : ""}"${dlBar(row)}>🎯 ${goalText}</div></div>
                 ${metaBlock}
               </div>
             </div>
