@@ -409,10 +409,12 @@
     return true;
   }
   /** 📝 기준이 잡힌 것도 "기록" 탭에 남깁니다 — 방 흐름에는 안 보이고 내 줄에만 */
-  async function pushBaseLine(b, how) {
+  async function pushBaseLine(b, how, L) {
     if (!me() || !window.db) return;
     try {
-      await window.db.ref(`wordfeed/${dayKey()}`).push({ nick: me(), kind: "base", base: Number(b), how: how || "set", at: Date.now() });
+      const 짐 = { nick: me(), kind: "base", base: Number(b), how: how || "set", at: Date.now() };
+      if (L) 짐.L = String(L).slice(0, 1);          // ⏰ 데드라인 작품 알파벳 (2026-10-12)
+      await window.db.ref(`wordfeed/${dayKey()}`).push(짐);
     } catch (e) {}
   }
 
@@ -825,7 +827,7 @@
                   : f.how === "fresh" ? "🆕 새 편 시작"
                   : "출발선";
         const tm3 = (f.at && window.formatHHMM) ? `<span class="wc-priv-t">${window.formatHHMM(f.at)}</span>` : "";
-        return `<div class="wc-feed me"><div class="wc-feed-sys wc-base-line">${tm3}▶ 기준 <b>${fmt(f.base)}자</b> · ${how}</div></div>`;
+        return `<div class="wc-feed me"><div class="wc-feed-sys wc-base-line">${tm3}▶ ${f.L ? esc(f.L) + " " : ""}기준 <b>${fmt(f.base)}자</b> · ${how}</div></div>`;
       }
       /* 옛 기록에는 snap 이 없습니다. 그럴 땐 윗줄을 생략합니다. */
       const snap = (f.snap === undefined || f.snap === null) ? null : Number(f.snap);
@@ -1053,6 +1055,18 @@
       say(`🏷️ ${what} — 방에 올렸어요`);
       return true;
     };
+    /* ⏰ [2026-10-12 콩] 데드라인 연동 — 작품이 하나면 글자수만으로, 둘 이상이면 작업 내용 맨 앞 알파벳으로.
+       알파벳이 빠졌거나 글자수가 빠졌으면 **아무것도 올리지 않고** 안내만 합니다(글자수를 못 지우니까요).
+       칸에 적은 건 그대로 남아서, 빠진 것만 채워 다시 누르면 됩니다. 데드라인이 없는 사람은 여기서 아무 일도 없어요. */
+    const DL = window.Deadline;
+    const 길 = DL ? DL.route(what) : { kind: "none" };
+    if (길.kind === "need" || 길.kind === "unknown" || 길.kind === "letter") {
+      const 홀로 = DL.loneLetter(what);
+      if (v === null) {
+        if (홀로) { say(길.kind === "unknown" ? DL.msgUnknown(길.L) : DL.msgNoNum(홀로)); return; }
+      } else if (길.kind === "need") { say(DL.msgNeed()); return; }
+      else if (길.kind === "unknown") { say(DL.msgUnknown(길.L)); return; }
+    }
     if (v === null) {
       const 메모함 = 메모처리();
       if (await 작업만()) return;
@@ -1066,6 +1080,38 @@
     if (!me()) { say("잠시만요, 아직 준비 중이에요."); return; }
 
     const mine = myRow();
+
+    /* ⏰ 알파벳 길 — 기준(출발선)도 알파벳마다 따로 갖습니다. 오늘 누적(total)은 그대로 합쳐요. */
+    if (길.kind === "letter") {
+      const 옛 = DL.letterBase(길.L);
+      if (옛 === null) {
+        await DL.setLetterBase(길.L, v);
+        pushBaseLine(v, "set", 길.L);
+        clearInput();
+        say(`${길.L} 출발선을 ${fmt(v)}자로 잡았어요`);
+        await 작업만();
+        return;
+      }
+      const d = v - 옛;
+      if (d > 0) {
+        const next = Number(mine.total || 0) + d;
+        const okSave = await save({ total: next });
+        if (okSave === false) { clearInput(); return; }
+        await pushFeed(d, v, what);
+        if (what) 작업칸비우기();
+        await DL.addWritten(길.L, d, v);
+        say(`+${fmt(d)}자 · ${길.L} 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
+      } else if (d === 0) {
+        if (!(await 작업만())) say("그대로예요");
+      } else {
+        await DL.setLetterBase(길.L, v);
+        say(`글자수가 줄었네요. ${길.L} 기준만 ${fmt(v)}자로 옮겼어요`);
+        await 작업만();
+      }
+      clearInput();
+      return;
+    }
+
     const base = mine.base;
 
     if (base === null || base === undefined) {
@@ -1086,6 +1132,8 @@
       if (okSave === false) { clearInput(); return; }
       await pushFeed(diff, v, what);
       if (what) 작업칸비우기();
+      /* ⏰ 데드라인 작품이 하나뿐이면 글자수만으로 그 작품에 더합니다 (2026-10-12) */
+      if (길.kind === "single") { try { await DL.addWritten(길.L, diff, null); } catch (e) {} }
       /* [2026-08-22 — 콩] 기준을 함께 보여 줍니다. 안 보이니 자꾸
          [▶ 기준] 을 눌러 되짚어 보게 되더라고요.
          기준 = 방금 적은 값(v) — 다음엔 여기서부터 셉니다. */
@@ -1105,6 +1153,17 @@
     rolloverIfNeeded();
     const v = inputVal();
     if (v === null) { say("먼저 지금 글자수를 적어주세요."); return; }
+    /* ⏰ 작품이 여럿이면 알파벳 작품의 기준을 옮깁니다 (2026-10-12) */
+    const DL = window.Deadline, 길 = DL ? DL.route(whatVal()) : { kind: "none" };
+    if (길.kind === "need") { say(DL.msgNeed()); return; }
+    if (길.kind === "unknown") { say(DL.msgUnknown(길.L)); return; }
+    if (길.kind === "letter") {
+      await DL.setLetterBase(길.L, v);
+      pushBaseLine(v, "set", 길.L);
+      clearInput();
+      say(`${길.L} 기준을 ${fmt(v)}자로`);
+      return;
+    }
     await save({ base: v });
     pushBaseLine(v, "set");
     clearInput();
@@ -1232,6 +1291,13 @@
 
     _ydayRow = { total: r.next, base: r.v };
 
+    /* ⏰ 어제 채운 글자는 데드라인의 **전체 쓴 글**에만 더하고 오늘 진척엔 안 넣습니다 (2026-10-12).
+       작품이 여럿이면 어느 작품인지 알 수 없어 건드리지 않아요. */
+    try {
+      const 길 = window.Deadline ? window.Deadline.route("") : { kind: "none" };
+      if (길.kind === "single") await window.Deadline.addWritten(길.L, r.add, null, { yday: true });
+    } catch (e) {}
+
     /* 오늘 출발선이 아직 없으면 이어서 잡아 줍니다.
        어제 마지막 상태에서 오늘도 계속 쓰는 게 보통이니까요.
        이미 잡아 둔 사람의 값은 건드리지 않습니다. */
@@ -1251,6 +1317,17 @@
 
   async function freshStart() {
     rolloverIfNeeded();
+    /* ⏰ 작품이 여럿이면 알파벳 작품의 새 편 (2026-10-12) */
+    const DL = window.Deadline, 길 = DL ? DL.route(whatVal()) : { kind: "none" };
+    if (길.kind === "need") { say(DL.msgNeed()); return; }
+    if (길.kind === "unknown") { say(DL.msgUnknown(길.L)); return; }
+    if (길.kind === "letter") {
+      await DL.setLetterBase(길.L, 0);
+      pushBaseLine(0, "fresh", 길.L);
+      clearInput();
+      say(`새 편 시작 · ${길.L} 기준 0자`);
+      return;
+    }
     await save({ base: 0 });
     pushBaseLine(0, "fresh");
     clearInput();

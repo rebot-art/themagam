@@ -585,6 +585,7 @@ window.AppSession = AppSession;
       callIfFn("listenNotes");
       callIfFn("listenHearts");       // 💘 오늘 받은 하트 (프사 오른쪽 위)
       callIfFn("listenDday");         // 📅 내 디데이 (나의 작업 · 카드 딱지)
+      callIfFn("listenDeadline");     // ⏰ 내 데드라인 — 한 번 읽고 접속 계산 (script_deadline.js · 지금은 혼자 방만)
       callIfFn("listenCheers");       // 🔥 화공 카드 응원 (윗변)
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
       callIfFn("listenNoticeBoard");  // 📢 공지판 — 안 읽은 게 있으면 단추에 붉은 점

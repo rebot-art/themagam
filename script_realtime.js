@@ -1906,7 +1906,7 @@
                 <div class="lite-nk">${ddChipHtml(row)}<span class="lite-nm" title="${escapeHtml(u)}">${shareChip}<span>${escapeHtml(u)}</span></span></div>
                 <div class="lite-st ${cls}${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-pick-status="1" role="button" tabindex="0" title="상태 바꾸기"' : ""}>${상태글}</div>
-                <div class="lite-gl"${isMine
+                <div class="lite-gl${dlBar(row) ? " has-dl" : ""}"${dlBar(row)}${isMine
                   ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"` : ""
                   } title="${escapeHtml(row.todayGoalText || "")}">🎯 ${goalText}</div>
                 <!-- 🎖️ 지난 달 배지 — 꾸민 카드처럼 카드 아랫변에서 낱장에 걸치게 (2026-10-03 콩) -->
@@ -2194,6 +2194,18 @@
     })[code] || "휴식";
   }
 
+  /* ⏰ [2026-10-12 콩] 🎯 목표 줄의 연한 진척 바 — 데드라인이 있는 사람만, **오늘 날짜의 값만**.
+     0 이면 안 깔고, 100 을 넘으면 첫 바퀴는 가득 찬 채 둘째 색이 앞에서부터 한 번 더 (최대 2바퀴).
+     퍼센트 글자는 없습니다 — "작업하고 있구나" 정도만 보이게. (둘째 줄의 class 도 이 값으로 붙입니다) */
+  function dlBar(row) {
+    const p = Number(row?.dlP);
+    if (!Number.isFinite(p) || p <= 0) return "";
+    const k = (window.Wordcount?.dayKey?.() || "");
+    if (!k || row.dlK !== k) return "";
+    const a = Math.min(100, p), b = Math.max(0, Math.min(100, p - 100));
+    return ` style="--dl1:${a}%;--dl2:${b}%"`;
+  }
+
   function statusClass(code) {
     return ({
       idle: "status-rest",
@@ -2313,6 +2325,10 @@
          항목 이름은 안 나갑니다. 없으면 null 로 보내 칸을 지웁니다 (script_dday.js). */
       ddN: (window.myDday?.() || null)?.n ?? null,
       ddD: (window.myDday?.() || null)?.days ?? null,
+      /* ⏰ [2026-10-12 콩] 데드라인 — 오늘 목표 달성도(0~200 정수)와 그 날짜. 🎯 목표 줄에 연한 바로 깔립니다.
+         제목·분량·작품 수는 안 나갑니다. 데드라인이 없으면 null 로 칸을 지웁니다 (script_deadline.js). */
+      dlP: (window.myDeadline?.() || null)?.p ?? null,
+      dlK: (window.myDeadline?.() || null)?.k ?? null,
       /* 펫 요약 — 남들 카드에도 보이게 */
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,

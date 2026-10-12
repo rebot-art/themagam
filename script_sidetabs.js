@@ -29,6 +29,10 @@
   const W = 400;
   const TABS = [
     { id: "notice", label: "📢 공지" },
+    /* [2026-10-12 콩] ⏰ 데드라인 — 📢 공지와 🏢 출판사 품평 사이. **혼자 방에서 먼저** (solo 표시) —
+       본방에 켤 때는 solo 를 지우고 script_deadline.js 의 DEADLINE_SOLO_ONLY 를 false 로.
+       알맹이는 script_deadline.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
+    { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", solo: true },
     /* [2026-10-09 콩] 차례 — 본방: 공지·품평·표현 공부·Q&A / 혼자 방: 공지·Member·표현 공부·Q&A
        (혼자 방엔 품평이 없고, 그 자리에 Member 탭이 끼어듭니다 — 자리맞추기 가 틈을 벌려요) */
     { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
@@ -40,7 +44,7 @@
     /* [2026-10-10 콩] 🔗 LINK — **맨 아래, 다른 탭들과 떨어져서** (bottom → CSS margin-top:auto).
        알맹이는 script_links.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. */
     { id: "links",  label: "🔗 LINK",    open: "openLinks", close: "closeLinks", bottom: true }
-  ].filter(t => !(t.main && window.SOLO));
+  ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.solo && !window.SOLO));
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;
   const OPEN_KEY = "sideTabOpen";

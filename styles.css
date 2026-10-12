@@ -12921,3 +12921,74 @@ html.side-files #files-modal .modal-x{ display: none; }
 html.side-files #files-modal .modal-title{ display: none; }   /* 칸 머리에 이미 "📁 자료실" 이 있어요 */
 /* 폭 400 안에서는 긴 파일 이름을 **줄바꿈** (콩) — 가운데 창에서는 … 으로 자르던 것 */
 html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text-overflow: clip; word-break: break-all; line-height: 1.3; }
+
+/* =====================================================================
+   ⏰ 데드라인 (2026-10-12 — 콩) — script_deadline.js 옆 탭 + 카드 🎯 목표 줄 바
+   ===================================================================== */
+.deadline-board{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
+.deadline-board > *{ flex: none; }   /* 칸이 세로 flex 라 카드가 눌려 잘리지 않게 */
+.dl-sync{ display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-xs); color: var(--muted-strong); margin-bottom: 6px; }
+.dl-sync b{ color: var(--text); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.dl-hint{ font-size: 11px; line-height: 1.55; color: var(--muted); margin: 4px 0 10px; }
+.dl-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); line-height: 1.7; padding: 18px 0 14px; }
+.dl-msg{ font-size: var(--fs-xs); color: var(--danger); margin: 8px 0 0; }
+.dl-bar{ position: relative; border-radius: 99px; background: var(--fill-1, rgba(120,120,128,.12)); overflow: hidden; margin: 6px 0 4px; }
+.dl-bar > i{ position: absolute; left: 0; top: 0; bottom: 0; display: block; }
+.dl-bar > i.a{ background: rgba(63,200,140,.55); }
+.dl-bar > i.b{ background: rgba(255,196,64,.80); }
+.dl-card{ border: 1px solid var(--border); border-radius: var(--r-md); background: var(--fill-1, rgba(255,255,255,.5)); margin-bottom: 8px; overflow: hidden; }
+.dl-hd{ display: flex; align-items: center; gap: 7px; padding: 9px 11px 3px; cursor: pointer; }
+.dl-badge{ flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px;
+  background: var(--text); color: var(--bg); font-size: 12px; font-weight: 800; }
+.dl-t{ flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.dl-pill{ flex: none; font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 2px 8px; background: var(--fill-1); color: var(--muted-strong); }
+.dl-pill.is-hot{ background: var(--danger); color: #fff; }
+.dl-pill.is-past{ opacity: .6; }
+.dl-chev{ flex: none; color: var(--muted); font-size: 10px; }
+.dl-bd{ padding: 2px 11px 10px; }
+.dl-big{ display: flex; align-items: baseline; gap: 6px; }
+.dl-big b{ font-size: 19px; font-variant-numeric: tabular-nums; }
+.dl-big span{ font-size: 11px; color: var(--muted); }
+.dl-warn{ font-size: var(--fs-xs); color: var(--danger); margin: 4px 0; }
+.dl-meta{ display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dl-wk{ display: flex; gap: 3px; align-items: flex-end; height: 38px; margin-top: 8px; }
+.dl-wk > div{ flex: 1; text-align: center; font-size: 9.5px; color: var(--muted); }
+.dl-wk > div i{ display: block; margin: 0 auto 2px; width: 100%; max-width: 26px; min-height: 3px; border-radius: 3px 3px 0 0; background: var(--border); }
+.dl-wk > div.t{ color: var(--accent); font-weight: 800; }
+.dl-wk > div.t i{ background: var(--accent); }
+.dl-wk > div.o i{ opacity: .45; }
+.dl-wrote{ display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: var(--fs-xs); color: var(--muted-strong); }
+.dl-wrote input{ width: 92px; text-align: right; }
+.dl-wrote b{ color: var(--danger); }
+.deadline-board input[type=text], .deadline-board input[type=number], .deadline-board input[type=date]{
+  box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 5px 9px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--bg); color: var(--text); }
+.dl-ed{ border-top: 1px dashed var(--border); padding: 8px 11px 11px; }
+.dl-ed label{ display: block; font-size: 11px; font-weight: 700; color: var(--muted-strong); margin: 8px 0 3px; }
+.dl-ed input[type=text], .dl-ed input[type=number], .dl-ed input[type=date]{ width: 100%; }
+.dl-nm{ display: flex; align-items: center; gap: 8px; }
+.dl-two{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dl-seg{ display: inline-flex; border: 1px solid var(--border); border-radius: 99px; overflow: hidden; }
+.dl-seg button{ border: 0; background: none; padding: 4px 12px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.dl-seg button.on{ background: var(--accent); color: #fff; }
+.dl-dows{ display: flex; gap: 4px; }
+.dl-dows button{ flex: 1; border: 1px solid var(--border); border-radius: 9px; padding: 6px 0; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; background: none; color: var(--text); }
+.dl-dows button.n{ background: var(--accent); border-color: var(--accent); color: #fff; }
+.dl-dows button.h{ background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); border-color: var(--accent); }
+.dl-dows button.o{ color: var(--muted); text-decoration: line-through; opacity: .6; }
+.dl-edf{ display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.dl-del{ border: 0; background: none; color: var(--muted); font: inherit; font-size: 11.5px; cursor: pointer; }
+.dl-del:hover{ color: var(--danger); }
+.dl-addw{ width: 100%; border: 1.5px dashed var(--border); border-radius: var(--r-md); background: none; padding: 10px; font: inherit; font-size: var(--fs-xs); font-weight: 700; color: var(--muted-strong); cursor: pointer; }
+.dl-addw span{ font-weight: 400; color: var(--muted); }
+.dl-addw:disabled{ opacity: .5; cursor: default; }
+
+/* 🎯 가볍게 보기 목표 줄 — 오늘 목표 달성도를 **연한 한 색**으로만 깐다 (끝 줄·퍼센트 없음 — 콩).
+   100% 를 넘으면 첫 바퀴는 가득 찬 채 둘째 색이 앞에서부터 한 번 더. 글자는 그대로 읽혀야 해서 맨 아래층에 둡니다. */
+.lite-card .lite-gl.has-dl{ position: relative; isolation: isolate; }
+.lite-card .lite-gl.has-dl::before{
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,196,64,.30) var(--dl2, 0%), transparent 0),
+    linear-gradient(90deg, rgba(63,200,140,.22) var(--dl1, 0%), transparent 0);
+}
