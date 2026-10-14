@@ -13012,3 +13012,8 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 .dl-help ol{ margin: 0 0 6px; padding-left: 18px; }
 .dl-help li{ margin: 2px 0; }
 .dl-help p{ margin: 6px 0 0; color: var(--muted-strong); font-size: 11.5px; }
+
+/* ↔ 카드 마당(#user-cards)은 가로로 스크롤될 일이 없습니다 (2026-10-14 콩 "바탕화면에 가로 막대가 떴다 사라져").
+   ★ overflow-y:auto 를 걸면 가로도 저절로 auto 가 돼서, 95% 같은 배율에서 소수점 반올림으로 1px 만 넘쳐도
+     아래에 얇은 가로 막대가 생겼어요(1013/1012 로 실제 확인). 가로만 잠가 둡니다 — 세로 스크롤은 그대로. */
+.user-cards-grid{ overflow-x: hidden; }
