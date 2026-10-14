@@ -12872,7 +12872,7 @@ html[data-lite] .user-card.share-card,
   border-left: 0 solid var(--border);
 }
 html.side-open .side-pane{ width: 400px; border-left-width: 1px; }
-html.side-open .cards-area{ padding-right: 400px; }
+html.side-open .cards-area{ padding-right: calc(400px + var(--side-strip, 40px)); }   /* 칸 + 탭 줄(옆으로 밀려 칸 왼쪽에 섭니다) */
 html.side-open .member-side{ right: 400px; }
 html.member-open .side-tabs{ right: 250px; }
 .side-pane-head{ flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px 6px 14px;
@@ -13017,3 +13017,16 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
    ★ overflow-y:auto 를 걸면 가로도 저절로 auto 가 돼서, 95% 같은 배율에서 소수점 반올림으로 1px 만 넘쳐도
      아래에 얇은 가로 막대가 생겼어요(1013/1012 로 실제 확인). 가로만 잠가 둡니다 — 세로 스크롤은 그대로. */
 .user-cards-grid{ overflow-x: hidden; }
+
+/* ↔ 카드 판은 **오른쪽 탭 줄을 뺀 자리**의 가운데에 놓입니다 (2026-10-14 콩).
+   탭 줄(35px)은 화면 오른쪽에 떠 있는 층이라 자리를 안 차지해서, 카드가 그 밑으로 들어가 있었어요.
+   ★ 오른쪽 여백만 미리 비워 둡니다. 탭을 열면 400px 밀리는 건 그대로고, 그 위에 탭 줄 폭이 얹힐 뿐이에요.
+   ★ 배경판(접속 현황·개근·지금 방에서)은 position:absolute; left:0; right:0 라 이 여백을 안 받습니다 —
+     그대로 제자리(화면 전체 가운데)에 있어서 아래 알약 줄·머리와 가운데가 맞아요. 건드리지 않습니다.
+   ★ 좁은 화면(900px 아래)은 카드 폭이 아쉬워서 안 비웁니다 (위쪽 좁은 화면 규칙 — 칸이 카드 위로 덮음). */
+:root{ --side-strip: 40px; }
+@media (min-width: 901px){
+  html.sidetabs-on .cards-area{ padding-right: var(--side-strip); }
+  html.member-open.sidetabs-on .cards-area{ padding-right: calc(250px + var(--side-strip)); }
+  html.side-open.sidetabs-on .cards-area{ padding-right: calc(400px + var(--side-strip)); }   /* 같은 힘이라 맨 끝에 둬야 칸이 열릴 때 이깁니다 */
+}
