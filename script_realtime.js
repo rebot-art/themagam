@@ -2162,6 +2162,27 @@
     _lonelyTimer = setTimeout(() => fixLonelyCard(true), 150);
   });
 
+  /* ↔ [2026-10-14 콩] 카드 마당 폭이 **창 크기 말고 다른 이유로** 바뀌어도 바로 다시 맞춥니다.
+     (옆 탭 칸·Member 명단을 열고 닫을 때 — "닫고 나서 한참 뒤에야 재정렬돼")
+     ★ 지금까지는 창 크기(resize)·배율·옆 탭 코드가 부를 때만 다시 쟀습니다. 폭이 변하는 **그 순간**을
+       브라우저가 직접 알려 주는 ResizeObserver 로 바꿔, 누가 폭을 바꾸든 놓치지 않게 합니다.
+     ★ 폭(가로)만 봅니다 — 줄바꿈 띠를 넣고 빼며 높이가 달라져도 다시 돌지 않아요(무한 반복 방지).
+     ★ 재는 건 바뀐 뒤 80ms 에 한 번뿐이라 타자와 겹치지 않습니다. */
+  (function watchCardsWidth(tries) {
+    const list = document.getElementById("user-cards");
+    if (!list) { if (tries < 40) setTimeout(() => watchCardsWidth(tries + 1), 250); return; }
+    if (typeof ResizeObserver !== "function") return;
+    let last = -1, timer = null;
+    new ResizeObserver((entries) => {
+      const w = Math.round(entries[entries.length - 1].contentRect.width);
+      if (w === last) return;
+      last = w;
+      _마당폭 = 0;
+      clearTimeout(timer);
+      timer = setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 80);
+    }).observe(list);
+  })(0);
+
   /* 상태 이름. 저장되는 값(writing/focus/rest/away)은 그대로 두고
      화면에 보이는 이름만 바꿨습니다. 기존 데이터가 그대로 살아납니다.
        writing → WORK      focus → 🔥초집중🔥

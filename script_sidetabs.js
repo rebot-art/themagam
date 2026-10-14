@@ -126,6 +126,7 @@
   function 카드다시() {
     try { window.relayoutCards?.(); } catch (e) {}
     setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 280);
+    setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 800);   // 무거운 방에서 폭이 늦게 자리 잡을 때를 위한 한 번 더 (2026-10-14)
   }
 
   function 열기(id, 처음) {
