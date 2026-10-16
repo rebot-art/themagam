@@ -542,6 +542,26 @@
     .adm-att-table td.cell.short20{
       background-image: linear-gradient(to top right, transparent calc(50% - 1px), #C0392B calc(50% - 1px), #C0392B calc(50% + 1px), transparent calc(50% + 1px));
     }
+    /* 🌸 인사 빼먹은 날 (2026-10-16 콩) — 분홍 / 1시간도 안 머물렀으면 진한 분홍.
+       ★ .brief(하늘) 와 같은 칸에 붙을 수 있어서, 더 구체적인 선택자로 하늘을 이깁니다.
+       ★ 붉은 사선(.short20)은 background-image 라 색과 따로 얹혀요 — 어느 칸이든 긋습니다. */
+    .adm-att-table td.cell.gpk{ background: #F9D9E6; color: #8E2F57; }
+    .adm-att-table td.cell.gpk.brief{ background: #EBA3C0; color: #5E1233; }
+    .adm-att-legend .lg.gpk{ background: #F9D9E6; color: #8E2F57; }
+    .adm-att-legend .lg.gpk.brief{ background: #EBA3C0; color: #5E1233; }
+    .adm-att-legend .lg.short{ color: #C0392B; background: #FFFDF8; }
+    .adm-dig-gm-btn{ margin-left: auto; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+      border: 0; border-radius: 7px; padding: 6px 10px; background: #D9709C; color: #fff; }
+    .adm-greet{ margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #FDF1F6; border: 1px solid #F0C6D8; }
+    .adm-greet-h{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: #7A2147; }
+    .adm-greet-sub{ font-size: 12px; color: #A07085; }
+    .adm-greet-h .adm-btn{ margin-left: auto; }
+    .adm-greet-table{ width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 13px; }
+    .adm-greet-table th{ text-align: left; font-size: 11.5px; color: #A07085; padding: 4px 6px; border-bottom: 1px solid #F0C6D8; }
+    .adm-greet-table td{ padding: 6px 6px; border-bottom: 1px solid #F8DCE8; }
+    .adm-greet-table td.nm{ font-weight: 700; }
+    .adm-greet-table td.ct{ font-variant-numeric: tabular-nums; color: #7A2147; font-weight: 700; }
+    .adm-greet-table tr.max td{ background: #F9D9E6; }
     .adm-dig-cancel{ margin-top: 10px; padding: 9px 11px; border-radius: 9px; background: #FBEAE8;
       color: #8E2B20; font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .adm-dig-cancel.ok{ background: #E6F2E2; color: #2E6B2B; }
@@ -706,6 +726,8 @@
         </div>
         <div class="adm-msg" id="adm-att-fill-msg"></div>
         <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
+        <!-- 🌸 인사 빼먹은 분들 (2026-10-16 콩) — script_admin.js 가 채웁니다 -->
+        <div id="adm-greet-box"></div>
         <!-- [2026-08-16] 📈 한 달 흐름 — 총원과 출석 두 줄.
              값은 위 머리글 두 줄이 쓰는 것과 **같은 것**입니다
              (script_admin.js 의 cntByDay · totalByDay). 서버에 더 묻지
@@ -1116,7 +1138,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610151725"></script>
+  <script src="script_admin.js?v=202610160324"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

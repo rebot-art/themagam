@@ -13030,3 +13030,25 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
   html.member-open.sidetabs-on .cards-area{ padding-right: calc(250px + var(--side-strip)); }
   html.side-open.sidetabs-on .cards-area{ padding-right: calc(400px + var(--side-strip)); }   /* 같은 힘이라 맨 끝에 둬야 칸이 열릴 때 이깁니다 */
 }
+
+/* =====================================================================
+   👋 인사 규칙 카드 (script_greet.js · 시안 A — 2026-10-16 콩)
+   ★ 움직이지 않습니다(애니메이션 없음). 안 글은 가운데 정렬 —
+     아이콘 칸과 같은 너비의 빈 칸(.gc-sp)을 오른쪽에 두어 글이 정확히 가운데에 옵니다.
+   ★ 경고에 빨강을 안 씁니다(2026-08-14 "잔소리 같다" 결정) — 분홍.
+   ===================================================================== */
+.greet-card{
+  display: grid; grid-template-columns: 34px 1fr 34px; align-items: center;
+  margin: 8px auto; width: 94%; max-width: 94%;
+  padding: 9px 10px; border-radius: 14px; border: 1.5px solid; line-height: 1.35;
+}
+.greet-card .gc-ic{ font-size: 22px; text-align: center; line-height: 1; }
+.greet-card .gc-t{ text-align: center; font-weight: 800; font-size: 15px; word-break: keep-all; }
+.greet-card.gk-in  { background: #E6EEF8; border-color: #7FA3CF; color: #27496F; }
+.greet-card.gk-ok  { background: #E3F0DA; border-color: #7FA96F; color: #2E5A28; }
+.greet-card.gk-wait{ background: #FFF1D6; border-color: #E0A93B; color: #6E4B0A; }
+.greet-card.gk-warn{ background: #FBE0EA; border-color: #D9709C; color: #7A2147; }
+:root[data-is-dark="true"] .greet-card.gk-in  { background: rgba(127,163,207,.18); color: #BBD3F0; }
+:root[data-is-dark="true"] .greet-card.gk-ok  { background: rgba(127,169,111,.18); color: #C4E3B8; }
+:root[data-is-dark="true"] .greet-card.gk-wait{ background: rgba(224,169,59,.18);  color: #F3D79B; }
+:root[data-is-dark="true"] .greet-card.gk-warn{ background: rgba(217,112,156,.20); color: #F6C0D6; }

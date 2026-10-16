@@ -396,7 +396,7 @@
        눌러서 돋보기를 열면 방장은 [출석 취소] 를 할 수 있어요.
        ★ 자동으로 빼지는 않습니다 (운영진과 상의 중) — 눈으로 보고 손으로만.
        ★ 오늘 칸은 아직 진행 중이라 긋지 않아요. */
-  const SHORT_STAY_MIN = 20;
+  const SHORT_STAY_MIN = 15;   // [2026-10-16 콩] 20 → 15분 — 잠깐 들른 사람(휴가 확인 등)의 문턱
 
   /** 한 사람의 이 달 규칙 셈 */
   function ruleOf({ daysInMonth, beforeN, vacInMonth, attended, daysLeft }) {
@@ -646,7 +646,7 @@
       /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번
          ★ [2026-09-21] 입장일(firstSeen)은 여기서 빠졌습니다 — 명단(nicks)을
            알아야 새로 생긴 닉만 채울 수 있어서, 명단이 온 **뒤에** 부릅니다. */
-      const [asnap, nickSnap, wsnap] = await Promise.all([
+      const [asnap, nickSnap, wsnap, gsnap] = await Promise.all([
         db.ref("attendance").orderByKey()
           .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
         db.ref("nickOwner").once("value"),
@@ -654,8 +654,12 @@
            받아 오므로 요청은 하나예요(하루씩 31번 부르면 안 됩니다).
            한 달 50KB 안팎 — 관리자 페이지는 방장만 가끔 열어서 괜찮습니다. */
         db.ref("wordlog").orderByKey()
-          .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")
+          .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
+        /* 🌸 인사 빼먹은 날 (2026-10-16) — 명단 전체가 작아서 한 번에 받습니다.
+           읽을 권한이 없으면(규칙 미적용) 조용히 비웁니다. */
+        db.ref("greetMiss").once("value").catch(() => null)
       ]);
+      const greetMiss = gsnap ? (gsnap.val() || {}) : null;
       const attMonth = asnap.val() || {};
       const wordMonth = wsnap.val() || {};
       const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
@@ -728,7 +732,7 @@
       }));
 
       _달자료 = { ymKey, attMonth, wordMonth, nicks, vacByNick, leaveByNick,
-                  minsByNick, segsByNick, firstSeen, 무거운것 };
+                  minsByNick, segsByNick, firstSeen, 무거운것, greetMiss };
       await 그리기(_달자료, { ymKey, daysInMonth, base, todayKey, monthOffset });
     } catch (e) {
       console.warn("[adm attendance]", e);
@@ -741,6 +745,7 @@
   async function 그리기(자, 달) {
     const { attMonth, wordMonth, nicks, vacByNick, leaveByNick,
             minsByNick, segsByNick, firstSeen, 무거운것 } = 자;
+    const greetMiss = 자.greetMiss || {};
     const { ymKey, daysInMonth, base, todayKey, monthOffset } = 달;
     const body = el("adm-att-body");
     _vac셈 = {};
@@ -927,6 +932,15 @@
               tip = ` title="${hhmm(inAt)} 첫 입장 · ${머문글(stay)} 머묾${
                 stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}${
                 stay < SHORT_STAY_MIN && dk !== todayKey ? (rec && rec.ok ? " · ✅ 방장 인정" : ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 인정·취소`) : ""}"`;
+            }
+            /* 🌸 인사를 빼먹은 날 (2026-10-16 콩) — 분홍. 1시간도 안 머물렀으면(하늘색 조건) 진한 분홍.
+               ★ 휴가·개인사정 칸은 위에서 이미 갈렸으니 여기 오지 않습니다(예외).
+               ★ 15분도 안 머문 날은 대상이 아닙니다(A안) — 사선만 남아요.
+               ★ 오늘 칸은 이 창이 15분을 채운 뒤에야 기록이 생겨서, 그전에는 분홍이 안 칠해집니다. */
+            if (greetMiss[n] && greetMiss[n][dk] && !(stay != null && stay < SHORT_STAY_MIN)) {
+              cls += " gpk";
+              tip = tip ? tip.replace(/"$/, ' · 🌸 인사를 빼먹은 날"')
+                        : ` title="${hhmm(inAt)} 첫 입장 · 🌸 인사를 빼먹은 날"`;
             }
           }
           if (dk === todayKey) cls += " today";
@@ -1142,6 +1156,8 @@
       const 범례 = `<p class="adm-att-legend">
         <span class="lg full">09:20</span> ${VALID_STAY_MIN}분 넘게 머문 <b>✔ 유효 출석</b>
         · <span class="lg brief">09:20</span> 1시간이 안 되게 머문 날
+        · <span class="lg gpk">09:20</span> 🌸 인사를 빼먹은 날 (<span class="lg gpk brief">09:20</span> 1시간도 안 머문 진한 분홍)
+        · <span class="lg short">╱</span> 붉은 사선 = ${SHORT_STAY_MIN}분도 안 머문 날 (그 날은 인사 규칙 대상이 아니에요)
         · <span class="lg leave">🌿</span> 개인사정 · <span class="lg vac">🏖️</span> 휴가
         · 어느 쪽도 아닌 칸은 머문 기록이 없는 날이에요.
         <br>${무거운것
@@ -1160,6 +1176,7 @@
         else body.insertAdjacentHTML("beforeend", 범례);
       }
       bindDig(body);
+      빼먹은분그리기(자.greetMiss);
     } catch (e) {
       console.warn("[adm attendance]", e);
       body.innerHTML = "불러오지 못했어요.";
@@ -2826,6 +2843,8 @@
 
     let 인정됨 = false;
     try { 인정됨 = (await db.ref(`attendance/${dk}/${nick}/ok`).once("value")).val() === true; } catch (e) {}
+    let 빼먹음 = false;
+    try { 빼먹음 = !!(await db.ref(`greetMiss/${nick}/${dk}`).once("value")).val(); } catch (e) {}
     const GAP_MS = 5 * 60 * 1000;
     let total = 0, rows = "", prevEnd = 0;
     segs.forEach(s => {
@@ -2857,6 +2876,11 @@
         <button type="button" class="adm-dig-ok-btn" data-ok="1">인정</button>
         <button type="button" class="adm-dig-cancel-btn">출석 취소</button>
       </div>`) : ""}
+      ${(isOwner && 빼먹음) ? `
+      <div class="adm-dig-cancel">
+        🌸 인사를 빼먹은 날이에요.
+        <button type="button" class="adm-dig-gm-btn">빼먹음 취소</button>
+      </div>` : ""}
       <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
         <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분 브라우저나
         회선 쪽을 의심해 보세요 (접속 유지는 입장하면 저절로 켜져요).</div>`;
@@ -2873,6 +2897,17 @@
         alert("바꾸지 못했어요. " + (err.code || err.message || ""));
       }
     });
+    /* 🌸 빼먹음 취소 (2026-10-16) — 방장만. greetMiss/{닉}/{날} 한 줄만 지웁니다(핑크·횟수가 함께 사라져요). */
+    wrap.querySelector(".adm-dig-gm-btn")?.addEventListener("click", async () => {
+      if (!confirm(`${nick} 님의 ${dk} "인사 빼먹음"을 취소할까요?\n핑크 칸과 횟수에서 빠집니다.`)) return;
+      try {
+        await db.ref(`greetMiss/${nick}/${dk}`).remove();
+        wrap.remove();
+        await loadAttendance(_attOffset, { 다시읽기: true });
+      } catch (e) {
+        alert("취소하지 못했어요. " + (e.code || e.message || ""));
+      }
+    });
     /* ⛔ 출석 취소 (2026-10-05 콩) — 방장만. 도장·개인 달력 사본·머문 분을 함께 지웁니다.
        ★ 휴가·개인사정 표시는 건드리지 않아요 (다른 자리). */
     wrap.querySelector(".adm-dig-cancel-btn")?.addEventListener("click", async () => {
@@ -2886,6 +2921,56 @@
       } catch (e) {
         alert("취소하지 못했어요. " + (e.code || e.message || ""));
       }
+    });
+  }
+
+  /* =====================================================================
+     🌸 인사 빼먹은 분들 (2026-10-16 콩) — 출석부 바로 아래 관리 박스
+     ---------------------------------------------------------------------
+     · 빼먹은 분만 올립니다(1회 이상). 인사 잘하는 분은 명단에 안 올라요.
+     · 횟수는 10회까지만 표시하고, 10회에 닿으면 "운영진 확인!" 을 붙입니다.
+       (내보내기는 운영진이 직접 — 시스템은 세기만 합니다)
+     · 기간: 지금 기간이 기본 — 11/1 이후면 11/1 부터, 그 전이면 시행일(10/16)부터.
+       [전체 보기] 로 유예 기간 것까지 봅니다.
+     ★ 두 날짜는 script_greet.js 의 START_DAY·COUNT_FROM 과 **같아야** 합니다.
+     ===================================================================== */
+  const GREET_START = "2026-10-16";
+  const GREET_COUNT_FROM = "2026-11-01";
+  const GREET_CAP = 10;
+  let _gmAll = false;
+  let _gm자료 = null;
+  function 빼먹은분그리기(gm) {
+    _gm자료 = gm;
+    const box = el("adm-greet-box");
+    if (!box) return;
+    if (!gm || typeof gm !== "object") { box.innerHTML = ""; return; }
+    const 오늘 = dayKey(new Date());
+    const 기간시작 = 오늘 >= GREET_COUNT_FROM ? GREET_COUNT_FROM : GREET_START;
+    const from = _gmAll ? "0000-00-00" : 기간시작;
+    const 글 = (d) => { const [, m, dd] = d.split("-"); return `${+m}/${+dd}`; };
+    const rows = Object.keys(gm).map(n => {
+      const days = Object.keys(gm[n] || {}).filter(d => d >= from).sort();
+      return { n, c: days.length, last: days[days.length - 1] };
+    }).filter(r => r.c >= 1)
+      .sort((a, b) => b.c - a.c || a.n.localeCompare(b.n, "ko"));
+    const 기간글 = _gmAll ? "전체" : `${글(기간시작)} 부터`;
+    box.innerHTML = `
+      <div class="adm-greet">
+        <div class="adm-greet-h"><b>🌸 인사 빼먹은 분들</b>
+          <span class="adm-greet-sub">${기간글} · 1회 이상만 · ${GREET_CAP}회가 상한</span>
+          <button type="button" class="adm-btn ghost" id="adm-greet-toggle">${_gmAll ? "지금 기간만" : "전체 보기"}</button>
+        </div>
+        ${rows.length ? `<table class="adm-greet-table">
+          <tr><th>작가</th><th>횟수</th><th>마지막</th></tr>
+          ${rows.map(r => `<tr class="${r.c >= GREET_CAP ? "max" : ""}">
+            <td class="nm">${r.n}</td>
+            <td class="ct">${Math.min(GREET_CAP, r.c)}회${r.c >= GREET_CAP ? " · 운영진 확인!" : ""}</td>
+            <td>${글(r.last)}</td></tr>`).join("")}
+        </table>` : `<div class="adm-msg">이 기간에는 인사를 빼먹은 분이 없어요 🌸</div>`}
+      </div>`;
+    box.querySelector("#adm-greet-toggle")?.addEventListener("click", () => {
+      _gmAll = !_gmAll;
+      빼먹은분그리기(_gm자료);
     });
   }
 

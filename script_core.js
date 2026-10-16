@@ -301,6 +301,11 @@ window.AppSession = AppSession;
       joinOf: myNick,
       sid
     };
+    /* 👋 인사 규칙(script_greet.js) — 켜져 있으면 "○○님 입장!" 카드로 보냅니다.
+       꺼져 있으면(본방 시험 전) 예전 문구 그대로예요. */
+    try {
+      if (window.greetOn?.()) { payload.msg = `${myNick}님 입장!`; payload.gk = "in"; }
+    } catch (e) {}
 
     await db.ref(`messages/${key}`).set(payload);
 

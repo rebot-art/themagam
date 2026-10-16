@@ -2957,6 +2957,8 @@
 
       const isSystemLike = (data.type === "system" || data.type === "fx");
       const isMine = (data.user && data.user === myNick);
+      /* 👋 내가 이 방에 보낸 말 = 인사 (script_greet.js). 새로 안 받고 받은 걸 넘겨 줄 뿐이에요 */
+      if (isMine) { try { window.greetNote?.(data); } catch (e) {} }
 
       if (!isSystemLike && !isMine) {
         if (!autoScrollEnabled) {
@@ -3189,10 +3191,15 @@
       const aref = db.ref(`attendance/${day}/${myNick}`);
       const prevSnap = await aref.once("value");
       const prev = prevSnap.val();
-      await aref.set({
+      /* ★ [2026-10-16] set → update. 인사 도장(gAt)·머문 분(m)·방장 인정(ok)을
+           같은 날 다시 들어와도 지우지 않기 위해서예요. 퇴장 시각만 비웁니다(예전 set 과 같은 효과). */
+      await aref.update({
         firstAt: prev?.firstAt || prev?.at || Date.now(),
-        at: Date.now()
+        at: Date.now(),
+        leftAt: null
       });
+      /* 👋 인사 규칙 — 입장 도장이 찍힌 뒤에 시작 (script_greet.js) */
+      try { window.greetStart?.({ day, prev }); } catch (e) {}
 
       /* 입장 기록 — 3시간에 한 번만 (들락날락은 안 적힙니다) */
       writeAttendLog("in");

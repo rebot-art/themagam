@@ -684,6 +684,15 @@
     // system (줄바꿈 지원)
     if (data.type === "system") {
       _maybeRenderDateDivider(box, data.time || Date.now());
+      /* 👋 인사 규칙 카드 (script_greet.js · 시안 A) — 입장 / 건필 / 기다림 / 경고 */
+      if (["in", "ok", "wait", "warn"].includes(data.gk)) {
+        const ic = { in: "👋", ok: "🌱", wait: "⏳", warn: "🌸" }[data.gk];
+        box.insertAdjacentHTML("beforeend",
+          `<div class="greet-card gk-${data.gk}"><span class="gc-ic">${ic}</span>` +
+          `<span class="gc-t">${escapeHtml(data.msg)}</span><span class="gc-sp"></span></div>`);
+        lastRendered = { ...lastRendered, user: null, ts: Number(data.time || Date.now()), msg: String(data.msg || "") };
+        return;
+      }
       const safeMsg = escapeHtml(data.msg).replace(/\n/g, "<br>");
       box.insertAdjacentHTML("beforeend",
         `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">${safeMsg}</div>`);

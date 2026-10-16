@@ -641,6 +641,8 @@
     setInterval(() => { try { window.updateStatus?.(false); } catch (e) {} }, 20000);
 
     setTimeout(숨쉬기, 20000);
+    /* 👋 인사 규칙 시험 — 혼자 방은 입장 절차가 없어서 여기서 시작합니다 (script_greet.js) */
+    setTimeout(() => { try { window.greetStart?.(); } catch (e) {} }, 1500);
   }
 
   window.addEventListener("load", () => setTimeout(띄우기, 350));

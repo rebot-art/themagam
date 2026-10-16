@@ -223,7 +223,7 @@
     function isDuplicateSystem(data) {
       if (!data || data.type !== "system") return false;
       // [FIX] 입장/퇴장 메시지는 키가 이미 고유하므로 문구 중복 검사 제외
-      if (data.joinOf || data.leaveOf) return false;
+      if (data.joinOf || data.leaveOf || data.gk) return false;   // 👋 인사 카드도 키가 고유합니다
 
       const msg = String(data.msg || "");
       const t = Number(data.time || Date.now());
