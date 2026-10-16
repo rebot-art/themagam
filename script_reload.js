@@ -8,6 +8,14 @@
    ② 방장 전원 새로고침 — 방장이 관리 페이지에서 누르면 접속 중인 모두가 새로고침.
       새 패치를 한꺼번에 입히려는 용도예요. 이때는 인사 시간 보너스 5분.
 
+   ③ 새 판 감지 새로고침 — 접속자 중 누군가 나보다 새 판(패치)으로 와 있으면,
+      그걸 처음 안 때부터 1시간 뒤 조용히 새로고침합니다. (콩 결정 2026-10-16)
+      · 대기 중 더 새 판이 또 나와도 1시간 타이머는 그대로 — 새로고침하면 최신으로 갑니다.
+      · 무한 반복 방지: 같은(또는 더 낮은) 판 번호로는 30분 안에 다시 안 합니다
+        (호스팅이 옛 파일을 잠깐 줄 때 새로고침이 맴도는 걸 막아요).
+      · 통신량 0 — 이미 받는 접속자 status 의 판 번호(ver)를 읽기만 합니다.
+      · 오늘 이전에 열어 둔 창에는 이 기능이 없어서, 그 창은 한 번 직접 새로고침이 필요합니다.
+
    [새로고침해도 이어서 들어오기]
    로그인은 이 탭에 남아 있으니(탭 단위 로그인), 비밀번호를 또 받지 않고
    "오늘 출석 도장이 이미 있는 사람"만 그대로 다시 입장시킵니다.
@@ -25,7 +33,8 @@
    · 도장이 없어 로그인 화면으로 갈 때만, 로그인 상자 안에 한 줄 안내가 붙습니다(팝업 아님).
 
    [통신량] 방장 전원 새로고침 = config/forceReload 한 칸(숫자 하나)을 듣습니다.
-   [시험] 혼자 방에서  &reloadspeed=1 → 20시간이 20초로 줄어듭니다.
+   [시험] 혼자 방에서  &reloadspeed=1 → 20시간이 20초, 1시간이 20초로 줄어듭니다.
+          &vertest=1 → 시작 5초 뒤 "새 판이 나왔다" 상황을 흉내 냅니다.
           &forcetest=1 → 시작 20초 뒤 "방장이 눌렀다" 상황을 흉내 냅니다.
    ===================================================================== */
 (function () {
@@ -35,6 +44,10 @@
   const SPEED = /[?&]reloadspeed=1/.test(location.search);
   const FORCE_TEST = /[?&]forcetest=1/.test(location.search);
   const T_AUTO = SPEED ? 20 * 1000 : 20 * 3600 * 1000;    // 입장 뒤 이만큼 지나면 자동 새로고침
+  const VER_TEST = /[?&]vertest=1/.test(location.search);
+  const T_VER = SPEED ? 20 * 1000 : 3600 * 1000;           // 새 판을 안 뒤 이만큼 기다렸다가 새로고침
+  const T_VER_RETRY = 30 * 60 * 1000;                      // 같은 판으로 다시 하려면 이만큼 지나야 함
+  const K_VER = "verTried";
   const BONUS_MS = 5 * 60 * 1000;
   const K_RE = "reentry", K_SEEN = "forceSeen";
 
@@ -45,6 +58,7 @@
   let _t0 = 0, _체크 = null, _귀 = null, _귀닉 = "";
   let _마커 = null, _보너스줌 = false;
   let _진행 = false, _마지막입력 = 0;
+  let _새판at = 0, _새판no = 0, _가짜판 = 0;
 
   /* ---------- 순수 계산 (checks.js 가 따로 시험합니다) ---------- */
 
@@ -109,9 +123,34 @@
 
   /* ---------- 20시간 시계 · 방장 신호 ---------- */
 
+  /** 순수 판정: 새 판을 안 지 얼마나 됐나 → 새로고침할 때인가 */
+  function 새판때인가(내판, 최신, 알게된때, 지금, 시도) {
+    if (!내판 || !최신 || 최신 <= 내판) return "없음";
+    if (시도 && 최신 <= 시도.ver && 지금 - 시도.at < T_VER_RETRY) return "없음";   // 방금 같은 판으로 해 봤어요
+    if (!알게된때) return "알게됨";
+    return 지금 - 알게된때 >= T_VER ? "실행" : "기다림";
+  }
+
+  function 새판검사() {
+    if (_진행) return;
+    let 내 = 0, 최신 = 0, 시도 = null;
+    try { 내 = Number(window.MY_VER || 0); 최신 = Number(window.newestVer?.() || 0); } catch (e) {}
+    if (_가짜판) 최신 = Math.max(최신, 내 + _가짜판);
+    try { 시도 = JSON.parse(SS()?.getItem(K_VER) || "null"); } catch (e) {}
+    const r = 새판때인가(내, 최신, _새판at, Date.now(), 시도);
+    if (r === "없음") { if (최신 <= 내) { _새판at = 0; } return; }
+    if (r === "알게됨") { _새판at = Date.now(); _새판no = 최신; return; }
+    if (최신 > _새판no) _새판no = 최신;     // 기다리는 동안 더 새 판이 나와도 타이머는 그대로
+    if (r === "실행") {
+      try { SS()?.setItem(K_VER, JSON.stringify({ ver: _새판no, at: Date.now() })); } catch (e) {}
+      예약("ver");
+    }
+  }
+
   function 자동검사() {
     if (_진행 || !_t0) return;
-    if (Date.now() - _t0 >= T_AUTO) 예약("auto");
+    if (Date.now() - _t0 >= T_AUTO) { 예약("auto"); return; }
+    새판검사();
   }
 
   function 신호듣기(nick) {
@@ -149,6 +188,7 @@
       document.addEventListener("input", 입력, true);
     }
     신호듣기(nick);
+    if (SOLO() && VER_TEST) setTimeout(() => { _가짜판 = 1; }, 5000);
     if (SOLO() && FORCE_TEST) setTimeout(() => 예약("force"), 20000);
     /* 조용한 입장 표시는 조금 뒤 풀어 줍니다 (그 사이 만들어지는 입장 문구를 막으려는 것) */
     if (window.__silentJoin) setTimeout(() => { window.__silentJoin = false; }, 15000);
@@ -219,9 +259,9 @@
   window.Reload = {
     /** 새로고침 때문에 돌아온 사람인가 — 자정을 넘겨 작업 중이다가 재로그인한 경우 등. 인사 규칙을 적용하지 않습니다. */
     cameFromReload: () => !!_마커,
-    T_AUTO, BONUS_MS,
+    T_AUTO, T_VER, BONUS_MS,
     takeBonus: 보너스가져가기,
-    _t: { 안내문, 조용한가, 월일, 일, 예약, 실행, 시작, 다시들어오기, 자동검사,
+    _t: { 안내문, 조용한가, 새판때인가, 새판검사, 월일, 일, 예약, 실행, 시작, 다시들어오기, 자동검사,
           state: () => ({ _t0, _진행, 마커: _마커 }) }
   };
 })();

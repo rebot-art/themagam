@@ -1377,6 +1377,7 @@
     } catch (e) {}
     return m;
   }
+  window.newestVer = 최신판;   // 🔄 새 판 감지 새로고침(script_reload.js)이 씁니다 — 읽기만, 통신량 0
   function 옛창(row) {
     if (!MY_VER || !row) return false;           // 단일파일 등 판 번호를 모르면 안 칠함
     const 기준 = 최신판();
