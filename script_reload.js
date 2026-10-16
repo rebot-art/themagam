@@ -34,7 +34,9 @@
 
    [통신량] 방장 전원 새로고침 = config/forceReload 한 칸(숫자 하나)을 듣습니다.
    [시험] 혼자 방에서  &reloadspeed=1 → 20시간이 20초, 1시간이 20초로 줄어듭니다.
-          &vertest=1 → 시작 5초 뒤 "새 판이 나왔다" 상황을 흉내 냅니다.
+          (★ 이 스위치는 20초마다 계속 새로고침돼요 — 20시간 시계 시험용입니다)
+          &vertest=1 → 시작 5초 뒤 "새 판이 나왔다" 상황을 흉내 내고 1시간을 20초로 줄입니다.
+          (★ 새 판 시험은 이것 **하나만** 쓰세요. reloadspeed 와 같이 쓰면 20초 새로고침이 먼저 돌아요)
           &forcetest=1 → 시작 20초 뒤 "방장이 눌렀다" 상황을 흉내 냅니다.
    ===================================================================== */
 (function () {
@@ -45,7 +47,7 @@
   const FORCE_TEST = /[?&]forcetest=1/.test(location.search);
   const T_AUTO = SPEED ? 20 * 1000 : 20 * 3600 * 1000;    // 입장 뒤 이만큼 지나면 자동 새로고침
   const VER_TEST = /[?&]vertest=1/.test(location.search);
-  const T_VER = SPEED ? 20 * 1000 : 3600 * 1000;           // 새 판을 안 뒤 이만큼 기다렸다가 새로고침
+  const T_VER = (SPEED || VER_TEST) ? 20 * 1000 : 3600 * 1000;           // 새 판을 안 뒤 이만큼 기다렸다가 새로고침
   const T_VER_RETRY = 30 * 60 * 1000;                      // 같은 판으로 다시 하려면 이만큼 지나야 함
   const K_VER = "verTried";
   const BONUS_MS = 5 * 60 * 1000;
