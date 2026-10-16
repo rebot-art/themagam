@@ -9476,6 +9476,32 @@ html.member-open .cards-area{ padding-right: 250px; }
   .sticker-pop{ gap: 2px; padding: 6px; }
   .sticker-pop .sticker-opt{ padding: 2px; }
 }
+/* 📖 쪽 표시 (2026-10-16 콩) — 최근 쓴 줄 점선 **바로 위, 왼쪽**.
+   ‹ 1 / 2 › — 한 페이지 5줄(넓은 화면 10×5=50). 쪽이 하나뿐이면 아예 안 그립니다. */
+.sticker-pager{
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 2px 0 12px;          /* 12px — 아래 점선에 얹힌 "최근 쓴" 글씨가 안 겹치게 */
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+.sticker-pager button{
+  width: 26px; height: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--fill-1);
+  color: var(--muted-strong, var(--muted));
+  font-size: 14px; line-height: 1;
+  cursor: pointer;
+}
+.sticker-pager button:hover:not(:disabled){ background: var(--fill-2); }
+.sticker-pager button:disabled{ opacity: .35; cursor: default; }
+.sticker-pager .sp-no{ min-width: 40px; text-align: center; font-weight: 600; }
+.msg-sticker-gone{ font-size: 12px; color: var(--muted); }
 /* 🕓 최근 쓴 스티커 줄 (2026-10-09 콩) — 판 맨 아래, 점선으로 갈라서.
    격자 전체 폭을 차지하고(grid-column 1/-1), 판을 굴려도 **바닥에 붙어 따라옵니다**(sticky).
    ★ 콩 "절대 두 줄로 넘어가지 않게" — script 가 칸 수만큼만 넣고, 여기서도

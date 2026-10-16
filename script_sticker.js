@@ -3,8 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 예순 개. 채팅과 수다방 양쪽에서 씁니다.
-   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나 → 10-09 예순)
+   말풍선 대신 크게 뜨는 손그림 여든세 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나 → 10-09 예순 → 10-16 여든셋: 딴짓·충전 넷 빼고 출석 인사 스물일곱 더함 · 판은 5줄씩 페이지로)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -562,72 +562,6 @@
       textColor: "#2E7D57"
     },
     {
-      /* 인풋 — 펼친 책 위로 솟는 별 셋 = 채워지는 중.
-         독서만이 아니라 자료조사·강의 듣기까지 다 여기입니다. */
-      id: "input", cmd: "인풋", label: "인풋",
-      cmdRe: /^\/(인풋|독서|책)$/,
-      svg: `<path d="M36 28c-6-4.5-13-4.5-19-1.5v22c6-3 13-3 19 1.5z" fill="#FFFDF6" stroke="#3A2A22"
-                  stroke-width="1.7" stroke-linejoin="round"/>
-            <path d="M36 28c6-4.5 13-4.5 19-1.5v22c-6-3-13-3-19 1.5z" fill="#E8F0F8" stroke="#3A2A22"
-                  stroke-width="1.7" stroke-linejoin="round"/>
-            <path d="M36 28v22" stroke="#3A2A22" stroke-width="1.6"/>
-            <path d="M22 33h9M22 38h9M41 33h9M41 38h9" stroke="#C9BCA8" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M24 18l1.2 2.6 2.6 1.2-2.6 1.2-1.2 2.6-1.2-2.6-2.6-1.2 2.6-1.2z" fill="#F0C674"/>
-            <path d="M36 8l1.7 3.7 3.7 1.7-3.7 1.7-1.7 3.7-1.7-3.7-3.7-1.7 3.7-1.7z" fill="#F0C674"/>
-            <path d="M48 17l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#F0A0B8"/>`,
-      textColor: "#2F6191"
-    },
-    {
-      /* 영화 — 슬레이트.
-         ★ 처음엔 팝콘으로 그렸는데, 판에 이미 밥그릇 셋(밥탐·맛점·맛저)이
-           있어서 58px 로 줄이면 "먹는 것" 무리로 빨려 들어갔습니다. */
-      id: "movie", cmd: "영화", label: "영화",
-      cmdRe: /^\/(영화|영화보는중|드라마)$/,
-      svg: `<rect x="12" y="28" width="48" height="24" rx="3" fill="#8B84A6" stroke="#3A2A22" stroke-width="1.7"/>
-            <path d="M20 37h32M20 45h20" stroke="#FFFDF6" stroke-width="2.6" stroke-linecap="round"/>
-            <g transform="rotate(-11 14 26)">
-              <rect x="12" y="17" width="48" height="10" rx="2" fill="#5A5175" stroke="#3A2A22" stroke-width="1.6"/>
-              <path d="M19 17.8l-3.6 8.4M29 17.8l-3.6 8.4M39 17.8l-3.6 8.4M49 17.8l-3.6 8.4M58 17.8l-3.6 8.4"
-                    stroke="#FFFDF6" stroke-width="2.6"/>
-            </g>
-            <path d="M64 14l3-3M66 24h4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
-      textColor: "#5A5175"
-    },
-    {
-      /* 음악 — 헤드폰. 음표는 헤드밴드 **바깥**에 둡니다.
-         안에 넣었더니 헤드폰의 더듬이처럼 보였어요. */
-      id: "music", cmd: "음악", label: "음악",
-      cmdRe: /^\/(음악|노래|듣는중)$/,
-      svg: `<path d="M16 40v-8a20 20 0 0 1 40 0v8" fill="none" stroke="#3A2A22" stroke-width="3.2" stroke-linecap="round"/>
-            <rect x="9" y="34" width="13" height="18" rx="6" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.7"/>
-            <rect x="50" y="34" width="13" height="18" rx="6" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.7"/>
-            <circle cx="9" cy="26" r="3.2" fill="#AFA9EC" stroke="#3A2A22" stroke-width="1.3"/>
-            <path d="M12 26V14q4 1 4 4.5" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-            <circle cx="60" cy="20" r="2.8" fill="#CFC9F4" stroke="#3A2A22" stroke-width="1.2"/>
-            <path d="M62.7 20V9.5q3.5 1 3.5 4" stroke="#3A2A22" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-            <path d="M24 12l2-4M48 14l3-4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
-      textColor: "#4A3F9E"
-    },
-    {
-      /* 멍 때리는 중 — 창틀에 걸터앉아 구름 흘러가는 걸 보는 그림.
-         ★ 쉰세 개 중 **창문은 얘 하나**라 판에서 절대 안 헷갈립니다.
-         ★ 이름이 여섯 자라 22px 로는 그림 밖으로 나가요 → fs 14.
-           (같은 뜻의 「멍~」은 얼굴 쪽에 따로 있습니다 — 콩이 둘 다 원함) */
-      id: "gaze", cmd: "멍때", label: "멍 때리는 중", fs: 14,
-      cmdRe: /^\/(멍때|멍때리기|멍때리는중|창밖)$/,
-      svg: `<rect x="14" y="10" width="44" height="38" rx="3" fill="#D6E8F4" stroke="#3A2A22" stroke-width="1.9"/>
-            <ellipse cx="26" cy="22" rx="8" ry="5" fill="#FFFDF6"/>
-            <ellipse cx="32" cy="20" rx="6" ry="4.4" fill="#FFFDF6"/>
-            <ellipse cx="45" cy="38" rx="7" ry="4.4" fill="#FFFDF6" opacity=".8"/>
-            <ellipse cx="50" cy="37" rx="5" ry="3.6" fill="#FFFDF6" opacity=".8"/>
-            <path d="M36 10v38M14 29h44" stroke="#3A2A22" stroke-width="1.7"/>
-            <rect x="10" y="48" width="52" height="4.5" rx="2" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.5"/>
-            <circle cx="61" cy="15" r="1.9" fill="#A79A88"/>
-            <circle cx="66" cy="20" r="1.6" fill="#A79A88"/>
-            <circle cx="69" cy="26" r="1.3" fill="#A79A88"/>`,
-      textColor: "#6B7C8C"
-    },
-    {
       /* ── [2026-09-10] 해냈다 셋 ──────────────────────────
          자리(자리 비움·퇴근·출근·재출근)가 **어디 있는지**라면, 이 셋은
          **뭘 했는지**입니다. 자리 무리 바로 뒤에 붙였어요. */
@@ -989,8 +923,370 @@
                   stroke-linecap="round" stroke-dasharray="3 3"/>
             <circle cx="58" cy="16" r="4.5" fill="#EDE9F5" stroke="#A79FC4" stroke-width="1.4"/>`,
       textColor: "#5A5175"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 출석부에 빨간 체크! */
+      id: "chulcheck", cmd: "출첵", label: "출첵",
+      cmdRe: /^\/(출첵|출석체크)$/,
+      svg: `<g transform="translate(2.6 1) scale(.93)"><rect x="18" y="12" width="36" height="44" rx="4" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <rect x="28" y="7" width="16" height="9" rx="2.5" fill="#F0C674" stroke="#3A2A22" stroke-width="1.5"/>
+            <path d="M24 28h8M24 38h8M24 48h8M38 28h10M38 38h10M38 48h10" stroke="#C9BCA8" stroke-width="2" stroke-linecap="round"/>
+            <path d="M23 33l6 7 16-20" stroke="#B3372B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 16l3 3M13 9H8" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/><path d="M60 40l3-3M62 47h5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/></g>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 빨간 도장 쾅! */
+      id: "stampin", cmd: "출석", label: "출석 완료", fs: 17,
+      cmdRe: /^\/(출석|출석완료)$/,
+      svg: `<circle cx="36" cy="30" r="19" fill="#FBE3DF" stroke="#B3372B" stroke-width="3"/>
+            <circle cx="36" cy="30" r="14.5" fill="none" stroke="#B3372B" stroke-width="1.4"/>
+            <text x="36" y="36" text-anchor="middle" font-family="'Gamja Flower',cursive" font-size="17" fill="#B3372B" stroke="#B3372B" stroke-width=".4">출석</text>
+            <path d="M8 14l4 3M10 48l4-3M64 14l-4 3M62 48l-4-3" stroke="#F0997B" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 꾸벅 공손 인사 */
+      id: "annyeong", cmd: "안녕", label: "안녕하세요", fs: 17,
+      cmdRe: /^\/(안녕|안녕하세요|안뇽)$/,
+      svg: `<path d="M19 56V47q0-10 11-12" stroke="#8FB8E0" stroke-width="12" fill="none" stroke-linecap="round"/>
+            <path d="M19 56l-1 0" stroke="#8FB8E0" stroke-width="1" />
+            <circle cx="42" cy="33" r="11" fill="#F0A0B8"/>
+            <path d="M36.5 33q2.5 2.6 5 0M43.5 33q2.5 2.6 5 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M40.5 39q2 1.6 4 0" stroke="#3A2A22" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <circle cx="35.5" cy="37.5" r="2" fill="#F0997B" opacity=".6"/><circle cx="49.5" cy="37.5" r="2" fill="#F0997B" opacity=".6"/>
+            <path d="M14 22q4-2 6 2M22 14l1 4M32 11l-1 4" stroke="#F0C674" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 하트눈! 반가워서 어쩔 줄 몰라요 */
+      id: "bangawa", cmd: "반가워", label: "반가워요", fs: 20,
+      cmdRe: /^\/(반가워|반가워요|반갑습니다)$/,
+      svg: `<circle cx="36" cy="30" r="16" fill="#F2B07A"/>
+            <path transform="translate(30 28) scale(1.3)" d="M0-1.2C-1.2-3.2-4.4-2.4-4.4.2c0 2 2.6 3.4 4.4 5 1.8-1.6 4.4-3 4.4-5 0-2.6-3.2-3.4-4.4-1.4z" fill="#B3372B" stroke="#3A2A22" stroke-width="1"/><path transform="translate(42 28) scale(1.3)" d="M0-1.2C-1.2-3.2-4.4-2.4-4.4.2c0 2 2.6 3.4 4.4 5 1.8-1.6 4.4-3 4.4-5 0-2.6-3.2-3.4-4.4-1.4z" fill="#B3372B" stroke="#3A2A22" stroke-width="1"/>
+            <path d="M29 37q7 7 14 0z" fill="#B3372B" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="23" cy="36" r="2.6" fill="#F0A0B8" opacity=".8"/><circle cx="49" cy="36" r="2.6" fill="#F0A0B8" opacity=".8"/>
+            <path d="M12 14l3 3M17 8h-5M60 14l-3 3M60 8h5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 모래시계 한 바퀴 돌아서 왔어요 */
+      id: "longtime", cmd: "오랜만", label: "오랜만",
+      cmdRe: /^\/(오랜만|오랜만이에요|오랜만이야)$/,
+      svg: `<path d="M26 10h20v7c0 7-10 9-10 12s10 5 10 12v7H26v-7c0-7 10-9 10-12s-10-5-10-12z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M23 9h26M23 48h26" stroke="#3A2A22" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M30 17h12c-1 4-6 6-6 9z" fill="#F0C674"/>
+            <path d="M36 29v11" stroke="#F0C674" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M29 48c1-5 4-7 7-7s6 2 7 7z" fill="#F0C674"/>
+            <path transform="translate(58 20) scale(1.2)" d="M0-1.2C-1.2-3.2-4.4-2.4-4.4.2c0 2 2.6 3.4 4.4 5 1.8-1.6 4.4-3 4.4-5 0-2.6-3.2-3.4-4.4-1.4z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1"/><path transform="translate(14 30) scale(0.9)" d="M0-1.2C-1.2-3.2-4.4-2.4-4.4.2c0 2 2.6 3.4 4.4 5 1.8-1.6 4.4-3 4.4-5 0-2.6-3.2-3.4-4.4-1.4z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1"/><path d="M56 36l3 3M10 12l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2557A"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 문 빼꼼, 저 왔어요~ */
+      id: "peekin", cmd: "왔어요", label: "왔어요",
+      cmdRe: /^\/(왔어요|왔어|도착)$/,
+      svg: `<g transform="translate(2.6 1) scale(.93)"><rect x="22" y="9" width="34" height="46" rx="3" fill="#FFF1D0" stroke="#3A2A22" stroke-width="1.8"/>
+            <circle cx="40" cy="40" r="10" fill="#8FB8E0"/>
+            <circle cx="36.5" cy="38" r="1.7" fill="#3A2A22"/><circle cx="43.5" cy="38" r="1.7" fill="#3A2A22"/><path d="M36 43q4 3.5 8 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="33" cy="43" r="2" fill="#F0A0B8" opacity=".8"/><circle cx="47" cy="43" r="2" fill="#F0A0B8" opacity=".8"/>
+            <path d="M22 9l-13 5v43l13-2z" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="13" cy="36" r="1.9" fill="#F0C674" stroke="#3A2A22" stroke-width="1"/>
+            <path d="M58 14l3-3M62 22h5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/></g>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 들어가도 될까요? 노크! */
+      id: "knock", cmd: "똑똑", label: "똑똑",
+      cmdRe: /^\/(똑똑|노크)$/,
+      svg: `<g transform="translate(2.6 1) scale(.93)"><rect x="28" y="9" width="30" height="47" rx="3" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8"/>
+            <rect x="33" y="14" width="9" height="15" rx="1.5" fill="none" stroke="#3A2A22" stroke-width="1.3" opacity=".5"/>
+            <rect x="45" y="14" width="8" height="15" rx="1.5" fill="none" stroke="#3A2A22" stroke-width="1.3" opacity=".5"/>
+            <circle cx="53" cy="36" r="2.3" fill="#F0C674" stroke="#3A2A22" stroke-width="1.2"/>
+            <ellipse cx="17" cy="32" rx="7" ry="6" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M13 29v-1M16 27.5v-1.5M19 28v-1.5" stroke="#3A2A22" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M23 24q-3 2.5-2 6M22 38q-3 2-2 5M9 22q-5 5-3 12" stroke="#8FB8E0" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 달이 아직 떠 있는 이른 출근 */
+      id: "dawn", cmd: "새벽출근", label: "새벽 출근", fs: 17,
+      cmdRe: /^\/(새벽출근)$/,
+      svg: `<path d="M20 44a16 16 0 0 1 32 0z" fill="#F0997B" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M8 44h56" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M36 21v-5M22 29l-3-3M50 29l3-3" stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M16 18a6.5 6.5 0 1 0 4 11.2 7.8 7.8 0 0 1-4-11.2z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M55 12l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#AFA9EC"/>
+            <path d="M44 9l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#8FB8E0"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 밤늦게 출근하는 올빼미 작가님 */
+      id: "owl", cmd: "올빼미", label: "올빼미",
+      cmdRe: /^\/(올빼미)$/,
+      svg: `<path d="M20 18l4 7M52 18l-4 7" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <ellipse cx="36" cy="35" rx="17" ry="19" fill="#AFA9EC" stroke="#3A2A22" stroke-width="1.8"/>
+            <ellipse cx="36" cy="44" rx="10" ry="10" fill="#CFC9F4"/>
+            <circle cx="29" cy="30" r="6.5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="43" cy="30" r="6.5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="30" cy="31" r="2.6" fill="#3A2A22"/><circle cx="42" cy="31" r="2.6" fill="#3A2A22"/>
+            <path d="M33.5 36l2.5 4 2.5-4z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M60 8a6 6 0 1 0 3.4 10.2 7 7 0 0 1-3.4-10.2z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.3"/>
+            <path d="M10 14l2 2M12 8H8" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 빨간 날인데 출근했어요 */
+      id: "weekend", cmd: "주말출근", label: "주말 출근", fs: 17,
+      cmdRe: /^\/(주말출근)$/,
+      svg: `<path d="M26 8v6M46 8v6" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <rect x="16" y="12" width="40" height="42" rx="5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M16 18a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v6H16z" fill="#B3372B" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <text x="36" y="47" text-anchor="middle" font-family="'Gamja Flower',cursive" font-size="24" fill="#B3372B" stroke="#B3372B" stroke-width=".5">일</text>
+            <path d="M60 24q3 5 0 8-3-3 0-8z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1"/>
+            <path d="M8 22l3 3M10 34H5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 밥 먹고 돌아왔어요 */
+      id: "backfood", cmd: "복귀", label: "복귀했어요", fs: 17,
+      cmdRe: /^\/(복귀|복귀했어요|밥먹고왔어요)$/,
+      svg: `<path d="M14 32h38a19 19 0 0 1-38 0z" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M18 32c0-7 5-10 11-10h8c6 0 11 3 11 10z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6"/>
+            <circle cx="26" cy="40" r="1.7" fill="#3A2A22"/><circle cx="40" cy="40" r="1.7" fill="#3A2A22"/><path d="M28 45q5 3.5 10 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="21" cy="44" r="2.2" fill="#F0A0B8" opacity=".8"/><circle cx="45" cy="44" r="2.2" fill="#F0A0B8" opacity=".8"/>
+            <path d="M60 22a9 9 0 1 1-3-6.6" stroke="#6FBF9B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M58 8v8h-8" stroke="#6FBF9B" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 초록 카드의 '오늘도 건필!'과 같은 말 */
+      id: "gunpil", cmd: "건필", label: "오늘도 건필!", fs: 15, lines: ["오늘도", "건필!"],
+      cmdRe: /^\/(건필|오늘도건필|건필하세요)$/,
+      svg: `<path d="M44 8l9 9-26 26-11 2 2-11z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M18 34l-3 12 12-3z" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M15 46l3-4" stroke="#3A2A22" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M44 8l9 9" stroke="#F0997B" stroke-width="4" stroke-linecap="round"/>
+            <path d="M52 40c-8 0-10-8-8-13 7 0 9 6 8 13z" fill="#6FBF9B" stroke="#3A2A22" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M52 40c1-7 5-11 11-12-1 7-5 11-11 12z" fill="#C0DD97" stroke="#3A2A22" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M52 40v6" stroke="#3A2A22" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M8 14l3 3M12 8H7" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 6시 땡! 칼같이 쌩~ */
+      id: "kaltoe", cmd: "칼퇴", label: "칼퇴",
+      cmdRe: /^\/(칼퇴|칼퇴근)$/,
+      svg: `<circle cx="42" cy="30" r="17" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M42 30V18M42 30v10" stroke="#3A2A22" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M42 30V19" stroke="#B3372B" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="42" cy="30" r="2" fill="#3A2A22"/>
+            <path d="M42 15v2M42 43v2M27 30h2M55 30h2" stroke="#8A7B68" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M6 22h12M3 30h14M8 38h10" stroke="#8FB8E0" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M58 12l3-3M62 20h5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 달 뜬 밤, 커피 옆에서 달리는 중 */
+      id: "overtime", cmd: "야근", label: "야근 중", fs: 20,
+      cmdRe: /^\/(야근|야근중)$/,
+      svg: `<rect x="17" y="24" width="30" height="20" rx="3" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M22 31h14M22 37h9" stroke="#FFFDF6" stroke-width="2" stroke-linecap="round"/>
+            <path d="M11 48h42l-3 -4H14z" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="52" y="34" width="12" height="13" rx="3" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M64 37q4 0 4 4t-4 4" stroke="#3A2A22" stroke-width="1.5" fill="none"/>
+            <path d="M55 30q-2-3 0-5M60 30q-2-3 0-5" stroke="#C9BCA8" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M18 8a7 7 0 1 0 4 12 8.4 8.4 0 0 1-4-12z" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M40 10l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#AFA9EC"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 손 흔들며 먼저 나가요 */
+      id: "firstgo", cmd: "먼저갈게", label: "먼저 가요", fs: 18,
+      cmdRe: /^\/(먼저갈게|먼저가요|먼저갈게요)$/,
+      svg: `<rect x="46" y="10" width="19" height="44" rx="2.5" fill="#6FBF9B" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M51 32h8M56 28l4 4-4 4" stroke="#FFFDF6" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="25" cy="30" r="10" fill="#F0A0B8"/>
+            <circle cx="21.5" cy="29" r="1.7" fill="#3A2A22"/><circle cx="28.5" cy="29" r="1.7" fill="#3A2A22"/><path d="M21.5 34q3.5 3.2 7 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M25 40v8M25 48l-4 6M25 48l4 6" stroke="#3A2A22" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M16 38q-8-1-9-9" stroke="#3A2A22" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M5 16q-2 3 0 7M10 11q-2 3 0 6" stroke="#8FB8E0" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 따뜻한 차 한잔 하고 가요 */
+      id: "goodjob", cmd: "수고", label: "수고했어요", fs: 17,
+      cmdRe: /^\/(수고|수고했어요|수고하셨어요|고생했어요)$/,
+      svg: `<path d="M20 28h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M46 31h4a5 5 0 0 1 0 10h-4" stroke="#3A2A22" stroke-width="2" fill="none"/>
+            <path d="M26 52h14" stroke="#3A2A22" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="29" cy="38" r="1.7" fill="#3A2A22"/><circle cx="37" cy="38" r="1.7" fill="#3A2A22"/><path d="M29 43q4 3 8 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M28 24q-3-4 0-7t0-6M38 24q-3-4 0-7t0-6" stroke="#C9BCA8" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path transform="translate(54 17) scale(1.3)" d="M0-1.2C-1.2-3.2-4.4-2.4-4.4.2c0 2 2.6 3.4 4.4 5 1.8-1.6 4.4-3 4.4-5 0-2.6-3.2-3.4-4.4-1.4z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1"/><path d="M10 20l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 거품 목욕처럼 푹~ */
+      id: "rest", cmd: "푹쉬어", label: "푹 쉬어요", fs: 18,
+      cmdRe: /^\/(푹쉬어|푹쉬어요|푹쉬세요)$/,
+      svg: `<g transform="translate(2.6 1) scale(.93)"><circle cx="34" cy="28" r="9" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M29 28q2 2.4 4 0M35 28q2 2.4 4 0" stroke="#3A2A22" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M31 33q3 2 6 0" stroke="#3A2A22" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M10 34h52v6a13 13 0 0 1-13 13H23a13 13 0 0 1-13-13z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M10 39h52" stroke="#3A2A22" stroke-width="1.2" opacity=".4"/>
+            <circle cx="20" cy="31" r="4.5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.2"/>
+            <circle cx="49" cy="29" r="5.5" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.2"/>
+            <circle cx="57" cy="22" r="3" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.1"/>
+            <circle cx="14" cy="22" r="2.6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.1"/>
+            <path d="M20 53l-2 4M52 53l2 4" stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/></g>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 해 뜨는 걸 보며 집으로 */
+      id: "dawnoff", cmd: "새벽퇴근", label: "새벽 퇴근", fs: 17,
+      cmdRe: /^\/(새벽퇴근)$/,
+      svg: `<circle cx="36" cy="32" r="24" fill="#CFC9F4"/>
+            <path d="M22 40a14 14 0 0 1 28 0z" fill="#F0997B" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M36 17v-4M23 24l-3-3M49 24l3-3M17 36h-4M55 36h4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M20 56V44l16-12 16 12v12z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <rect x="31" y="46" width="10" height="10" rx="2" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.4"/>
+            <path d="M14 14l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#FFFDF6"/>
+            <path d="M58 12l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#FFFDF6"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 오늘은 일찍 들어갈게요~ */
+      id: "earlygo", cmd: "일찍가요", label: "일찍 가볼게요", fs: 15, lines: ["일찍","가볼게요"],
+      cmdRe: /^\/(일찍가요|일찍갈게|일찍가볼게요)$/,
+      svg: `<rect x="12" y="25" width="10" height="16" rx="3" fill="#F0997B" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="32" cy="22" r="9" fill="#AFA9EC"/>
+            <circle cx="28.5" cy="21" r="1.7" fill="#3A2A22"/><circle cx="35.5" cy="21" r="1.7" fill="#3A2A22"/><path d="M28.5 26q3.5 3.2 7 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M30 31v8l-6 7M30 39l7 7" stroke="#3A2A22" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 12h-8M14 18H4M12 44H5" stroke="#8FB8E0" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="54" cy="16" r="8" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M54 16V11M54 16l4 2" stroke="#B3372B" stroke-width="2" stroke-linecap="round"/>`,
+      textColor: "#5A5175"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 배터리 바닥… 충전하고 올게요 */
+      id: "recharge", cmd: "쉬고올게", label: "쉬고 올게요", fs: 15,
+      cmdRe: /^\/(쉬고올게|쉬고올게요)$/,
+      svg: `<rect x="12" y="22" width="40" height="24" rx="6" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8"/>
+            <rect x="52" y="29" width="6" height="10" rx="2" fill="#3A2A22"/>
+            <rect x="16" y="26" width="8" height="16" rx="2.5" fill="#F0997B"/>
+            <circle cx="34" cy="33" r="1.7" fill="#3A2A22"/><circle cx="43" cy="33" r="1.7" fill="#3A2A22"/><path d="M34 39q4.5 3 9 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M56 6l-8 11h6l-5 10 11-13h-6z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M8 14l3 3M12 8H7" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 노트를 덮고 연필도 내려놓기 */
+      id: "stophere", cmd: "여기까지", label: "오늘은 여기까지", fs: 15, lines: ["오늘은","여기까지"],
+      cmdRe: /^\/(여기까지|오늘은여기까지)$/,
+      svg: `<rect x="14" y="20" width="38" height="28" rx="4" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M22 20v28" stroke="#3A2A22" stroke-width="1.4" opacity=".5"/>
+            <rect x="42" y="20" width="4" height="28" fill="#F0997B" opacity=".9"/>
+            <path d="M30 28h8M30 34h8" stroke="#FFFDF6" stroke-width="2" stroke-linecap="round"/>
+            <path d="M26 44l30-22 3 4-30 22-6 2z" fill="#F0C674" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round" transform="translate(0 -6)"/>
+            <path d="M29 42l-4 6 6-2z" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.2" transform="translate(0 -6)"/>
+            <path d="M58 10l3-3M62 18h5" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 글이 안 풀려서 구겨진 마음 */
+      id: "stuck", cmd: "안써져", label: "잘 안 써져요", fs: 15, lines: ["잘 안","써져요"],
+      cmdRe: /^\/(안써져|안써져요|슬럼프)$/,
+      svg: `<path d="M36.0 12.0L42.7 17.0L50.9 19.2L51.1 27.6L54.5 35.2L48.1 40.7L44.2 48.1L36.0 46.5L27.8 48.1L23.9 40.7L17.5 35.2L20.9 27.6L21.1 19.2L29.3 17.0z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M25 28l7 3M45 28l-7 3" stroke="#3A2A22" stroke-width="2" stroke-linecap="round"/>
+            <path d="M28 40q3-3 6 0t6 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M56 18q3 5 0 8-3-3 0-8z" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1"/>
+            <path d="M26 6q3-3 6 0t6 0" stroke="#AFA9EC" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#6B7C8C"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 사이렌! 급한 일이 생겼어요 */
+      id: "urgent", cmd: "급한일", label: "급한 일", fs: 20,
+      cmdRe: /^\/(급한일|급한일생김)$/,
+      svg: `<rect x="22" y="44" width="28" height="8" rx="2.5" fill="#8A7B68" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M25 44V35a11 11 0 0 1 22 0v9z" fill="#F0997B" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M30 30q1-5 5-6" stroke="#FFFDF6" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M36 14V8M20 22l-4-4M52 22l4-4M13 36H7M65 36h-6" stroke="#B3372B" stroke-width="2.4" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 달팽이처럼 느릿느릿 가는 중 */
+      id: "late", cmd: "늦어요", label: "늦어요",
+      cmdRe: /^\/(늦어요|지각|조금늦어요)$/,
+      svg: `<path d="M10 48h46q4 0 4-4t-5-4H18" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M10 48q-3-8 0-14" stroke="#3A2A22" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M60 42q4-8 8-8M60 40q0-8-2-12" stroke="#3A2A22" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <circle cx="38" cy="30" r="15" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M38 30a2.5 2.5 0 1 1 2.5 2.5 5 5 0 1 1-5-5 8 8 0 1 1 8 8" stroke="#3A2A22" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M64 38l0 0" stroke="#3A2A22" stroke-width="1"/>
+            <circle cx="63" cy="36" r="1.7" fill="#3A2A22"/><path d="M8 20l3 3M12 14H7" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 문에 거는 '오늘은 쉽니다' 팻말 */
+      id: "dayoff", cmd: "쉬는날", label: "쉬는 날", fs: 20,
+      cmdRe: /^\/(쉬는날|휴무|휴가)$/,
+      svg: `<path d="M26 22L36 10l10 12" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+            <circle cx="36" cy="10" r="2.6" fill="#F0C674" stroke="#3A2A22" stroke-width="1.3"/>
+            <rect x="14" y="22" width="44" height="26" rx="5" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.8"/>
+            <text x="36" y="41" text-anchor="middle" font-family="'Gamja Flower',cursive" font-size="17" fill="#B3372B" stroke="#B3372B" stroke-width=".4">휴무</text>
+            <text x="50" y="22" font-family="'Gamja Flower',cursive" font-size="13" fill="#8FB8E0">zZ</text>`,
+      textColor: "#A34A32"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 몸도 마음도 흐림 */
+      id: "unwell", cmd: "컨디션", label: "컨디션 꽝", fs: 17,
+      cmdRe: /^\/(컨디션|컨디션꽝)$/,
+      svg: `<circle cx="34" cy="36" r="15" fill="#C0DD97" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M26 31l5 4M31 31l-5 4M37 31l5 4M42 31l-5 4" stroke="#3A2A22" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M28 44q3-3 6 0t6 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M38 42l14 6" stroke="#FFFDF6" stroke-width="3" stroke-linecap="round"/><circle cx="53" cy="48.5" r="3" fill="#B3372B" stroke="#3A2A22" stroke-width="1.1"/>
+            <path d="M18 14a6 6 0 0 1 11-3 7 7 0 0 1 13 1 5 5 0 0 1 0 10H20a5 5 0 0 1-2-8z" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.5" stroke-linejoin="round"/>`,
+      textColor: "#3B6D11"
+    },
+    {
+      /* 2026-10-16 출석 인사 — 하품이 쩍~ 졸려요 */
+      id: "sleepy", cmd: "졸려", label: "졸려요",
+      cmdRe: /^\/(졸려|졸려요|졸림)$/,
+      svg: `<circle cx="34" cy="34" r="16" fill="#F0C674" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M25 30q3 2.4 6 0M37 30q3 2.4 6 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <ellipse cx="34" cy="42" rx="5" ry="6" fill="#F0997B" stroke="#3A2A22" stroke-width="1.5"/>
+            <circle cx="23" cy="37" r="2.4" fill="#F0A0B8" opacity=".75"/><circle cx="45" cy="37" r="2.4" fill="#F0A0B8" opacity=".75"/>
+            <text x="48" y="22" font-family="'Gamja Flower',cursive" font-size="18" fill="#AFA9EC" stroke="#AFA9EC" stroke-width=".4">zZ</text>
+            <path d="M10 16l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#B07D12"
     }
   ];
+
+  /* =====================================================================
+     📖 판에 놓이는 차례 (2026-10-16 콩) — 한 페이지에 5줄씩 나누기 때문에
+     **앞쪽 쉰 개가 첫 페이지**입니다. 하루에 가장 자주 쓰는 출석 인사·출퇴근·
+     사정·끼니를 앞에 모았어요 (넓은 화면 10칸 × 5줄 = 50).
+     ★ 위의 배열은 쓴 순서 그대로 두고, 놓이는 자리는 여기서만 정합니다.
+       여기에 없는 id 는 맨 뒤로 갑니다 (새 스티커를 배열에만 적어도 사라지진 않아요).
+     ===================================================================== */
+  const ORDER = [
+    "hi", "rehi", "welcome", "wel", "morning", "chulcheck", "stampin", "annyeong", "bangawa", "longtime",
+    "peekin", "knock", "dawn", "owl", "weekend", "backfood", "gunpil", "on", "gin", "reon",
+    "bye", "byebye", "seeya", "gnight", "dream", "kaltoe", "overtime", "firstgo", "goodjob", "rest",
+    "dawnoff", "earlygo", "recharge", "stophere", "off", "yay", "gout", "away", "stuck", "urgent",
+    "late", "dayoff", "unwell", "sleepy", "soon", "back", "yum", "lunch", "dinner", "coffee",
+    "walk", "out", "pat", "fight", "cheerup", "cando", "aza", "clap", "stamp", "praise",
+    "cheer", "dash", "pomo", "done", "good", "best", "thanks", "nod", "ok", "wow",
+    "wau", "oh", "eek", "heol", "ah", "meong", "sorry", "wait", "carrot", "haha",
+    "hehe", "cry", "dead"
+  ];
+  STICKERS.sort((a, b) => {
+    const x = ORDER.indexOf(a.id), y = ORDER.indexOf(b.id);
+    return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
+  });
+
+  /* 없어진 스티커(2026-10-16 · 딴짓·충전 넷) — 지난 채팅에 남아 있는 표시가
+     글자 그대로 `[[스티커:movie]]` 로 보이지 않게 안내만 띄웁니다. */
+  const RETIRED = ["input", "movie", "music", "gaze"];
 
   const MARK_RE = /^\[\[스티커:([a-z]+)\]\]$/;
   const byId = (id) => STICKERS.find(s => s.id === id) || null;
@@ -1017,6 +1313,7 @@
   window.stickerHtml = function (msg, size) {
     const m = String(msg || "").trim().match(MARK_RE);
     const s = m && byId(m[1]);
+    if (m && !s && RETIRED.includes(m[1])) return `<span class="msg-sticker-gone">(없어진 스티커예요)</span>`;
     if (!s) return "";
     ensureFilter();
     const px = size || 104;
@@ -1041,6 +1338,7 @@
      답장인지 아닌지까지 기존 흐름이 알아서 판단해요.
      ===================================================================== */
   let _pop = null;
+  let _쪽가기 = null;      // 열려 있는 판의 쪽 넘기기 (← → 키)
   let _popDoc = null;     // 판을 띄운 문서 — 비밀방이 ↗ 따로 창에 있으면 그쪽
 
   /* ↗ 비밀방 따로 창(script_srpop.js) — 글칸·단추가 다른 문서에 있을 수
@@ -1051,6 +1349,7 @@
     if (!_pop) return;
     _pop.remove();
     _pop = null;
+    _쪽가기 = null;
     [document, _popDoc].forEach(d => {
       try { d?.removeEventListener("click", onDoc, true); d?.removeEventListener("keydown", onKey, true); } catch (e) {}
     });
@@ -1059,7 +1358,15 @@
   function onDoc(e) {
     if (_pop && !_pop.contains(e.target) && !e.target.closest("#" + _곳.btnId)) close();
   }
-  function onKey(e) { if (e.key === "Escape") close(); }
+  function onKey(e) {
+    if (e.key === "Escape") close();
+    else if (_쪽가기 && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      const t = e.target && e.target.tagName;
+      if (t === "INPUT" || t === "TEXTAREA") return;      // 글 쓰는 중이면 커서가 먼저입니다
+      e.preventDefault();
+      _쪽가기(e.key === "ArrowLeft" ? -1 : 1);
+    }
+  }
 
   /* =====================================================================
      어느 글칸에 놓을 것인가 (2026-08-30 — ⚙️ 비밀방도 스티커를 쓰면서)
@@ -1127,7 +1434,7 @@
            써도 배지가 안 붙어서 "왜 나만 안 되지" 가 됩니다. */
         /* ★ 한 줄에 하나씩 — checks.js 가 줄 단위로 읽습니다 (여러 줄로
            나누면 "아예 없음" 으로 잡혀요). */
-        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "byebye", "morning", "seeya", "gnight", "dream"], // 👋 인사왕 (웰컴 2026-09-30 · 바이바이·좋은 꿈꿔 2026-10-09)
+        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "byebye", "morning", "seeya", "gnight", "dream", "annyeong", "bangawa", "longtime", "peekin", "knock", "firstgo", "goodjob", "earlygo"], // 👋 인사왕 (웰컴 2026-09-30 · 바이바이·좋은 꿈꿔 2026-10-09 · 안녕하세요·반가워요·오랜만·왔어요·똑똑·먼저 가요·수고했어요·일찍 가볼게요 2026-10-16)
         cPat:   ["pat", "cheerup", "praise"],                                   // 🫶 토닥이
         cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]           // 📣 응원왕
       };
@@ -1153,11 +1460,50 @@
     pop.className = "sticker-pop";
     pop.setAttribute("role", "menu");
     pop.setAttribute("aria-label", "스티커 고르기");
-    pop.innerHTML = STICKERS.map(s => `
+    doc.body.appendChild(pop);   // 칸 수는 화면 폭(CSS)이 정하니, 붙인 뒤에 읽습니다
+
+    /* ★★ 페이지 나누기 (2026-10-16 콩 "판이 거대해지는 걸 방지 — 10×5 를 한 페이지로")
+       한 페이지 = 그때의 칸 수 × 5줄 (넓은 화면 10칸 → 50개, 보통 9칸 → 45개, 폰 5칸 → 25개).
+       쪽 번호(‹ 1/2 ›)는 **최근 쓴 줄의 점선 바로 위, 왼쪽**에 놓습니다. 차례는
+       ORDER 가 정해서 첫 쪽에 출석 인사·출퇴근이 모입니다. */
+    const ROWS = 5;
+    const 열수 = () => (view.getComputedStyle(pop).gridTemplateColumns || "").split(" ").filter(Boolean).length || 5;
+    const 한쪽 = 열수() * ROWS;
+    const 쪽수 = Math.max(1, Math.ceil(STICKERS.length / 한쪽));
+    let 쪽 = 0;
+    const optHtml = (s) => `
       <button type="button" class="sticker-opt" data-sticker="${s.id}"
               title="${s.label} (/${s.cmd})" aria-label="${s.label}"
-      >${window.stickerHtml(`[[스티커:${s.id}]]`, 58)}</button>`).join("");
-    doc.body.appendChild(pop);
+      >${window.stickerHtml(`[[스티커:${s.id}]]`, 58)}</button>`;
+    let 쪽표 = null;
+    if (쪽수 > 1) {
+      쪽표 = doc.createElement("div");
+      쪽표.className = "sticker-pager";
+      쪽표.innerHTML = `<button type="button" class="sp-prev" data-sp="-1" aria-label="이전 쪽">‹</button>` +
+                       `<span class="sp-no" aria-live="polite"></span>` +
+                       `<button type="button" class="sp-next" data-sp="1" aria-label="다음 쪽">›</button>`;
+      pop.appendChild(쪽표);
+    }
+    const 그리기 = () => {
+      pop.querySelectorAll(":scope > .sticker-opt").forEach(b => b.remove());
+      const html = STICKERS.slice(쪽 * 한쪽, (쪽 + 1) * 한쪽).map(optHtml).join("");
+      if (쪽표) pop.insertBefore(Object.assign(doc.createElement("template"), { innerHTML: html }).content, 쪽표);
+      else pop.insertAdjacentHTML("afterbegin", html);
+      if (쪽표) {
+        쪽표.querySelector(".sp-no").textContent = `${쪽 + 1} / ${쪽수}`;
+        쪽표.querySelector(".sp-prev").disabled = 쪽 <= 0;
+        쪽표.querySelector(".sp-next").disabled = 쪽 >= 쪽수 - 1;
+      }
+    };
+    const 쪽가기 = (d) => {
+      const n = Math.max(0, Math.min(쪽수 - 1, 쪽 + d));
+      if (n === 쪽) return;
+      쪽 = n;
+      그리기();
+      try { 놓기(); } catch (e) {}      // 쪽마다 높이가 달라서 다시 자리를 잡습니다
+    };
+    _쪽가기 = 쪽수 > 1 ? 쪽가기 : null;
+    그리기();
 
     /* 🕓 최근 쓴 스티커 — 점선 아래 한 줄. 칸 수만큼만 보여 **두 줄로 안 넘어갑니다**.
        칸 수는 CSS 가 화면 폭으로 정하므로(5·9·10), 그려진 뒤 격자에서 읽어 옵니다. */
@@ -1176,34 +1522,39 @@
       pop.appendChild(row);
     }
 
-    const r = btn.getBoundingClientRect();
-    /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1)
-       ★ 따로 창에는 확대가 없습니다 — 그 창의 크기로 잽니다 */
-    const _z = (doc === document) ? (window.uiZoom?.() || 1) : 1;
-    const VW = view.innerWidth / _z, VH = view.innerHeight / _z;
-    const w = pop.offsetWidth, h = pop.offsetHeight;
+    const 놓기 = () => {
+      const r = btn.getBoundingClientRect();
+      /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1)
+         ★ 따로 창에는 확대가 없습니다 — 그 창의 크기로 잽니다 */
+      const _z = (doc === document) ? (window.uiZoom?.() || 1) : 1;
+      const VW = view.innerWidth / _z, VH = view.innerHeight / _z;
+      const w = pop.offsetWidth, h = pop.offsetHeight;
 
-    /* ★★★ 화면 안에 가두기 (2026-09-12 — 콩 "아래쪽이 잘려 보인대")
-       예전 셈은 이랬습니다 —
-         위로 올려 보고 → 안 들어가면 **무조건 아래로**.
-       스티커가 쉰셋이 되어 판이 784px 로 자라자, 세로 800px 이 안 되는
-       화면에서는 "아래로" 가 곧 **화면 밖**이었어요. 아래쪽 700px 넘게
-       잘려 나갑니다. 위에도 아래에도 못 들어가는 경우를 아예 안 따져
-       본 셈이라, 그 상황이 오기 전까지는 멀쩡해 보였습니다.
+      /* ★★★ 화면 안에 가두기 (2026-09-12 — 콩 "아래쪽이 잘려 보인대")
+         예전 셈은 이랬습니다 —
+           위로 올려 보고 → 안 들어가면 **무조건 아래로**.
+         스티커가 쉰셋이 되어 판이 784px 로 자라자, 세로 800px 이 안 되는
+         화면에서는 "아래로" 가 곧 **화면 밖**이었어요. 아래쪽 700px 넘게
+         잘려 나갑니다. 위에도 아래에도 못 들어가는 경우를 아예 안 따져
+         본 셈이라, 그 상황이 오기 전까지는 멀쩡해 보였습니다.
 
-       이제 위에 들어가면 위로, 아니면 아래로 — 그러고 나서 **끝으로
-       넘치면 끌어당겨** 화면 안에 넣습니다. styles.css 가 판 높이를
-       화면보다 작게 잡아 두므로(max-height), 끌어당길 자리는 늘 있어요.
-       넘치는 만큼은 판 속을 굴려서 봅니다. */
-    const 위칸 = r.top / _z - 8;                  // 단추 위로 남은 높이
-    let left = Math.min(r.left / _z, VW - w - 8);
-    let top = (h <= 위칸) ? (r.top / _z - h - 8)   // 위에 들어가면 위로 (원래대로)
-                          : (r.bottom / _z + 8);  // 아니면 아래로
-    top = Math.max(8, Math.min(top, VH - h - 8)); // ★ 그리고 반드시 화면 안
-    pop.style.left = Math.max(8, left) + "px";
-    pop.style.top = top + "px";
+         이제 위에 들어가면 위로, 아니면 아래로 — 그러고 나서 **끝으로
+         넘치면 끌어당겨** 화면 안에 넣습니다. styles.css 가 판 높이를
+         화면보다 작게 잡아 두므로(max-height), 끌어당길 자리는 늘 있어요.
+         넘치는 만큼은 판 속을 굴려서 봅니다. */
+      const 위칸 = r.top / _z - 8;                  // 단추 위로 남은 높이
+      let left = Math.min(r.left / _z, VW - w - 8);
+      let top = (h <= 위칸) ? (r.top / _z - h - 8)   // 위에 들어가면 위로 (원래대로)
+                            : (r.bottom / _z + 8);  // 아니면 아래로
+      top = Math.max(8, Math.min(top, VH - h - 8)); // ★ 그리고 반드시 화면 안
+      pop.style.left = Math.max(8, left) + "px";
+      pop.style.top = top + "px";
+    };
+    놓기();
 
     pop.addEventListener("click", (e) => {
+      const g = e.target.closest("[data-sp]");
+      if (g) { 쪽가기(Number(g.dataset.sp)); return; }
       const b = e.target.closest("[data-sticker]");
       if (b) pick(b.dataset.sticker);
     });

@@ -1,0 +1,214 @@
+<!doctype html>
+<!-- TheMagam © 그링링 · 무단 복제·재배포 금지 -->
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TheMagam — 가이드 v2</title>
+<link rel="icon" href="icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --paper:#FAF6EC; --card:#FFFDF6; --line:#E0D6BC; --ink:#2B2620; --muted:#8A7A5E; --red:#B3372B; --soft:#F3EBDD;
+         --serif:"Noto Serif KR",serif; --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px 80px}
+  /* ── 머리 ── */
+  .hero{padding:54px 0 26px;text-align:center}
+  .hero .tag{display:inline-block;font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--paper);background:var(--red);padding:3px 12px;border-radius:4px;letter-spacing:.08em}
+  .hero h1{margin:14px 0 6px;font-family:var(--serif);font-weight:900;font-size:clamp(34px,6vw,50px);line-height:1.1;letter-spacing:-.01em}
+  .hero h1 em{font-style:normal;color:var(--red)}
+  .hero p{margin:0;font-family:var(--serif);font-size:16px;color:var(--muted)}
+  /* ── 흐름 지도 ── */
+  .map{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:28px 0 10px}
+  .map a{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center;transition:transform .12s,border-color .12s}
+  .map a:hover{transform:translateY(-2px);border-color:var(--red)}
+  .map .n{display:block;font-family:var(--serif);font-weight:900;font-size:22px;color:var(--red);line-height:1}
+  .map .t{display:block;font-weight:800;font-size:14px;margin-top:6px}
+  .map .s{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  @media(max-width:600px){.map{grid-template-columns:repeat(2,1fr)}}
+  /* ── 장 ── */
+  .ch{margin-top:56px}
+  .ch-h{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:18px}
+  .ch-h .n{font-family:var(--serif);font-weight:900;font-size:30px;color:var(--red);line-height:1}
+  .ch-h h2{margin:0;font-family:var(--serif);font-weight:900;font-size:24px}
+  .ch-h .s{margin-left:auto;font-size:13px;color:var(--muted)}
+  /* 한 단계 = 그림 + 글 */
+  .step{display:grid;grid-template-columns:200px 1fr;gap:18px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .step.r{grid-template-columns:1fr 200px}.step.r .shot{order:2}
+  @media(max-width:600px){.step,.step.r{grid-template-columns:1fr}.step.r .shot{order:0}}
+  .shot{aspect-ratio:4/3;border-radius:10px;background:repeating-linear-gradient(45deg,#F3EBDD 0 8px,#EFE5D3 8px 16px);border:1px dashed #D2C4A6;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .shot img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .step h3{margin:0 0 6px;font-size:16.5px;font-weight:800}
+  .step h3 .k{display:inline-block;font-size:11px;font-weight:700;color:var(--red);background:rgba(179,55,43,.1);border-radius:99px;padding:2px 8px;vertical-align:middle;margin-left:6px}
+  .step p{margin:0;font-size:14px}
+  .step ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}
+  .step li{margin:3px 0}
+  .step b{color:var(--red)}
+  .tip{margin-top:8px;font-size:12.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+  /* 작은 카드 묶음 */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  @media(max-width:600px){.grid{grid-template-columns:1fr 1fr}}
+  .mini{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .mini .ic{font-size:24px;line-height:1}
+  .mini h4{margin:8px 0 4px;font-size:14.5px;font-weight:800}
+  .mini p{margin:0;font-size:12.5px;color:#5a4e40}
+  /* 마무리 */
+  .end{margin-top:64px;text-align:center;padding:36px 20px;background:var(--card);border:1px solid var(--line);border-radius:20px}
+  .end h2{margin:0 0 6px;font-family:var(--serif);font-weight:900;font-size:26px}
+  .end p{margin:0 0 18px;color:var(--muted)}
+  .end a{display:inline-block;background:var(--red);color:var(--paper);font-weight:800;padding:12px 32px;border-radius:999px;text-decoration:none}
+  .end .sub{display:block;margin-top:12px;font-size:12.5px}
+  .end .sub a{background:none;color:var(--red);padding:0;font-weight:600;text-decoration:underline}
+  .foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:30px}
+</style></head>
+<body><div class="wrap">
+
+<header class="hero">
+  <span class="tag">GUIDE · v2</span>
+  <h1>The<em>Magam</em></h1>
+  <p>작가들의 온라인 작업실 — 처음 오신 분을 위한 한 장</p>
+  <nav class="map">
+    <a href="#s1"><span class="n">1</span><span class="t">들어오기</span><span class="s">닉네임 → 계정 → 카드</span></a>
+    <a href="#s2"><span class="n">2</span><span class="t">글 쓸 때</span><span class="s">뽀모 · Work Log · BGM</span></a>
+    <a href="#s3"><span class="n">3</span><span class="t">그 밖에</span><span class="s">대숲 · 품평 · 쪽지</span></a>
+    <a href="#s4"><span class="n">4</span><span class="t">매일 조금씩</span><span class="s">하트 · 할 일 · 출석</span></a>
+  </nav>
+</header>
+
+<!-- ───────────── 1 ───────────── -->
+<section class="ch" id="s1">
+  <div class="ch-h"><span class="n">1</span><h2>들어오기</h2><span class="s">딱 세 단계</span></div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>입장 화면 (닉네임 · 비밀번호)</div>
+    <div><h3>닉네임 승인 받기 <span class="k">1분</span></h3>
+      <p>먼저 오픈카톡에서 <b>방장에게 닉네임을 알려 주세요.</b> 방장이 승인 명단에 올려 두면, 그 닉네임과 비밀번호로 입장할 수 있어요. 처음 넣은 비밀번호가 그 닉네임의 자물쇠가 돼요 — 이메일·가입 절차 없어요.</p>
+      <p class="tip">비밀번호를 잊으면 스스로 되찾을 방법이 없어요(이 방은 이메일을 안 써요). 방장에게 말하면 초기화해 드려요 — 채팅·기록은 그대로 남아요.</p></div>
+  </div>
+
+  <div class="step r">
+    <div class="shot">📷 캡처 자리<br>프로필 카드 (프사 · 상태 · 메모)</div>
+    <div><h3>내 카드 꾸미기</h3>
+      <p>들어오면 내 <b>프로필 카드</b>가 생겨요. 카드를 누르면 프사·소개·작품을 적을 수 있어요. 카드는 방 안 모두에게 보이는 내 자리예요.</p>
+      <ul>
+        <li><b>상태표</b> — 🔥WRITE · 💻JOB · 📓multiT 중 지금 뭘 하는지. 크롬·엣지·웨일이면 <b>자동감지</b>를 켜면 알아서 바뀌어요.</li>
+        <li><b>카드 메모</b> — "마감 중" "퇴고 중" 같은 한 줄을 카드에 얹어 두면 서로 사정을 알아요.</li>
+        <li><b>🏷️ 작업 스티커</b> — 왼쪽 위 구석에 지금 무슨 작업인지 딱지.</li>
+      </ul></div>
+  </div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>방 전체 (카드들 + 아래 알약 줄 + 옆 탭)</div>
+    <div><h3>화면 한눈에</h3>
+      <p>가운데는 <b>카드들</b>(지금 누가 뭘 하나), 아래 <b>알약 줄</b>은 자주 쓰는 도구(챗·뽀모·Work Log·업적…), 오른쪽 <b>옆 탭</b>은 읽는 자리(공지·품평·표현 공부·Q&A·자료실·LINK).</p>
+      <p class="tip">알약을 누르면 그 자리에서 판이 올라와요. 여러 개 함께 열어 둘 수 있고, 머리말을 잡고 끌면 자리도 옮겨요.</p></div>
+  </div>
+</section>
+
+<!-- ───────────── 2 ───────────── -->
+<section class="ch" id="s2">
+  <div class="ch-h"><span class="n">2</span><h2>글 쓸 때</h2><span class="s">원고는 각자, 리듬은 함께</span></div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>🍅 뽀모 알약 (타이머 흐르는 모습)</div>
+    <div><h3>🍅 Pomodoro</h3>
+      <p>25분 쓰고 5분 쉬는 타이머. <b>내려둔 알약이 곧 타이머</b>라 판을 닫아도 아래에서 계속 흘러요. ⏱️ <b>뽀모방</b>은 여럿이 같은 타이머로 함께 달리는 방.</p>
+      <p class="tip">모양은 원형 / 가로 바 중에 각자 골라요.</p></div>
+  </div>
+
+  <div class="step r">
+    <div class="shot">📷 캡처 자리<br>✍️ Work Log (전체 글자수 칸 + 흐름)</div>
+    <div><h3>✍️ Work Log</h3>
+      <p>원고의 <b>전체 글자수</b>를 적고 [기록]만 누르면 돼요. 처음 적은 숫자가 출발선, 그다음부터는 <b>차이만</b> 오늘 누적으로 쌓여요. 방 흐름에 "+800자"가 올라가고, 옆 칸에 <b>무슨 작업?</b>을 적으면 글자수 없이도 방에 보여요.</p>
+      <ul>
+        <li><b>기록</b> 탭 — 오늘·어제 내 기록. 자정을 넘겨도 어제 마지막 기준을 그대로 이어받아요.</li>
+        <li><b>주간 · 작품</b> 탭 — 달력과 회차표로 진도 보기.</li>
+      </ul></div>
+  </div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>🎯 오늘 목표 · ⏱️ 작업 시간 막대</div>
+    <div><h3>🎯 오늘 목표 · ⏱️ 작업 시간</h3>
+      <p>하루 목표 글자수를 걸어 두면 막대가 차올라요. <b>작업 시간</b>은 따로 누를 게 없어요 — 상태표가 🔥WRITE면 저절로 재요(💻JOB·📓multiT는 70%로).</p>
+      <p class="tip">60분 넘게 머문 날만 <b>✔ 유효 출석</b>이 돼요 — 작업 시간과 같은 잣대예요.</p></div>
+  </div>
+
+  <div class="grid">
+    <div class="mini"><div class="ic">🎵</div><h4>BGM</h4><p>유튜브 주소를 붙이면 방 배경음. 추천은 흐름에 남아요.</p></div>
+    <div class="mini"><div class="ic">🖥️</div><h4>화면 공유</h4><p>내 원고 창을 카드에 비춰요. 뭉갬 정도는 내가 조절 — 글자는 안 읽혀요.</p></div>
+    <div class="mini"><div class="ic">📓</div><h4>표현 공부</h4><p>좋은 문장·표현을 모아 두는 공책. 옆 탭에서.</p></div>
+    <div class="mini"><div class="ic">💬</div><h4>Chat · 스티커</h4><p>손그림 스티커 여든세 개. <b>/굿모닝 /토닥</b>처럼 쳐도 나가요.</p></div>
+    <div class="mini"><div class="ic">⏱️</div><h4>뽀모방</h4><p>여럿이 같은 타이머로 함께 달려요. 모여서 으샤으샤!</p></div>
+    <div class="mini"><div class="ic">📁</div><h4>자료실 · 🔗 LINK</h4><p>파일·링크 모음. 옆 탭 아래쪽.</p></div>
+  </div>
+</section>
+
+<!-- ───────────── 3 ───────────── -->
+<section class="ch" id="s3">
+  <div class="ch-h"><span class="n">3</span><h2>그 밖에</h2><span class="s">머리 식히고, 업계 살피고</span></div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>🎋 대숲 (익명 글)</div>
+    <div><h3>🎋 대숲</h3>
+      <p>익명으로 털어놓는 자리. 닉네임도 기기도 안 남고, 글은 30일이면 저절로 시들어요. 오늘 마감이 미웠다면 여기서.</p></div>
+  </div>
+
+  <div class="step r">
+    <div class="shot">📷 캡처 자리<br>🏢 출판사 품평 (명패 목록)</div>
+    <div><h3>🏢 출판사 품평 · 🤔 Q&A</h3>
+      <p><b>품평</b>은 출판사·레이블마다 익명 경험담. 계약 전에 한 번 들러요. 새 글이 달린 회사엔 이름 앞에 점이 붙어요. <b>Q&A</b>는 업계·플랫폼 궁금한 것 묻고 답하기.</p>
+      <p class="tip">둘 다 옆 탭에 있어요. 점수·별점은 없고 글만 — 분쟁 없게.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>📮 쪽지 (카드 누르면 뜨는 칸)</div>
+    <div><h3>📮 쪽지</h3>
+      <p>남의 카드를 눌러 조용히 한마디 남겨요. 방 전체에 안 보이고 <b>받는 사람만</b> 봐요. 안 읽은 쪽지가 있으면 프사 위에 표시가 붙어요.</p></div>
+  </div>
+</section>
+
+<!-- ───────────── 4 ───────────── -->
+<section class="ch" id="s4">
+  <div class="ch-h"><span class="n">4</span><h2>매일 조금씩</h2><span class="s">서로 독려하는 작은 습관</span></div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>💘 하트 쏘기 (카드 위 하트)</div>
+    <div><h3>💘 하트 쏘기 · 🔥 화공 응원</h3>
+      <p>남의 카드를 눌러 <b>하루 한 번</b> 하트. 받은 하트는 카드에 스티커로 붙고, 누가 줬는지는 본인만 알아요. 마감 중인 사람에겐 🔥 화공 응원도.</p></div>
+  </div>
+
+  <div class="step r">
+    <div class="shot">📷 캡처 자리<br>📅 나의 작업 (할 일 · 디데이)</div>
+    <div><h3>📅 할 일 · 디데이</h3>
+      <p>Work Log 메모칸에 <b>/내일 4화 초고</b>처럼 적으면 할 일이 돼요. <b>나의 작업</b>에서 디데이를 걸면 달력에 🚩, 카드에도 딱지가 붙어요.</p>
+      <p class="tip">날짜 없는 할 일은 매일 반복 칸이 돼요.</p></div>
+  </div>
+
+  <div class="step">
+    <div class="shot">📷 캡처 자리<br>📋 출석 달력 (● ○ 🏖️)</div>
+    <div><h3>📋 출석 · 🏖️ 휴가</h3>
+      <p>방에 들어온 날은 자동으로 출석. <b>60분 넘게</b> 머문 날만 ✔ 유효 출석이에요. 못 오는 날은 내 달력에서 날짜를 눌러 🏖️ 휴가 표시 — 본인과 운영진만 봐요.</p>
+      <ul>
+        <li><b>🏅 업적</b> — 연속 출석·인사왕·스티커 수집가… 배지가 모여요.</li>
+        <li><b>📋 열흘 리포트</b> — 열흘마다 출석·그래프·공지를 한 장으로. 🔗 LINK에 걸려 있어요.</li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- ───────────── 안전 ───────────── -->
+<section class="ch" id="s5">
+  <div class="ch-h"><span class="n">!</span><h2>안전한가요?</h2><span class="s">세 가지만 기억하면 돼요</span></div>
+  <div class="grid">
+    <div class="mini"><div class="ic">🙈</div><h4>받는 개인정보가 없어요</h4><p>이메일·전화번호·실명 안 받아요. 닉네임과 비밀번호뿐이고, 비밀번호는 구글 인증이 처리해 방장도 원문을 못 봐요.</p></div>
+    <div class="mini"><div class="ic">📄</div><h4>원고는 안 올라가요</h4><p>Work Log에 적는 건 <b>숫자</b>뿐이에요. 화면 공유도 보내는 쪽에서 뭉개져 나가 글자가 안 읽혀요.</p></div>
+    <div class="mini"><div class="ic">🌐</div><h4>설치하는 앱이 아니에요</h4><p>그냥 웹페이지라 '앱처럼 설치'는 홈 화면 바로가기일 뿐. 코드도 전부 공개돼 있어요.</p></div>
+  </div>
+</section>
+
+<section class="end">
+  <h2>오늘도 원고 앞에.</h2>
+  <p>궁금한 건 방장에게, 더 자세한 건 긴 설명서에.</p>
+  <a href="index.html">더마감 들어가기</a>
+  <span class="sub"><a href="guide.html">자세한 가이드(v1) 보기</a></span>
+</section>
+<p class="foot">TheMagam © 그링링 · 무단 복제·재배포 금지</p>
+</div></body></html>
