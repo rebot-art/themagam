@@ -324,13 +324,16 @@ window.AppSession = AppSession;
     const sid = _ensureSessionId();
     const key = `sys_leave_${sid}_${_myJoinTs || Date.now()}`;
 
-    await db.ref(`messages/${key}`).set({
+    const payload = {
       type: "system",
       msg: `👋 ${myNick} 작가님이 작업실을 나갔어요.`,
       time: firebase.database.ServerValue.TIMESTAMP,
       leaveOf: myNick,
       sid
-    });
+    };
+    /* 👋 인사 규칙(script_greet.js)이 켜져 있으면 입장 카드와 한 쌍인 퇴장 카드로 — 글은 그대로, 앞 이모지는 카드 아이콘이 맡습니다 */
+    try { if (window.greetOn?.()) { payload.msg = `${myNick} 작가님이 작업실을 나갔어요.`; payload.gk = "out"; } } catch (e) {}
+    await db.ref(`messages/${key}`).set(payload);
   }
 
   /* ===================================================================
@@ -838,14 +841,10 @@ window.AppSession = AppSession;
     const sid = _ensureSessionId();
 
     const url = `${firebaseConfig.databaseURL}/messages/sys_leave_${sid}_${_myJoinTs || Date.now()}.json?x-http-method-override=PUT`;
-    const payload = JSON.stringify({
-      type:    "system",
-      msg:     `👋 ${myNick} 작가님이 작업실을 나갔어요.`,
-      time:    Date.now(),
-      leaveOf: myNick,
-      sid,
-      byUnload: true
-    });
+    const 퇴장글 = { type: "system", msg: `👋 ${myNick} 작가님이 작업실을 나갔어요.`, time: Date.now(), leaveOf: myNick, sid, byUnload: true };
+    /* 창을 닫을 때도 나가기 버튼과 같은 카드(gk:"out") — 위 _writeLeaveSystemMessageOnce 와 똑같이 맞춥니다 */
+    try { if (window.greetOn?.()) { 퇴장글.msg = `${myNick} 작가님이 작업실을 나갔어요.`; 퇴장글.gk = "out"; } } catch (e) {}
+    const payload = JSON.stringify(퇴장글);
 
     // ✅ [FIX] sendBeacon은 크로스오리진으로 application/json 전송이 차단됨 →
     // 허용되는 text/plain으로 전송 (Firebase REST는 형식 무관하게 본문을 해석함)

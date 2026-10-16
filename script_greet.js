@@ -45,7 +45,7 @@
   const START_DAY = "2026-10-16";                // 이 날 이전은 규칙 밖(기록이 없어서 판단 불가)
   const COUNT_FROM = "2026-11-01";               // 이 날부터 횟수를 다시 셉니다
   const CAP = 10;                                // 횟수 표시 상한
-  const KINDS = ["in", "ok", "wait", "warn"];
+  const KINDS = ["in", "ok", "wait", "warn", "out"];   // out = 퇴장 카드 (script_core.js 가 씁니다)
 
   const 나 = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
   const 날 = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
