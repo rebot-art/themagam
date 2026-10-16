@@ -1171,7 +1171,13 @@ function _profilesChanged() {
    status 가 바뀔 때마다 불려도 괜찮게, 이미 달린 사람은 건너뜁니다. */
 function syncProfileRefs() {
   const cache = window._statusCache || {};
-  const want = new Set(Object.keys(cache));
+  /* ★ [2026-10-16 콩 "오프인 벨벨님 프사가 지난 채팅에 보여 — 원래 나가면 눈사람"]
+       status 줄은 창을 갑자기 닫거나 새로고침 도중 끊기면 **끊김 표시만 단 채 남아** 있을 수 있어요
+       (카드는 isOnline 이 숨기지만 줄 자체는 그대로). 줄이 있다고 다 "방에 있는 사람"으로 치면
+       나간 사람의 프사가 계속 보입니다 → 접속 중으로 **판정된 줄만** 셉니다. */
+  const 지금 = (window.serverNow ? window.serverNow() : Date.now());
+  const 방에있나 = (row) => (window.SOLO || typeof window.isOnline !== "function") ? true : window.isOnline(row, 지금);
+  const want = new Set(Object.keys(cache).filter(n => 방에있나(cache[n])));
   if (myNick) want.add(myNick);          // 내 것은 늘 봅니다
 
   /* 나간 사람 — 리스너를 뗍니다 */

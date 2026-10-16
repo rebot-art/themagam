@@ -218,6 +218,9 @@
     try { m = JSON.parse(SS()?.getItem(K_RE) || "null"); } catch (e) {}
     if (!m || !m.nick) return;
     try { SS()?.removeItem(K_RE); } catch (e) {}      // 딱 한 번만 — 실패해도 무한 반복은 없습니다
+    /* 묵은 표시는 믿지 않습니다 — 새로고침이 끝난 지 2분이 넘었다면(창을 한참 뒤에 되살린 경우 등)
+       "새로고침 중"이 아니라 그냥 새로 연 창이에요. 조용히 들여보내면 입장 카드가 안 뜹니다. */
+    if (Date.now() - Number(m.at || 0) > 2 * 60 * 1000) return;
     _마커 = m;
     const 오늘 = 날(Date.now());
 
