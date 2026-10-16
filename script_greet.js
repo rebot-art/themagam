@@ -169,8 +169,8 @@
       ready: false, miss: {}, n: 0
     };
     if (SOLO()) {
-      /* 혼자 방은 입장 절차가 없어서 입장 카드를 여기서 올립니다 */
-      올리기("in", 문구("in", nick));
+      /* 혼자 방은 입장 절차가 없어서 입장 카드를 여기서 올립니다 (새로고침으로 돌아온 경우는 조용히) */
+      if (!window.__silentJoin) 올리기("in", 문구("in", nick));
       try { DB().ref(`users/${nick}/attend/days/${day}`).set(true); } catch (e) {}
     }
     if (SOLO() && RESET) {
@@ -197,6 +197,7 @@
     if (!S) return;
     S.ready = true;
     S.last = Date.now();
+    try { const b = window.Reload?.takeBonus?.(); if (b) 보너스(b); } catch (e) {}   // 방장이 시킨 새로고침이면 +5분
     _타이머 = setInterval(틱, TEST ? 500 : 5000);
     if (!_깨움붙임) {
       _깨움붙임 = true;

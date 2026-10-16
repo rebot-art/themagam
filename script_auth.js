@@ -287,7 +287,10 @@
   const _join = window.join;
   if (typeof _join === "function" && !_join.__authPatched) {
     const wrapped = async function () {
-      const okAuth = await authenticate();
+      /* 🔄 새로고침 뒤 자동 재입장(script_reload.js)은 이 탭에 남은 로그인으로 들어옵니다 */
+      let okAuth = true;
+      if (window.__skipAuth && firebase.auth().currentUser) window.myUid = firebase.auth().currentUser.uid;
+      else okAuth = await authenticate();
       if (!okAuth) return;
       return _join.apply(this, arguments);
     };

@@ -265,6 +265,8 @@ window.AppSession = AppSession;
      ===================================================================== */
   function 조용히드나드나() {
     try {
+      /* 🔄 새로고침·재입장 중에는 입장/퇴장 문구를 내지 않습니다 (script_reload.js) */
+      if (window.__reloading || window.__silentJoin) return true;
       /* ★★★ [고침 2026-08-22 · 2차 — 콩 신고] **이 열쇠를 가장 먼저** 봅니다.
          `repair_{닉}` 은 상태표에서 REPAIR 를 고르는 **그 순간** 적힙니다
          (script_profile.js 의 pick). 디바운스도, 다른 함수도 안 거쳐요.

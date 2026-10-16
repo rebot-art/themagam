@@ -2346,6 +2346,17 @@
     msg("adm-share-msg", "기본값을 넣어 두었어요 — [저장] 을 눌러야 적용돼요.");
   }
 
+  /* 🔄 전원 새로고침 — config/forceReload = {at} (script_reload.js 가 듣습니다) */
+  async function sendForceReload() {
+    if (!window.confirm("지금 접속 중인 모두의 화면이 바로 새로고침돼요.\n단톡에 미리 공지하셨나요?")) return;
+    try {
+      await db.ref("config/forceReload").set({ at: Date.now() });
+      msg("adm-force-msg", "보냈어요! 접속 중인 분들 화면이 곧 새로고침돼요 🔄");
+    } catch (e) {
+      msg("adm-force-msg", "보내지 못했어요. 방장 계정이 맞는지 확인해 주세요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   async function loadHello() {
     const ta = el("adm-hello");
     if (!ta) return;
@@ -3619,6 +3630,7 @@
     /* 🔐 입장 승인 · 🚫 내보내기 */
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
+    el("adm-force-send")?.addEventListener("click", sendForceReload);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
     el("adm-bnotice-save")?.addEventListener("click", saveBoardNotice);
     el("adm-bnotice-clear")?.addEventListener("click", clearBoardNotice);

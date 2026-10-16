@@ -953,6 +953,16 @@
         <div class="adm-msg" id="adm-hello-msg"></div>
       </div>
 
+      <!-- 🔄 전원 새로고침 (2026-10-16 — 콩) — 새 패치를 접속 중인 모두에게 한꺼번에 입힐 때 -->
+      <div class="adm-card">
+        <h2>🔄 전원 새로고침</h2>
+        <p class="adm-sub">누르면 <b>지금 접속 중인 모두</b>의 화면이 <b>팝업 없이 조용히</b> 새로고침돼요. <b>누르기 전에 단톡에 먼저 공지</b>해 주세요.
+          오늘 출석 도장이 있는 분은 <b>비밀번호 없이 자동으로 다시 들어오고</b>, 인사 시간도 +5분 드려요.
+          (어제 열어 둔 창은 안내 문구와 함께 로그인 화면으로 가요.) · <b>방장만</b> 누를 수 있어요.</p>
+        <button class="adm-btn" id="adm-force-send">지금 전원 새로고침</button>
+        <div class="adm-msg" id="adm-force-msg"></div>
+      </div>
+
       <!-- 📌 배경판 공지 (2026-10-07 — 콩) — 방 배경의 현황판 바로 위에 한 줄.
            config/boardNotice = { text, style, at }. 걸면 지금 방에 있는 모두에게 곧바로.
            ★ 방장만 (data-owner-only) — config 는 방장만 쓸 수 있습니다. -->
@@ -1138,7 +1148,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610160324"></script>
+  <script src="script_admin.js?v=202610160417"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

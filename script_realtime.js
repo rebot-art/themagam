@@ -3200,6 +3200,8 @@
       });
       /* 👋 인사 규칙 — 입장 도장이 찍힌 뒤에 시작 (script_greet.js) */
       try { window.greetStart?.({ day, prev }); } catch (e) {}
+      /* 🔄 8시간 자동 새로고침 시계 · 방장 전원 새로고침 신호 (script_reload.js) */
+      try { window.reloadStart?.(); } catch (e) {}
 
       /* 입장 기록 — 3시간에 한 번만 (들락날락은 안 적힙니다) */
       writeAttendLog("in");
