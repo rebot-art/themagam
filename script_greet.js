@@ -37,6 +37,7 @@
   const SOLO = () => !!window.SOLO;
   const ON = () => SOLO() || MAIN_ON;
   const TEST = /[?&]greetspeed=1/.test(location.search);
+  const RESET = /[?&]greetreset=1/.test(location.search);      // 혼자 방 시험용 — 오늘의 인사·빼먹음 기록을 지우고 다시 시작
   const MIN = TEST ? 1000 : 60000;               // "1분" 의 길이(ms)
   const T_WAIT = 10 * MIN;                       // 이때까지 말이 없으면 "n번째 출석입니다"
   const T_WARN = 15 * MIN;                       // 이때까지 없으면 "빼먹었어요"
@@ -171,6 +172,15 @@
       /* 혼자 방은 입장 절차가 없어서 입장 카드를 여기서 올립니다 */
       올리기("in", 문구("in", nick));
       try { DB().ref(`users/${nick}/attend/days/${day}`).set(true); } catch (e) {}
+    }
+    if (SOLO() && RESET) {
+      /* 시험 되돌리기: 오늘 빼먹음/인사 기록을 지웁니다 (혼자 방 전용) */
+      try { await DB().ref(`greetMiss/${nick}/${day}`).remove(); } catch (e) {}
+      try { await DB().ref(`attendance/${day}/${nick}/gAt`).remove(); } catch (e) {}
+      S.greeted = false;
+    } else if (SOLO() && !S.greeted) {
+      /* 혼자 방은 이전 기록을 안 넘겨 주니 직접 읽습니다 */
+      try { const g = await DB().ref(`attendance/${day}/${nick}/gAt`).once("value"); if (g.val()) S.greeted = true; } catch (e) {}
     }
     if (S.greeted) { 멈추기(); return; }
     try {
