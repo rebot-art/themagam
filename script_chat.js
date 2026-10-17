@@ -685,8 +685,8 @@
     if (data.type === "system") {
       _maybeRenderDateDivider(box, data.time || Date.now());
       /* 👋 인사 규칙 카드 (script_greet.js · 시안 A) — 입장 / 건필 / 기다림 / 경고 */
-      if (["in", "ok", "wait", "warn", "out"].includes(data.gk)) {
-        const ic = { in: "👋", ok: "🌱", wait: "⏳", warn: "🌸", out: "👋" }[data.gk];
+      if (["in", "ok", "wait", "warn", "out", "re"].includes(data.gk)) {
+        const ic = { in: "👋", ok: "🌱", wait: "⏳", warn: "🌸", out: "👋", re: "🌿" }[data.gk];
         box.insertAdjacentHTML("beforeend",
           `<div class="greet-card gk-${data.gk}"><span class="gc-ic">${ic}</span>` +
           `<span class="gc-t">${escapeHtml(data.msg)}</span><span class="gc-sp"></span></div>`);

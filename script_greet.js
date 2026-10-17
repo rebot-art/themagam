@@ -16,7 +16,12 @@
    이미 한 인사를 잊지 않아요. (창 안의 시계는 새로 시작해도 되지만, 인사했는가는 서버 기준)
 
    [콩이 정한 규칙]
-   · 인사 확인은 그날 **처음 입장할 때만**. 같은 날 재입장(새로고침 포함)은 규칙 적용 안 함.
+   · 인사 확인은 그날 **처음 입장할 때**. 같은 날 재입장(새로고침 포함)은 규칙 적용 안 함.
+     ★ 단, 직접 나갔다 **2시간 넘어** 다시 들어오면 "재접속 모드" (2026-10-17 콩): 인사하면
+       「17일, 재접속입니다. 파이팅!」 카드(gk:"re")가 뜨고, 안 해도 **아무 일도 없습니다** —
+       빼먹음(greetMiss)도, 기다림·경고 카드도, 읽기·쓰기도 없어요. 15분 안에 한 인사만 받습니다.
+       나간 시각은 attendance/{날}/{닉}/leftAt (나가기 버튼·창 닫을 때 모두 적습니다). 시각을 모르면 확인 안 함.
+       (새로고침 재입장·자정 넘긴 이어진 작업은 그대로 조용합니다.)
    · 새로고침(20시간 자동·방장 전체) 때문에 다시 로그인한 경우도 적용 안 함 (자정 넘겨 작업 중이던 사람).
    · 인사 = 내가 이 방에 보낸 모든 말(글·스티커·명령어). 스티커 종류를 따지지 않아요.
    · 휴가·개인사정인 날은 대상이 아닙니다.
@@ -42,12 +47,14 @@
   const RESET = /[?&]greetreset=1/.test(location.search);      // 혼자 방 시험용 — 오늘의 인사·빼먹음 기록을 지우고 다시 시작
   const MIN = TEST ? 1000 : 60000;               // "1분" 의 길이(ms)
   const T_WAIT = 10 * MIN;                       // 이때까지 말이 없으면 "n번째 출석입니다"
-  const T_WARN = 15 * MIN;                       // 이때까지 없으면 "빼먹었어요"
+  const T_WARN = 15 * MIN;                       // 이때까지 없으면 "빼먹었어요" (재접속 모드는 이때까지 받고 조용히 끝)
+  const T_AWAY = 120 * MIN;                      // 이만큼 나가 있다 돌아오면 "재접속" 인사 확인 (콩 결정 2026-10-17: 2시간)
+  const REGREET = /[?&]regreet=1/.test(location.search);       // 혼자 방 시험용 — 재접속 모드를 바로 켭니다
   const DT_CAP = 5 * MIN;                        // 틱 사이가 이보다 길면 잠들었던 것 — 5분까지만 쳐 줍니다
   const START_DAY = "2026-10-16";                // 이 날 이전은 규칙 밖(기록이 없어서 판단 불가)
   const COUNT_FROM = "2026-11-01";               // 이 날부터 횟수를 다시 셉니다
   const CAP = 10;                                // 횟수 표시 상한
-  const KINDS = ["in", "ok", "wait", "warn", "out"];   // out = 퇴장 카드 (script_core.js 가 씁니다)
+  const KINDS = ["in", "ok", "wait", "warn", "out", "re"];   // out = 퇴장 카드 (script_core.js 가 씁니다)
 
   const 나 = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
   const 날 = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
@@ -75,6 +82,7 @@
     if (kind === "ok")   return extra === "short" ? `오늘도 건필! ${nick}님` : `오늘도 건필! ${nick}님, ${n}번째 출석입니다.`;
     if (kind === "wait") return `${nick}님, ${n}번째 출석입니다.`;
     if (kind === "warn") return `${nick}님, 인사를 빼먹었어요. (${n}회)`;
+    if (kind === "re")   return `${Number(String(extra || "").slice(8)) || ""}일, 재접속입니다. 파이팅!`;
     return "";
   }
 
@@ -92,7 +100,7 @@
 
   async function 올리기(kind, text) {
     if (!S) return;
-    const key = `gr_${kind}_${S.nick}_${S.day}` + (kind === "in" ? `_${S.joinAt}` : "");
+    const key = `gr_${kind}_${S.nick}_${S.day}` + ((kind === "in" || kind === "re") ? `_${S.joinAt}` : "");
     const payload = { type: "system", msg: text, time: Date.now(), gk: kind, greetOf: S.nick };
     try {
       await DB().ref(`messages/${key}`).set(payload);
@@ -113,6 +121,7 @@
     S.alive += Math.min(Math.max(0, now - S.last), DT_CAP);
     S.last = now;
     if (!S.ready) return;                         // 서버 값(휴가·빼먹음)이 아직 안 왔어요
+    if (S.re) { if (S.alive >= T_WARN + S.extra) 멈추기(); return; }   // 재접속 모드 — 기다림·경고 없이 조용히 끝
     if (S.alive >= T_WAIT && !S.waited) { S.waited = true; 기다림알림(); }
     if (S.alive >= T_WARN + S.extra && !S.warned) { S.warned = true; 경고(); }
   }
@@ -147,6 +156,7 @@
     if (Number(data && data.time) < S.joinAt - 2000) return;     // 옛 기록은 인사가 아닙니다
     S.greeted = true;
     const nick = S.nick, day = S.day;
+    if (S.re) { await 올리기("re", 문구("re", nick, 0, day)); 멈추기(); return; }   // 재접속 인사 — 카드만, 기록은 없음
     const 이미경고 = S.warned;
     try { await DB().ref(`attendance/${day}/${nick}`).update({ gAt: Date.now() }); } catch (e) { console.warn("[greet gAt]", e); }
     if (이미경고) { 멈추기(); return; }                              // 이미 빼먹음이 남았어요 — 말 없이 둡니다
@@ -170,17 +180,23 @@
       greeted: !!(prev && prev.gAt), waited: false, warned: false, done: false,
       ready: false, miss: {}, n: 0
     };
-    /* ★ 인사 확인은 **그날 처음 입장할 때만** (콩 결정 2026-10-16). 오늘 입장 도장이 이미 있었으면(prev)
-         같은 날 재입장·새로고침·20시간 자동 새로고침이므로 규칙을 적용하지 않습니다. */
-    if (prev && (prev.firstAt || prev.at)) { 멈추기(); return; }
     /* ★ 새로고침(20시간 자동·방장 전체) 때문에 **다시 로그인한** 사람도 적용하지 않습니다 (콩 결정 2026-10-16).
          자정을 넘겨 한창 작업 중이다가 로그인 화면이 떠서 새로 들어온 경우, 인사를 새로 하라는 건 억울해요. */
     try { if (window.Reload?.cameFromReload?.()) { 멈추기(); return; } } catch (e) {}
+    /* ★ 인사 **빼먹음 확인**은 그날 처음 입장할 때만 (콩 결정 2026-10-16). 오늘 입장 도장이 이미 있었으면(prev)
+         같은 날 재입장이에요. 다만 **직접 나갔다 2시간 넘어** 돌아왔다면 "재접속 모드"(콩 결정 2026-10-17):
+         인사하면 재접속 카드만 띄우고, 안 해도 아무것도 세지 않습니다. */
+    if (prev && (prev.firstAt || prev.at)) {
+      const 떠난때 = Number(prev.leftAt || 0);
+      if (떠난때 > 0 && Date.now() - 떠난때 >= T_AWAY) { 재접속시작(); return; }
+      멈추기(); return;
+    }
     if (SOLO()) {
       /* 혼자 방은 입장 절차가 없어서 입장 카드를 여기서 올립니다 (새로고침으로 돌아온 경우는 조용히) */
       if (!window.__silentJoin) 올리기("in", 문구("in", nick));
       try { DB().ref(`users/${nick}/attend/days/${day}`).set(true); } catch (e) {}
     }
+    if (SOLO() && REGREET) { 재접속시작(); return; }       // 시험용: 혼자 방에서 재접속 모드를 바로 켭니다
     if (SOLO() && RESET) {
       /* 시험 되돌리기: 오늘 빼먹음/인사 기록을 지웁니다 (혼자 방 전용) */
       try { await DB().ref(`greetMiss/${nick}/${day}`).remove(); } catch (e) {}
@@ -214,6 +230,20 @@
     }
   }
 
+  /** 재접속 모드 — 서버를 읽지 않고(휴가·빼먹음 확인 없음) 인사만 기다립니다 */
+  function 타이머켜기() {
+    _타이머 = setInterval(틱, TEST ? 500 : 5000);
+    if (!_깨움붙임) {
+      _깨움붙임 = true;
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) 틱(); });
+    }
+  }
+  function 재접속시작() {
+    if (!S) return;
+    S.re = true; S.greeted = false; S.ready = true; S.last = Date.now();
+    타이머켜기();
+  }
+
   /** 방장이 일부러 새로고침을 시킨 사람 — 인사 시간 5분 보너스 */
   function 보너스(ms) { if (S) S.extra += Number(ms) || 5 * MIN; }
 
@@ -223,6 +253,7 @@
   window.greetBonus = 보너스;
   window.Greet = {
     KINDS, CAP, START_DAY, COUNT_FROM,
+    T_AWAY,
     _t: { 세기시작, 셈, 표시횟수, 문구, 틱, 시작, 인사함, state: () => S }
   };
 })();

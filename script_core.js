@@ -864,6 +864,22 @@ window.AppSession = AppSession;
       try { ok2 = navigator.sendBeacon(withAuth(stUrl), new Blob(["null"], { type: "text/plain" })); } catch(e) {}
       if (!ok2) fetch(withAuth(stUrl), { method: "POST", body: "null", keepalive: true });
     } catch(e) {}
+
+    /* [2026-10-17] 창을 닫을 때도 **나간 시각**(leftAt)을 출석 줄에 적어 둡니다 (best-effort).
+       몇 시간 뒤 다시 들어올 때 "2시간 넘게 나가 있었나"를 알아야 재접속 인사를 확인할 수 있어서예요.
+       나가기 버튼은 recordLeaveAttendance 가 이미 적습니다. 혼자 방은 출석 줄이 없어 건너뜁니다. */
+    try {
+      if (!window.SOLO) {
+        const 날짜 = window.__attendDay || (window.ymd ? window.ymd(Date.now()) : "");
+        if (날짜) {
+          const atUrl = `${firebaseConfig.databaseURL}/attendance/${날짜}/${encodeURIComponent(myNick)}.json?x-http-method-override=PATCH`;
+          const body = JSON.stringify({ leftAt: Date.now() });
+          let ok3 = false;
+          try { ok3 = navigator.sendBeacon(withAuth(atUrl), new Blob([body], { type: "text/plain" })); } catch(e) {}
+          if (!ok3) fetch(withAuth(atUrl), { method: "POST", body, keepalive: true });
+        }
+      }
+    } catch(e) {}
   }
 
   window._handleBeforeUnload = _handleBeforeUnload;
