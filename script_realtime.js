@@ -3187,6 +3187,20 @@
     if (!myNick) return;
     const day = ymd(Date.now());
 
+    /* ★ [2026-10-17 콩 "자정 넘겨 퇴근하면 새 날 도장이 찍혀요"] 이어진 작업은 도장을 새로 찍지 않습니다.
+         자정 전에 출근해 일하다가 새로고침(20시간·새 판·방장)으로 자정을 넘겨 돌아온 경우는
+         "어제 출근의 연장"이에요. 시간만 재고(새로고침 시계·접속 표시), 새 날짜의 출석·인사는 건드리지 않습니다.
+         몇 시간 뒤 나갔다 **새로 들어오면** 그때는 이 길이 아니라서 오늘 도장과 인사 확인이 정상으로 이뤄져요. */
+    const 이어짐 = !!window.__carryOver;
+    window.__carryOver = false;
+    if (이어짐) {
+      window.__attendDay = window.__carryDay || window.__attendDay || day;
+      try { window.reloadStart?.(); } catch (e) {}
+      try { updateStatus(true); } catch (e) {}
+      return;
+    }
+    window.__attendDay = day;           // 오늘 도장을 찍은 날 — 자정을 넘겨 나가도 퇴장 시각은 이 날에 적습니다
+
     try {
       // ---- 공용 로그 ----
       const aref = db.ref(`attendance/${day}/${myNick}`);
@@ -3283,8 +3297,11 @@
   async function recordLeaveAttendance() {
     if (!myNick) return;
     try {
-      const day = ymd(Date.now());
+      /* ★ [2026-10-17] 자정을 넘겨 나가도 퇴장 시각은 **출근 도장을 찍은 날**에 적습니다.
+           예전에는 나가는 날짜(ymd(now))에 적어서, 23시 출근 → 01시 퇴근이면 새 날짜 줄이 생겨 출석으로 보였어요. */
+      const day = window.__attendDay || ymd(Date.now());
       await db.ref(`attendance/${day}/${myNick}`).update({ leftAt: Date.now(), at: Date.now() });
+      window.__attendDay = "";
       /* [2026-08-14] 입장 기록으로 간소화되며 퇴장 로그는 안 적습니다 —
          출석부의 leftAt(위 한 줄)이면 충분해요 */
     } catch (e) { console.warn("[recordLeaveAttendance]", e); }

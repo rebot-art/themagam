@@ -352,7 +352,7 @@
         _머문보낸[day] = 머문;
         await db.ref(`attendance/${day}/${myNick}`).update({ m: 머문 });
         await db.ref(`users/${myNick}/attend/mins/${day}`).set(머문);
-      } catch (e) { /* 도장이 없는 날 등 — 조용히 넘깁니다 */ }
+      } catch (e) { delete _머문보낸[day]; /* 도장이 없는 날 등 — 조용히 넘깁니다. 나중에 도장이 찍히면 그때 쌓인 시간을 다시 보냅니다 */ }
     }
   }
 

@@ -81,6 +81,12 @@
       : "오늘자 출석 도장이 아직 없어요. 재로그인 해주세요.";
   }
 
+  /** 순수 판정: 새로고침 전 작업이 "어제 출근의 연장"인가 — 출근 도장 날이 오늘이 아니고 어제 이후일 때만.
+      (이틀 넘게 이어진 창은 연장으로 보지 않고 예전처럼 재로그인 안내) */
+  function 이어진날인가(기준날, 오늘, 어제) {
+    return !!(기준날 && 기준날 !== 오늘 && 기준날 >= 어제 && 기준날 < 오늘);
+  }
+
   /** 지금 새로고침해도 되는 조용한 순간인가 (쓰던 글이 없고 방금 타자를 안 쳤다) */
   function 조용한가(now) {
     try {
@@ -103,7 +109,7 @@
   function 실행(kind) {
     const nick = 나();
     try {
-      SS()?.setItem(K_RE, JSON.stringify({ nick, day: 날(Date.now()), kind, at: Date.now() }));
+      SS()?.setItem(K_RE, JSON.stringify({ nick, day: 날(Date.now()), stampDay: window.__attendDay || "", kind, at: Date.now() }));
     } catch (e) {}
     window.__reloading = true;                  // 퇴장 문구를 막습니다 (script_core.js 조용히드나드나)
     try { location.reload(); } catch (e) { window.__reloading = false; _진행 = false; }
@@ -223,6 +229,8 @@
     if (Date.now() - Number(m.at || 0) > 2 * 60 * 1000) return;
     _마커 = m;
     const 오늘 = 날(Date.now());
+    const 기준날 = m.stampDay || m.day || 오늘;                         // 이 작업의 출근 도장이 찍힌 날
+    const 이어짐 = 이어진날인가(기준날, 오늘, 날(Date.now() - 24 * 3600 * 1000));
 
     if (SOLO()) { window.__silentJoin = true; return; }   // 혼자 방은 입장 절차가 없어요 (문구만 막음)
 
@@ -239,7 +247,7 @@
       const [owner, ban, stamp] = await Promise.all([
         db.ref("nickOwner/" + m.nick).once("value"),
         db.ref("config/ban/" + m.nick).once("value"),
-        db.ref(`attendance/${오늘}/${m.nick}`).once("value")
+        db.ref(`attendance/${이어짐 ? 기준날 : 오늘}/${m.nick}`).once("value")
       ]);
       if (owner.val() !== user.uid || ban.val()) { 안내걸기(안내문(m.kind, m.day, 오늘, "login")); return; }
       if (!stamp.exists()) { 안내걸기(안내문(m.kind, m.day, 오늘)); return; }
@@ -249,12 +257,14 @@
       input.value = m.nick;
       window.__skipAuth = true;       // 비밀번호 확인은 건너뜁니다 (이 탭의 로그인이 이미 증거)
       window.__silentJoin = true;     // 입장 문구도 건너뜁니다
+      if (이어짐) { window.__carryOver = true; window.__carryDay = 기준날; }   // 자정 넘긴 이어진 작업 — 새 날 도장은 안 찍습니다
       try { await window.join?.(); }
-      finally { window.__skipAuth = false; }
+      finally { window.__skipAuth = false; window.__carryOver = false; }
     } catch (e) {
       console.warn("[reentry]", e);
       window.__skipAuth = false;
       window.__silentJoin = false;
+      window.__carryOver = false;
     }
   }
 
@@ -266,7 +276,7 @@
     cameFromReload: () => !!_마커,
     T_AUTO, T_VER, BONUS_MS,
     takeBonus: 보너스가져가기,
-    _t: { 안내문, 조용한가, 새판때인가, 새판검사, 월일, 일, 예약, 실행, 시작, 다시들어오기, 자동검사,
+    _t: { 안내문, 이어진날인가, 조용한가, 새판때인가, 새판검사, 월일, 일, 예약, 실행, 시작, 다시들어오기, 자동검사,
           state: () => ({ _t0, _진행, 마커: _마커 }) }
   };
 })();
