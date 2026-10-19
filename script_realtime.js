@@ -2207,8 +2207,8 @@
   }
 
   /* 🔤 꾸민 카드의 상태표 — multiT 를 multitasking 으로 풀어 씁니다 (2026-10-19 콩).
-     ★ 지금은 **혼자 방에서만** 보입니다(시험 중). 본방에도 켜려면 아래 MULTI_FULL_MAIN 을 true 로. */
-  const MULTI_FULL_MAIN = false;
+     ★ 혼자 방에서 시험을 마치고 2026-10-19 본방도 켰습니다. 되돌리려면 아래 MULTI_FULL_MAIN 을 false 로. */
+  const MULTI_FULL_MAIN = true;
   function 상태이름풀기(label) {
     const s = String(label || "");
     return (window.SOLO || MULTI_FULL_MAIN) ? s.replace(/multiT/g, "multitasking") : s;
