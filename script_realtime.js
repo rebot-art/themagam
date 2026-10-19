@@ -1745,6 +1745,12 @@
              기본 자리일 때만 프사 칸 안(프사를 따라다님)에 둡니다 */
           const decoRootExtra = (stkP.b ? decoB : "") + (stkP.e ? decoE : "");
           const decoAvatar = (stkP.b ? "" : decoB) + (stkP.e ? "" : decoE);
+          /* ★ [2026-10-19 콩 "왼쪽 허리 스티커가 접속점을 가려요"] 기본 자리의 D 는 **아래칸 안**에 둡니다 —
+               아래칸 윗변을 닻으로 삼아 그 바로 위에 앉아서, 카드 모양(세로·가로)과 아래칸 키가 달라도
+               왼쪽 위의 접속점을 안 가립니다 (예전엔 카드 맨 아래에서 46px 위라 아래칸이 낮은 가로형에서 겹쳤어요).
+               직접 옮긴 D(자유 배치)는 카드 기준 좌표라 예전처럼 카드에 직접 붙입니다. */
+          const decoFoot = stkP.d ? "" : decoD;
+          const decoRootD = stkP.d ? decoD : "";
 
           /* 연결 상태 안테나 — 이 사람이 지금 붙어 있는가.
              disconnectedAt 이 남아 있으면 "끊겨서 유예 중"이라는 뜻입니다. */
@@ -1923,7 +1929,7 @@
                    왼쪽 위 구석입니다. 그래서 .card-body 바깥, 카드 바로
                    아래에 둡니다 (프사 칸 안에 있으면 프사를 따라다녀요). -->
               ${window.workTagChipHtml?.(row, isMine) || ""}
-              ${decoA}${decoC}${decoD}${decoRootExtra}
+              ${decoA}${decoC}${decoRootD}${decoRootExtra}
               ${window.cardMemoHtml?.(row) || ""}
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
@@ -1940,7 +1946,7 @@
                   <div class="card-state-row">
                     <span class="card-state ${cls}${isMine ? " is-clickable" : ""}"${
                       isMine ? ' data-pick-status="1" role="button" tabindex="0" title="상태 바꾸기"' : ""
-                    }>${escapeHtml(row.statusLabel || statusLabel(st))}</span>
+                    }>${escapeHtml(상태이름풀기(row.statusLabel || statusLabel(st)))}</span>
                     <!-- 폭 기준자 — 눈에는 안 보이지만 자리는 차지합니다.
                          가장 긴 상태(🔥초집중🔥)를 모든 카드에 똑같이 심어 두면,
                          상태가 짧은 사람의 카드도 오른쪽 칸 폭이 같아집니다.
@@ -1955,6 +1961,7 @@
               <div class="card-foot"${inkStyle}${isMine
                 ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"`
                 : ""}>
+                ${decoFoot}
                 <span class="card-conn${connCls(row, connOk)}" aria-hidden="true"
                       title="${connTitle(row, connOk)}">
                   <i></i><i></i><i></i><i></i>
@@ -2197,6 +2204,14 @@
     const cls = d === 0 ? " is-day" : d <= 3 ? " is-hot" : d <= 7 ? " is-warm" : "";
     const txt = d === 0 ? "D-DAY" : `D-${d}`;
     return `<span class="card-dday${cls}" title="디데이 ${n}개 — 가장 가까운 것까지 ${d === 0 ? "오늘" : d + "일"}">🚩 ${txt}${n > 1 ? `<i>·${n}</i>` : ""}</span>`;
+  }
+
+  /* 🔤 꾸민 카드의 상태표 — multiT 를 multitasking 으로 풀어 씁니다 (2026-10-19 콩).
+     ★ 지금은 **혼자 방에서만** 보입니다(시험 중). 본방에도 켜려면 아래 MULTI_FULL_MAIN 을 true 로. */
+  const MULTI_FULL_MAIN = false;
+  function 상태이름풀기(label) {
+    const s = String(label || "");
+    return (window.SOLO || MULTI_FULL_MAIN) ? s.replace(/multiT/g, "multitasking") : s;
   }
 
   function statusLabel(code) {

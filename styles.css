@@ -9001,6 +9001,9 @@ html.member-open .cards-area{ padding-right: 250px; }
 .card-deco.deco-c{ bottom: -8px; right: 12px; transform: rotate(-5deg); }
 /* [조정 2026-08-13] D 를 34px → 46px 로 — ⏱ 작업 시간 줄과 좀 더 떨어지게 */
 .card-deco.deco-d{ left: -8px;  bottom: 46px; transform: rotate(7deg); }
+/* [2026-10-19 콩 "왼쪽 허리가 접속점을 가려요"] 기본 자리의 D 는 아래칸 안에 들어가 **아래칸 윗변**이 닻입니다.
+   접속점(왼쪽 위, 아래칸 윗변에서 9px 아래)보다 위에 앉아서, 카드 모양·아래칸 키가 달라도 안 가립니다. */
+.card-foot > .card-deco.deco-d{ left: -8px; top: -24px; bottom: auto; transform: rotate(7deg); }
 /* [추가 2026-08-13] E — B 의 아랫동네. 프사 칸 기준이라 프사를 따라다닙니다.
    [조정 당일] 더 왼쪽으로(-14 → -26px), 기울기 반대로(+4 → -4도) —
    프사 그림을 덜 가리고 모서리 밖으로 삐져나온 스티커 맛이 삽니다 */

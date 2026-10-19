@@ -2227,7 +2227,8 @@ function bindProfilePanel() {
       el.dataset.custom = p ? "1" : "0";
       el.dataset.r = p ? p.r : 0;
       if (p) { el.dataset.x = p.x; el.dataset.y = p.y; if (p.w) el.dataset.w = p.w; }
-      ((k === "b" || k === "e") && !p ? wrap : clone).appendChild(el);
+      /* D 의 기본 자리는 아래칸 안 (진짜 카드와 같은 규칙 — script_realtime.js decoFoot) */
+      ((k === "b" || k === "e") && !p ? wrap : (k === "d" && !p ? (clone.querySelector(".card-foot") || clone) : clone)).appendChild(el);
     });
 
     /* 탭·안내 */
