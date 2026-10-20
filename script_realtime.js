@@ -2106,9 +2106,20 @@
      ★ 화면 공유 카드 키도 같이 다시 잽니다 (사람 카드 키를 따라가는 카드라).
      ===================================================================== */
   window.relayoutCards = function () {
+    _띠금지N = 0;   // 손으로(↻)·배율 바꿈 등 "진짜 다시 맞추기"는 금지를 풉니다
     try { fixLonelyCard(true); } catch (e) {}
     try { window.syncShareCardHeights?.(); } catch (e) {}
   };
+
+  /* ★★★ [고침 2026-10-20 — 콩 "110% 로 키우고 7명일 때 화면이 막 번쩍거려"]
+     [왜] 줄바꿈 띠를 넣으면 한 줄이 늘어 → 세로 스크롤바가 생기고 → 마당 폭이 스크롤바만큼 좁아져
+          → 한 줄 장수(C)가 달라져 → 띠가 필요 없어지고 → 띠를 빼면 스크롤바가 사라지고 → 폭이 넓어지고
+          → 다시 띠가 필요해지는 … 끝없이 도는 고리였습니다. (110% 에서 7명·6명처럼 폭이 아슬아슬할 때만)
+     [고침] 폭 변화로 다시 맞추기가 3초 안에 4번 돌면 고리로 보고 **띠를 빼고 멈춥니다.**
+          띠가 없으면 마지막 카드 한 장이 혼자 내려갈 뿐, 깜빡임은 없어요.
+          사람 수가 달라지거나 배율을 바꾸거나 ↻ 를 누르면 금지가 풀리고 다시 맞춥니다. */
+  let _띠금지N = 0;            // 0 이면 금지 아님, 아니면 "금지를 건 때의 카드 수"
+  const _띠흔들 = [];          // 폭 변화로 다시 맞춘 시각들
 
   function fixLonelyCard(force) {
     const list = document.getElementById("user-cards");
@@ -2135,6 +2146,8 @@
 
     const cards = list.querySelectorAll(":scope > .user-card");
     const n = cards.length;
+    if (_띠금지N && n !== _띠금지N) _띠금지N = 0;   // 사람 수가 달라졌으면 금지 해제
+    if (_띠금지N) return;                            // 고리로 판정된 상태 — 띠 없이 둡니다
     if (n < 4) return;
     const first = cards[0];
     if (!first) return;
@@ -2187,7 +2200,19 @@
       last = w;
       _마당폭 = 0;
       clearTimeout(timer);
-      timer = setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 80);
+      timer = setTimeout(() => {
+        const t = Date.now();
+        _띠흔들.push(t);
+        while (_띠흔들.length && t - _띠흔들[0] > 3000) _띠흔들.shift();
+        if (_띠흔들.length >= 4) {                    // 3초에 4번 → 스크롤바 고리
+          _띠흔들.length = 0;
+          _띠금지N = list.querySelectorAll(":scope > .user-card").length;
+          list.querySelector(".card-row-break")?.remove();
+          return;
+        }
+        try { fixLonelyCard(true); } catch (e) {}
+        try { window.syncShareCardHeights?.(); } catch (e) {}
+      }, 80);
     }).observe(list);
   })(0);
 
@@ -2211,7 +2236,10 @@
   const MULTI_FULL_MAIN = true;
   function 상태이름풀기(label) {
     const s = String(label || "");
-    return (window.SOLO || MULTI_FULL_MAIN) ? s.replace(/multiT/g, "multitasking") : s;
+    /* 💡 [2026-10-20 콩] 풀어 쓸 때는 앞뒤 이모지도 전구로 (💻multiT📓 → 💡multitasking💡) */
+    return (window.SOLO || MULTI_FULL_MAIN)
+      ? s.replace(/💻multiT📓/g, "💡multitasking💡").replace(/multiT/g, "multitasking")
+      : s;
   }
 
   function statusLabel(code) {
