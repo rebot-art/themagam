@@ -1515,6 +1515,21 @@
   /* 스무 분마다 한 칸씩 넘어가는 상태 무늬 — 대체로 쓰고, 가끔 쉽니다 */
   const HELPER_STATUS = ["writing", "writing", "focus", "writing", "rest", "writing", "multi", "writing"];
   let _helperCfg = null, _helperOn = false;
+  /* 🎲 [2026-10-23 콩 "지원군이 늘 같은 순서로 떠요"] 접속할 때마다 한 번 섞고, 그 접속 동안은 그대로.
+     ★ 앞에서부터 잘라 쓰니 사람이 들고 나도 남은 지원군은 그대로이고 맨 뒤 카드만 늘고 줄어요(카드가 흔들리지 않음).
+     ★ 서버를 안 읽습니다 — 화면 안에서만 섞어요. */
+  let _helperOrder = null;
+  function 지원군차례() {
+    if (!_helperOrder) {
+      const a = HELPER_DEFAULT.map((_, i) => i);
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      _helperOrder = a;
+    }
+    return _helperOrder;
+  }
 
   function 지원군시험수() {
     if (!window.SOLO) return 0;
@@ -1562,13 +1577,15 @@
     if (!몇) return data;
     const out = Object.assign({}, data);
     const 분 = Math.floor(now / 60000);
-    지원군목록().slice(0, 몇).forEach((h, i) => {
-      if (out[h.name]) return;                       // 같은 닉의 진짜 멤버가 있으면 양보
+    const 전체 = 지원군목록();
+    지원군차례().slice(0, 몇).forEach((k, i) => {
+      const h = 전체[k];                             // k = 원래 번호(상태·작업시간 무늬는 이 번호를 따라갑니다), i = 놓이는 자리
+      if (!h || out[h.name]) return;                 // 같은 닉의 진짜 멤버가 있으면 양보
       out[h.name] = {
         _helper: true,
         _prof: { cardBg: h.bg, photo: h.photo },
-        status: HELPER_STATUS[(Math.floor(분 / 20) + i * 3) % HELPER_STATUS.length],
-        workMs: (((분 + i * 83) % 420) + 12) * 60000,
+        status: HELPER_STATUS[(Math.floor(분 / 20) + k * 3) % HELPER_STATUS.length],
+        workMs: (((분 + k * 83) % 420) + 12) * 60000,
         todayGoalText: h.goal,
         lastSeen: 분 * 60000,                        // 분 단위로만 바뀌게 (카드를 초마다 갈지 않게)
         joinedAt: 8e15 + i                           // 늘 맨 뒤, 정해진 차례로
@@ -3226,6 +3243,17 @@
        23:30 입장 → 00:10 퇴근이 이틀로 찍히니 그건 하지 마세요.
      ===================================================================== */
 
+  /* 🔗 어제 출근의 연장인가 — 어제 줄에 출근 도장이 있고, 나간 지 60분이 안 됐으면 참 (콩 결정 2026-10-23) */
+  const 이어짐_분 = 60;
+  function 이어진작업인가(어제줄, 지금) {
+    if (!어제줄 || !(어제줄.firstAt || 어제줄.at)) return false;
+    const 떠난때 = Number(어제줄.leftAt || 0);
+    if (!(떠난때 > 0)) return false;
+    const 간격 = 지금 - 떠난때;
+    return 간격 < 이어짐_분 * 60000;
+  }
+  window.__이어진작업인가 = 이어진작업인가;
+
   async function recordAttendance() {
     if (!myNick) return;
     const day = ymd(Date.now());
@@ -3249,6 +3277,23 @@
       const aref = db.ref(`attendance/${day}/${myNick}`);
       const prevSnap = await aref.once("value");
       const prev = prevSnap.val();
+      /* ★★ [2026-10-23 콩 "자정까지 작업하다 잠깐 재접속했는데 인사 확인이 떴어요"]
+           오늘 줄이 아직 없는데(=새 날 첫 입장처럼 보이는데), 어제 줄의 퇴장 시각이 60분 안이면
+           어제 작업이 이어진 거예요. 새 도장도 인사 확인도 하지 않고, 어제 줄의 퇴장 표시만 지웁니다.
+           (60분이 넘어 돌아오면 지금처럼 새 날 도장 + 인사 확인) — 어제 줄 한 줄만 더 읽습니다. */
+      if (!(prev && (prev.firstAt || prev.at))) {
+        try {
+          const 어제 = ymd(Date.now() - DAY_MS);
+          const ysnap = await db.ref(`attendance/${어제}/${myNick}`).once("value");
+          if (이어진작업인가(ysnap.val(), Date.now())) {
+            window.__attendDay = 어제;
+            await db.ref(`attendance/${어제}/${myNick}`).update({ leftAt: null });
+            try { window.reloadStart?.(); } catch (e) {}
+            try { updateStatus(true); } catch (e) {}
+            return;
+          }
+        } catch (e) { console.warn("[이어진 작업 확인]", e); }
+      }
       /* ★ [2026-10-16] set → update. 인사 도장(gAt)·머문 분(m)·방장 인정(ok)을
            같은 날 다시 들어와도 지우지 않기 위해서예요. 퇴장 시각만 비웁니다(예전 set 과 같은 효과). */
       await aref.update({

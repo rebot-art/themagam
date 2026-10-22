@@ -1084,6 +1084,15 @@
                  }</td>${vacCell}${cells}</tr>`;
       }).join("");
 
+      /* 🏅 개근 명단은 그래프를 접어 둬도 맞춥니다 (2026-10-23 — 콩 "그래프를 열어야만 10월이 떠요")
+         ---------------------------------------------------------------
+         9월 22일에 배지 계산을 "펼쳤을 때만"으로 옮기면서, 같은 블록 안에 있던 명단 적기까지 같이 접혔어요.
+         명단은 표가 이미 낸 ✅ 로 거르기만 하니 **서버를 새로 읽을 일이 없습니다**(rateRows 그대로).
+         ★ 배지(null)는 건드리지 않아요 — 이미 굳힌 배지는 그대로 둡니다.
+         ★ 이름이 달라졌을 때만 서버에 쓰고, 같은 명단이면 서버를 읽지도 않습니다(_명단본값).
+         ★ 기다리지 않고(await 없음) 부릅니다 — 표 그리기를 늦추지 않아요. */
+      명단굳히기(ymKey, rateRows, null);
+
       /* =====================================================================
          📊 그래프·배지는 **펼쳤을 때만** (2026-09-22 — 콩)
          ---------------------------------------------------------------------
@@ -1783,6 +1792,8 @@
     return [달이름(now), 달이름(지난)];
   }
 
+  const _명단본값 = {};   // { "2026-10": 마지막으로 서버와 맞춘 명단 글 } — 같은 명단이면 서버를 안 읽습니다 (2026-10-23)
+
   async function 명단굳히기(ymKey, rateRows, 배지) {
     try {
       /* 옛 달도, 앞달도 지나갑니다 — 최근두달() 은 지난달·이번달 둘뿐이라
@@ -1795,6 +1806,9 @@
       const 명단 = rateRows.filter(r => r.state === "ok" && r.need > 0 && !r.out)
                           .map(r => r.n)
                           .sort((a, b) => a.localeCompare(b, "ko"));
+      /* ★ [2026-10-23 콩] 배지 없이(null) 부르는 "명단만 맞추기"는 지난번과 같은 명단이면 서버를 아예 안 읽습니다. */
+      const 명단글 = JSON.stringify(명단);
+      if (배지 === null && _명단본값[ymKey] === 명단글) return;
       const 옛 = (await db.ref(`honors/${ymKey}`).once("value")).val() || {};
       const 옛명단 = Array.isArray(옛.list) ? 옛.list : (옛.list ? Object.values(옛.list) : []);
       const 옛배지 = 옛.badges || {};
@@ -1803,19 +1817,20 @@
          배지가 사라져요). */
       const 새배지 = (배지 === null) ? 옛배지 : (배지 || {});
       if (JSON.stringify(옛명단) === JSON.stringify(명단) &&
-          JSON.stringify(옛배지) === JSON.stringify(새배지)) return;   // 그대로면 안 씀
+          JSON.stringify(옛배지) === JSON.stringify(새배지)) { _명단본값[ymKey] = 명단글; return; }   // 그대로면 안 씀
       /* 아무도 없으면 노드를 통째로 지웁니다 — 빈 목록을 남겨 두면
          배경판이 "달성자 0명" 칸을 괜히 그립니다.
          ★ 규칙이 list·at 를 요구해서(보안규칙 honors/$ym), 개근이 아무도
            없는 달에는 배지도 못 실립니다 — 달 초라 어차피 배지도 의미가
            없는 때라 그대로 둡니다. */
-      if (!명단.length) { await db.ref(`honors/${ymKey}`).remove(); return; }
+      if (!명단.length) { await db.ref(`honors/${ymKey}`).remove(); _명단본값[ymKey] = 명단글; return; }
       await db.ref(`honors/${ymKey}`).set({
         list: 명단,
         badges: 새배지,
         at: firebase.database.ServerValue.TIMESTAMP,
         by: (window.myNick || window.ADMIN_NICK || "")
       });
+      _명단본값[ymKey] = 명단글;
     } catch (e) { console.warn("[adm honors]", e); }
   }
 
@@ -3524,6 +3539,7 @@
     });
     el("adm-att-reload")?.addEventListener("click", () => {
       _굳힌달.clear();                       // 🎖️ 배지도 다시 뽑습니다
+      for (const k in _명단본값) delete _명단본값[k];   // 🏅 명단도 서버와 다시 맞춥니다
       loadAttendance(_attOffset, { 다시읽기: true });
     });
     el("adm-att-prev")?.addEventListener("click", () => loadAttendance(_attOffset + 1));
