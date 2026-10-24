@@ -12789,11 +12789,16 @@ html[data-lite] .user-card.share-card,
 }
 /* 🆕 새 카드 메모 — 빈 카드에 메모와 닉만. 옆 카드와 키를 맞춰 섭니다. */
 .user-card.memo-card{
-  pointer-events: none;
+  pointer-events: auto;           /* [2026-10-24 콩] 응원 스티커를 더블클릭으로 붙이려면 손이 닿아야 합니다 — 눌러서 일어나는 일은 여전히 없어요 */
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; gap: 6px; min-height: 96px;
   align-self: stretch;            /* 카드 마당이 위로 붙여 세우는 줄이라, 옆 카드 키만큼 늘립니다 */
 }
+.user-card.memo-card:hover{ border-color: var(--border); }   /* 눌러도 반응이 없다는 느낌 그대로 — 테두리색을 안 바꿉니다 */
+/* 🔥 응원 스티커 — 새 카드 메모의 윗변 (화공 카드와 같은 .share-cheers: 크기·자리도 같은 규칙) (2026-10-24 콩) */
+.user-card.memo-card{ overflow: visible; }
+/* ★ 단순 카드는 .lite-in 아닌 자식을 !important 로 감춥니다 — 응원 줄만 더 센 선택자로 엽니다 */
+.user-card.lite-card.memo-card > .share-cheers{ display: flex !important; }
 .memo-card-t{
   font-family: "Nanum Pen Script", "Gaegu", cursive; font-size: 28px; line-height: 1.15;
   white-space: pre-line; color: var(--text); padding: 0 10px; max-width: 100%; overflow-wrap: anywhere;

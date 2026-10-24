@@ -46,6 +46,11 @@
   const KINDS = ["fire", "thumb", "star", "heart"];
   const KIND_LABEL = { fire: "🔥 불꽃", thumb: "👍 따봉", star: "⭐ 별", heart: "❤️ 하트" };
   const KIND_EMOJI = { fire: "🔥", thumb: "👍", star: "⭐", heart: "❤️" };
+  /* 🆕 [2026-10-24 콩] 새 카드 메모에도 같은 응원 — 서버에는 종류 이름 앞에 m 을 붙여 따로 적습니다
+     (mfire · mthumb · mstar · mheart). 같은 닉의 화공 카드와 **서로 안 섞여요.**
+     ★ 보안규칙의 $kind 검사도 이 넷을 허용해야 합니다 (보안규칙.json). */
+  const MKINDS = KINDS.map(k => "m" + k);
+  const ALL_KINDS = KINDS.concat(MKINDS);
 
   /* 그림 — 전부 64×62 판에 40×38 로 그립니다 (프로필 하트와 같은 크기) */
   const HEART_PATH = "M32 57 C14 44 3 32 5 19 C7 8 20 4 32 15 C44 4 57 8 59 19 C61 32 50 44 32 57Z";
@@ -69,6 +74,8 @@
     heart: sticker(HEART_PATH, "#e6323c", `<path d="M14 20 C16 14 21 12 25 13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`)
   };
   const COLOR = { fire: "#f0642b", thumb: "#1f6fd1", star: "#f2a51c", heart: "#e6323c" };
+  /* 메모용 종류는 그림·색·이름이 짝(화공용)과 똑같습니다 */
+  MKINDS.forEach(k => { const b = k.slice(1); KIND_LABEL[k] = KIND_LABEL[b]; KIND_EMOJI[k] = KIND_EMOJI[b]; SVG[k] = SVG[b]; COLOR[k] = COLOR[b]; });
 
   let _day = "", _onRef = null, _mineRef = null, _byRef = null;
   let _on   = {};        // { 받는닉: { 종류: true } }
@@ -163,11 +170,15 @@
   function renderCheers() {
     const list = el("user-cards");
     if (!list) return;
-    list.querySelectorAll(".share-card[data-share-nick]").forEach(card => {
-      const nick = card.getAttribute("data-share-nick");
+    /* 🖥 화공 카드 · 🆕 새 카드 메모 — 같은 윗변, 같은 크기(CSS 가 .share-cheers 하나로 둘 다 맞춥니다) */
+    [
+      { sel: ".share-card[data-share-nick]", attr: "data-share-nick", 종류들: KINDS },
+      { sel: ".memo-card[data-memo-of]",     attr: "data-memo-of",     종류들: MKINDS }
+    ].forEach(({ sel, attr, 종류들 }) => list.querySelectorAll(sel).forEach(card => {
+      const nick = card.getAttribute(attr);
       const mine = nick === me();
       let row = card.querySelector(":scope > .share-cheers");
-      const kinds = KINDS.filter(k => hasCheer(nick, k));
+      const kinds = 종류들.filter(k => hasCheer(nick, k));
       if (!kinds.length) { if (row) row.remove(); return; }
       if (!row) {
         row = document.createElement("div");
@@ -188,21 +199,22 @@
           b.setAttribute("data-cheer-kind", kind);
           b.innerHTML = SVG[kind] + (mine ? `<span class="card-heart-n" style="color:${COLOR[kind]}"></span>` : "");
           /* 종류 순서를 지켜 끼워 넣습니다 */
-          const after = Array.from(row.children).find(c => KINDS.indexOf(c.getAttribute("data-cheer-kind")) > KINDS.indexOf(kind));
+          const after = Array.from(row.children).find(c => 종류들.indexOf(c.getAttribute("data-cheer-kind")) > 종류들.indexOf(kind));
           row.insertBefore(b, after || null);
           _shown.add(key);
         }
+        const 곳 = MKINDS.includes(kind) ? "메모" : "화면";
         if (mine) {
           const n = myCount(kind);
           const nEl = b.querySelector(".card-heart-n");
           if (nEl) nEl.textContent = n > 1 ? String(n) : "";
           b.title = `${KIND_LABEL[kind]} ${n}명 — 눌러서 누가 보냈는지 봐요`;
         } else {
-          b.title = `${nick} 님 화면에 ${KIND_LABEL[kind]} 응원`;
+          b.title = `${nick} 님 ${곳}에 ${KIND_LABEL[kind]} 응원`;
         }
         b.setAttribute("aria-label", b.title);
       });
-    });
+    }));
   }
 
   /* ---------------------------------------------------------------
@@ -212,7 +224,7 @@
   async function sendCheer(to, kind, card) {
     const from = me();
     to = String(to || "").trim();
-    if (!from || !to || !window.db || !KINDS.includes(kind)) return;   // 나에게도 됩니다
+    if (!from || !to || !window.db || !ALL_KINDS.includes(kind)) return;   // 나에게도 됩니다
     if (sentTo(to, kind)) { window.heartToast?.(`오늘 이미 ${KIND_LABEL[kind]} 붙였어요`); return; }   // ★ 하루 한 번
     if (_busy) return;
     _busy = true;
@@ -239,17 +251,17 @@
   /* ---------------------------------------------------------------
      고르기 판 — 더블클릭한 자리에 넷
      --------------------------------------------------------------- */
-  function openPicker(nick, card, x, y) {
+  function openPicker(nick, card, x, y, memo) {
     closePicker(); closePop();
     const p = document.createElement("div");
     p.className = "share-cheer-picker";
     p.setAttribute("role", "dialog");
-    p.innerHTML = `<div class="share-cheer-picker-h">${nick === me() ? "내 화면에 붙이기" : esc(nick) + " 님 화면에 응원"}</div>
+    p.innerHTML = `<div class="share-cheer-picker-h">${nick === me() ? `내 ${memo ? "메모" : "화면"}에 붙이기` : esc(nick) + ` 님 ${memo ? "메모" : "화면"}에 응원`}</div>
       <div class="share-cheer-picker-row">${KINDS.map(k =>
         `<button type="button" data-cheer-pick="${k}" title="${KIND_LABEL[k]}" aria-label="${KIND_LABEL[k]}">${SVG[k]}</button>`).join("")}</div>`;
     document.body.appendChild(p);
     _picker = p;
-    p.__nick = nick; p.__card = card;
+    p.__nick = nick; p.__card = card; p.__memo = !!memo;
     const w = p.offsetWidth || 200, h = p.offsetHeight || 70;
     let left = x - w / 2, top = y - h - 10;
     if (left < 8) left = 8;
@@ -289,7 +301,7 @@
     const total = rows.reduce((s, r) => s + r.n, 0);
     if (!total) { closePop(); return; }
     _pop.innerHTML = `
-      <div class="card-heart-pop-h" style="color:${COLOR[_popKind]}">${KIND_LABEL[_popKind]} 내 화면에 <b>${total}</b></div>
+      <div class="card-heart-pop-h" style="color:${COLOR[_popKind]}">${KIND_LABEL[_popKind]} 내 ${MKINDS.includes(_popKind) ? "메모에" : "화면에"} <b>${total}</b></div>
       <ul>${rows.map(r =>
         `<li><span>${esc(r.from)}</span>${r.n > 1 ? `<span class="x" style="color:${COLOR[_popKind]}">×${r.n}</span>` : ""}</li>`).join("")}
       </ul>
@@ -314,16 +326,17 @@
         openPop(kind, b);
       });
 
-      /* 남의 화공 카드 더블클릭 → 고르기 판. 내 것의 단추들은 비켜 줍니다. */
+      /* 남의 화공 카드 · 새 카드 메모 더블클릭 → 고르기 판. 내 것의 단추들은 비켜 줍니다. */
       list.addEventListener("dblclick", (e) => {
-        const card = e.target.closest(".share-card[data-share-nick]");
+        const card = e.target.closest(".share-card[data-share-nick], .memo-card[data-memo-of]");
         if (!card) return;
         if (e.target.closest("[data-share-stop], [data-share-switch], [data-blur-open], [data-cheer-open], .share-cheers")) return;
-        const nick = card.getAttribute("data-share-nick");
+        const memo = card.classList.contains("memo-card");
+        const nick = card.getAttribute(memo ? "data-memo-of" : "data-share-nick");
         if (!nick) return;                    // 내 카드도 됩니다 (화공 홍보)
         e.preventDefault(); e.stopPropagation();
         try { window.getSelection()?.removeAllRanges(); } catch (x) {}
-        openPicker(nick, card, e.clientX, e.clientY);
+        openPicker(nick, card, e.clientX, e.clientY, memo);
       });
     }
 
@@ -331,9 +344,9 @@
       const pick = e.target.closest("[data-cheer-pick]");
       if (pick && _picker) {
         e.preventDefault(); e.stopPropagation();
-        const nick = _picker.__nick, card = _picker.__card;
+        const nick = _picker.__nick, card = _picker.__card, memo = _picker.__memo;
         closePicker();
-        sendCheer(nick, pick.getAttribute("data-cheer-pick"), card);
+        sendCheer(nick, (memo ? "m" : "") + pick.getAttribute("data-cheer-pick"), card);
         return;
       }
       if (_picker && !e.target.closest(".share-cheer-picker")) closePicker();
@@ -395,7 +408,7 @@
     list.__cheerWatched = true;
     new MutationObserver(muts => {
       /* 내가 붙인 스티커 줄 때문에 또 도는 건 걸러냅니다 */
-      if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && n.classList?.contains("share-card")))) return;
+      if (!muts.some(m => Array.from(m.addedNodes).some(n => n.nodeType === 1 && (n.classList?.contains("share-card") || n.classList?.contains("memo-card"))))) return;
       /* ★ 미루지 않습니다 — MutationObserver 는 화면을 그리기 **전**에 불리므로
          여기서 바로 붙이면 스티커가 한 프레임도 안 비어요. setTimeout 으로
          미뤘더니 그 사이 한 번 그려져서 스티커가 깜빡였습니다 (2026-09-30). */
