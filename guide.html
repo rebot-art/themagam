@@ -151,6 +151,12 @@
 /* [2026-08-22] 머리말 알약이 열 개라 아슬아슬합니다 — 재어 보니 1052px
    자리에 1001px 이었어요. 화면이 조금만 좁아도 두 줄로 접힙니다.
    글자와 여백을 한 눈금씩 줄여 숨통을 틔웁니다(≈1001 → 900px). */
+#onepage .shell{ display:flex; gap:6px; align-items:stretch; }
+#onepage .shell-main{ flex:1; min-width:0; }
+#onepage .sidecol{ display:flex; flex-direction:column; gap:4px; width:22px; flex:0 0 22px; position:relative; margin-top:2px; }
+#onepage .sidecol .tool{ writing-mode:vertical-rl; padding:6px 3px; text-align:center; letter-spacing:1px; }
+#onepage .sidecol .tool.bot{ margin-top:auto; }
+#onepage .tool.on{ background:#F7E3DF; border-color:#B3372B; color:#2B2620; }
 #onepage .tool{ background:#FFFDF6; border:1px solid rgba(150,120,80,.4); border-radius:6px; padding:2.5px 6px; font-size:10px; white-space:nowrap; position:relative; }
 #onepage .topbar{ gap:4px; }
 #onepage .cols{ display:flex; gap:8px; }
@@ -208,7 +214,7 @@
 
 <!-- ═══════════ [재배치 2026-08-22 — 콩] 입장 · 상태 · 워크 로그 · 뽀모
        ---------------------------------------------------------------------
-       차례: 입장 → **워크 로그** → 뽀모 → 상태 (콩 확정 2026-08-22).
+       차례: 입장 → **뽀모 → 상태 → 워크 로그** (콩 확정 2026-10-27; 전에는 입장 → 워크 로그 → 뽀모 → 상태).
        매일 여는 판이 워크 로그라 앞으로 왔고, 상태는 한 번 익히면
        더 볼 일이 없어 뒤로 갔습니다. 뽀모는 쓰는 사람만 써요.
        그리고 넷을 **두 칸**으로 묶었습니다 — 세로로 늘어놓으면 스크롤만
@@ -237,42 +243,6 @@
       <div>
         <dt>비밀번호는 <b>설정 › 🔒 개인정보</b>에서 바꿔요.</dt>
         <dd>잊으셨다면 방장에게 문의해 주세요 — 스스로 되돌릴 방법이 없어 방장이 초기화해 드려요. 채팅·기록은 그대로 남습니다.</dd>
-      </div>
-    </dl>
-  </div>
-</section>
-
-<section class="wrap">
-  <h2 class="h2">Work Log ✍️</h2>
-  <p class="lead">뺄셈은 방이 대신 해요. 지금 원고의 전체 글자수만 적으세요.</p>
-  <div class="sheet">
-    <dl class="steps">
-      <div>
-        <dt>글자수 넣는 길이 <b>둘</b>이에요.</dt>
-        <dd><b>① 그냥 적기</b> — 지금 원고의 전체 글자수를 적고 [기록]. 처음 적은 숫자가 출발선이 되고,
-            다음부터는 늘어난 만큼만 쌓여요.<br>
-            <b>② 작품·회차로</b> — 작품을 만들어 두고 <b>1-5</b> 처럼 적으면 다섯 회차가 한 번에 생겨요.
-            회차마다 글자수를 적고, 마무리하면 체크.</dd>
-      </div>
-      <div>
-        <dt>탭 다섯 — <b>오늘 · 주간 · 작품 · 메모 · 기록</b>.</dt>
-        <dd><b>오늘</b> 회차 적기와 🔥 방 흐름 · <b>주간</b> 세로 달력(날짜를 누르면 그날 마친 회차가 펼쳐짐) ·
-            <b>작품</b> 진도 막대와 회차표 · <b>메모</b> 혼잣말과 할 일 · <b>기록</b> 나만의 그래프.</dd>
-      </div>
-      <div>
-        <dt>회차는 <b>체크한 날</b>에 들어갑니다.</dt>
-        <dd>며칠에 걸쳐 써도 마무리 짓는 날 하루에 얹혀요. 상태는 다섯 — 초고 · 수정 · 퇴고 · 비축 · 업로드.
-            단위는 작품마다 <b>화 / 챕터</b> 중에 골라요.</dd>
-      </div>
-      <div>
-        <dt>퇴고로 <b>줄어도 벌이 없어요.</b></dt>
-        <dd>3,000자를 2,500자로 깎으면 기준만 조용히 내려가고, 다시 3,500자가 되면 그때 +1,000자.
-            순위는 없습니다 — 어제의 나와만 겨뤄요.</dd>
-      </div>
-      <div>
-        <dt>버튼 셋만 기억하세요.</dt>
-        <dd><b>▶ 기준</b> 누적은 그대로, 기준만 지금 값으로 · <b>🧹 초기화</b> 오늘 누적을 0으로 ·
-            <b>🆕 새 편</b> 빈 문서에서 시작할 때.</dd>
       </div>
     </dl>
   </div>
@@ -342,6 +312,42 @@
         <dt>카드 <b>왼쪽 위 구석</b>에는 오늘 <b>무슨 작업인지</b>를 붙여요.</dt>
         <dd>💭 구상 · ✍️ 원고 · 📝 퇴고 · 🔍 교정 · ✂️ 수정 · 🔧 개정 · 📚 인풋 · ✨ 기타.
             같은 WRITE 라도 초고를 미는 날과 교정지를 보는 날은 전혀 다르니까요. 두 번 누르면 골라요.</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2 class="h2">Work Log ✍️</h2>
+  <p class="lead">뺄셈은 방이 대신 해요. 지금 원고의 전체 글자수만 적으세요.</p>
+  <div class="sheet">
+    <dl class="steps">
+      <div>
+        <dt>글자수 넣는 길이 <b>둘</b>이에요.</dt>
+        <dd><b>① 그냥 적기</b> — 지금 원고의 전체 글자수를 적고 [기록]. 처음 적은 숫자가 출발선이 되고,
+            다음부터는 늘어난 만큼만 쌓여요.<br>
+            <b>② 작품·회차로</b> — 작품을 만들어 두고 <b>1-5</b> 처럼 적으면 다섯 회차가 한 번에 생겨요.
+            회차마다 글자수를 적고, 마무리하면 체크.</dd>
+      </div>
+      <div>
+        <dt>탭 다섯 — <b>오늘 · 주간 · 작품 · 메모 · 기록</b>.</dt>
+        <dd><b>오늘</b> 회차 적기와 🔥 방 흐름 · <b>주간</b> 세로 달력(날짜를 누르면 그날 마친 회차가 펼쳐짐) ·
+            <b>작품</b> 진도 막대와 회차표 · <b>메모</b> 혼잣말과 할 일 · <b>기록</b> 나만의 그래프.</dd>
+      </div>
+      <div>
+        <dt>회차는 <b>체크한 날</b>에 들어갑니다.</dt>
+        <dd>며칠에 걸쳐 써도 마무리 짓는 날 하루에 얹혀요. 상태는 다섯 — 초고 · 수정 · 퇴고 · 비축 · 업로드.
+            단위는 작품마다 <b>화 / 챕터</b> 중에 골라요.</dd>
+      </div>
+      <div>
+        <dt>퇴고로 <b>줄어도 벌이 없어요.</b></dt>
+        <dd>3,000자를 2,500자로 깎으면 기준만 조용히 내려가고, 다시 3,500자가 되면 그때 +1,000자.
+            순위는 없습니다 — 어제의 나와만 겨뤄요.</dd>
+      </div>
+      <div>
+        <dt>버튼 셋만 기억하세요.</dt>
+        <dd><b>▶ 기준</b> 누적은 그대로, 기준만 지금 값으로 · <b>🧹 초기화</b> 오늘 누적을 0으로 ·
+            <b>🆕 새 편</b> 빈 문서에서 시작할 때.</dd>
       </div>
     </dl>
   </div>
@@ -485,8 +491,7 @@
       </div>
       <div>
         <dt>방을 떠나면 <b>자료를 지워 드려요.</b></dt>
-        <dd>탈퇴하신 분의 프로필·기록·출석·업적은 방장이 한 번에 지울 수 있습니다.
-        다만 <b>채팅에 남은 지난 말은 그대로</b> 둡니다 — 한 사람의 말만 빼면 남은 대화가 읽히지 않아서요.
+        <dd>탈퇴하신 뒤에는 프로필·기록·출석·업적 등 <b>기록을 모두 삭제</b>합니다.
         익명으로 쓰신 글은 애초에 누가 썼는지 서버에 없어 찾을 수도 없습니다.</dd>
       </div>
     </dl>
@@ -509,7 +514,7 @@
     <div class="eyebrow">— WRITERS' ROOM —</div>
     <div class="title">더마감 이용 설명</div>
     <div class="sub"><b>① 입장 승인</b>은 들어오기 <b>전</b>의 일이라 그림에는 없어요.</div>
-    <div class="sub" style="font-size:11px; opacity:.8;">2026-08-22 · 머리말 열 알약 · Work Log · 표현 공부 · 자료실 · 화면 크기 반영</div>
+    <div class="sub" style="font-size:11px; opacity:.8;">2026-10-27 · 머리말 정리 · 오른쪽 옆 탭 · 아래 알약(대숲·나의 작업) 반영</div>
   </div>
 
   <!-- 화면 미니어처 -->
@@ -518,18 +523,17 @@
     <div class="topbar">
       <span class="brand">TheMagam</span>
       <span class="redpill">9명 집필 중</span>
-      <span class="tool" style="background:transparent;border:none;padding-left:0;">8/22 (토) 2:33 🦉</span>
+      <span class="tool" style="background:transparent;border:none;padding-left:0;">10/27 (화) 3:31 🦉</span>
       <span style="flex:1"></span>
-      <span class="tool">📢 공지<span class="num" style="top:-10px; right:-8px;">2</span></span>
-      <span class="tool">📁 자료실</span>
       <span class="tool">🖥️ 화면 공유<span class="num" style="top:-10px; right:-8px;">6</span></span>
       <span class="tool">🖱️ 자동감지<span class="num" style="top:-10px; right:-8px;">5</span></span>
-      <span class="tool">⚙️ 설정</span>
+      <span class="tool">⚙️ 설정<span class="num" style="top:-10px; right:-8px;">2</span></span>
       <span class="tool">📘 가이드</span>
-      <span class="tool">− 100% +<span class="num" style="top:-10px; right:-8px;">3</span></span>
-      <span class="tool">↩ 나가기<span class="num" style="top:-10px; right:-8px;">10</span></span>
+      <span class="tool">− 100% + ↻<span class="num" style="top:-10px; right:-8px;">3</span></span>
+      <span class="tool">↩ 나가기<span class="num" style="top:-10px; right:-8px;">11</span></span>
     </div>
 
+    <div class="shell"><div class="shell-main">
     <!-- 접속자 카드가 화면을 꽉 채웁니다 -->
     <div class="p-cards" style="position:relative; padding:6px 0 8px;">
       <div class="card"><span class="num" style="top:-8px; left:-8px;">4</span>
@@ -571,19 +575,29 @@
         <div style="font-size:12px; font-weight:700; color:#2B2620; margin-top:2px;">39,683자</div>
       </div>
     </div>
+    </div>
+    <!-- 오른쪽 옆 탭 — 위에서부터 공지 · 출판사 품평 · 표현 공부 · Q&A · 자료실, 맨 아래 따로 LINK -->
+    <div class="sidecol" style="">
+      <span class="num" style="top:-12px; left:-16px;">10</span>
+      <span class="tool">📢 공지</span>
+      <span class="tool">🏢 출판사 품평</span>
+      <span class="tool">📓 표현 공부</span>
+      <span class="tool">🤔 Q&amp;A</span>
+      <span class="tool">📁 자료실</span>
+      <span class="tool bot">🔗 LINK</span>
+    </div></div>
 
     <!-- 아래 알약 줄 -->
     <div class="topbar" style="justify-content:center; position:relative; margin-top:6px;">
       <span class="num" style="top:-9px; left:-7px;">9</span>
       <span class="tool">💬 Chat</span>
       <span class="tool">⏱️ 뽀모방</span>
-      <span class="tool">🏢 출판사 품평</span>
       <span class="tool">♪ BGM</span>
+      <span class="tool on">🎋 대숲</span>
       <span class="tool" style="background:transparent; border:none;">📌 오늘 할 일 12개 중 5개</span>
-      <span class="tool">📓 표현 공부‼️</span>
-      <span class="tool">🤔 Q&amp;A</span>
       <span class="tool">🏅 업적</span>
       <span class="tool">🍅 Pomodoro</span>
+      <span class="tool">🗂️ 나의 작업</span>
       <span class="tool">✍️ Work Log</span>
     </div>
   </div>
@@ -600,24 +614,23 @@
 
     <div class="item"><div class="dnum">2</div><div>
       <h4>머리말 — 늘 있는 것들</h4>
-      <p>왼쪽부터 <b>방 이름 · 지금 몇 명 · 오늘 날짜와 시계</b>, 오른쪽에 여덟 개의 단추가 있어요 —
-      <b>📢 공지 · 📁 자료실 · 🖥️ 화면 공유 · 🖱️ 자동감지 · ⚙️ 설정 · 📘 가이드 · 🔍 크기 · ↩ 나가기</b>.</p>
-      <p class="tip"><b>📢 공지</b>에 안 읽은 게 있으면 붉은 점이 붙어요 ·
-      <b>📁 자료실</b>은 한 개 2MB까지, 90일 뒤 자동 삭제 ·
-      머리말 단추와 시계는 <b>화면을 줄여도 작아지지 않아요</b>.</p>
+      <p>왼쪽부터 <b>방 이름 · 지금 몇 명 · 오늘 날짜와 시계</b>, 오른쪽에 단추가 있어요 —
+      <b>🖥️ 화면 공유 · 🖱️ 자동감지 · ⚙️ 설정 · 📘 가이드 · 🔍 크기 · ↩ 나가기</b>.
+      (📢 공지·📁 자료실·🎋 대숲은 머리말에서 <b>아래 알약 줄·오른쪽 옆 탭</b>으로 내려갔어요.)</p>
+      <p class="tip">머리말 단추와 시계는 <b>화면을 줄여도 작아지지 않아요</b>.</p>
     </div></div>
 
     <div class="item"><div class="dnum">3</div><div>
       <h4>🔍 화면 크기 — 두 가지를 따로</h4>
       <p>여기 <b>[− 100% +]</b> 는 <b>접속자 카드</b> 크기예요. 줄이면 한 화면에 더 많은 분이 보이고,
-      머리말·알약 줄·떠 있는 창은 그대로입니다.</p>
+      머리말·알약 줄·떠 있는 창은 그대로입니다. 바로 옆 <b>↻</b> 는 카드 배열을 다시 맞춰요(접속은 그대로).</p>
       <p class="tip">아래에서 뜨는 <b>판 크기</b>는 <b>⚙️ 설정 › ⚙️ 기본 설정 › 하단 메뉴 창 크기</b>에서 따로 정해요 ·
       공지·설정 같은 <b>머리말 창은 늘 조금 크게</b> 고정돼 있습니다 · 전부 <b>이 기기에만</b> 저장돼요.</p>
     </div></div>
 
     <div class="item"><div class="dnum">4</div><div>
       <h4>프로필 카드 — 상태와 작업 스티커</h4>
-      <p>내 카드는 항상 맨 앞이에요. <b>상태 도장</b>을 누르면 🔥WRITE🔥 · 💻JOB💻 · 💻multiT📓 · ☕BREAK☕ · 💤AWAY💤 중에 고르고,
+      <p>내 카드는 항상 맨 앞이에요. <b>상태 도장</b>을 누르면 🔥WRITE🔥 · 💻JOB💻 · 💡multitasking💡 · ☕BREAK☕ · 💤AWAY💤 중에 고르고,
       <b>왼쪽 위 구석</b>을 두 번 누르면 오늘 무슨 작업인지 붙여요 —
       💭 구상 · ✍️ 원고 · 📝 퇴고 · 🔍 교정 · ✂️ 수정 · 🔧 개정 · 📚 인풋 · ✨ 기타.</p>
       <p class="tip">카드에 오늘 작업 시간(⏱)과 뽀모 횟수(🍅)가 보여요 ·
@@ -645,7 +658,7 @@
     </div></div>
 
     <div class="item"><div class="dnum">7</div><div>
-      <h4>🗂️ 나의 작업 — <b>내 카드 아래칸</b>을 누르면</h4>
+      <h4>🗂️ 나의 작업 — <b>내 카드 아래칸</b>이나 <b>아래 알약</b>을 누르면</h4>
       <p>왼쪽은 출석 달력이에요. 입장만 해도 붉은 <b>✓ 도장</b>이 찍히고, <b>한 번</b> 누르면 그 날짜를 고르고
       <b>두 번</b> 누르면 🏖️ 휴가로 표시돼요.
       오른쪽 탭은 여섯 — <b>📌 할 일 · 🎯 목표 · ⏱️ 작업 시간 · ✍️ 글자수 · 📮 쪽지 · 🏅 업적</b>.
@@ -662,14 +675,24 @@
 
     <div class="item"><div class="dnum">9</div><div>
       <h4>⚓ 아래 알약 줄 — 필요한 창만 꺼내 쓰기</h4>
-      <p>접속자 카드가 화면을 꽉 채우고, 나머지는 <b>맨 아래 알약</b>으로 내려갔어요. 누르면 그 자리에서 <b>위로</b> 펼쳐집니다 —
-      <b>💬 Chat · ⏱️ 뽀모방 · 🏢 출판사 품평 · ♪ BGM · 📌 오늘 할 일 · 📓 표현 공부 · 🤔 Q&amp;A · 🏅 업적 · 🍅 Pomodoro · ✍️ Work Log</b>.</p>
+      <p>접속자 카드가 화면을 꽉 채우고, 자주 쓰는 것은 <b>맨 아래 알약</b>에 있어요. 누르면 그 자리에서 <b>위로</b> 펼쳐집니다 —
+      <b>💬 Chat · ⏱️ 뽀모방 · ♪ BGM · 🎋 대숲 · 📌 오늘 할 일 · 🏅 업적 · 🍅 Pomodoro · 🗂️ 나의 작업 · ✍️ Work Log</b>.
+      <b>🎋 대숲</b>은 늘 붉은 테두리로 눈에 띄고, <b>🗂️ 나의 작업</b>과 대숲은 누르면 <b>가운데 창</b>이 떠요.</p>
       <p class="tip"><b>여러 개를 동시에</b> 열어도 돼요 · 머리말을 <b>잡고 끌면</b> 자리를 옮기고 <b>두 번 누르면</b> 제자리 ·
-      Chat·뽀모방·품평·BGM·표현 공부·Q&amp;A·Work Log 는 <b>위 가장자리를 잡고 위로 끌면</b> 커집니다 ·
+      Chat·뽀모방·BGM·Work Log 는 <b>위 가장자리를 잡고 위로 끌면</b> 커집니다 ·
       글을 쓰는 판은 <b>바깥을 눌러도 안 닫혀요</b>(쓰던 글이 날아가지 않게).</p>
     </div></div>
 
     <div class="item"><div class="dnum">10</div><div>
+      <h4>📑 오른쪽 옆 탭 — 읽고 찬찬히 보는 것들</h4>
+      <p>화면 오른쪽 끝에 세로 탭이 있어요 — 위에서부터 <b>📢 공지 · 🏢 출판사 품평 · 📓 표현 공부 · 🤔 Q&amp;A · 📁 자료실</b>,
+      맨 아래에 따로 <b>🔗 LINK</b>. 누르면 <b>400px 폭 칸</b>이 열리고 카드가 왼쪽으로 밀려요. <b>한 번에 하나</b>만 열립니다.</p>
+      <p class="tip"><b>📢 공지</b>에 안 읽은 게 있으면 붉은 점이 붙어요 ·
+      <b>📁 자료실</b>은 한 개 2MB까지, 90일 뒤 자동 삭제 ·
+      좁은 화면(900px 아래)에서는 카드를 밀지 않고 칸이 카드 위로 덮여요.</p>
+    </div></div>
+
+    <div class="item"><div class="dnum">11</div><div>
       <h4>↩ 나가기 — 퇴장할 땐 꼭!</h4>
       <p>창을 그냥 닫지 말고 <b>[나가기]</b>를 눌러주세요. 작업 시간과 출석 기록이 그 시각으로 정확히 닫혀요.
       깜빡하고 닫아도 시간이 증발하진 않지만, 기록이 훨씬 깔끔해져요.</p>
