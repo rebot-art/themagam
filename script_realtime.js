@@ -1066,6 +1066,7 @@
        (대시보드를 열 때 staff 를 보고 저절로 맞추기도 합니다)
      ===================================================================== */
   let _vice = {};
+  let _honor = {};       // 🏅 명예 멤버 {닉:true} — config/honorary/list (2026-10-27)
   let _pickSet = null;   // ⭐ 고른 멤버 Set — 렌더 한 번마다 다시 계산 (아래)
 
   /* =====================================================================
@@ -1085,6 +1086,14 @@
       const arr = JSON.parse(raw);
       return Array.isArray(arr) ? new Set(arr.filter(x => typeof x === "string")) : null;
     } catch (e) { return null; }
+  }
+  function listenHonor() {
+    try {
+      db.ref("config/honorary/list").on("value", s => {
+        _honor = s.val() || {};
+        if (_statusCache) renderUserCards(_statusCache);
+      });
+    } catch (e) {}
   }
   function listenVice() {
     try {
@@ -1109,6 +1118,7 @@
   function stampHtml(u) {
     if (u === ADMIN_NICK) return `<span class="card-admin-stamp" aria-label="방장">방장</span>`;
     if (_vice[u] === true) return `<span class="card-admin-stamp is-vice" aria-label="부방장">부방장</span>`;
+    if (_honor[u] === true) return `<span class="card-admin-stamp is-honor" aria-label="명예 멤버">명예✨</span>`;
     return "";
   }
 
@@ -1183,6 +1193,7 @@
     _seenOnline = null;   // 다시 붙을 때는 씨앗부터 (옛 목록으로 오알림 방지)
     listenBans();
     listenVice();          // 🏷️ 부방장 스티커 명단 (config/vice)
+    listenHonor();         // 🏅 명예 멤버 도장 명단 (config/honorary/list)
     /* 📢 공지 목록 — [2026-08-21] 여기로 옮겨 왔습니다.
        예전엔 아래 알약 판이 열릴 때 켜졌는데, 공지가 머리말로 올라가면서
        그 자리가 없어졌어요. 안 읽은 글 빨간 점은 **판을 열기 전에**
@@ -1905,7 +1916,7 @@
             const 곁 = `${proomChip}${pomoChip}`.trim();
             단순 = (`
             <div class="user-card lite-card ${cls}${isMine ? " is-me" : ""}${connOk ? "" : " is-off"}${
-                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : "")}${
+                 u === ADMIN_NICK ? " is-owner" : (_vice[u] === true ? " is-vice" : (_honor[u] === true && !isMine && !지원 ? " is-honor" : ""))}${
                  /* ⭐ 내가 고른 멤버 — 방장만, 이미 색이 있는 사람(본인·방장·부방장)은 빼고 (운영진 우선) */
                  (u !== ADMIN_NICK && _vice[u] !== true && !isMine && (_pickSet ||= (고른멤버Set() || new Set())).has(u)) ? " is-pick" : ""}${지원 ? " is-helper" : ""}"
                  data-card-nick="${escapeHtml(u)}">

@@ -257,7 +257,7 @@
     loadForest();
     loadAllowList();
     loadHello();
-    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); }
+    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); loadHonor(); }
   }
 
   /* =====================================================================
@@ -3299,6 +3299,156 @@
     }
   }
 
+  // ------------------------------------------------- ③-3.93 🏅 명예 멤버 뽑기
+  /* =====================================================================
+     🏅 명예 멤버 뽑기 (2026-10-27 — 콩)
+     ---------------------------------------------------------------------
+     분기마다 최대 5명. 기간은 **시작 달 ~ 끝 달**을 직접 고릅니다
+     (첫 판은 8·9·10월이라 분기와 어긋나서요 — 기본값은 이번 달까지 석 달).
+       · 출석률  = 나온 날 ÷ (입장일~어제 중 🏖️🌿 쉰 날을 뺀 날)
+       · 작업시간 = timeSegs 를 WORK_WEIGHT(작업ms)로 센 합계
+       · 글자수  = wordlog 합계
+       · 점수    = 출석률 40% + 작업시간 40% + 글자수 20%
+                   (작업시간·글자수는 후보 중 1등을 100% 로 놓고 견줍니다)
+     ★ 방장·부방장·내보낸 닉은 후보에서 뺍니다 (이미 방장 딱지가 있으니까요).
+     ★ [뽑기 시작] 을 눌렀을 때만 읽습니다 — 멤버마다 3번(휴가·개인사정·구간) 읽어요.
+     ★ 저장 = config/honorary = { from, to, list:{닉:true}, at } (방 카드가 list 만 읽음)
+       기록 남기기 = config/honoraryHist/{from}_{to}
+     ★ config 는 누구나 읽고 방장만 써서 보안규칙은 안 고칩니다.
+     ===================================================================== */
+  const HONOR_MAX = 5;
+  let _honorRows = [];
+  function 달목록(n) {
+    const out = [], b = new Date(); b.setDate(1);
+    for (let i = 0; i < n; i++) {
+      out.push(`${b.getFullYear()}-${String(b.getMonth() + 1).padStart(2, "0")}`);
+      b.setMonth(b.getMonth() - 1);
+    }
+    return out;
+  }
+  function 분(ms) { const m = Math.round(ms / 60000); return `${Math.floor(m / 60)}시간 ${String(m % 60).padStart(2, "0")}분`; }
+  function paintHonorSelects() {
+    const f = el("adm-honor-from"), t = el("adm-honor-to");
+    if (!f || !t || f.options.length) return;
+    const ms = 달목록(14);
+    const opt = ms.map(m => `<option value="${m}">${m.replace("-", "년 ")}월</option>`).join("");
+    f.innerHTML = opt; t.innerHTML = opt;
+    t.value = ms[0]; f.value = ms[2];
+  }
+  async function loadHonor() {
+    paintHonorSelects();
+    const box = el("adm-honor-now");
+    if (!box) return;
+    try {
+      const v = (await db.ref("config/honorary").once("value")).val();
+      const names = Object.keys((v && v.list) || {});
+      box.innerHTML = names.length
+        ? `지금 명예 멤버 (${escapeHtml(String(v.from || ""))} ~ ${escapeHtml(String(v.to || ""))}): <b>${names.map(escapeHtml).join(" · ")}</b>`
+        : `지금 명예 멤버가 없어요.`;
+    } catch (e) { box.textContent = ""; }
+  }
+  async function runHonor() {
+    const from = el("adm-honor-from").value, to = el("adm-honor-to").value;
+    const box = el("adm-honor-list");
+    if (!from || !to || from > to) { msg("adm-honor-msg", "시작 달이 끝 달보다 뒤예요. 다시 골라 주세요.", true); return; }
+    msg("adm-honor-msg", "");
+    box.innerHTML = `<div class="adm-msg">읽는 중… 조금 걸려요 ⏳</div>`;
+    try {
+      const [nsnap, bsnap, vsnap, asnap, wsnap] = await Promise.all([
+        db.ref("nickOwner").once("value"),
+        db.ref("config/ban").once("value").catch(() => null),
+        db.ref("config/vice").once("value").catch(() => null),
+        db.ref("attendance").orderByKey().startAt(`${from}-01`).endAt(`${to}-31`).once("value"),
+        db.ref("wordlog").orderByKey().startAt(`${from}-01`).endAt(`${to}-31`).once("value")
+      ]);
+      const ban = (bsnap && bsnap.val()) || {}, vice = (vsnap && vsnap.val()) || {};
+      const att = asnap.val() || {}, wl = wsnap.val() || {};
+      const nicks = Object.keys(nsnap.val() || {})
+        .filter(n => n !== ADMIN_NICK && vice[n] !== true && !ban[n])
+        .sort((a, b) => a.localeCompare(b, "ko"));
+      const firstSeen = (await loadFirstSeen(nicks)) || {};
+      const 첫날 = `${from}-01`;
+      const 어제 = 날더하기(dayKey(new Date()), -1);
+      const 끝날 = `${to}-31` < 어제 ? `${to}-31` : 어제;
+
+      const rows = [];
+      await Promise.all(nicks.map(async n => {
+        const 읽기 = async 칸 => {
+          try { return (await db.ref(`users/${n}/${칸}`).orderByKey().startAt(첫날).endAt(`${to}-31`).once("value")).val() || {}; }
+          catch (e) { return {}; }
+        };
+        const [vac, leave, segs] = await Promise.all([읽기("vacations"), 읽기("leaves"), 읽기("timeSegs")]);
+        /* 나온 날 */
+        const 나온 = new Set();
+        Object.keys(att).forEach(dk => { const r = att[dk] && att[dk][n]; if (r && (r.firstAt || r.at)) 나온.add(dk); });
+        /* 기준 날 = 입장일(없으면 기간 첫날) ~ 어제 */
+        const fs = firstSeen[n] && firstSeen[n] > 첫날 ? firstSeen[n] : 첫날;
+        const 날들 = fs <= 끝날 ? 날사이(fs, 끝날) : [];
+        let 쉰 = 0;
+        날들.forEach(dk => { if ((vac[dk] || leave[dk]) && !나온.has(dk)) 쉰++; });
+        const 기준 = Math.max(0, 날들.length - 쉰);
+        const 나옴 = 날들.filter(dk => 나온.has(dk)).length;
+        const rate = 기준 > 0 ? Math.min(1, 나옴 / 기준) : 0;
+        /* 작업 시간 — 같은 상태·같은 시작은 한 번만 (출석부와 같은 규칙) */
+        let work = 0;
+        Object.keys(segs).forEach(d => {
+          const best = {};
+          Object.values(segs[d] || {}).forEach(sg => {
+            if (!sg || !(sg.b > sg.a)) return;
+            const k = `${sg.s}|${sg.a}`;
+            if (!best[k] || sg.b > best[k].b) best[k] = sg;
+          });
+          Object.values(best).forEach(sg => { work += 작업ms(sg.s, sg.b - sg.a); });
+        });
+        /* 글자수 */
+        let words = 0;
+        Object.values(wl).forEach(day => { words += Math.max(0, Number(day && day[n] && day[n].total || 0)); });
+        rows.push({ n, rate, 나옴, 기준, work, words });
+      }));
+
+      const mw = Math.max(1, ...rows.map(r => r.work)), mc = Math.max(1, ...rows.map(r => r.words));
+      rows.forEach(r => { r.score = r.rate * 0.4 + (r.work / mw) * 0.4 + (r.words / mc) * 0.2; });
+      const 후보 = rows.filter(r => r.나옴 > 0)
+        .sort((a, b) => b.score - a.score || a.n.localeCompare(b.n, "ko"));
+      _honorRows = 후보;
+      box.innerHTML = 후보.length ? `
+        <div class="adm-absent-list" style="max-height:360px;">` + 후보.map((r, i) => `
+          <label class="adm-row" style="cursor:pointer;">
+            <input type="checkbox" data-honor-nick="${escapeHtml(r.n)}"${i < HONOR_MAX && r.score > 0 ? " checked" : ""}>
+            <span class="n">${i + 1}. ${escapeHtml(r.n)}</span>
+            <span class="s">출석 <b>${Math.round(r.rate * 100)}%</b> (${r.나옴}/${r.기준}일) · 작업 <b>${분(r.work)}</b> · 글자 <b>${r.words.toLocaleString()}</b> · 점수 ${(r.score * 100).toFixed(1)}</span>
+          </label>`).join("") + `</div>` : `<div class="adm-msg">후보가 없어요.</div>`;
+      msg("adm-honor-msg", `${후보.length}명을 견줬어요 · 1~${HONOR_MAX}등에 체크해 뒀어요. 바꿔도 됩니다 (최대 ${HONOR_MAX}명).`);
+    } catch (e) {
+      console.warn("[adm honor]", e);
+      box.innerHTML = `<div class="adm-msg">읽지 못했어요. 연결을 확인해 주세요.</div>`;
+    }
+  }
+  async function saveHonor() {
+    if (!ownerOnly("명예 멤버 저장")) return;
+    const picks = [...document.querySelectorAll("#adm-honor-list [data-honor-nick]:checked")]
+      .map(c => c.getAttribute("data-honor-nick"));
+    if (!_honorRows.length) { msg("adm-honor-msg", "먼저 [뽑기 시작]을 눌러 주세요.", true); return; }
+    if (picks.length > HONOR_MAX) { msg("adm-honor-msg", `최대 ${HONOR_MAX}명까지예요. 체크를 줄여 주세요.`, true); return; }
+    const from = el("adm-honor-from").value, to = el("adm-honor-to").value;
+    const list = {}; picks.forEach(n => { list[n] = true; });
+    const data = { from, to, list, at: firebase.database.ServerValue.TIMESTAMP };
+    try {
+      await db.ref("config/honorary").set(data);
+      await db.ref(`config/honoraryHist/${from}_${to}`).set(data);
+      msg("adm-honor-msg", `✅ 저장했어요 — ${picks.length}명. 방 카드에 곧 도장이 붙어요.`);
+      loadHonor();
+    } catch (e) { msg("adm-honor-msg", "저장하지 못했어요. 방장 계정인지 확인해 주세요.", true); }
+  }
+  async function clearHonor() {
+    if (!ownerOnly("명예 멤버 비우기")) return;
+    try {
+      await db.ref("config/honorary").remove();
+      msg("adm-honor-msg", "지금 명예 멤버를 비웠어요 (지난 기록은 남아요).");
+      loadHonor();
+    } catch (e) { msg("adm-honor-msg", "비우지 못했어요.", true); }
+  }
+
   // ------------------------------------------------- ③-3.95 🤝 지원군
   /* =====================================================================
      🤝 지원군 (2026-10-07 — 콩) — 방에 사람이 적을 때 빈자리를 채우는 가상 멤버
@@ -3559,6 +3709,16 @@
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-absent-run")?.addEventListener("click", runAbsent);
+    el("adm-honor-run")?.addEventListener("click", runHonor);
+    el("adm-honor-save")?.addEventListener("click", saveHonor);
+    el("adm-honor-clear")?.addEventListener("click", clearHonor);
+    el("adm-honor-list")?.addEventListener("change", e => {     // 최대 5명 — 여섯째를 누르면 되돌립니다
+      const c = e.target;
+      if (c && c.matches && c.matches("[data-honor-nick]") &&
+          document.querySelectorAll("#adm-honor-list [data-honor-nick]:checked").length > HONOR_MAX) {
+        c.checked = false; msg("adm-honor-msg", `최대 ${HONOR_MAX}명까지예요. 다른 분 체크를 먼저 풀어 주세요.`, true);
+      }
+    });
 
     /* 🤝 지원군 — 줄은 다시 그려지므로 상자에 위임합니다 */
     el("adm-helper-save")?.addEventListener("click", saveHelpers);
