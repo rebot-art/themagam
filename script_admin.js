@@ -3303,7 +3303,7 @@
   /* =====================================================================
      🏅 명예 멤버 뽑기 (2026-10-27 — 콩)
      ---------------------------------------------------------------------
-     분기마다 최대 5명. 기간은 **시작 달 ~ 끝 달**을 직접 고릅니다
+     분기마다 최대 7명. 기간은 **시작 달 ~ 끝 달**을 직접 고릅니다
      (첫 판은 8·9·10월이라 분기와 어긋나서요 — 기본값은 이번 달까지 석 달).
        · 출석률  = 나온 날 ÷ (입장일~어제 중 🏖️🌿 쉰 날을 뺀 날)
        · 작업시간 = timeSegs 를 WORK_WEIGHT(작업ms)로 센 합계
@@ -3316,7 +3316,7 @@
        기록 남기기 = config/honoraryHist/{from}_{to}
      ★ config 는 누구나 읽고 방장만 써서 보안규칙은 안 고칩니다.
      ===================================================================== */
-  const HONOR_MAX = 5;
+  const HONOR_MAX = 7;
   let _honorRows = [];
   function 달목록(n) {
     const out = [], b = new Date(); b.setDate(1);
@@ -3712,7 +3712,7 @@
     el("adm-honor-run")?.addEventListener("click", runHonor);
     el("adm-honor-save")?.addEventListener("click", saveHonor);
     el("adm-honor-clear")?.addEventListener("click", clearHonor);
-    el("adm-honor-list")?.addEventListener("change", e => {     // 최대 5명 — 여섯째를 누르면 되돌립니다
+    el("adm-honor-list")?.addEventListener("change", e => {     // 최대 7명 — 여덟째를 누르면 되돌립니다
       const c = e.target;
       if (c && c.matches && c.matches("[data-honor-nick]") &&
           document.querySelectorAll("#adm-honor-list [data-honor-nick]:checked").length > HONOR_MAX) {

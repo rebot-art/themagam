@@ -13096,17 +13096,16 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 :root[data-is-dark="true"] .greet-card.gk-re  { background: rgba(127,169,111,.18); color: #C4E3B8; }
 :root[data-is-dark="true"] .greet-card.gk-out { background: rgba(189,179,166,.16); color: #D8CFC3; }
 
-/* 🏅 명예 멤버 도장 (2026-10-27 콩 — 와인 버건디 「명예✨」) — 방장·부방장·지원군과 같은 자리·같은 각도.
-   글자는 부방장과 같은 크기(.72)에 여백만 조금 줘서 ✨ 가 들어갑니다. 방장·부방장은 후보에서 빠지므로 겹치지 않아요. */
+/* 🏅 명예 멤버 도장 (2026-10-27 콩 — 골드 「명예」) — 방장·부방장·지원군과 같은 자리·같은 각도.
+   [바꿈] 처음엔 와인색 「명예✨」 였는데 글자가 안 보인다고 해서 금색 + 진한 갈색 글자, 두 글자만으로 바꿨습니다.
+   크기는 방장과 같게(글자 .79 · 좌우 여백 9px) — 두 글자라 폭도 방장과 같아요. */
 .card-admin-stamp.is-honor{
-  background: rgba(158, 40, 70, .95);
-  color: #fff;
-  font-size: calc(var(--fs-sm) * .72);
-  padding: 3.5px 5px;
-  letter-spacing: -.01em;
+  background: linear-gradient(135deg, #F7D774, #E0A82E);
+  border-color: rgba(255, 255, 255, .6);
+  color: #4A2F00;
 }
-/* 가볍게 보기 — 방장·부방장·지원군처럼 테두리를 덧그리되 와인색 (내 카드가 우선) */
+/* 가볍게 보기 — 방장·부방장·지원군처럼 테두리를 덧그리되 금색 (내 카드가 우선) */
 .lite-card.is-honor .lite-in::after{
   content: ""; position: absolute; inset: -1px; z-index: 3;
-  border: 2.5px solid #9E2846; border-radius: 0 6px 6px 0; pointer-events: none;
+  border: 2.5px solid #E0A82E; border-radius: 0 6px 6px 0; pointer-events: none;
 }

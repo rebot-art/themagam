@@ -813,20 +813,20 @@
       </div>
 
       <!-- =====================================================================
-           🏅 명예 멤버 뽑기 (2026-10-27 — 콩) — 분기마다 최대 5명
-           출석률·작업시간·글자수로 견주고, 뽑힌 분은 방 카드에 와인색 「명예✨」 도장.
+           🏅 명예 멤버 뽑기 (2026-10-27 — 콩) — 분기마다 최대 7명
+           출석률·작업시간·글자수로 견주고, 뽑힌 분은 방 카드에 금색 「명예」 도장.
            config/honorary = { from, to, list:{닉:true}, at } · 방장·부방장은 후보에서 뺍니다.
            ★ config 는 누구나 읽고 방장만 써서 보안규칙을 안 고칩니다. 방장만 보입니다.
            ===================================================================== -->
       <span data-owner-only>
       <div class="adm-card" id="adm-honor-card">
-        <h2>🏅 명예 멤버 뽑기 <span style="font-size:12px; color:#8A7B68; font-weight:400;">분기마다 최대 5명</span></h2>
+        <h2>🏅 명예 멤버 뽑기 <span style="font-size:12px; color:#8A7B68; font-weight:400;">분기마다 최대 7명</span></h2>
         <p class="adm-sub">고른 기간의 <b>출석률 40% · 작업시간 40% · 글자수 20%</b>로 견줘요.
-          방장·부방장은 후보에서 빠집니다. 체크는 바꿔도 돼요 (최대 5명).</p>
+          방장·부방장은 후보에서 빠집니다. 체크는 바꿔도 돼요 (최대 7명).</p>
         <div id="adm-honor-now" class="adm-vac-dates"></div>
         <div class="adm-gap"></div>
-        <select id="adm-honor-from"></select> ~ <select id="adm-honor-to"></select>
-        <button class="adm-btn" id="adm-honor-run">🔍 뽑기 시작</button>
+        <div><select id="adm-honor-from"></select> ~ <select id="adm-honor-to"></select>
+        <button class="adm-btn" id="adm-honor-run">🔍 뽑기 시작</button></div>
         <div id="adm-honor-list"><div class="adm-msg">기간을 고르고 [뽑기 시작]을 눌러 주세요.</div></div>
         <div class="adm-gap"></div>
         <button class="adm-btn" id="adm-honor-save">💾 이 명단으로 저장</button>
@@ -1171,7 +1171,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202610270824"></script>
+  <script src="script_admin.js?v=202610270834"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

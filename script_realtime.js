@@ -1118,7 +1118,7 @@
   function stampHtml(u) {
     if (u === ADMIN_NICK) return `<span class="card-admin-stamp" aria-label="방장">방장</span>`;
     if (_vice[u] === true) return `<span class="card-admin-stamp is-vice" aria-label="부방장">부방장</span>`;
-    if (_honor[u] === true) return `<span class="card-admin-stamp is-honor" aria-label="명예 멤버">명예✨</span>`;
+    if (_honor[u] === true) return `<span class="card-admin-stamp is-honor" aria-label="명예 멤버">명예</span>`;
     return "";
   }
 
