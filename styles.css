@@ -10286,11 +10286,14 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 .dock-pill:hover{ color: var(--text); background: var(--fill-2); }
 /* 열려 있는 알약은 판과 이어져 보이게 */
-.dock-pill[aria-expanded="true"]{
+.dock-pill[aria-expanded="true"],
+/* [2026-10-27 콩] 🎋 대숲은 늘 "열린 모양" — 아래 줄에서 튀게 */
+#dock-pill-forest{
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--text);
 }
+#dock-pill-forest:hover{ background: var(--accent-soft); color: var(--text); filter: brightness(.97); }
 /* ⏱️ 내려뒀지만 방에는 있음 (콩 2026-08-30) — **알약이 곧 진행 바.**
    글자는 「🍅 뽀모방 참여 중 · 16:03」(script_proom.js 의 시계가 씀),
    배경은 --pr-pct 만큼 왼쪽부터 차오릅니다. 참여자에게만 보여요 —

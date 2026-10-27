@@ -589,6 +589,16 @@
   /* =====================================================================
      여닫기
      ===================================================================== */
+  /* [2026-10-27 콩] 🗂️ 나의 작업 알약 — 가운데 창이 **열려 있는 동안** 다른 알약처럼 붉게 (aria-expanded).
+     창은 style.display 로 열고 닫히니 그 속성을 지켜봅니다. */
+  (function () {
+    const m = el("mywork-modal"), pill = el("dock-pill-mywork");
+    if (!m || !pill) return;
+    const sync = () => pill.setAttribute("aria-expanded", m.style.display && m.style.display !== "none" ? "true" : "false");
+    new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ["style"] });
+    sync();
+  })();
+
   function open(id) {
     const d = DOCK.find(x => x.id === id);
     if (!d) return;
