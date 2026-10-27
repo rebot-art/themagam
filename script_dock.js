@@ -120,6 +120,9 @@
        ※ 낮게 쓰고 싶은 분은 위 가장자리를 잡고 줄이면 됩니다 —
          150px 까지 내려가고, 그 값은 기기에 남아요. */
     { id: "music", label: "♪ BGM", stay: true, size: 1.06, move: null, drag: true, resize: true },
+    /* [2026-10-27 자리 옮김 — 콩] 🎋 대숲 — 머리말에서 **♪ BGM 오른쪽**으로. 뜨는 모양은 그대로 가운데 창입니다
+       (modal 에 적힌 openForest 를 부릅니다 — 판을 안 만듭니다). */
+    { id: "forest", label: "🎋 대숲", stay: false, size: 0, move: null, modal: "openForest" },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다.
        [2026-08-13] 자리를 기준선으로 — 왼쪽(함께 떠드는 것)과
@@ -151,6 +154,9 @@
        "글자수" 보다 넓어졌습니다. 콩트에서 쓰던 이름을 그대로 씁니다.
        ★ resize: true — 일지가 길어지니 챗처럼 위 가장자리를 잡아
          키울 수 있어야 합니다 (2026-08-16 방장 요청). */
+    /* [2026-10-27 되살림 — 콩] 🗂️ 나의 작업 — **🍅 Pomodoro 와 ✍️ Work Log 사이**.
+       내 카드 아래칸으로도 열리고, 여기서도 열립니다 (둘 다 같은 openMyWork). 뜨는 모양은 그대로 가운데 창. */
+    { id: "mywork", label: "🗂️ 나의 작업", stay: false, size: 0, move: null, modal: "openMyWork" },
     { id: "wc",     label: "✍️ Work Log",        stay: true,  size: 1.23, move: "#wordcount-block", drag: true, resize: true }
     /* [옮김 2026-10-07 — 콩] 🙋‍♂️ Member 알약은 여기서 빠졌습니다 — 혼자 방 화면 **오른쪽 끝의
        세로 탭**으로 갔어요 (script_member.js 가 탭과 명단을 직접 만듭니다). */
