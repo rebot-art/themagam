@@ -691,7 +691,7 @@ function fileToSquareDataUrl(file) {
 }
 
 /* =====================================================================
-   기본 프사 — 눈사람
+   기본 프사 — (옛 눈사람 → 2026-10-27 캐릭터 열둘, 아래 AVATAR_CHARS). 함수 이름 snowmanSvg 는 부르는 곳이 많아 그대로 둡니다.
    ---------------------------------------------------------------------
    사진을 안 올린 사람에게 이모지 대신 보여줍니다.
    배경색은 닉네임에서 계산하므로 같은 사람은 늘 같은 색이고,
@@ -1074,13 +1074,77 @@ function snowBgFor(nick) {
 }
 window.snowBgFor = snowBgFor;
 
+/* =====================================================================
+   기본 프사 캐릭터 열둘 — 닉네임으로 하나가 정해집니다 (2026-10-27 콩: 눈사람 → 캐릭터)
+   ---------------------------------------------------------------------
+   각 그림은 100×100 안에 들어가고, 몸통에는 흰 테두리(O)를 둘러 어떤 배경색에서도
+   또렷하게 보이게 했습니다. 눈·입은 늘 같은 진한 갈색(E).
+   ★ 토끼는 두 귀가 모두 보이게 (안쪽 분홍).
+   ★ 이미지 파일이 아니라 SVG 글자라서 저장소·통신량이 따로 안 듭니다.
+   ===================================================================== */
+const AVATAR_CHARS = (() => {
+  const O = 'stroke="#fff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"';
+  const E = "#3A2E28";
+  const eye = (x, y, r = 3.2) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${E}"/>`;
+  const smile = (x, y, w = 5) => `<path d="M${x - w} ${y} Q${x} ${y + w * 0.9} ${x + w} ${y}" stroke="${E}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+  const cheek = (x, y) => `<circle cx="${x}" cy="${y}" r="4" fill="#FF9FB0" opacity=".7"/>`;
+  return [
+    /* 토끼 */
+    `<ellipse cx="35" cy="26" rx="9" ry="21" fill="#fff" ${O}/><ellipse cx="65" cy="26" rx="9" ry="21" fill="#fff" ${O}/>
+     <ellipse cx="35" cy="28" rx="4.5" ry="14" fill="#FFC2D1"/><ellipse cx="65" cy="28" rx="4.5" ry="14" fill="#FFC2D1"/>
+     <circle cx="50" cy="62" r="27" fill="#fff" ${O}/>${eye(41, 59)}${eye(59, 59)}${smile(50, 67, 4.5)}${cheek(33, 67)}${cheek(67, 67)}`,
+    /* 고양이 */
+    `<path d="M22 44 L26 14 L46 30Z M78 44 L74 14 L54 30Z" fill="#9A94AA" ${O}/><circle cx="50" cy="56" r="31" fill="#B9B3C8" ${O}/>
+     <path d="M29 28 L33 22 L40 29Z M71 28 L67 22 L60 29Z" fill="#FFC2D1"/>${eye(39, 54)}${eye(61, 54)}${smile(50, 65, 5)}${cheek(30, 63)}${cheek(70, 63)}
+     <path d="M18 60 L30 62 M18 68 L30 66 M82 60 L70 62 M82 68 L70 66" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`,
+    /* 곰 */
+    `<circle cx="25" cy="28" r="12" fill="#B98355" ${O}/><circle cx="75" cy="28" r="12" fill="#B98355" ${O}/><circle cx="50" cy="57" r="32" fill="#C99366" ${O}/>
+     <ellipse cx="50" cy="65" rx="13" ry="10" fill="#FFF0D8"/>${eye(38, 50)}${eye(62, 50)}<ellipse cx="50" cy="61" rx="4.2" ry="3" fill="${E}"/>`,
+    /* 달 */
+    `<path d="M62 12 A40 40 0 1 0 90 62 A31 31 0 1 1 62 12Z" fill="#FFE08A" ${O}/>${eye(34, 52)}${smile(34, 64, 6)}${cheek(26, 62)}
+     <circle cx="80" cy="22" r="3.5" fill="#fff"/><circle cx="87" cy="40" r="2.3" fill="#fff"/><circle cx="68" cy="10" r="2" fill="#fff"/>`,
+    /* 고래 */
+    `<path d="M8 58 Q8 28 44 28 Q82 28 90 56 Q94 70 80 76 Q58 88 28 80 Q8 74 8 58Z" fill="#6FB7E3" ${O}/>
+     <path d="M86 40 Q99 28 97 46 Q95 54 88 52Z" fill="#5AA3D3" ${O}/><path d="M18 66 Q40 82 74 72 Q40 74 18 66Z" fill="#DFF1FB"/>
+     ${eye(30, 52, 3.4)}${smile(26, 62, 5)}<path d="M42 28 Q38 14 46 9 M50 28 Q54 14 62 17" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+    /* 펜 */
+    `<g transform="rotate(35 50 50)"><rect x="38" y="6" width="24" height="62" rx="6" fill="#7C6CF0" ${O}/><path d="M38 68 L62 68 L50 92Z" fill="#F4E3C1" ${O}/><path d="M45 82 L55 82 L50 92Z" fill="#3A2E28"/><rect x="38" y="16" width="24" height="7" fill="#fff" opacity=".55"/></g>
+     ${eye(46, 40)}${eye(60, 40)}${cheek(41, 47)}${cheek(65, 47)}`,
+    /* 책 */
+    `<path d="M10 26 Q30 18 50 28 Q70 18 90 26 L90 78 Q70 70 50 80 Q30 70 10 78Z" fill="#7F8FE0" ${O}/><path d="M50 28 L50 80" stroke="#fff" stroke-width="2.4" opacity=".8"/>
+     ${eye(34, 52)}${eye(66, 52)}${smile(50, 60, 5)}${cheek(26, 60)}${cheek(74, 60)}`,
+    /* 별 */
+    `<path d="M50 8 L62 36 L92 39 L69 59 L77 89 L50 73 L23 89 L31 59 L8 39 L38 36Z" fill="#FFD04A" ${O}/>${eye(42, 50)}${eye(58, 50)}${smile(50, 59, 5)}${cheek(34, 58)}${cheek(66, 58)}`,
+    /* 양 */
+    `<g fill="#fff" ${O}><circle cx="28" cy="40" r="15"/><circle cx="50" cy="30" r="17"/><circle cx="72" cy="40" r="15"/><circle cx="33" cy="60" r="15"/><circle cx="67" cy="60" r="15"/></g>
+     <ellipse cx="50" cy="57" rx="19" ry="21" fill="#5A4B40" ${O}/><circle cx="43" cy="54" r="3" fill="#fff"/><circle cx="57" cy="54" r="3" fill="#fff"/><path d="M45 65 Q50 69 55 65" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+    /* 머그컵 */
+    `<path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#fff" stroke-width="12" fill="none"/><path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#E39A6B" stroke-width="6" fill="none"/>
+     <path d="M16 34 H72 V68 Q72 88 52 88 H36 Q16 88 16 68Z" fill="#E39A6B" ${O}/>${eye(36, 60)}${eye(54, 60)}${smile(45, 68, 5)}${cheek(28, 68)}${cheek(62, 68)}
+     <path d="M32 26 Q27 17 34 10 M45 26 Q40 17 47 10 M58 26 Q53 17 60 10" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round"/>`,
+    /* 구름 */
+    `<path d="M26 76 Q6 76 8 58 Q10 44 28 46 Q30 24 52 24 Q72 24 76 44 Q96 44 93 62 Q90 76 74 76Z" fill="#fff" ${O}/>${eye(39, 56)}${eye(63, 56)}${smile(51, 64, 5)}${cheek(30, 64)}${cheek(72, 64)}`,
+    /* 여우 */
+    `<path d="M12 14 L38 34 L62 34 L88 14 L86 56 Q82 86 50 88 Q18 86 14 56Z" fill="#F08A4B" ${O}/><path d="M30 68 Q50 94 70 68 Q50 60 30 68Z" fill="#FFF3DF"/>
+     <path d="M20 24 L32 34 L22 42Z M80 24 L68 34 L78 42Z" fill="#FFD0A8"/>${eye(38, 55, 3.4)}${eye(62, 55, 3.4)}<ellipse cx="50" cy="68" rx="4" ry="3" fill="${E}"/>`,
+  ];
+})();
+
+/** 닉네임으로 캐릭터 번호 (배경색과 따로 흔들리도록 해시를 한 번 더 섞습니다) */
+function avatarCharIndex(nick) {
+  const s = String(nick || "");
+  let h = 2166136261;                       // FNV-1a — 한글 닉네임도 골고루 흩어집니다
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return (h >>> 0) % AVATAR_CHARS.length;
+}
+
 function snowmanSvg(nick, bgOverride) {
   const bg = sanitizeHexColor(bgOverride) || snowBgFor(nick);
   return `<svg class="snowman" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-               role="img" aria-label="기본 프로필" focusable="false">
+               role="img" aria-label="기본 프로필 캐릭터" focusable="false">
             <rect width="100" height="100" fill="${bg}"/>
-            <circle cx="50" cy="31" r="13.5" fill="#ffffff" opacity="0.85"/>
-            <circle cx="50" cy="56" r="24" fill="#ffffff" opacity="0.85"/>
+            ${AVATAR_CHARS[avatarCharIndex(nick)]}
           </svg>`;
 }
 
@@ -1500,7 +1564,7 @@ function renderProfilePanel() {
           </div>
           <div class="hint" id="prof-photo-hint">${
             photo ? "카드와 채팅에 이 사진이 보여요."
-                  : "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 눈사람이 보여요."
+                  : "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 귀여운 캐릭터가 보여요."
           }</div>
         </div>
       </div>
@@ -1629,10 +1693,10 @@ function renderProfilePanel() {
 
     <!-- 눈사람 배경색 — 사진을 안 올린 사람만 의미가 있으므로 그때만 보입니다 -->
     <div class="set-block${photo ? " hidden" : ""}" id="prof-snowbg-block">
-      <div class="set-title">눈사람 배경색</div>
+      <div class="set-title">프사 배경색</div>
       <div class="color-row">
         <input type="color" id="prof-snowbg" class="color-well"
-               value="${curSnowBg}" aria-label="눈사람 배경색 고르기">
+               value="${curSnowBg}" aria-label="프사 배경색 고르기">
         <input type="text" id="prof-snowbg-hex" class="color-hex"
                value="${curSnowBg}" maxlength="7" spellcheck="false"
                autocapitalize="off" aria-label="색상 코드 직접 입력">
@@ -2442,7 +2506,7 @@ function bindProfilePanel() {
       photoClear.classList.add("hidden");
       if (photoHint) {
         photoHint.textContent =
-          "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 눈사람이 보여요.";
+          "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 귀여운 캐릭터가 보여요.";
       }
       window.rerenderUserCards?.();
       document.getElementById("prof-snowbg-block")?.classList.remove("hidden");
