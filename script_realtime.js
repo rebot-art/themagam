@@ -1115,10 +1115,14 @@
 
   /* 카드 프사에 붙는 이름표 — 방장이 먼저입니다 (방장이 부방장 명단에도
      들어 있으면 '방장' 하나만 붙어요. 둘 다 붙으면 겹칩니다). */
+  /* 🎖️ 명예 훈장 (2026-10-27 콩) — 금 톱니 원판 + 와인 별 + 와인 리본(끝은 제비 꼬리).
+     글자 없이 훈장만 답니다. 모양·기울기(왼쪽 13도)는 styles.css 의 .is-honor 가 정해요.
+     ★ 그라데이션 id 가 카드마다 같은 것은 **모양이 같아서** 괜찮습니다. */
+  const HONOR_MEDAL_SVG = `<svg viewBox="0 0 48 64"><defs><linearGradient id="hmG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE99A"/><stop offset="1" stop-color="#D9A21F"/></linearGradient></defs><g transform="rotate(14 16 28)"><polygon points="10,28 22,28 22,62 16,55 10,62" fill="#A92B4B" stroke="#6E1430" stroke-width="1.2" stroke-linejoin="round"/><rect x="14.5" y="28.6" width="3" height="31" fill="#F2CF6B"/></g><g transform="rotate(-14 32 28)"><polygon points="26,28 38,28 38,62 32,55 26,62" fill="#A92B4B" stroke="#6E1430" stroke-width="1.2" stroke-linejoin="round"/><rect x="30.5" y="28.6" width="3" height="31" fill="#F2CF6B"/></g><polygon points="40.50,20.00 37.94,23.18 38.87,27.16 35.18,28.92 34.29,32.90 30.20,32.88 27.67,36.09 24.00,34.30 20.33,36.09 17.80,32.88 13.71,32.90 12.82,28.92 9.13,27.16 10.06,23.18 7.50,20.00 10.06,16.82 9.13,12.84 12.82,11.08 13.71,7.10 17.80,7.12 20.33,3.91 24.00,5.70 27.67,3.91 30.20,7.12 34.29,7.10 35.18,11.08 38.87,12.84 37.94,16.82" fill="url(#hmG)" stroke="#8A5A00" stroke-width="1.4" stroke-linejoin="round"/><circle cx="24" cy="20" r="11" fill="none" stroke="#FFF3C4" stroke-width="1"/><polygon points="24.00,12.00 26.12,17.59 32.08,17.87 27.42,21.61 29.00,27.38 24.00,24.10 19.00,27.38 20.58,21.61 15.92,17.87 21.88,17.59" fill="#A92B4B" stroke="#6E1430" stroke-width=".8" stroke-linejoin="round"/></svg>`;
   function stampHtml(u) {
     if (u === ADMIN_NICK) return `<span class="card-admin-stamp" aria-label="방장">방장</span>`;
     if (_vice[u] === true) return `<span class="card-admin-stamp is-vice" aria-label="부방장">부방장</span>`;
-    if (_honor[u] === true) return `<span class="card-admin-stamp is-honor" aria-label="명예 멤버">명예</span>`;
+    if (_honor[u] === true) return `<span class="card-admin-stamp is-honor" role="img" aria-label="명예 멤버">${HONOR_MEDAL_SVG}</span>`;
     return "";
   }
 

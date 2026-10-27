@@ -13096,14 +13096,24 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 :root[data-is-dark="true"] .greet-card.gk-re  { background: rgba(127,169,111,.18); color: #C4E3B8; }
 :root[data-is-dark="true"] .greet-card.gk-out { background: rgba(189,179,166,.16); color: #D8CFC3; }
 
-/* 🏅 명예 멤버 도장 (2026-10-27 콩 — 골드 「명예」) — 방장·부방장·지원군과 같은 자리·같은 각도.
-   [바꿈] 처음엔 와인색 「명예✨」 였는데 글자가 안 보인다고 해서 금색 + 진한 갈색 글자, 두 글자만으로 바꿨습니다.
-   크기는 방장과 같게(글자 .79 · 좌우 여백 9px) — 두 글자라 폭도 방장과 같아요. */
+/* 🎖️ 명예 멤버 훈장 (2026-10-27 콩) — 글자 딱지 대신 **훈장 그림**.
+   금 톱니 원판 + 와인 별 + 와인 리본(끝은 제비 꼬리). 방장 딱지(오른쪽 7도)와 반대로 **왼쪽 13도**.
+   자리는 방장·부방장 딱지와 같은 프사 오른쪽 아래 — 원판이 프사 모서리에 걸치고 리본이 아래로 늘어집니다.
+   ★ 딱지 공통 규칙(.card-admin-stamp)의 바탕·테두리·그림자는 여기서 모두 지웁니다 — 훈장 그림이 직접 그려요.
+   ★ pointer-events: none 은 공통 규칙에서 물려받아요(프사 클릭을 안 가림) — 그래서 마우스를 올려도 말풍선은 안 뜹니다. */
 .card-admin-stamp.is-honor{
-  background: linear-gradient(135deg, #F7D774, #E0A82E);
-  border-color: rgba(255, 255, 255, .6);
-  color: #4A2F00;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  width: 30px;
+  height: 40px;
+  right: -16px;
+  bottom: -22px;
+  transform: rotate(-13deg);
+  filter: drop-shadow(0 1px 2px rgba(40, 30, 20, .35));
 }
+.card-admin-stamp.is-honor svg{ display: block; width: 100%; height: 100%; }
 /* 가볍게 보기 — 방장·부방장·지원군처럼 테두리를 덧그리되 금색 (내 카드가 우선) */
 .lite-card.is-honor .lite-in::after{
   content: ""; position: absolute; inset: -1px; z-index: 3;
