@@ -3305,7 +3305,7 @@
      ---------------------------------------------------------------------
      방 쪽 셈(몇 명일 때 몇 장)은 script_realtime.js 의 지원군수() 에 있습니다.
      여기는 **넷의 생김새**만 고칩니다: 이름 · 목표 · 카드 배경 · 프사.
-         config/helpers = { on, list: [{ name, goal, bg, photo } × 4], at }
+         config/helpers = { on, list: [{ name, goal, bg, photo } × 6], at }
      ★ 처음 값(HELPER_DEFAULT)은 script_realtime.js 의 것과 **같아야** 합니다 —
        checks.js 가 두 표를 견줍니다.
      ★ 프사는 160px 정사각으로 줄여 글자(data:)로 넣습니다. 창고(Storage)를 안 쓰는
@@ -3315,10 +3315,12 @@
     { name: "밤샘러", goal: "오늘도 끝까지",   bg: "#FFF6E4" },
     { name: "마감러", goal: "마감은 지킨다",   bg: "#F3F0FF" },
     { name: "새벽반", goal: "조용히 한 장 더", bg: "#EEF7F1" },
-    { name: "올빼미", goal: "밤이 내 시간",    bg: "#FDF0EE" }
+    { name: "올빼미", goal: "밤이 내 시간",    bg: "#FDF0EE" },
+    { name: "별밤지기", goal: "한 줄이라도 더",   bg: "#EEF3FB" },
+    { name: "커피수혈", goal: "카페인으로 달린다", bg: "#FBF1E6" }
   ];
   const HELPER_PHOTO_PX = 160;
-  let _helperPhotos = ["", "", "", ""];
+  let _helperPhotos = ["", "", "", "", "", ""];
   let _helperPick = -1;                    // 지금 사진을 고르는 줄
 
   function 지원군사진칸(i) {
@@ -3396,10 +3398,10 @@
     try {
       const list = 지원군읽어오기();
       const 이름들 = list.map(x => x.name);
-      if (new Set(이름들).size !== 이름들.length) { msg("adm-helper-msg", "이름이 겹쳐요 — 넷이 서로 달라야 해요.", true); return; }
+      if (new Set(이름들).size !== 이름들.length) { msg("adm-helper-msg", "이름이 겹쳐요 — 여섯이 서로 달라야 해요.", true); return; }
       const on = !!el("adm-helper-on")?.checked;
       await db.ref("config/helpers").set({ on, list, at: Date.now() });
-      msg("adm-helper-msg", on ? "✅ 저장했어요 — 방에 다섯 명이 안 되면 지원군이 떠요."
+      msg("adm-helper-msg", on ? "✅ 저장했어요 — 방에 일곱 명이 안 되면 지원군이 떠요."
                                : "✅ 저장했어요 — 지금은 꺼 둔 상태라 아무에게도 안 떠요.");
     } catch (e) {
       msg("adm-helper-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
@@ -3561,7 +3563,7 @@
     /* 🤝 지원군 — 줄은 다시 그려지므로 상자에 위임합니다 */
     el("adm-helper-save")?.addEventListener("click", saveHelpers);
     el("adm-helper-reset")?.addEventListener("click", () => {
-      _helperPhotos = ["", "", "", ""];
+      _helperPhotos = ["", "", "", "", "", ""];
       지원군줄그리기(null);
       msg("adm-helper-msg", "처음 값으로 돌렸어요 — [저장] 을 눌러야 방에 반영돼요.");
     });
