@@ -1130,9 +1130,14 @@ const AVATAR_CHARS = (() => {
   ];
 })();
 
+/* 🦊 손으로 정해 둔 캐릭터 (2026-10-28 콩 — 방장의 특권) — 표는 window.AVATAR_CHAR_PICK ({닉: 캐릭터 번호}).
+   ★ 표는 script_realtime.js 에 있습니다 — 방장 닉(ADMIN_NICK)이 거기 있어서, 닉을 여기 또 베껴 적지 않으려고요.
+   여기 없는 닉은 아래 해시로 자동 배정됩니다. */
 /** 닉네임으로 캐릭터 번호 (배경색과 따로 흔들리도록 해시를 한 번 더 섞습니다) */
 function avatarCharIndex(nick) {
   const s = String(nick || "");
+  const pick = window.AVATAR_CHAR_PICK;
+  if (pick && Object.prototype.hasOwnProperty.call(pick, s) && AVATAR_CHARS[pick[s]]) return pick[s];
   let h = 2166136261;                       // FNV-1a — 한글 닉네임도 골고루 흩어집니다
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
