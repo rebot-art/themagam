@@ -9481,7 +9481,7 @@ html.member-open .cards-area{ padding-right: 250px; }
   .sticker-pop .sticker-opt{ padding: 2px; }
 }
 /* 📖 쪽 표시 (2026-10-16 콩) — 최근 쓴 줄 점선 **바로 위, 왼쪽**.
-   ‹ 1 / 2 › — 한 페이지 5줄(넓은 화면 10×5=50). 쪽이 하나뿐이면 아예 안 그립니다. */
+   ‹ 1 / 2 › — 한 페이지 4줄(넓은 화면 10×4=40, 2026-10-29 5줄→4줄). 쪽이 하나뿐이면 아예 안 그립니다. */
 .sticker-pager{
   grid-column: 1 / -1;
   display: flex;
@@ -9519,8 +9519,8 @@ html.member-open .cards-area{ padding-right: 250px; }
   /* 판 색(--panel)은 반투명이라 굴린 스티커가 비쳐 보였어요 — 두 겹 깔아 거의 불투명하게 */
   background: linear-gradient(var(--panel), var(--panel)), linear-gradient(var(--panel), var(--panel));
   border-top: 1.5px dashed var(--border);
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;                 /* [2026-10-29 콩] 최근 20개 = 두 줄 — 위 판과 같은 칸 수로 줄을 맞춥니다 */
+  grid-template-columns: repeat(5, 1fr);
   overflow: hidden;
   gap: 4px;
   align-items: center;
@@ -9538,7 +9538,9 @@ html.member-open .cards-area{ padding-right: 250px; }
   color: var(--muted);
   white-space: nowrap;
 }
-.sticker-recent .sticker-opt{ flex: 0 0 auto; }
+.sticker-recent .sticker-opt{ min-width: 0; }
+@media (min-width: 600px){ .sticker-recent{ grid-template-columns: repeat(9, 1fr); } }
+@media (min-width: 820px){ .sticker-recent{ grid-template-columns: repeat(10, 1fr); } }
 @media (max-width: 400px){
   .sticker-recent{ margin: 2px -6px -6px; padding: 9px 6px 6px; gap: 2px; bottom: -6px; }
 }

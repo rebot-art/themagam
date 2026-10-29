@@ -3,8 +3,8 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 여든세 개. 채팅과 수다방 양쪽에서 씁니다.
-   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나 → 10-09 예순 → 10-16 여든셋: 딴짓·충전 넷 빼고 출석 인사 스물일곱 더함 · 판은 5줄씩 페이지로)
+   말풍선 대신 크게 뜨는 손그림 여든아홉 개. 채팅과 수다방 양쪽에서 씁니다.
+   (2026-08-10 열다섯 → 08-11 스물다섯 → 09-10 서른아홉 → 마흔넷 → 쉰하나 → 10-09 예순 → 10-16 여든셋 → 10-29 여든아홉(하트·재입장·새로고침·복귀·PC 재부팅·환영 더함) / 10-16: 딴짓·충전 넷 빼고 출석 인사 스물일곱 더함 · 판은 5줄씩 페이지로)
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
@@ -79,7 +79,7 @@
          앞의 둘은 들어온 사람이 하는 말이고, 이건 **맞는 쪽**이 하는
          말이라 얼굴 하나가 아니라 두 팔을 벌린 온몸으로 그렸습니다. */
       id: "welcome", cmd: "어서와", label: "어서와요",
-      cmdRe: /^\/(어서와|어서와요|환영)$/,
+      cmdRe: /^\/(어서와|어서와요)$/,
       svg: `<circle cx="36" cy="26" r="10" fill="#6FBF9B"/>
             <circle cx="32" cy="25" r="1.6" fill="#3A2A22"/>
             <circle cx="40" cy="25" r="1.6" fill="#3A2A22"/>
@@ -1048,8 +1048,8 @@
     },
     {
       /* 2026-10-16 출석 인사 — 밥 먹고 돌아왔어요 */
-      id: "backfood", cmd: "복귀", label: "복귀했어요", fs: 17,
-      cmdRe: /^\/(복귀|복귀했어요|밥먹고왔어요)$/,
+      id: "backfood", cmd: "복귀했어요", label: "복귀했어요", fs: 17,
+      cmdRe: /^\/(복귀했어요|밥먹고왔어요)$/,
       svg: `<path d="M14 32h38a19 19 0 0 1-38 0z" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
             <path d="M18 32c0-7 5-10 11-10h8c6 0 11 3 11 10z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6"/>
             <circle cx="26" cy="40" r="1.7" fill="#3A2A22"/><circle cx="40" cy="40" r="1.7" fill="#3A2A22"/><path d="M28 45q5 3.5 10 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
@@ -1258,24 +1258,97 @@
             <text x="48" y="22" font-family="'Gamja Flower',cursive" font-size="18" fill="#AFA9EC" stroke="#AFA9EC" stroke-width=".4">zZ</text>
             <path d="M10 16l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#B07D12"
+    },
+    {
+      /* 2026-10-29 콩 — 열린 문으로 다시 들어와요 */
+      id: "reenter", cmd: "재입장", label: "재입장",
+      cmdRe: /^\/(재입장|재입장했어요)$/,
+      svg: `<rect x="30" y="8" width="30" height="46" rx="2" fill="#FFF3D6" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M30 8L16 13V50L30 54Z" fill="#F0997B" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="20" cy="33" r="1.8" fill="#3A2A22"/>
+            <circle cx="45" cy="38" r="9" fill="#8FB8E0"/>
+            <circle cx="42" cy="37" r="1.5" fill="#3A2A22"/><circle cx="48.5" cy="37" r="1.5" fill="#3A2A22"/>
+            <path d="M42.2 41.5q2.8 2.4 5.6 0" stroke="#3A2A22" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M64 22a6.5 6.5 0 1 0-2 4.8" stroke="#6FBF9B" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M65 29l-4-.5-.5-4" stroke="#6FBF9B" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
+      /* 2026-10-29 콩 — 웃는 노트북 + 유턴 — 밥그릇 「복귀했어요」와 따로 */
+      id: "comeback", cmd: "복귀", label: "복귀",
+      cmdRe: /^\/(복귀|복귀요|돌아왔어요)$/,
+      svg: `<rect x="9" y="12" width="38" height="28" rx="3" fill="#8FB8E0" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M5 43h46l-3 6H8z" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="22" cy="25" r="1.7" fill="#3A2A22"/><circle cx="34" cy="25" r="1.7" fill="#3A2A22"/>
+            <path d="M23 31q5 4 10 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="18" cy="30" r="2.2" fill="#F0A0B8" opacity=".85"/><circle cx="38" cy="30" r="2.2" fill="#F0A0B8" opacity=".85"/>
+            <path d="M65 44V22a8 8 0 0 0-16 0v6" stroke="#6FBF9B" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+            <path d="M45 25l4 6 4-6" stroke="#6FBF9B" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* 2026-10-29 콩 — 큼직한 하트 하나 */
+      id: "heart", cmd: "하트", label: "하트",
+      cmdRe: /^\/(하트|하트뿅|사랑)$/,
+      svg: `<path d="M36 52C12 37 8 22 17 14c8-6 17-2 19 6 2-8 11-12 19-6 9 8 5 23-19 38z" fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M19 22q2-5 7-5" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".8"/>
+            <path d="M58 8l1.4 3.2 3.2 1.4-3.2 1.4-1.4 3.2-1.4-3.2-3.2-1.4 3.2-1.4z" fill="#F0C674"/>
+            <path d="M10 8l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#F0C674"/>`,
+      textColor: "#B3372B"
+    },
+    {
+      /* 2026-10-29 콩 — 브라우저 새로고침 ↻ */
+      id: "refresh", cmd: "새로고침", label: "새로고침", fs: 18,
+      cmdRe: /^\/(새로고침|리프레시)$/,
+      svg: `<rect x="6" y="8" width="60" height="44" rx="5" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M6 20h60" stroke="#3A2A22" stroke-width="1.6"/>
+            <circle cx="13" cy="14" r="2" fill="#F0997B"/><circle cx="20" cy="14" r="2" fill="#F0C674"/><circle cx="27" cy="14" r="2" fill="#6FBF9B"/>
+            <path d="M47 36a11 11 0 1 1-3.5-8" stroke="#6FBF9B" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+            <path d="M46 23v7h-7" stroke="#6FBF9B" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#3B7A5C"
+    },
+    {
+      /* 2026-10-29 콩 — 모니터 전원 + 재시작 화살표 */
+      id: "reboot", cmd: "재부팅", label: "PC 재부팅", fs: 17,
+      cmdRe: /^\/(재부팅|컴재부팅|피씨재부팅)$/,
+      svg: `<rect x="4" y="8" width="50" height="36" rx="4" fill="#3A2A22"/>
+            <rect x="8" y="12" width="42" height="28" rx="2" fill="#AFA9EC"/>
+            <path d="M23.5 23A8.4 8.4 0 1 0 34.5 23" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M29 18v10" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            <path d="M24 44l-2 7h14l-2-7" fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M17 52h24" stroke="#3A2A22" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M68 34a8 8 0 1 1-2.5-5.8" stroke="#6FBF9B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M67 22v6.5h-6.5" stroke="#6FBF9B" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      textColor: "#4A3F9E"
+    },
+    {
+      /* 2026-10-29 콩 — 글자만 — 「환영!」 (박수처럼) */
+      id: "hwanyoung", cmd: "환영", label: "환영",
+      cmdRe: /^\/(환영|환영해요)$/,
+      svg: `<text x="36" y="40" text-anchor="middle" font-size="30" font-family="'Gamja Flower', cursive" stroke-width="0.7" paint-order="stroke" transform="rotate(-5 36 36)"><tspan fill="#E08A2E" stroke="#E08A2E">환</tspan><tspan fill="#2F6191" stroke="#2F6191">영</tspan><tspan fill="#B3372B" stroke="#B3372B">!</tspan></text>
+            <path d="M10 14l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#F0C674"/>
+            <path d="M62 44l1.4 3.2 3.2 1.4-3.2 1.4-1.4 3.2-1.4-3.2-3.2-1.4 3.2-1.4z" fill="#F0A0B8"/>
+            <circle cx="14" cy="48" r="2.4" fill="#6FBF9B"/><circle cx="60" cy="14" r="2.4" fill="#8FB8E0"/>
+            <path d="M20 8q3 4 0 8M52 8q-3 4 0 8" stroke="#F0997B" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#B3372B"
     }
   ];
 
   /* =====================================================================
-     📖 판에 놓이는 차례 (2026-10-16 콩) — 한 페이지에 5줄씩 나누기 때문에
-     **앞쪽 쉰 개가 첫 페이지**입니다. 하루에 가장 자주 쓰는 출석 인사·출퇴근·
-     사정·끼니를 앞에 모았어요 (넓은 화면 10칸 × 5줄 = 50).
+     📖 판에 놓이는 차례 (2026-10-16 콩) — 한 페이지에 4줄씩 나누기 때문에(2026-10-29 5줄→4줄)
+     **앞쪽 마흔 개가 첫 페이지**입니다. 하루에 가장 자주 쓰는 출석 인사·출퇴근·
+     사정·끼니를 앞에 모았어요 (넓은 화면 10칸 × 4줄 = 40).
      ★ 위의 배열은 쓴 순서 그대로 두고, 놓이는 자리는 여기서만 정합니다.
        여기에 없는 id 는 맨 뒤로 갑니다 (새 스티커를 배열에만 적어도 사라지진 않아요).
      ===================================================================== */
   const ORDER = [
-    "hi", "rehi", "welcome", "wel", "morning", "chulcheck", "stampin", "annyeong", "bangawa", "longtime",
-    "peekin", "knock", "dawn", "owl", "weekend", "backfood", "gunpil", "on", "gin", "reon",
+    "hi", "rehi", "welcome", "wel", "hwanyoung", "morning", "chulcheck", "stampin", "annyeong", "bangawa", "longtime",
+    "peekin", "knock", "reenter", "dawn", "owl", "weekend", "backfood", "comeback", "gunpil", "on", "gin", "reon",
     "bye", "byebye", "seeya", "gnight", "dream", "kaltoe", "overtime", "firstgo", "goodjob", "rest",
-    "dawnoff", "earlygo", "recharge", "stophere", "off", "yay", "gout", "away", "stuck", "urgent",
+    "dawnoff", "earlygo", "recharge", "stophere", "off", "yay", "gout", "away", "stuck", "refresh", "reboot", "urgent",
     "late", "dayoff", "unwell", "sleepy", "soon", "back", "yum", "lunch", "dinner", "coffee",
     "walk", "out", "pat", "fight", "cheerup", "cando", "aza", "clap", "stamp", "praise",
-    "cheer", "dash", "pomo", "done", "good", "best", "thanks", "nod", "ok", "wow",
+    "cheer", "dash", "pomo", "done", "good", "best", "thanks", "heart", "nod", "ok", "wow",
     "wau", "oh", "eek", "heol", "ah", "meong", "sorry", "wait", "carrot", "haha",
     "hehe", "cry", "dead"
   ];
@@ -1390,7 +1463,7 @@
        · 한 번도 안 쓴 사람은 줄 자체가 없어서 예전 판과 똑같이 보입니다.
      ===================================================================== */
   const RECENT_KEY = "themagam.stickerRecent";
-  const RECENT_MAX = 10;
+  const RECENT_MAX = 20;
   function recentList() {
     try {
       const a = JSON.parse((window.AppStore || localStorage).getItem(RECENT_KEY) || "[]");
@@ -1434,7 +1507,7 @@
            써도 배지가 안 붙어서 "왜 나만 안 되지" 가 됩니다. */
         /* ★ 한 줄에 하나씩 — checks.js 가 줄 단위로 읽습니다 (여러 줄로
            나누면 "아예 없음" 으로 잡혀요). */
-        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "byebye", "morning", "seeya", "gnight", "dream", "annyeong", "bangawa", "longtime", "peekin", "knock", "firstgo", "goodjob", "earlygo"], // 👋 인사왕 (웰컴 2026-09-30 · 바이바이·좋은 꿈꿔 2026-10-09 · 안녕하세요·반가워요·오랜만·왔어요·똑똑·먼저 가요·수고했어요·일찍 가볼게요 2026-10-16)
+        cGreet: ["hi", "rehi", "welcome", "wel", "bye", "byebye", "morning", "seeya", "gnight", "dream", "annyeong", "bangawa", "longtime", "peekin", "knock", "reenter", "comeback", "hwanyoung", "firstgo", "goodjob", "earlygo"], // 👋 인사왕 (웰컴 2026-09-30 · 바이바이·좋은 꿈꿔 2026-10-09 · 안녕하세요·반가워요·오랜만·왔어요·똑똑·먼저 가요·수고했어요·일찍 가볼게요 2026-10-16)
         cPat:   ["pat", "cheerup", "praise"],                                   // 🫶 토닥이
         cCheer: ["fight", "cheerup", "cando", "aza", "clap", "stamp"]           // 📣 응원왕
       };
@@ -1463,10 +1536,10 @@
     doc.body.appendChild(pop);   // 칸 수는 화면 폭(CSS)이 정하니, 붙인 뒤에 읽습니다
 
     /* ★★ 페이지 나누기 (2026-10-16 콩 "판이 거대해지는 걸 방지 — 10×5 를 한 페이지로")
-       한 페이지 = 그때의 칸 수 × 5줄 (넓은 화면 10칸 → 50개, 보통 9칸 → 45개, 폰 5칸 → 25개).
+       한 페이지 = 그때의 칸 수 × 4줄 (넓은 화면 10칸 → 40개, 보통 9칸 → 36개, 폰 5칸 → 20개) — 2026-10-29 콩: 5줄 → 4줄.
        쪽 번호(‹ 1/2 ›)는 **최근 쓴 줄의 점선 바로 위, 왼쪽**에 놓습니다. 차례는
        ORDER 가 정해서 첫 쪽에 출석 인사·출퇴근이 모입니다. */
-    const ROWS = 5;
+    const ROWS = 4;
     const 열수 = () => (view.getComputedStyle(pop).gridTemplateColumns || "").split(" ").filter(Boolean).length || 5;
     const 한쪽 = 열수() * ROWS;
     const 쪽수 = Math.max(1, Math.ceil(STICKERS.length / 한쪽));
@@ -1505,7 +1578,7 @@
     _쪽가기 = 쪽수 > 1 ? 쪽가기 : null;
     그리기();
 
-    /* 🕓 최근 쓴 스티커 — 점선 아래 한 줄. 칸 수만큼만 보여 **두 줄로 안 넘어갑니다**.
+    /* 🕓 최근 쓴 스티커 — 점선 아래 **최대 두 줄·스무 개**(2026-10-29 콩: 최근 20개). 칸 수×2 만큼만(10칸 20 · 9칸 18 · 5칸 10).
        칸 수는 CSS 가 화면 폭으로 정하므로(5·9·10), 그려진 뒤 격자에서 읽어 옵니다. */
     const 최근 = recentList();
     if (최근.length) {
@@ -1513,7 +1586,7 @@
       const row = doc.createElement("div");
       row.className = "sticker-recent";
       row.innerHTML = `<span class="sticker-recent-lbl">최근 쓴</span>` +
-        최근.slice(0, cols).map(id => {
+        최근.slice(0, cols * 2).map(id => {
           const s = byId(id);
           return `<button type="button" class="sticker-opt" data-sticker="${id}"
                    title="${s.label} (/${s.cmd})" aria-label="${s.label}"
