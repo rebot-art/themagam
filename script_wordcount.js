@@ -429,6 +429,7 @@
     if (!big || !rows) return;
 
     const mine = myRow();
+    상태줄();      // 🟢 초록 줄 — 탭·팝업이 바뀌어도 늘 채웁니다 (아래 say 위 주석 참고)
 
     /* =====================================================================
        [2026-08-21] wl 로 시작하는 탭은 script_worklog.js 가 그립니다.
@@ -929,9 +930,56 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  /* =====================================================================
+     🟢 초록 줄(#wc-log)을 **늘** 보이게 (2026-10-29 — 콩)
+     ---------------------------------------------------------------------
+     "+414자 · 기준 364,078자 · 오늘 누적 756자" 가 기록 직후에만 떴다가, 팝업을 닫았다 열거나
+     탭을 옮기면 사라졌습니다(기록 탭에서만 다시 보였어요). 이제 **그릴 때마다** 이 줄을 채웁니다:
+       · 기준이 있으면 → "기준 N자 · 오늘 누적 M자"
+                          (마지막 기록이 오늘 것이고 기준·누적이 그대로면 맨 앞에 "+414자" 도)
+       · 기준이 없으면 → "기준을 정해주세요 — 전체 글자수를 적고 기록을 눌러요"
+     ★ 다른 안내("글자수가 줄었네요" 등)가 막 떴으면 5초 동안은 그 안내가 먼저예요.
+     ★ "+414자" 는 이 기기에만 남깁니다(AppStore · 서버 통신 0). 기준·누적이 바뀌면(새 편·초기화·기준
+       다시 잡기·남은 쪽 기록) 맞지 않아 저절로 빠져요.
+     ===================================================================== */
+  const LAST_KEY = "wcLast";
+  let _sayText = "", _sayAt = 0, _sayTimer = 0;
   function say(t) {
     const box = el("wc-log");
     if (box) box.textContent = t || "";
+    _sayText = t || "";
+    _sayAt = Date.now();
+    const 표 = ++_sayTimer;                          // (clearTimeout 대신 번호표 — 검사용 가짜 환경에는 없어요)
+    if (t) {
+      /* 안내가 끝나면 늘 보이는 줄로 돌아옵니다 (setTimeout 이 없는 검사용 환경에서도 멈추지 않게 감쌌어요) */
+      try { setTimeout(() => { if (표 === _sayTimer) 상태줄(); }, 5200); } catch (e) {}
+    } else 상태줄();
+  }
+  function rememberLast(d, base, total) {
+    try {
+      window.AppStore?.setItem(LAST_KEY, JSON.stringify({ nick: me(), day: dayKey(), d: Number(d), base: Number(base), total: Number(total) }));
+    } catch (e) {}
+  }
+  function lastDelta(mine) {
+    try {
+      const o = JSON.parse(window.AppStore?.getItem(LAST_KEY) || "null");
+      if (o && o.nick === me() && o.day === dayKey() && Number(o.base) === Number(mine.base) &&
+          Number(o.total) === Number(mine.total || 0) && o.d > 0) return o.d;
+    } catch (e) {}
+    return null;
+  }
+  function 상태줄() {
+    const box = el("wc-log");
+    if (!box || !me()) return;
+    /* 막 떠 있는 안내(5초 안)는 건드리지 않습니다 */
+    if (_sayText && box.textContent === _sayText && Date.now() - _sayAt < 5000) return;
+    const mine = myRow();
+    if (mine.base === null || mine.base === undefined) {
+      box.textContent = "기준을 정해주세요 — 전체 글자수를 적고 기록을 눌러요";
+      return;
+    }
+    const d = lastDelta(mine);
+    box.textContent = (d ? `+${fmt(d)}자 · ` : "") + `기준 ${fmt(mine.base)}자 · 오늘 누적 ${fmt(mine.total || 0)}자`;
   }
 
   /* ---------------------------------------------------------------
@@ -1137,6 +1185,7 @@
       /* [2026-08-22 — 콩] 기준을 함께 보여 줍니다. 안 보이니 자꾸
          [▶ 기준] 을 눌러 되짚어 보게 되더라고요.
          기준 = 방금 적은 값(v) — 다음엔 여기서부터 셉니다. */
+      rememberLast(diff, v, next);
       say(`+${fmt(diff)}자 · 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
     } else if (diff === 0) {
       if (!(await 작업만())) say("그대로예요");
