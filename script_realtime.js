@@ -1551,6 +1551,15 @@
     return _helperOrder;
   }
 
+  /* 🎲 [2026-10-30 콩 "지원군은 정렬과 상관없이 사이사이에 랜덤으로"] 지원군마다 0~1 사이 자리값을 접속할 때 한 번만 뽑아 둡니다.
+     ★ 카드 줄을 그릴 때 (정렬이 끝난 뒤) 이 값만큼 진짜 카드 사이에 끼워요. 접속하는 동안은 값이 그대로라 카드가 흔들리지 않습니다.
+     ★ 서버를 안 읽습니다 — 화면 안에서만 뽑아요. */
+  const _helperSlot = {};
+  function 지원군자리(이름) {
+    if (!(이름 in _helperSlot)) _helperSlot[이름] = Math.random();
+    return _helperSlot[이름];
+  }
+
   function 지원군시험수() {
     if (!window.SOLO) return 0;
     try { return Math.max(0, Number(new URLSearchParams(location.search).get("helpers")) || 0); }
@@ -1608,7 +1617,7 @@
         workMs: (((분 + k * 83) % 420) + 12) * 60000,
         todayGoalText: h.goal,
         lastSeen: 분 * 60000,                        // 분 단위로만 바뀌게 (카드를 초마다 갈지 않게)
-        joinedAt: 8e15 + i                           // 늘 맨 뒤, 정해진 차례로
+        joinedAt: 8e15 + i                           // (2026-10-30 부터 자리는 그릴 때 사이사이로 정함 — 이 값은 접속 순서 정렬 안에서만 뒤)
       };
     });
     return out;
@@ -1689,6 +1698,21 @@
       }
       orderedNicks.sort((a, b) =>
         (a === myNick ? -1 : 0) - (b === myNick ? -1 : 0));
+
+      /* 🤝 [2026-10-30 콩] 지원군은 정렬 설정과 상관없이 진짜 카드 **사이사이**에 끼웁니다 (접속할 때 한 번 정한 자리로 고정).
+         ★ 첫 자리(0번)는 내 카드를 위해 비워 둡니다 — 지원군은 둘째 자리부터. */
+      {
+        const 진짜들 = orderedNicks.filter(u => !(data[u] && data[u]._helper === true));
+        const 지원들 = orderedNicks.filter(u => data[u] && data[u]._helper === true);
+        if (지원들.length) {
+          const 합 = 진짜들.slice();
+          지원들.map(u => [u, 지원군자리(u)]).sort((a, b) => b[1] - a[1]).forEach(([u, r]) => {
+            합.splice(Math.min(합.length, 1 + Math.floor(r * Math.max(1, 진짜들.length))), 0, u);
+          });
+          orderedNicks.length = 0;
+          합.forEach(u => orderedNicks.push(u));
+        }
+      }
 
       for (const u of orderedNicks) {
         const row = data[u] || {};
