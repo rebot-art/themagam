@@ -691,7 +691,7 @@ function fileToSquareDataUrl(file) {
 }
 
 /* =====================================================================
-   기본 프사 — (옛 눈사람 → 2026-10-27 캐릭터 열둘, 아래 AVATAR_CHARS). 함수 이름 snowmanSvg 는 부르는 곳이 많아 그대로 둡니다.
+   기본 프사 — (옛 눈사람 → 2026-10-27 캐릭터 스물넷, 아래 AVATAR_CHARS). 함수 이름 snowmanSvg 는 부르는 곳이 많아 그대로 둡니다.
    ---------------------------------------------------------------------
    사진을 안 올린 사람에게 이모지 대신 보여줍니다.
    배경색은 닉네임에서 계산하므로 같은 사람은 늘 같은 색이고,
@@ -1075,7 +1075,7 @@ function snowBgFor(nick) {
 window.snowBgFor = snowBgFor;
 
 /* =====================================================================
-   기본 프사 캐릭터 열둘 — 닉네임으로 하나가 정해집니다 (2026-10-27 콩: 눈사람 → 캐릭터)
+   기본 프사 캐릭터 스물넷 — 닉네임으로 하나가 정해집니다 (2026-10-27 콩: 눈사람 → 캐릭터)
    ---------------------------------------------------------------------
    각 그림은 100×100 안에 들어가고, 몸통에는 흰 테두리(O)를 둘러 어떤 배경색에서도
    또렷하게 보이게 했습니다. 눈·입은 늘 같은 진한 갈색(E).
@@ -1088,6 +1088,8 @@ const AVATAR_CHARS = (() => {
   const eye = (x, y, r = 3.2) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${E}"/>`;
   const smile = (x, y, w = 5) => `<path d="M${x - w} ${y} Q${x} ${y + w * 0.9} ${x + w} ${y}" stroke="${E}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
   const cheek = (x, y) => `<circle cx="${x}" cy="${y}" r="4" fill="#FF9FB0" opacity=".7"/>`;
+  const rays = (() => { let s = ""; for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; const x1 = 50 + Math.cos(a) * 31, y1 = 50 + Math.sin(a) * 31, x2 = 50 + Math.cos(a) * 43, y2 = 50 + Math.sin(a) * 43; s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#fff" stroke-width="10" stroke-linecap="round"/><line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFB92E" stroke-width="5" stroke-linecap="round"/>`; } return s; })();
+  const petals = (() => { let s = ""; for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 - Math.PI / 2; s += `<circle cx="${(50 + Math.cos(a) * 24).toFixed(1)}" cy="${(50 + Math.sin(a) * 24).toFixed(1)}" r="15" fill="#FFF" ${O}/>`; } return s; })();
   return [
     /* 토끼 */
     `<ellipse cx="35" cy="26" rx="9" ry="21" fill="#fff" ${O}/><ellipse cx="65" cy="26" rx="9" ry="21" fill="#fff" ${O}/>
@@ -1117,6 +1119,7 @@ const AVATAR_CHARS = (() => {
     `<path d="M50 8 L62 36 L92 39 L69 59 L77 89 L50 73 L23 89 L31 59 L8 39 L38 36Z" fill="#FFD04A" ${O}/>${eye(42, 50)}${eye(58, 50)}${smile(50, 59, 5)}${cheek(34, 58)}${cheek(66, 58)}`,
     /* 양 */
     `<g fill="#fff" ${O}><circle cx="28" cy="40" r="15"/><circle cx="50" cy="30" r="17"/><circle cx="72" cy="40" r="15"/><circle cx="33" cy="60" r="15"/><circle cx="67" cy="60" r="15"/></g>
+     <g transform="rotate(-14 22 52)"><ellipse cx="22" cy="52" rx="12" ry="6.5" fill="#5A4B40" ${O}/><ellipse cx="22" cy="52" rx="8" ry="4" fill="#E8A9A0"/></g><g transform="rotate(14 78 52)"><ellipse cx="78" cy="52" rx="12" ry="6.5" fill="#5A4B40" ${O}/><ellipse cx="78" cy="52" rx="8" ry="4" fill="#E8A9A0"/></g>
      <ellipse cx="50" cy="57" rx="19" ry="21" fill="#5A4B40" ${O}/><circle cx="43" cy="54" r="3" fill="#fff"/><circle cx="57" cy="54" r="3" fill="#fff"/><path d="M45 65 Q50 69 55 65" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
     /* 머그컵 */
     `<path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#fff" stroke-width="12" fill="none"/><path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#E39A6B" stroke-width="6" fill="none"/>
@@ -1127,6 +1130,18 @@ const AVATAR_CHARS = (() => {
     /* 여우 */
     `<path d="M12 14 L38 34 L62 34 L88 14 L86 56 Q82 86 50 88 Q18 86 14 56Z" fill="#F08A4B" ${O}/><path d="M30 68 Q50 94 70 68 Q50 60 30 68Z" fill="#FFF3DF"/>
      <path d="M20 24 L32 34 L22 42Z M80 24 L68 34 L78 42Z" fill="#FFD0A8"/>${eye(38, 55, 3.4)}${eye(62, 55, 3.4)}<ellipse cx="50" cy="68" rx="4" ry="3" fill="${E}"/>`,
+    /* 해 */ `${rays}<circle cx="50" cy="50" r="27" fill="#FFD84D" ${O}/>${eye(41, 48)}${eye(59, 48)}${smile(50, 57, 6)}${cheek(36, 56)}${cheek(64, 56)}`,
+    /* 나뭇잎 */ `<path d="M50 88 C18 70 14 36 50 10 C86 36 82 70 50 88Z" fill="#6FCF7A" ${O}/><path d="M50 88 L50 24" stroke="#3E9B55" stroke-width="3" stroke-linecap="round"/><path d="M50 46 L36 36 M50 58 L64 48 M50 70 L38 60" stroke="#3E9B55" stroke-width="2.4" stroke-linecap="round"/>${eye(41, 54)}${eye(59, 54)}${smile(50, 63, 5)}${cheek(35, 62)}${cheek(65, 62)}`,
+    /* 꽃 */ `${petals}<circle cx="50" cy="50" r="17" fill="#FFC93C" ${O}/>${eye(44, 48, 2.8)}${eye(56, 48, 2.8)}${smile(50, 55, 4)}${cheek(39, 55)}${cheek(61, 55)}`,
+    /* 딸기 */ `<path d="M50 90 C20 76 12 46 22 34 C34 24 66 24 78 34 C88 46 80 76 50 90Z" fill="#FF5E6C" ${O}/><path d="M50 30 L38 16 L50 22 L62 16Z" fill="#4CB86B" ${O}/><g fill="#FFE8A3"><ellipse cx="34" cy="50" rx="2.2" ry="3.4"/><ellipse cx="66" cy="50" rx="2.2" ry="3.4"/><ellipse cx="42" cy="72" rx="2.2" ry="3.4"/><ellipse cx="58" cy="72" rx="2.2" ry="3.4"/><ellipse cx="50" cy="80" rx="2.2" ry="3.4"/></g>${eye(41, 56)}${eye(59, 56)}${smile(50, 64, 5)}${cheek(35, 63)}${cheek(65, 63)}`,
+    /* 병아리 */ `<circle cx="50" cy="56" r="32" fill="#FFE066" ${O}/><path d="M50 14 Q46 22 52 26 M44 16 Q40 24 46 26" stroke="#F4B400" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M44 62 L56 62 L50 70Z" fill="#FF9A3C" ${O}/>${eye(39, 52)}${eye(61, 52)}${cheek(32, 60)}${cheek(68, 60)}`,
+    /* 펭귄 */ `<ellipse cx="50" cy="56" rx="30" ry="34" fill="#4A5568" ${O}/><ellipse cx="50" cy="62" rx="20" ry="25" fill="#fff"/><path d="M44 54 L56 54 L50 62Z" fill="#FF9A3C" ${O}/>${eye(40, 46)}${eye(60, 46)}${cheek(34, 54)}${cheek(66, 54)}<ellipse cx="22" cy="62" rx="6" ry="14" fill="#4A5568" ${O} transform="rotate(12 22 62)"/><ellipse cx="78" cy="62" rx="6" ry="14" fill="#4A5568" ${O} transform="rotate(-12 78 62)"/>`,
+    /* 버섯 */ `<path d="M20 56 C14 24 86 24 80 56Z" fill="#F0556A" ${O}/><circle cx="36" cy="40" r="5" fill="#fff"/><circle cx="58" cy="34" r="6" fill="#fff"/><circle cx="68" cy="48" r="4" fill="#fff"/><path d="M34 56 L34 80 Q50 90 66 80 L66 56Z" fill="#FFF3DF" ${O}/>${eye(43, 66)}${eye(57, 66)}${smile(50, 72, 4)}${cheek(39, 72)}${cheek(61, 72)}`,
+    /* 무지개 */ `<path d="M12 72 A38 38 0 0 1 88 72" fill="none" stroke="#FF6B6B" stroke-width="6"/><path d="M18 72 A32 32 0 0 1 82 72" fill="none" stroke="#FFC24D" stroke-width="6"/><path d="M24 72 A26 26 0 0 1 76 72" fill="none" stroke="#5CC97B" stroke-width="6"/><path d="M30 72 A20 20 0 0 1 70 72" fill="none" stroke="#5B9BFF" stroke-width="6"/><g fill="#fff" ${O}><circle cx="16" cy="76" r="9"/><circle cx="28" cy="78" r="8"/><circle cx="84" cy="76" r="9"/><circle cx="72" cy="78" r="8"/></g>`,
+    /* 하트 */ `<path d="M50 88 C14 62 10 34 28 24 C40 18 50 26 50 34 C50 26 60 18 72 24 C90 34 86 62 50 88Z" fill="#FF8FAB" ${O}/>${eye(39, 48)}${eye(61, 48)}${smile(50, 57, 5)}${cheek(33, 56)}${cheek(67, 56)}`,
+    /* 선인장 */ `<path d="M40 88 L40 40 Q40 18 50 18 Q60 18 60 40 L60 88Z" fill="#5CBF7E" ${O}/><path d="M40 62 L26 62 Q22 62 22 56 L22 44 Q22 40 26 40 Q30 40 30 44 L30 54 L40 54Z" fill="#5CBF7E" ${O}/><path d="M60 54 L70 54 L70 36 Q70 32 74 32 Q78 32 78 36 L78 56 Q78 62 72 62 L60 62Z" fill="#5CBF7E" ${O}/><path d="M50 26 L50 30 M46 40 L46 44 M54 48 L54 52" stroke="#2E8B57" stroke-width="2" stroke-linecap="round"/>${eye(45, 62, 2.8)}${eye(55, 62, 2.8)}${smile(50, 68, 4)}<circle cx="50" cy="14" r="5" fill="#FF8FB1" ${O}/>`,
+    /* 컵케이크 */ `<path d="M24 56 L32 88 L68 88 L76 56Z" fill="#E8A87C" ${O}/><path d="M36 58 L38 86 M50 58 L50 86 M64 58 L62 86" stroke="#C98757" stroke-width="2.2"/><path d="M20 56 C14 40 28 34 34 38 C34 22 66 22 66 38 C72 34 86 40 80 56Z" fill="#FFB6C8" ${O}/><circle cx="50" cy="20" r="6" fill="#F0556A" ${O}/>${eye(41, 48)}${eye(59, 48)}${smile(50, 54, 4)}${cheek(34, 53)}${cheek(66, 53)}`,
+    /* 도넛 */ `<path fill-rule="evenodd" d="M12 50 a38 38 0 1 0 76 0 a38 38 0 1 0 -76 0Z M38 50 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" fill="#E8B27A" ${O}/><path fill-rule="evenodd" d="M16 50 a34 34 0 1 0 68 0 a34 34 0 1 0 -68 0Z M38 50 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" fill="#FF9EC0"/><circle cx="50" cy="50" r="12" fill="none" stroke="#fff" stroke-width="3.5"/><g stroke-width="3" stroke-linecap="round"><line x1="30" y1="30" x2="36" y2="34" stroke="#FFF"/><line x1="66" y1="28" x2="62" y2="35" stroke="#6BC5FF"/><line x1="76" y1="52" x2="70" y2="52" stroke="#FFE066"/><line x1="26" y1="56" x2="32" y2="54" stroke="#6BE0A0"/><line x1="64" y1="72" x2="60" y2="66" stroke="#FFF"/><line x1="36" y1="74" x2="40" y2="68" stroke="#6BC5FF"/></g>`,
   ];
 })();
 
