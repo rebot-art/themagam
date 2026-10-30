@@ -370,7 +370,7 @@
      인 카드 마당 배경에 얹습니다.
 
          위 : 📊 오늘 접속 현황  (24칸 막대 — 띠와 같은 그림)
-         아래: 🔥 지금 n명 참여 중 (최근 일곱 줄)
+         아래: 🔥 지금 n명 참여 중 (최근 여섯 줄 — 2026-10-30 콩: 일곱 → 여섯)
 
      [지켜야 할 것]
      ① **클릭을 하나도 안 가립니다.** pointer-events: none 이고 카드보다
@@ -425,7 +425,7 @@
     if (!feed.length) {
       return `<p class="rb-empty">아직 조용해요 — 첫 줄을 올려 보세요</p>`;
     }
-    return feed.slice(-7).reverse().map(f => {
+    return feed.slice(-6).reverse().map(f => {
       const 내것 = !!myNick && f.nick === myNick;
       let 말;
       if (f.kind === "done")       말 = `<b>${escapeHtml(화글(f.ep || "", f.u))} 마침</b>${f.snap ? " · " + comma(f.snap) + "자" : ""} 🎉`;
