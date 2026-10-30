@@ -1120,7 +1120,7 @@ const AVATAR_CHARS = (() => {
     /* 양 */
     `<g fill="#fff" ${O}><circle cx="28" cy="40" r="15"/><circle cx="50" cy="30" r="17"/><circle cx="72" cy="40" r="15"/><circle cx="33" cy="60" r="15"/><circle cx="67" cy="60" r="15"/></g>
      <g transform="rotate(-14 22 52)"><ellipse cx="22" cy="52" rx="12" ry="6.5" fill="#5A4B40" ${O}/><ellipse cx="22" cy="52" rx="8" ry="4" fill="#E8A9A0"/></g><g transform="rotate(14 78 52)"><ellipse cx="78" cy="52" rx="12" ry="6.5" fill="#5A4B40" ${O}/><ellipse cx="78" cy="52" rx="8" ry="4" fill="#E8A9A0"/></g>
-     <ellipse cx="50" cy="57" rx="19" ry="21" fill="#5A4B40" ${O}/><circle cx="43" cy="54" r="3" fill="#fff"/><circle cx="57" cy="54" r="3" fill="#fff"/><path d="M45 65 Q50 69 55 65" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+     <ellipse cx="50" cy="57" rx="19" ry="21" fill="#5A4B40" ${O}/><g fill="#fff"><circle cx="40" cy="40" r="6.5"/><circle cx="50" cy="36" r="7.5"/><circle cx="60" cy="40" r="6.5"/></g><circle cx="43" cy="54" r="3" fill="#fff"/><circle cx="57" cy="54" r="3" fill="#fff"/><path d="M45 65 Q50 69 55 65" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
     /* 머그컵 */
     `<path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#fff" stroke-width="12" fill="none"/><path d="M70 42 Q92 40 90 58 Q87 74 68 72" stroke="#E39A6B" stroke-width="6" fill="none"/>
      <path d="M16 34 H72 V68 Q72 88 52 88 H36 Q16 88 16 68Z" fill="#E39A6B" ${O}/>${eye(36, 60)}${eye(54, 60)}${smile(45, 68, 5)}${cheek(28, 68)}${cheek(62, 68)}
