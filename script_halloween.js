@@ -48,30 +48,35 @@
 
   function 그리기() {
     if (!(Date.now() < END)) { 걷기(); clearInterval(타이머); return; }
-    const W = window.innerWidth || 0, H = window.innerHeight || 0;
-    const 숨김 = W < MIN_W || (typeof window.isLiteCards === "function" && window.isLiteCards());
+    const 숨김 = (window.innerWidth || 0) < MIN_W || (typeof window.isLiteCards === "function" && window.isLiteCards());
     const 마당 = document.querySelector(".cards-area");
     if (숨김 || !마당 || !document.getElementById("room-board") && !document.querySelector(".card")) { 걷기(); return; }
 
+    /* ★ 가랜드는 카드 마당(.cards-area) **안에** 답니다 — 마당이 넘치는 걸 잘라 주니
+         챗창·옆 칸·팝업은 절대 안 가리고, 배경 위에서만 보입니다.
+         (화면 전체에 fixed 로 얹었더니 챗창과 팝업까지 덮었어요 — 콩) */
+    const 틀 = 마당.getBoundingClientRect();
+    const ox = 틀.left + 마당.clientLeft, oy = 틀.top + 마당.clientTop;
+    const W = 마당.clientWidth, H = 마당.clientHeight;
     /* 기준 자리 — 공지 줄이 있으면 그 줄, 없으면 판 위쪽 */
     const 판 = document.getElementById("room-board");
     const 공지 = document.getElementById("rb-notice");
     const 기준 = (공지 || 판)?.getBoundingClientRect();
-    const 윗선 = 기준 ? 기준.top : H * 0.73;
-    const 왼쪽 = 기준 ? 기준.left : W * 0.346;
-    const yL = Math.max(120, Math.min(H - 160, 윗선 - 16));       // 긴 줄
-    const yS = Math.max(130, Math.min(H - 150, 윗선 + 2));        // 짧은 줄 시작
+    const 윗선 = 기준 ? 기준.top - oy : H * 0.73;
+    const 왼쪽 = 기준 ? 기준.left - ox : W * 0.346;
+    const yL = Math.max(60, Math.min(H - 100, 윗선 - 16));       // 긴 줄
+    const yS = Math.max(70, Math.min(H - 90, 윗선 + 2));        // 짧은 줄 시작
     const sig = [W, H, Math.round(yL), Math.round(yS), Math.round(왼쪽)].join(",");
-    if (svg && sig === 직전) return;
+    if (svg && svg.parentNode === 마당 && sig === 직전) return;
     직전 = sig;
 
     if (!svg) {
       svg = document.createElementNS(NS, "svg");
       svg.id = ID;
       svg.setAttribute("aria-hidden", "true");
-      svg.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:500;filter:drop-shadow(0 4px 4px rgba(0,0,0,.28))";
-      document.body.appendChild(svg);
+      svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:2;filter:drop-shadow(0 4px 4px rgba(0,0,0,.28))";
     }
+    if (svg.parentNode !== 마당) 마당.appendChild(svg);
     svg.setAttribute("width", W); svg.setAttribute("height", H);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
@@ -83,7 +88,7 @@
 
     svg.innerHTML =
       줄그리기(W * 0.03, yL, W * 0.98, yL, 70, 긴) +
-      줄그리기(왼쪽, yS, W * 0.98, Math.min(H - 110, yS + 168), 55, 짧);
+      줄그리기(왼쪽, yS, W * 0.98, Math.min(H - 60, yS + 168), 55, 짧);
   }
 
   let 타이머 = 0;
