@@ -1145,6 +1145,71 @@ const AVATAR_CHARS = (() => {
   ];
 })();
 
+
+/* =====================================================================
+   🎃 할로윈 기본 프사 (2026-10-31 — 콩)
+   ---------------------------------------------------------------------
+   "B 로 통째로 교체. 새로 프사 지정한 사람들도 내일까지는 할로윈 프사로. 월욜엔 돌아오게."
+   · 끝나는 시각: 2026-11-04 00:00 (한국시간) = 화요일 밤 12시. 그 뒤로는 이 덩어리가 아무것도 안 합니다.
+   · 기간 중에는 **사진을 올린 사람도** 보여 줄 때만 할로윈 캐릭터로 바뀝니다
+     (photoShown). 올린 사진·프로필은 하나도 안 건드려요 — 프로필 꾸밈 창은
+     photoSrcOf 를 그대로 써서 내 사진이 그대로 보이고, 저장도 그대로입니다.
+   · 캐릭터는 열두 종, 닉네임 해시로 배정. 방장은 손으로 프랑켄(5번).
+   · 끝나는 순간 열려 있는 창도 저절로 원래 프사로 돌아옵니다.
+   · 서버를 쓰지 않습니다 — 통신량 0, 보안규칙 그대로.
+   ★ 걷어내려면: 이 덩어리 · snowmanSvg 의 한 줄 · photoShown 을 쓰는 네 곳.
+   ===================================================================== */
+const HALLOWEEN_END = Date.parse("2026-11-04T00:00:00+09:00");
+function halloweenOn() { return Date.now() < HALLOWEEN_END; }
+window.halloweenOn = halloweenOn;
+const HALLOWEEN_CHARS = [
+    /* 호박 */ "<path d=\"M50 20 Q50 10 60 8\" stroke=\"#4a7c3a\" stroke-width=\"4.5\" fill=\"none\" stroke-linecap=\"round\"/><ellipse cx=\"50\" cy=\"58\" rx=\"36\" ry=\"30\" fill=\"#FF8A1F\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M50 28 Q36 58 50 88 M50 28 Q64 58 50 88 M30 34 Q18 58 30 82 M70 34 Q82 58 70 82\" stroke=\"#D96F10\" stroke-width=\"2.5\" fill=\"none\"/><path d=\"M33 52 L42 52 L37.5 44Z M58 52 L67 52 L62.5 44Z\" fill=\"#3A2E28\"/><path d=\"M36 68 Q50 80 64 68 L60 66 L56 70 L50 66 L44 70 L40 66Z\" fill=\"#3A2E28\"/>",
+    /* 유령 */ "<path d=\"M20 90 L20 48 Q20 14 50 14 Q80 14 80 48 L80 90 L70 82 L60 90 L50 82 L40 90 L30 82Z\" fill=\"#fff\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><ellipse cx=\"40\" cy=\"48\" rx=\"4\" ry=\"6\" fill=\"#3A2E28\"/><ellipse cx=\"60\" cy=\"48\" rx=\"4\" ry=\"6\" fill=\"#3A2E28\"/><ellipse cx=\"50\" cy=\"64\" rx=\"5\" ry=\"6.5\" fill=\"#3A2E28\"/><circle cx=\"33\" cy=\"60\" r=\"4\" fill=\"#FFB1C2\" opacity=\".7\"/><circle cx=\"67\" cy=\"60\" r=\"4\" fill=\"#FFB1C2\" opacity=\".7\"/>",
+    /* 박쥐 */ "<path d=\"M6 42 Q20 26 36 38 L36 66 Q22 56 6 62 Q12 52 6 42Z M94 42 Q80 26 64 38 L64 66 Q78 56 94 62 Q88 52 94 42Z\" fill=\"#5b4b73\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M34 34 L30 12 L46 28Z M66 34 L70 12 L54 28Z\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"56\" r=\"25\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"41\" cy=\"52\" r=\"5\" fill=\"#fff\"/><circle cx=\"59\" cy=\"52\" r=\"5\" fill=\"#fff\"/><circle cx=\"41\" cy=\"53\" r=\"2.5\" fill=\"#3A2E28\"/><circle cx=\"59\" cy=\"53\" r=\"2.5\" fill=\"#3A2E28\"/><path d=\"M44 66 L47 72 L50 66 L53 72 L56 66Z\" fill=\"#fff\"/>",
+    /* 마녀 고양이 */ "<path d=\"M22 50 L26 22 L46 38Z M78 50 L74 22 L54 38Z\" fill=\"#3a3340\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"62\" r=\"28\" fill=\"#3a3340\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"40\" cy=\"60\" r=\"5\" fill=\"#C8F06A\"/><circle cx=\"60\" cy=\"60\" r=\"5\" fill=\"#C8F06A\"/><ellipse cx=\"40\" cy=\"60\" rx=\"1.6\" ry=\"4\" fill=\"#3A2E28\"/><ellipse cx=\"60\" cy=\"60\" rx=\"1.6\" ry=\"4\" fill=\"#3A2E28\"/><path d=\"M46 70 Q50 74 54 70\" stroke=\"#fff\" stroke-width=\"2\" fill=\"none\"/><path d=\"M18 40 Q50 32 82 40 Q50 48 18 40Z\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M33 38 L50 6 L67 38Z\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><rect x=\"36\" y=\"30\" width=\"28\" height=\"5\" fill=\"#FF8A1F\"/>",
+    /* 해골 */ "<path d=\"M50 12 C24 12 18 32 22 50 C24 58 30 60 30 66 L30 80 L70 80 L70 66 C70 60 76 58 78 50 C82 32 76 12 50 12Z\" fill=\"#fff\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><ellipse cx=\"38\" cy=\"48\" rx=\"8\" ry=\"9\" fill=\"#3A2E28\"/><ellipse cx=\"62\" cy=\"48\" rx=\"8\" ry=\"9\" fill=\"#3A2E28\"/><path d=\"M50 58 L46 68 L54 68Z\" fill=\"#3A2E28\"/><path d=\"M38 70 V80 M46 70 V80 M54 70 V80 M62 70 V80\" stroke=\"#3A2E28\" stroke-width=\"2.5\"/>",
+    /* 프랑켄 */ "<rect x=\"22\" y=\"22\" width=\"56\" height=\"62\" rx=\"14\" fill=\"#B9E08A\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M22 36 Q50 20 78 36 L78 28 Q50 8 22 28Z\" fill=\"#3a3340\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><rect x=\"14\" y=\"52\" width=\"8\" height=\"12\" rx=\"3\" fill=\"#8A93A8\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><rect x=\"78\" y=\"52\" width=\"8\" height=\"12\" rx=\"3\" fill=\"#8A93A8\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M34 46 H46 M54 46 H66\" stroke=\"#3A2E28\" stroke-width=\"5\" stroke-linecap=\"round\"/><circle cx=\"40\" cy=\"52\" r=\"3\" fill=\"#3A2E28\"/><circle cx=\"60\" cy=\"52\" r=\"3\" fill=\"#3A2E28\"/><path d=\"M38 70 H62\" stroke=\"#3A2E28\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M44 66 V74 M50 66 V74 M56 66 V74\" stroke=\"#3A2E28\" stroke-width=\"2\"/><path d=\"M62 28 L68 34 L64 38\" stroke=\"#3A2E28\" stroke-width=\"2\" fill=\"none\"/>",
+    /* 미라 */ "<rect x=\"22\" y=\"14\" width=\"56\" height=\"72\" rx=\"24\" fill=\"#F4EBD3\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M24 36 H76 M22 52 H78 M24 68 H76\" stroke=\"#CFC2A0\" stroke-width=\"3.5\"/><rect x=\"30\" y=\"40\" width=\"40\" height=\"14\" rx=\"6\" fill=\"#3A2E28\"/><circle cx=\"40\" cy=\"47\" r=\"4\" fill=\"#fff\"/><circle cx=\"60\" cy=\"47\" r=\"4\" fill=\"#fff\"/><circle cx=\"40\" cy=\"47\" r=\"1.8\" fill=\"#3A2E28\"/><circle cx=\"60\" cy=\"47\" r=\"1.8\" fill=\"#3A2E28\"/><path d=\"M44 68 Q50 72 56 68\" stroke=\"#3A2E28\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\"/>",
+    /* 드라큘라 */ "<path d=\"M14 90 L22 52 L36 74Z M86 90 L78 52 L64 74Z\" fill=\"#2E2540\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"52\" r=\"26\" fill=\"#F7E7E0\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M26 44 Q50 18 74 44 Q64 34 50 38 Q36 34 26 44Z\" fill=\"#2a2030\"/><circle cx=\"41\" cy=\"54\" r=\"3.2\" fill=\"#3A2E28\"/><circle cx=\"59\" cy=\"54\" r=\"3.2\" fill=\"#3A2E28\"/><path d=\"M42 66 Q50 72 58 66\" stroke=\"#3A2E28\" stroke-width=\"2.4\" fill=\"none\"/><path d=\"M44 67 L46 73 L48 68Z M52 68 L54 73 L56 67Z\" fill=\"#fff\" stroke=\"#3A2E28\" stroke-width=\"1\"/><circle cx=\"35\" cy=\"62\" r=\"4\" fill=\"#FF9FB0\" opacity=\".7\"/><circle cx=\"65\" cy=\"62\" r=\"4\" fill=\"#FF9FB0\" opacity=\".7\"/>",
+    /* 사탕 */ "<path d=\"M14 40 L30 50 L30 70 L14 80 Z M86 40 L70 50 L70 70 L86 80 Z\" fill=\"#FF8AB8\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"60\" r=\"26\" fill=\"#FF8A1F\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M50 34 A26 26 0 0 1 76 60\" stroke=\"#fff\" stroke-width=\"6\" fill=\"none\" opacity=\".6\"/><circle cx=\"41\" cy=\"56\" r=\"3.2\" fill=\"#3A2E28\"/><circle cx=\"59\" cy=\"56\" r=\"3.2\" fill=\"#3A2E28\"/><path d=\"M43 66 Q50 73 57 66\" stroke=\"#3A2E28\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\"/>",
+    /* 거미 */ "<path d=\"M28 52 Q8 36 6 60\" stroke=\"#3B2A55\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M30 60 Q10 60 8 82\" stroke=\"#3B2A55\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M70 52 Q92 36 94 60\" stroke=\"#3B2A55\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M70 60 Q90 60 92 82\" stroke=\"#3B2A55\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><circle cx=\"50\" cy=\"58\" r=\"26\" fill=\"#6A4C93\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"41\" cy=\"52\" r=\"6\" fill=\"#fff\"/><circle cx=\"59\" cy=\"52\" r=\"6\" fill=\"#fff\"/><circle cx=\"41\" cy=\"53\" r=\"2.8\" fill=\"#3A2E28\"/><circle cx=\"59\" cy=\"53\" r=\"2.8\" fill=\"#3A2E28\"/><path d=\"M43 68 Q50 74 57 68\" stroke=\"#fff\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M50 4 V32\" stroke=\"#B9A6D6\" stroke-width=\"2\"/>",
+    /* 외눈 괴물 */ "<path d=\"M20 86 Q14 40 50 18 Q86 40 80 86Z\" fill=\"#7BD88F\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"50\" r=\"15\" fill=\"#fff\"/><circle cx=\"50\" cy=\"50\" r=\"7\" fill=\"#7A4FD0\"/><circle cx=\"50\" cy=\"50\" r=\"3\" fill=\"#3A2E28\"/><path d=\"M38 72 Q50 80 62 72\" stroke=\"#3A2E28\" stroke-width=\"2.6\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M34 22 L30 8 M66 22 L70 8\" stroke=\"#4FB868\" stroke-width=\"4\" stroke-linecap=\"round\"/><circle cx=\"30\" cy=\"8\" r=\"4\" fill=\"#FF8A1F\"/><circle cx=\"70\" cy=\"8\" r=\"4\" fill=\"#FF8A1F\"/>",
+    /* 마녀 */ "<path d=\"M24 50 Q20 84 34 90 L66 90 Q80 84 76 50Z\" fill=\"#E8793C\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><circle cx=\"50\" cy=\"56\" r=\"24\" fill=\"#FFE2CC\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M26 52 Q50 36 74 52 Q70 40 50 38 Q30 40 26 52Z\" fill=\"#E8793C\"/><circle cx=\"41\" cy=\"58\" r=\"3.2\" fill=\"#3A2E28\"/><circle cx=\"59\" cy=\"58\" r=\"3.2\" fill=\"#3A2E28\"/><path d=\"M44 68 Q50 73 56 68\" stroke=\"#3A2E28\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\"/><circle cx=\"35\" cy=\"64\" r=\"4\" fill=\"#FF9FB0\" opacity=\".7\"/><circle cx=\"65\" cy=\"64\" r=\"4\" fill=\"#FF9FB0\" opacity=\".7\"/><path d=\"M16 38 Q50 28 84 38 Q50 48 16 38Z\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M32 36 L50 2 L68 36Z\" fill=\"#3B2A55\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><rect x=\"36\" y=\"29\" width=\"28\" height=\"5\" fill=\"#FF8A1F\"/>",
+];
+const HALLOWEEN_ADMIN_PICK = 5;
+function halloweenIndex(nick) {
+  const s = String(nick || "");
+  const pick = window.AVATAR_CHAR_PICK;
+  if (pick && Object.prototype.hasOwnProperty.call(pick, s)) return HALLOWEEN_ADMIN_PICK;
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return (h >>> 0) % HALLOWEEN_CHARS.length;
+}
+/** 보여 줄 사진 — 할로윈 기간엔 모두 "사진 없음"으로 (기본 프사 자리에 할로윈 캐릭터가 뜹니다) */
+function photoShown(prof) { return halloweenOn() ? "" : photoSrcOf(prof); }
+window.photoShown = photoShown;
+(function () {
+  const 남은 = HALLOWEEN_END - Date.now();
+  if (!(남은 > 0 && 남은 < 2147483000)) return;
+  setTimeout(() => {
+    try {
+      document.querySelectorAll("[data-avatar-of]").forEach(el => {
+        const nick = el.dataset.avatarOf || "";
+        const photo = photoSrcOf((window._profileCache || {})[nick]);
+        if (photo) {
+          el.classList.remove("has-snow"); el.classList.add("has-photo");
+          el.innerHTML = `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`;
+        } else {
+          el.classList.remove("has-photo"); el.classList.add("has-snow");
+          el.innerHTML = snowmanSvg(nick);
+        }
+      });
+    } catch (e) {}
+    try { window.rerenderUserCards?.(); } catch (e) {}
+  }, 남은 + 800);
+})();
+
 /* 🦊 손으로 정해 둔 캐릭터 (2026-10-28 콩 — 방장의 특권) — 표는 window.AVATAR_CHAR_PICK ({닉: 캐릭터 번호}).
    ★ 표는 script_realtime.js 에 있습니다 — 방장 닉(ADMIN_NICK)이 거기 있어서, 닉을 여기 또 베껴 적지 않으려고요.
    여기 없는 닉은 아래 해시로 자동 배정됩니다. */
@@ -1164,7 +1229,7 @@ function snowmanSvg(nick, bgOverride) {
   return `<svg class="snowman" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
                role="img" aria-label="기본 프로필 캐릭터" focusable="false">
             <rect width="100" height="100" fill="${bg}"/>
-            ${AVATAR_CHARS[avatarCharIndex(nick)]}
+            ${halloweenOn() ? HALLOWEEN_CHARS[halloweenIndex(nick)] : AVATAR_CHARS[avatarCharIndex(nick)]}
           </svg>`;
 }
 
@@ -1181,7 +1246,7 @@ window.snowmanSvg = snowmanSvg;
 function chatAvatarHtml(user) {
   const nick = String(user || "");
   const prof = (window._profileCache || {})[nick] || {};
-  const photo = photoSrcOf(prof);
+  const photo = photoShown(prof);
   const attrs = `data-avatar-of="${escapeHtml(nick)}"`;
 
   return photo
@@ -1196,7 +1261,7 @@ function refreshChatAvatars() {
 
   box.querySelectorAll("[data-avatar-of]").forEach(el => {
     const nick = el.dataset.avatarOf || "";
-    const photo = photoSrcOf((window._profileCache || {})[nick]);
+    const photo = photoShown((window._profileCache || {})[nick]);
 
     if (photo) {
       const img = el.querySelector("img");
@@ -1204,7 +1269,7 @@ function refreshChatAvatars() {
       el.classList.remove("has-snow");
       el.classList.add("has-photo");
       el.innerHTML = `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`;
-    } else if (el.classList.contains("has-photo")) {
+    } else if (el.classList.contains("has-photo") || halloweenOn()) {
       el.classList.remove("has-photo");
       el.classList.add("has-snow");
       el.innerHTML = snowmanSvg(nick);

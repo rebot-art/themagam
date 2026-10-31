@@ -1740,7 +1740,7 @@
 
           // 프사 — 사진이 있으면 사진, 없으면 닉네임으로 만든 눈사람
           /* 🗄️ [2026-09-21] 창고 주소 먼저, 없으면 옛 글자 사진 */
-          const photo = window.photoSrcOf ? window.photoSrcOf(prof)
+          const photo = (window.photoShown || window.photoSrcOf) ? (window.photoShown || window.photoSrcOf)(prof)
                       : (window.sanitizePhoto?.(prof.photo) || "");
           const avatar = photo
             /* [고침 2026-08-13] loading="lazy" → decoding="sync".

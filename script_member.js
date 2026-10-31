@@ -75,7 +75,7 @@
     try {
       const r = await fetch(`${DB_URL}/users/${encodeURIComponent(nick)}/profile.json`, { cache: "no-store" });
       const prof = r.ok ? ((await r.json()) || {}) : {};
-      _photo[nick] = window.photoSrcOf ? window.photoSrcOf(prof) : "";
+      _photo[nick] = (window.photoShown || window.photoSrcOf) ? (window.photoShown || window.photoSrcOf)(prof) : "";
     } catch (e) { _photo[nick] = ""; }
     _photoBusy.delete(nick);
     render();
