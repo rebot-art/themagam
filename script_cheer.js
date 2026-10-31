@@ -51,6 +51,11 @@
      ★ 보안규칙의 $kind 검사도 이 넷을 허용해야 합니다 (보안규칙.json). */
   const MKINDS = KINDS.map(k => "m" + k);
   const ALL_KINDS = KINDS.concat(MKINDS);
+  /* 🎯 [2026-11-01 콩] "화공 카드는 불꽃만! 카드 메모는 따봉만! 응원 스티커 한 가지씩만."
+     보이고 고르는 건 이 둘뿐입니다. 위의 넷·서버 자리·보안규칙은 그대로 둡니다 —
+     (옛 별·하트가 서버에 남아 있어도 안 그려질 뿐이고, 다시 늘리고 싶으면 이 줄만 바꾸면 돼요.) */
+  const SHOW_SHARE = ["fire"];
+  const SHOW_MEMO  = ["mthumb"];
 
   /* 그림 — 전부 64×62 판에 40×38 로 그립니다 (프로필 하트와 같은 크기) */
   const HEART_PATH = "M32 57 C14 44 3 32 5 19 C7 8 20 4 32 15 C44 4 57 8 59 19 C61 32 50 44 32 57Z";
@@ -172,8 +177,8 @@
     if (!list) return;
     /* 🖥 화공 카드 · 🆕 새 카드 메모 — 같은 윗변, 같은 크기(CSS 가 .share-cheers 하나로 둘 다 맞춥니다) */
     [
-      { sel: ".share-card[data-share-nick]", attr: "data-share-nick", 종류들: KINDS },
-      { sel: ".memo-card[data-memo-of]",     attr: "data-memo-of",     종류들: MKINDS }
+      { sel: ".share-card[data-share-nick]", attr: "data-share-nick", 종류들: SHOW_SHARE },
+      { sel: ".memo-card[data-memo-of]",     attr: "data-memo-of",     종류들: SHOW_MEMO }
     ].forEach(({ sel, attr, 종류들 }) => list.querySelectorAll(sel).forEach(card => {
       const nick = card.getAttribute(attr);
       const mine = nick === me();
@@ -257,7 +262,7 @@
     p.className = "share-cheer-picker";
     p.setAttribute("role", "dialog");
     p.innerHTML = `<div class="share-cheer-picker-h">${nick === me() ? `내 ${memo ? "메모" : "화면"}에 붙이기` : esc(nick) + ` 님 ${memo ? "메모" : "화면"}에 응원`}</div>
-      <div class="share-cheer-picker-row">${KINDS.map(k =>
+      <div class="share-cheer-picker-row">${(memo ? ["thumb"] : ["fire"]).map(k =>
         `<button type="button" data-cheer-pick="${k}" title="${KIND_LABEL[k]}" aria-label="${KIND_LABEL[k]}">${SVG[k]}</button>`).join("")}</div>`;
     document.body.appendChild(p);
     _picker = p;
