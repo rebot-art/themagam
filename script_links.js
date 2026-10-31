@@ -11,6 +11,10 @@
    [통신량] 탭을 열 때 한 번 듣고(on), 닫으면 끊습니다(off). 공지·Q&A 와 같은 원칙.
    [새 링크 점] 방장이 올리면 newmark/links 에 시각을 찍고(dockMarkNew), 탭의 점이 켜집니다.
    [주소]  http/https 만 받습니다. 새 창(↗)으로 열려요.
+   [🔎 찾아보기] (2026-10-31 콩 — 콩트의 SearchCard 를 더마감 모양으로) 링크 목록 아래 · 올리기 칸 위.
+     검색어 + 엔터/[찾기] → 고른 사이트의 검색 결과가 **새 탭**으로 열립니다 (매번 새 탭 — 찾아 둔 걸 덮어쓰지 않게, 콩).
+     고른 사이트는 이 기기에만 기억(AppStore). 서버 통신 0 · 보안규칙 그대로. 방 식구 모두 씁니다.
+     ★ 검색칸은 목록이 갱신돼도 **지워지지 않게** 한 번만 그리고, 목록·올리기 칸만 다시 그립니다.
    ===================================================================== */
 (function () {
   "use strict";
@@ -19,6 +23,41 @@
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
   const 방장 = () => { try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; } };
+
+  /* 🔎 찾아보기 — 사이트 목록 (콩트 WEB_ENGINES 그대로) */
+  const ENGINES = [
+    { id: "google", label: "구글",     url: q => "https://www.google.com/search?q=" + q },
+    { id: "naver",  label: "네이버",   url: q => "https://search.naver.com/search.naver?query=" + q },
+    { id: "namu",   label: "나무위키", url: q => "https://namu.wiki/Search?q=" + q },
+    { id: "dict",   label: "국어사전", url: q => "https://ko.dict.naver.com/#/search?query=" + q },
+    { id: "thes",   label: "유의어",   url: q => "https://www.wordsisters.com/search/" + q },
+    { id: "ridi",   label: "리디",     url: q => "https://ridibooks.com/search?q=" + q },
+    { id: "image",  label: "이미지",   url: q => "https://www.google.com/search?tbm=isch&q=" + q },
+    { id: "yt",     label: "유튜브",   url: q => "https://www.youtube.com/results?search_query=" + q }
+  ];
+  const ENGINE_KEY = "linkSearchEngine";
+  function 사이트() {
+    let id = "";
+    try { id = (window.AppStore || localStorage).getItem(ENGINE_KEY) || ""; } catch (e) {}
+    return ENGINES.find(e => e.id === id) || ENGINES[0];
+  }
+  function 사이트고르기(id) {
+    try { (window.AppStore || localStorage).setItem(ENGINE_KEY, id); } catch (e) {}
+    document.querySelectorAll("#lk-find-c button").forEach(b => b.classList.toggle("on", b.dataset.eng === id));
+  }
+  function 찾기() {
+    const t = String(el("lk-q")?.value || "").trim();
+    if (!t) return;
+    window.open(사이트().url(encodeURIComponent(t)), "_blank", "noopener");   // 클릭·엔터 안에서 불러야 팝업 차단에 안 걸립니다
+  }
+  function 찾기칸() {
+    const 지금 = 사이트().id;
+    return `<div class="lk-find" id="lk-find">
+      <div class="lk-find-h"><i></i><b>찾아보기</b><span>새 탭으로 열려요</span></div>
+      <div class="lk-find-r"><input type="text" id="lk-q" maxlength="100" placeholder="검색어를 넣고 엔터" autocomplete="off"><button type="button" id="lk-find-go">찾기</button></div>
+      <div class="lk-find-c" id="lk-find-c">${ENGINES.map(e => `<button type="button" data-eng="${e.id}" class="${e.id === 지금 ? "on" : ""}">${e.label}</button>`).join("")}</div>
+    </div>`;
+  }
 
   let _rows = [];
   let _ref = null;
@@ -53,7 +92,13 @@
         </div>
         <p class="lk-msg" id="lk-msg"></p>
       </div>` : "";
-    _box.innerHTML = `<div class="lk-list">${줄}${빈}</div>${올리기}`;
+    /* 찾기 칸은 한 번만 — 다시 그리면 쓰던 검색어가 지워집니다 */
+    if (!_box.querySelector("#lk-find")) {
+      _box.innerHTML = `<div class="lk-list"></div>${찾기칸()}<div class="lk-addwrap"></div>`;
+    }
+    _box.querySelector(".lk-list").innerHTML = 줄 + 빈;
+    const 칸 = _box.querySelector(".lk-addwrap");
+    if (칸 && (!!칸.firstElementChild) !== 방장()) 칸.innerHTML = 올리기;
   }
 
   function say(t, bad) { const m = el("lk-msg"); if (m) { m.textContent = t || ""; m.classList.toggle("bad", !!bad); } }
@@ -90,9 +135,13 @@
     box.addEventListener("click", (e) => {
       const x = e.target.closest("[data-lk-del]");
       if (x) { e.preventDefault(); 지우기(x.dataset.lkDel); return; }
-      if (e.target.closest("#lk-send")) { 올리기(); }
+      if (e.target.closest("#lk-send")) { 올리기(); return; }
+      const c = e.target.closest("#lk-find-c [data-eng]");
+      if (c) { 사이트고르기(c.dataset.eng); return; }
+      if (e.target.closest("#lk-find-go")) { 찾기(); }
     });
     box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing && e.target.closest("#lk-q")) { e.preventDefault(); 찾기(); return; }   // 한글 조합 중 엔터는 무시
       if (e.key === "Enter" && !e.isComposing && e.target.closest("#lk-url, #lk-title, #lk-memo, #lk-icon")) { e.preventDefault(); 올리기(); }
     });
   }

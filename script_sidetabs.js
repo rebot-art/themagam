@@ -43,7 +43,7 @@
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
     /* [2026-10-10 콩] 🔗 LINK — **맨 아래, 다른 탭들과 떨어져서** (bottom → CSS margin-top:auto).
        알맹이는 script_links.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. */
-    { id: "links",  label: "🔗 LINK",    open: "openLinks", close: "closeLinks", bottom: true }
+    { id: "links",  label: "🔗 링크 & 검색", open: "openLinks", close: "closeLinks", bottom: true }
   ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.solo && !window.SOLO));
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;

@@ -12889,6 +12889,19 @@ html[data-lite] .user-card.share-card,
 .lk-x{ flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; }
 .lk-x:hover{ color: var(--danger); }
 .lk-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 20px 0; }
+/* 🔎 찾아보기 (2026-10-31 콩) — 링크 목록 아래 · 올리기 칸 위. 새 탭으로 열립니다 */
+.lk-find{ border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel, var(--fill-1)); padding: 10px 12px 11px; margin: 4px 0 8px; }
+.lk-find-h{ display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.lk-find-h i{ width: 14px; height: 3px; border-radius: 2px; background: var(--accent); display: block; }
+.lk-find-h b{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.lk-find-h span{ font-size: 10.5px; color: var(--muted); }
+.lk-find-r{ display: flex; gap: 6px; margin-bottom: 8px; }
+.lk-find-r input{ flex: 1 1 auto; min-width: 0; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 7px 11px; border-radius: var(--r-full, 99px); border: 1px solid var(--border); background: var(--fill-1); color: var(--text); outline: none; }
+.lk-find-r input:focus{ border-color: var(--accent); }
+.lk-find-r button{ flex: none; font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 6px 13px; border-radius: var(--r-full, 99px); border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+.lk-find-c{ display: flex; flex-wrap: wrap; gap: 4px; }
+.lk-find-c button{ font: inherit; font-size: 11px; line-height: 1.6; padding: 1px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
+.lk-find-c button.on{ border-color: var(--accent); color: var(--accent); background: var(--accent-softer); font-weight: var(--fw-bold); }
 .lk-add{ border: 1.5px dashed var(--border); border-radius: var(--r-md); padding: 10px 11px; margin-top: 6px; }
 .lk-add-h{ font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--muted-strong); margin-bottom: 6px; }
 .lk-add input{ display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 6px 11px; margin-bottom: 6px;
