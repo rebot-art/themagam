@@ -193,6 +193,17 @@
       } catch (err) {}
     });
 
+    /* 🖼 끌어다 놓기 (2026-10-31 콩) — 그 창 어디에 놓아도 그림으로 올립니다 (안 그러면 브라우저가 새 창으로 열어요) */
+    _doc.addEventListener("dragover", (e) => {
+      if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault();
+    });
+    _doc.addEventListener("drop", (e) => {
+      if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+      e.preventDefault();
+      const f = [...(e.dataTransfer?.files || [])].find(x => /^image\//.test(x.type || ""));
+      if (f) { try { window.imgUpDrop?.("sroomimg", f); } catch (err) {} }
+    });
+
     /* 창이 닫히면(✕ · 브라우저가 닫음) 제자리로 */
     win.addEventListener("pagehide", restore);
     win.addEventListener("unload",   restore);

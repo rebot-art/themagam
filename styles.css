@@ -12957,6 +12957,9 @@ html.side-files #files-modal .modal-content{
   width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; border: 0;
   background: transparent; zoom: 1;
 }
+/* [2026-10-31 콩] 옆 칸에서는 목록이 **칸 키만큼** 자랍니다 — 가운데 창용 최대 키(560px)가 그대로 남아 아래가 비는데도 스크롤이 생겼어요 */
+html.side-files #files-modal .modal-content{ display: flex; flex-direction: column; overflow: hidden; }
+html.side-files #files-modal .files-board{ flex: 1 1 auto; min-height: 0; max-height: none; }
 html.side-files #files-modal .modal-x{ display: none; }
 html.side-files #files-modal .modal-title{ display: none; }   /* 칸 머리에 이미 "📁 자료실" 이 있어요 */
 /* 폭 400 안에서는 긴 파일 이름을 **줄바꿈** (콩) — 가운데 창에서는 … 으로 자르던 것 */

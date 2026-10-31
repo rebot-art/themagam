@@ -174,21 +174,35 @@
       올리기(it.getAsFile(), 곳);
     });
 
-    /* 끌어다 놓기 — 판 위 아무 데나 */
+    /* 끌어다 놓기 — 판 위 아무 데나
+       ★ [2026-10-31 콩 "캡쳐를 끌어다 놓으면 새 창으로 떠 버려요"] 예전엔 **대화 목록(#chat-box · 비밀방 목록)** 위에만 달아서,
+         입력칸·머리말·빈 자리에 놓으면 브라우저가 그림을 새 창으로 열었습니다.
+         이제 **채팅 칸 전체(.chat-sidebar)** · **비밀방 판 전체** 에 답니다. */
     const host = 곳.hostId && document.getElementById(곳.hostId);
-    if (host && !host.dataset.imgupOn) {
-      host.dataset.imgupOn = "1";
+    const 칸 = host && (host.closest(".chat-sidebar, #dock-panel-sroom") || host);
+    [host, 칸].forEach(el => {
+      if (!el || el.dataset.imgupOn) return;
+      el.dataset.imgupOn = "1";
       ["dragenter", "dragover"].forEach(t =>
-        host.addEventListener(t, e => { e.preventDefault(); host.classList.add("imgup-over"); }));
+        el.addEventListener(t, e => {
+          if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+          e.preventDefault(); 칸.classList.add("imgup-over");
+        }));
       ["dragleave", "dragend"].forEach(t =>
-        host.addEventListener(t, () => host.classList.remove("imgup-over")));
-      host.addEventListener("drop", e => {
-        e.preventDefault(); host.classList.remove("imgup-over");
-        const f = [...(e.dataTransfer?.files || [])][0];
+        el.addEventListener(t, (e) => { if (!e.relatedTarget || !칸.contains(e.relatedTarget)) 칸.classList.remove("imgup-over"); }));
+      el.addEventListener("drop", e => {
+        if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+        e.preventDefault(); e.stopPropagation(); 칸.classList.remove("imgup-over");
+        const f = [...(e.dataTransfer?.files || [])].find(x => /^image\//.test(x.type || "")) || [...(e.dataTransfer?.files || [])][0];
         if (f) 올리기(f, 곳);
       });
-    }
+    });
+    _곳들[곳.folder] = 곳;
   }
+
+  /* 따로 창(↗)처럼 다른 문서에서 놓은 그림을 이쪽으로 넘겨 받는 문 (script_srpop.js) */
+  const _곳들 = {};
+  window.imgUpDrop = (folder, file) => { const g = _곳들[folder]; if (g && file) 올리기(file, g); };
 
   /* =====================================================================
      🧹 비밀방 그림 지우기 (자정 청소가 부릅니다)
