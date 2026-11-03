@@ -5783,9 +5783,11 @@ html[data-theme-style="night"] .pomo-bar-time{
 /* [2026-10-02 콩] 다시 70% 로 (0.64 → 0.448). 생각보다 좁은 화면으로
    보는 멤버가 많아서 — 단추가 줄 끝에서 접히기 전에 숨 자리를 내줍니다. */
 /* [2026-10-27 콩] 양끝 여백을 지금의 150% 로 (0.448 → 0.672). */
+/* [2026-11-03 콩] 🖥️ 안 켠 사람 단추에 "6/8 " 이 붙어 약 20px 길어졌습니다.
+   그만큼을 반으로 나눠 양끝 여백에서 10px 씩 덜어냅니다. */
 .app-head{
-  padding-left: calc(var(--card-w) * 0.672);
-  padding-right: calc(var(--card-w) * 0.672);
+  padding-left: calc(var(--card-w) * 0.672 - 10px);
+  padding-right: calc(var(--card-w) * 0.672 - 10px);
 }
 @media (max-width: 1100px){
   .app-head{ padding-left: 16px; padding-right: 16px; }

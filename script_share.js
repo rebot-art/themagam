@@ -1146,7 +1146,17 @@
     btn.classList.toggle("share-on", _sharing);
     btn.classList.toggle("share-others", !_sharing && others > 0);
 
-    if (label) label.textContent = _sharing ? "공유 중" : "화면 공유";
+    /* [2026-11-03 콩] 인원은 **공유를 안 켠 사람**에게만 보입니다 — [🖥️ 6/8 화면 공유]
+       앞 숫자 = 지금 공유 중인 사람 수, 뒤 숫자 = 관리자 페이지에서 정한 동시
+       공유 상한(maxShare). 켠 사람은 화면으로 알 수 있으니 [🖥️ 공유 중] 만 보입니다.
+       상한 규칙을 꺼 두었으면 숫자는 빼고 예전 그대로 "화면 공유".
+       ★ 글자가 길어진 만큼 머리말 양끝 여백을 줄인 값(한쪽 10px)이 styles.css 의
+         .app-head 에 있습니다. 글자를 더 늘리면 그쪽도 같이 고치세요. */
+    if (label) {
+      label.textContent = _sharing
+        ? "공유 중"
+        : ((_제한.on && _제한.maxShare > 0) ? `${others}/${_제한.maxShare} 화면 공유` : "화면 공유");
+    }
     /* 🚦 지금 못 켜는 상태면 말풍선으로 미리 알려 줍니다 — 누르기 전에
        알면 팝업까지 안 가도 되니까요 (버튼을 흐리게 하지는 않습니다:
        한산해지면 다시 켜지는 버튼이라 '고장' 으로 보이면 안 돼요). */
