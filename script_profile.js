@@ -1150,7 +1150,9 @@ const AVATAR_CHARS = (() => {
    🎃 할로윈 기본 프사 (2026-10-31 — 콩)
    ---------------------------------------------------------------------
    "B 로 통째로 교체. 새로 프사 지정한 사람들도 내일까지는 할로윈 프사로. 월욜엔 돌아오게."
-   · 끝나는 시각: 2026-11-04 00:00 (한국시간) = 화요일 밤 12시. 그 뒤로는 이 덩어리가 아무것도 안 합니다.
+   · [2026-11-04 콩] **매년 저절로** — 해마다 10/28 0시 ~ 11/2 0시(한국시간).
+     할로윈(10/31) 3일 전부터 바로 다음 날까지 5일입니다. 따로 올릴 파일 없음.
+     (올해만 11/4 0시까지 늘려 걸었고, 내년부터 이 규칙대로 돕니다.)
    · 기간 중에는 **사진을 올린 사람도** 보여 줄 때만 할로윈 캐릭터로 바뀝니다
      (photoShown). 올린 사진·프로필은 하나도 안 건드려요 — 프로필 꾸밈 창은
      photoSrcOf 를 그대로 써서 내 사진이 그대로 보이고, 저장도 그대로입니다.
@@ -1159,9 +1161,79 @@ const AVATAR_CHARS = (() => {
    · 서버를 쓰지 않습니다 — 통신량 0, 보안규칙 그대로.
    ★ 걷어내려면: 이 덩어리 · snowmanSvg 의 한 줄 · photoShown 을 쓰는 네 곳.
    ===================================================================== */
-const HALLOWEEN_END = Date.parse("2026-11-04T00:00:00+09:00");
-function halloweenOn() { return Date.now() < HALLOWEEN_END; }
+/* 해마다 10/28 0시 ~ 11/2 0시 (한국시간) — 시작 날은 포함, 끝 시각은 미포함 */
+function halloweenWindow(y) {
+  return [Date.parse(`${y}-10-28T00:00:00+09:00`), Date.parse(`${y}-11-02T00:00:00+09:00`)];
+}
+let _hwYear = 0, _hwStart = 0, _hwEnd = 0;
+function halloweenOn() {
+  const now = Date.now();
+  const y = new Date(now + 9 * 3600 * 1000).getUTCFullYear();      // 한국시간 기준 해
+  if (y !== _hwYear) { _hwYear = y; [_hwStart, _hwEnd] = halloweenWindow(y); }
+  return now >= _hwStart && now < _hwEnd;
+}
 window.halloweenOn = halloweenOn;
+
+/* =====================================================================
+   🎄 크리스마스 기본 프사 (2026-11-04 — 콩) — 할로윈과 같은 틀
+   ---------------------------------------------------------------------
+   · **매년 저절로** — 해마다 12/18 0시 ~ 12/27 0시(한국시간). 크리스마스(12/25)
+     7일 전부터 27일 0시까지 10일. 따로 올릴 파일 없음.
+   · 기간 중에는 **사진을 올린 사람도** 보여 줄 때만 이 캐릭터로 바뀝니다 (photoShown).
+     올린 사진·프로필은 하나도 안 건드립니다. 끝나면 저절로 돌아와요.
+   · 캐릭터는 열두 종, 닉네임 해시로 배정. 방장은 손으로 산타(0번).
+   · 서버를 쓰지 않습니다 — 통신량 0, 보안규칙 그대로.
+   · 전구 가랜드와 눈은 script_christmas.js — 기간은 이 함수(christmasOn) 하나로 정합니다.
+   ===================================================================== */
+function christmasWindow(y) {
+  return [Date.parse(`${y}-12-18T00:00:00+09:00`), Date.parse(`${y}-12-27T00:00:00+09:00`)];
+}
+let _xmYear = 0, _xmStart = 0, _xmEnd = 0;
+function christmasOn() {
+  const now = Date.now();
+  const y = new Date(now + 9 * 3600 * 1000).getUTCFullYear();      // 한국시간 기준 해
+  if (y !== _xmYear) { _xmYear = y; [_xmStart, _xmEnd] = christmasWindow(y); }
+  return now >= _xmStart && now < _xmEnd;
+}
+window.christmasOn = christmasOn;
+/** 할로윈이든 크리스마스든 — 기본 프사를 시즌 캐릭터로 바꾸는 기간인가 */
+function seasonOn() { return halloweenOn() || christmasOn(); }
+window.seasonOn = seasonOn;
+const CHRISTMAS_CHARS = (() => {
+const O='stroke="#fff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"';
+const D='#3A2E28';
+const eyes=(y=58,dx=9,r=3)=>`<circle cx="${50-dx}" cy="${y}" r="${r}" fill="${D}"/><circle cx="${50+dx}" cy="${y}" r="${r}" fill="${D}"/>`;
+const smile=(y=68,w=6)=>`<path d="M${50-w} ${y} Q50 ${y+6} ${50+w} ${y}" stroke="${D}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+const blush=(y=65,dx=16)=>`<circle cx="${50-dx}" cy="${y}" r="3.6" fill="#FF9FB0" opacity=".7"/><circle cx="${50+dx}" cy="${y}" r="3.6" fill="#FF9FB0" opacity=".7"/>`;
+/* 겹치는 모양을 한 덩어리 윤곽으로 — 흰 테두리를 먼저 굵게 깔고 그 위에 색을 얹습니다 */
+const blob=(shapes,fill)=>`<g fill="${fill}" stroke="#fff" stroke-width="7" stroke-linejoin="round">${shapes}</g><g fill="${fill}">${shapes}</g>`;
+
+const CHARS=[
+ ["산타",`<circle cx="50" cy="60" r="25" fill="#FFE2CC" ${O}/><circle cx="50" cy="68" r="4.5" fill="#FF9FB0"/>${eyes(60)}<path d="M26 66 Q50 106 74 66 Q62 78 50 76 Q38 78 26 66Z" fill="#fff" ${O}/><path d="M24 46 Q24 10 58 8 Q56 28 76 46 Q50 38 24 46Z" fill="#E5383B" ${O}/><rect x="21" y="41" width="58" height="12" rx="6" fill="#fff" ${O}/><circle cx="60" cy="8" r="7.5" fill="#fff" ${O}/>`],
+ ["루돌프",`<path d="M34 42 L26 14 M26 14 L16 20 M26 14 L34 12 M66 42 L74 14 M74 14 L84 20 M74 14 L66 12" stroke="#fff" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M34 42 L26 14 M26 14 L16 20 M26 14 L34 12 M66 42 L74 14 M74 14 L84 20 M74 14 L66 12" stroke="#8A5A36" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse cx="20" cy="52" rx="9" ry="6" fill="#B9835A" ${O}/><ellipse cx="80" cy="52" rx="9" ry="6" fill="#B9835A" ${O}/><ellipse cx="50" cy="62" rx="27" ry="27" fill="#B9835A" ${O}/><ellipse cx="50" cy="73" rx="15" ry="11" fill="#E8C39E"/>${eyes(56,12)}<circle cx="50" cy="70" r="7.5" fill="#E5383B"/><circle cx="47.5" cy="67.5" r="2" fill="#fff" opacity=".7"/>${smile(80,5)}`],
+ ["눈사람",`<circle cx="50" cy="76" r="22" fill="#fff" ${O}/><circle cx="50" cy="40" r="19" fill="#fff" ${O}/><path d="M32 54 Q50 64 68 54 L68 63 Q50 73 32 63Z" fill="#E5383B" ${O}/><rect x="59" y="58" width="10" height="22" rx="3" fill="#E5383B" ${O}/><ellipse cx="50" cy="24" rx="23" ry="5" fill="#2E2A33" ${O}/><rect x="37" y="6" width="26" height="19" rx="3" fill="#2E2A33" ${O}/><rect x="37" y="17" width="26" height="5" fill="#E5383B"/>${eyes(38,7,2.6)}<path d="M50 42 L65 45 L50 48Z" fill="#FF8A1F"/><circle cx="50" cy="74" r="2.8" fill="${D}"/><circle cx="50" cy="85" r="2.8" fill="${D}"/>`],
+ ["트리",`<rect x="43" y="82" width="14" height="12" rx="2" fill="#8B5A2B" ${O}/><path d="M50 12 L70 38 H60 L80 62 H65 L88 86 H12 L35 62 H20 L40 38 H30Z" fill="#2E8B57" ${O}/><path d="M50 2 L53 9 L61 9 L55 14 L57 22 L50 17 L43 22 L45 14 L39 9 L47 9Z" fill="#FFD166" ${O}/>${eyes(56,8,2.8)}${smile(64,5)}<circle cx="32" cy="76" r="4.2" fill="#E5383B"/><circle cx="68" cy="74" r="4.2" fill="#FFD166"/><circle cx="50" cy="78" r="4.2" fill="#4DA3FF"/><circle cx="40" cy="42" r="3.4" fill="#E5383B"/><circle cx="60" cy="46" r="3.4" fill="#FFD166"/>`],
+ ["진저브레드",blob(`<circle cx="50" cy="28" r="18"/><rect x="33" y="42" width="34" height="34" rx="10"/><rect x="12" y="44" width="76" height="16" rx="8"/><rect x="33" y="66" width="17" height="28" rx="8"/><rect x="50" y="66" width="17" height="28" rx="8"/>`,"#C98A4B")+`<g stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M17 52 H23 M77 52 H83 M36 86 H46 M54 86 H64"/></g><circle cx="43" cy="26" r="2.6" fill="#4A2C17"/><circle cx="57" cy="26" r="2.6" fill="#4A2C17"/><path d="M44 34 Q50 39 56 34" stroke="#4A2C17" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="3.6" fill="#E5383B"/><circle cx="50" cy="63" r="3.6" fill="#2E8B57"/><circle cx="37" cy="31" r="3" fill="#FF9FB0" opacity=".7"/><circle cx="63" cy="31" r="3" fill="#FF9FB0" opacity=".7"/>`],
+ ["엘프",`<path d="M28 60 L8 50 L29 52Z" fill="#FFE2CC" ${O}/><path d="M72 60 L92 50 L71 52Z" fill="#FFE2CC" ${O}/><circle cx="50" cy="62" r="23" fill="#FFE2CC" ${O}/>${eyes(62,9)}${smile(71,6)}${blush(68,15)}<path d="M25 50 Q28 18 60 12 Q76 8 90 26 Q72 22 75 50 Q50 40 25 50Z" fill="#2E8B57" ${O}/><rect x="22" y="44" width="56" height="10" rx="5" fill="#E5383B" ${O}/><circle cx="90" cy="26" r="6.5" fill="#FFD166" ${O}/>`],
+ ["선물상자",`<rect x="20" y="42" width="60" height="46" rx="6" fill="#E5383B" ${O}/><rect x="44" y="42" width="12" height="46" fill="#FFD166"/><rect x="15" y="32" width="70" height="16" rx="5" fill="#C1121F" ${O}/><rect x="44" y="32" width="12" height="16" fill="#FFD166"/><ellipse cx="38" cy="24" rx="13" ry="9" transform="rotate(-20 38 24)" fill="#FFD166" ${O}/><ellipse cx="62" cy="24" rx="13" ry="9" transform="rotate(20 62 24)" fill="#FFD166" ${O}/><circle cx="50" cy="29" r="5" fill="#E8A92A"/><circle cx="33" cy="60" r="3" fill="${D}"/><circle cx="67" cy="60" r="3" fill="${D}"/><path d="M45 69 Q50 75 55 69" stroke="${D}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="29" cy="70" r="4" fill="#7EC8F5" opacity=".9"/><circle cx="71" cy="70" r="4" fill="#7EC8F5" opacity=".9"/>`],
+ ["양말",blob(`<rect x="34" y="14" width="32" height="44" rx="4"/><path d="M34 50 L66 50 Q70 66 90 72 Q96 86 82 92 Q64 96 40 72 Q32 62 34 50Z"/>`,"#E5383B")+`<rect x="30" y="10" width="40" height="15" rx="6" fill="#fff" ${O}/><path d="M74 84 Q86 82 88 90 Q80 94 74 90Z" fill="#fff"/><circle cx="46" cy="40" r="3" fill="${D}"/><circle cx="58" cy="40" r="3" fill="${D}"/><path d="M47 48 Q52 53 57 48" stroke="${D}" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="41" cy="46" r="3" fill="#FF9FB0" opacity=".8"/><circle cx="63" cy="46" r="3" fill="#FF9FB0" opacity=".8"/>`],
+ ["종",`<path d="M50 14 Q26 18 26 54 L16 74 H84 L74 54 Q74 18 50 14Z" fill="#FFC93C" ${O}/><circle cx="50" cy="80" r="7.5" fill="#E8A92A" ${O}/><path d="M50 14 Q38 2 28 10 Q38 18 50 14 Q62 18 72 10 Q62 2 50 14Z" fill="#2E8B57" ${O}/><circle cx="50" cy="14" r="4.5" fill="#E5383B"/>${eyes(52,10,3.2)}${smile(62,6)}${blush(60,17)}<path d="M34 34 Q36 26 44 24" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".6"/>`],
+ ["캔디케인",`<path d="M62 92 V36 Q62 12 42 12 Q22 12 22 34" stroke="#fff" stroke-width="25" stroke-linecap="round" fill="none"/><path d="M62 92 V36 Q62 12 42 12 Q22 12 22 34" stroke="#E5383B" stroke-width="17" stroke-linecap="round" fill="none"/><path d="M62 92 V36 Q62 12 42 12 Q22 12 22 34" stroke="#fff" stroke-width="17" fill="none" stroke-dasharray="6 11"/><circle cx="56" cy="66" r="2.8" fill="${D}"/><circle cx="68" cy="66" r="2.8" fill="${D}"/><path d="M58 73 Q62 77 66 73" stroke="${D}" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="53" cy="72" r="2.6" fill="#FF9FB0" opacity=".9"/><circle cx="71" cy="72" r="2.6" fill="#FF9FB0" opacity=".9"/>`],
+ ["펭귄",`<ellipse cx="50" cy="60" rx="29" ry="32" fill="#2F3A56" ${O}/><ellipse cx="50" cy="68" rx="17" ry="21" fill="#fff"/><path d="M44 52 L56 52 L50 62Z" fill="#FF8A1F"/><circle cx="41" cy="46" r="4.2" fill="#fff"/><circle cx="59" cy="46" r="4.2" fill="#fff"/><circle cx="41.5" cy="46.5" r="2" fill="${D}"/><circle cx="58.5" cy="46.5" r="2" fill="${D}"/><path d="M24 60 Q16 66 22 78 M76 60 Q84 66 78 78" stroke="#2F3A56" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M26 62 Q50 74 74 62 L74 72 Q50 84 26 72Z" fill="#2E8B57" ${O}/><path d="M32 30 Q34 6 56 8 Q54 20 70 30 Q50 24 32 30Z" fill="#E5383B" ${O}/><rect x="29" y="27" width="44" height="8" rx="4" fill="#fff" ${O}/><circle cx="56" cy="8" r="5.5" fill="#fff" ${O}/>`],
+ ["별",`<ellipse cx="50" cy="9" rx="14" ry="4.5" fill="none" stroke="#fff" stroke-width="7"/><ellipse cx="50" cy="9" rx="14" ry="4.5" fill="none" stroke="#FFD166" stroke-width="3.2"/><path d="M50 14 L61 42 L92 44 L68 63 L77 93 L50 76 L23 93 L32 63 L8 44 L39 42Z" fill="#FFD166" ${O}/>${eyes(56,9,3)}${smile(65,6)}${blush(63,16)}`]
+];
+  return CHARS.map(c => c[1]);      // 산타 · 루돌프 · 눈사람 · 트리 · 진저브레드 · 엘프 · 선물상자 · 양말 · 종 · 캔디케인 · 펭귄 · 별
+})();
+const CHRISTMAS_ADMIN_PICK = 0;       // 방장은 산타
+function christmasIndex(nick) {
+  const s = String(nick || "");
+  const pick = window.AVATAR_CHAR_PICK;
+  if (pick && Object.prototype.hasOwnProperty.call(pick, s)) return CHRISTMAS_ADMIN_PICK;
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return (h >>> 0) % CHRISTMAS_CHARS.length;
+}
 const HALLOWEEN_CHARS = [
     /* 호박 */ "<path d=\"M50 20 Q50 10 60 8\" stroke=\"#4a7c3a\" stroke-width=\"4.5\" fill=\"none\" stroke-linecap=\"round\"/><ellipse cx=\"50\" cy=\"58\" rx=\"36\" ry=\"30\" fill=\"#FF8A1F\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><path d=\"M50 28 Q36 58 50 88 M50 28 Q64 58 50 88 M30 34 Q18 58 30 82 M70 34 Q82 58 70 82\" stroke=\"#D96F10\" stroke-width=\"2.5\" fill=\"none\"/><path d=\"M33 52 L42 52 L37.5 44Z M58 52 L67 52 L62.5 44Z\" fill=\"#3A2E28\"/><path d=\"M36 68 Q50 80 64 68 L60 66 L56 70 L50 66 L44 70 L40 66Z\" fill=\"#3A2E28\"/>",
     /* 유령 */ "<path d=\"M20 90 L20 48 Q20 14 50 14 Q80 14 80 48 L80 90 L70 82 L60 90 L50 82 L40 90 L30 82Z\" fill=\"#fff\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linejoin=\"round\" paint-order=\"stroke\"/><ellipse cx=\"40\" cy=\"48\" rx=\"4\" ry=\"6\" fill=\"#3A2E28\"/><ellipse cx=\"60\" cy=\"48\" rx=\"4\" ry=\"6\" fill=\"#3A2E28\"/><ellipse cx=\"50\" cy=\"64\" rx=\"5\" ry=\"6.5\" fill=\"#3A2E28\"/><circle cx=\"33\" cy=\"60\" r=\"4\" fill=\"#FFB1C2\" opacity=\".7\"/><circle cx=\"67\" cy=\"60\" r=\"4\" fill=\"#FFB1C2\" opacity=\".7\"/>",
@@ -1187,16 +1259,17 @@ function halloweenIndex(nick) {
   return (h >>> 0) % HALLOWEEN_CHARS.length;
 }
 /** 보여 줄 사진 — 할로윈 기간엔 모두 "사진 없음"으로 (기본 프사 자리에 할로윈 캐릭터가 뜹니다) */
-function photoShown(prof) { return halloweenOn() ? "" : photoSrcOf(prof); }
+function photoShown(prof) { return seasonOn() ? "" : photoSrcOf(prof); }
 window.photoShown = photoShown;
-(function () {
-  const 남은 = HALLOWEEN_END - Date.now();
-  if (!(남은 > 0 && 남은 < 2147483000)) return;
-  setTimeout(() => {
+/* 켜 둔 창에서도 기간이 시작·끝나는 순간 프사가 저절로 바뀝니다.
+   setTimeout 은 약 24일이 한계라 **최대 6시간마다 다시 살펴보며** 다음 경계에 맞춥니다 (통신량 0). */
+let _hwShown = seasonOn();
+(function 경계살피기() {
+  const 바꾸기 = () => {
     try {
       document.querySelectorAll("[data-avatar-of]").forEach(el => {
         const nick = el.dataset.avatarOf || "";
-        const photo = photoSrcOf((window._profileCache || {})[nick]);
+        const photo = photoShown((window._profileCache || {})[nick]);
         if (photo) {
           el.classList.remove("has-snow"); el.classList.add("has-photo");
           el.innerHTML = `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`;
@@ -1207,7 +1280,21 @@ window.photoShown = photoShown;
       });
     } catch (e) {}
     try { window.rerenderUserCards?.(); } catch (e) {}
-  }, 남은 + 800);
+  };
+  const 한바퀴 = () => {
+    const 지금켜짐 = seasonOn();
+    if (지금켜짐 !== _hwShown) { _hwShown = 지금켜짐; 바꾸기(); }
+    const now = Date.now();
+    const y = new Date(now + 9 * 3600 * 1000).getUTCFullYear();
+    /* 할로윈·크리스마스 두 기간 중 가장 가까운 시작·끝 */
+    let 다음 = 0;
+    [halloweenWindow(y), christmasWindow(y)].forEach(([시작, 끝]) => {
+      [시작, 끝].forEach(t => { if (t > now && (!다음 || t < 다음)) 다음 = t; });
+    });
+    const 남은 = 다음 ? 다음 - now + 800 : 6 * 3600 * 1000;
+    setTimeout(한바퀴, Math.max(1000, Math.min(남은, 6 * 3600 * 1000)));
+  };
+  setTimeout(한바퀴, 1000);
 })();
 
 /* 🦊 손으로 정해 둔 캐릭터 (2026-10-28 콩 — 방장의 특권) — 표는 window.AVATAR_CHAR_PICK ({닉: 캐릭터 번호}).
@@ -1229,7 +1316,7 @@ function snowmanSvg(nick, bgOverride) {
   return `<svg class="snowman" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
                role="img" aria-label="기본 프로필 캐릭터" focusable="false">
             <rect width="100" height="100" fill="${bg}"/>
-            ${halloweenOn() ? HALLOWEEN_CHARS[halloweenIndex(nick)] : AVATAR_CHARS[avatarCharIndex(nick)]}
+            ${halloweenOn() ? HALLOWEEN_CHARS[halloweenIndex(nick)] : (christmasOn() ? CHRISTMAS_CHARS[christmasIndex(nick)] : AVATAR_CHARS[avatarCharIndex(nick)])}
           </svg>`;
 }
 
@@ -1269,7 +1356,7 @@ function refreshChatAvatars() {
       el.classList.remove("has-snow");
       el.classList.add("has-photo");
       el.innerHTML = `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`;
-    } else if (el.classList.contains("has-photo") || halloweenOn()) {
+    } else if (el.classList.contains("has-photo") || seasonOn()) {
       el.classList.remove("has-photo");
       el.classList.add("has-snow");
       el.innerHTML = snowmanSvg(nick);

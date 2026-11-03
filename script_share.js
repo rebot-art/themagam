@@ -60,7 +60,9 @@
        공유하는 본인이니까요.
      ===================================================================== */
   const FIT_KEY = "shareFit";           // "cover"(채우기) | "contain"(전체 보기)
-  let _shareFit = "cover";
+  /* [2026-11-04 콩] 기본은 **전체 보기**. 잘라내지 않고 통째로 보이는 쪽이 더 무난해서요.
+     이 기기에서 이미 "채우기"를 골라 둔 분은 그 선택이 그대로 남습니다 (저장된 값을 먼저 봅니다). */
+  let _shareFit = "contain";
 
   /* =====================================================================
      👀 남의 화면 안 보기 (2026-08-21 — 콩)
@@ -1113,11 +1115,20 @@
     } catch (e) {}
   }
 
+  /* [2026-11-04 콩] 기본이 '전체 보기'로 바뀌면서, 예전에 골라 둔 값도 **딱 한 번** 전체 보기로 되돌립니다.
+     표식(FIT_RESET_KEY)이 없는 기기만 되돌리고 표식을 남겨서, 그 뒤에 직접 고른 '채우기'는 그대로 지켜집니다. */
+  const FIT_RESET_KEY = "shareFitReset1104";
   function loadShareFit() {
     try {
+      if (window.AppStore && window.AppStore.getItem(FIT_RESET_KEY) !== "1") {
+        window.AppStore.setItem(FIT_KEY, "contain");
+        window.AppStore.setItem(FIT_RESET_KEY, "1");
+        _shareFit = "contain";
+        return;
+      }
       const raw = String(window.AppStore && window.AppStore.getItem(FIT_KEY) || "");
-      _shareFit = (raw === "contain") ? "contain" : "cover";
-    } catch (e) { _shareFit = "cover"; }
+      _shareFit = (raw === "cover") ? "cover" : "contain";     // 골라 둔 적 없으면 전체 보기
+    } catch (e) { _shareFit = "contain"; }
   }
 
   /* ---------------------------------------------------------------

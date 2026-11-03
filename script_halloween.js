@@ -3,12 +3,14 @@
    🎃 할로윈 가랜드 (2026-10-31 — 콩)
    ---------------------------------------------------------------------
    "화면 위로 할로윈 느낌 가랜드를. 하루이틀만 걸어두고 저절로 사라지게."
+   → [2026-11-04 콩] **매년 저절로** 걸립니다 — 해마다 10/28 0시 ~ 11/2 0시(한국시간),
+     할로윈 3일 전부터 바로 다음 날까지 5일.
    · 길게 펼쳐지는 줄 하나 + 공지 시작점에서 오른쪽 아래로 내려가는 짧은 줄 하나.
    · 배경판(#room-board) 자리를 보고 높이를 잡습니다 — 카드·프사는 안 가립니다.
    · 마우스는 그대로 뚫고 지나갑니다 (pointer-events:none).
 
-   ★★ 끝나는 시각: 2026-11-04 00:00 (한국시간) = 화요일 밤 12시.
-      그 시각이 지나면 아무것도 그리지 않고, 켜져 있던 창에서는 그 순간
+   ★★ 기간은 script_profile.js 의 halloweenOn() 이 정합니다 (프사와 한 규칙).
+      기간 밖에는 아무것도 그리지 않고, 켜져 있던 창에서는 끝나는 순간
       저절로 걷힙니다. **따로 올릴 파일 없음.**
       (나중에 코드까지 치우고 싶으면: 이 파일 · index.html 의 script 줄 ·
        build-single.py ORDER 의 이름 · checks.js 의 할로윈 칸 — 네 군데.)
@@ -17,8 +19,8 @@
    ===================================================================== */
 (() => {
   "use strict";
-  const END = Date.parse("2026-11-04T00:00:00+09:00");
-  if (!(Date.now() < END)) return;
+  /* 기간인가 — 프사와 같은 규칙을 씁니다 (script_profile.js 가 먼저 로드됩니다) */
+  const 철인가 = () => typeof window.halloweenOn === "function" && window.halloweenOn();
 
   const NS = "http://www.w3.org/2000/svg";
   const ID = "halloween-garland";
@@ -49,7 +51,7 @@
   function 걷기() { svg?.remove(); svg = null; 직전 = ""; }
 
   function 그리기() {
-    if (!(Date.now() < END)) { 걷기(); clearInterval(타이머); return; }
+    if (!철인가()) { if (svg) 걷기(); return; }
     const 숨김 = (window.innerWidth || 0) < MIN_W || (typeof window.isLiteCards === "function" && window.isLiteCards());
     const 마당 = document.querySelector(".cards-area");
     if (숨김 || !마당 || !document.getElementById("room-board") && !document.querySelector(".card")) { 걷기(); return; }
@@ -99,11 +101,10 @@
   let 타이머 = 0;
   function 시작() {
     그리기();
-    타이머 = setInterval(그리기, 1500);                  // 카드 배치가 바뀌어도 따라가게 (값이 같으면 다시 안 그립니다)
+    /* 카드 배치가 바뀌어도 따라가게 (값이 같으면 다시 안 그립니다).
+       기간 밖에는 날짜만 비교하고 돌아오므로 해가 가도 거의 일을 안 합니다. 시작·끝나는 순간에도 이 줄이 알아서 켜고 걷습니다 */
+    타이머 = setInterval(그리기, 1500);
     window.addEventListener("resize", 그리기);
-    /* 켜 둔 창에서도 끝나는 시각에 딱 걷히게 */
-    const 남은 = END - Date.now();
-    if (남은 > 0 && 남은 < 2147483000) setTimeout(그리기, 남은 + 500);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", 시작);
   else 시작();
