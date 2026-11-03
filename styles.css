@@ -10768,13 +10768,29 @@ html[data-cardalign="right"] .dock-mode .user-cards-grid{ justify-content: flex-
 
 /* 📌 오늘 할 일 — 판이 없는 '보여주는 글자' */
 .dock-pill.dock-inline{
-  cursor: default;
+  cursor: pointer;                 /* [2026-11-03] 🖼️ 배경판을 접고 펴는 단추 */
   background: transparent;
   border-color: transparent;
   padding: 0;
 }
 .dock-pill.dock-inline:hover{ background: transparent; }
 .dock-pill.dock-inline .room-todo{ padding: 0; }
+
+/* 🖼️ 배경판 접기 (2026-11-03 — 콩)
+   접으면 표 세 칸만 숨고 📌 공지(#rb-notice)는 남습니다.
+   알약: 펼친 상태는 ▾ , 접으면 ▴ 와 점선 테두리. 글자 칸은 JS 가 안 건드려요. */
+html[data-board-fold] .room-board .rb-inner{ display: none; }
+#dock-pill-todo .room-todo-pill::before{
+  content: "▾"; font-size: 10px; opacity: .7; flex: 0 0 auto;
+}
+#dock-pill-todo:hover .room-todo-pill{ filter: brightness(.95); }
+#dock-pill-todo:active .room-todo-pill{ transform: scale(.97); }
+html[data-board-fold] #dock-pill-todo .room-todo-pill{
+  background: transparent;
+  border: 1px dashed var(--muted);
+  opacity: .8;
+}
+html[data-board-fold] #dock-pill-todo .room-todo-pill::before{ content: "▴"; }
 
 /* 🏅 업적 — 원래 알약 판(.achv-pop)의 결을 그대로.
    흰 바탕에 안쪽 여백이 있어야 목록이 답답하지 않습니다. */

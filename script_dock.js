@@ -351,11 +351,13 @@
       bar.appendChild(b);
 
       if (d.inline) {
-        /* 판이 없는 것 — 누르는 단추가 아니라 **보여주는 글자**입니다 */
+        /* 판이 없는 것 — 열 판은 없습니다.
+           [2026-11-03 콩] 다만 이 알약은 이제 🖼️ 배경판의 표를 접고 펴는 단추예요
+           (script_realtime.js 의 toggleBoardFold). 그래서 눌립니다. */
         b.classList.add("dock-inline");
         b.removeAttribute("aria-expanded");
         delete b.dataset.dock;
-        b.disabled = true;
+        b.disabled = false;
         return;
       }
       if (d.modal) { b.removeAttribute("aria-expanded"); return; }   // 가운데 창은 판을 안 만듭니다

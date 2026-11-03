@@ -303,6 +303,36 @@
      ===================================================================== */
   function boardOn() { return true; }
 
+  /* =====================================================================
+     🖼️ 배경판 접기 (2026-11-03 — 콩)
+     ---------------------------------------------------------------------
+     아래 알약 줄의 「📌 오늘 할 일」 알약을 누르면 배경판의 **표 세 칸**
+     (📊 접속 현황 · 🏅 개근 · 🔥 지금 참여 중)만 접혔다 펴집니다.
+     📌 배경판 공지(#rb-notice)는 **그대로 남습니다** — 방장이 건 공지니까요.
+       · 숨기는 일은 CSS 가 합니다 (html[data-board-fold] … .rb-inner)
+       · 접힘은 이 기기에만 기억합니다 (AppStore) — 남에게 영향 없음
+     [통신량] 접어 두는 동안 표에만 쓰던 읽기를 쉬게 합니다.
+       쉬는 것 : roomStat 구독(📊) · attendance 구독(출석 수) · 혼자 방 REST
+       안 쉬는 것: honors(개근) — 카드의 🎖️ 배지도 이 자료로 그려서요.
+     ===================================================================== */
+  const BOARD_FOLD_KEY = "themagam.boardFold";
+  let _boardFold = false;                 // 접혔나 — CSS 의 data-board-fold 와 늘 같이 갑니다
+  function 판접힘() { return _boardFold; }
+  (function 접힘복원() {
+    try {
+      if (window.AppStore?.getItem(BOARD_FOLD_KEY) === "1") {
+        _boardFold = true;
+        document.documentElement.setAttribute("data-board-fold", "");
+      }
+    } catch (e) {}
+  })();
+  /* roomStat 구독만 끊습니다. _pulseDay 는 남겨 둬요 — 지우면 기록해두기()가
+     매번 서버에 물어보러 갑니다. */
+  function 판읽기멈춤() {
+    try { _pulseRef?.off(); } catch (e) {}
+    _pulseRef = null;
+  }
+
   /* 이 시간대 기록 남기기 — 더 클 때만 (규칙도 같은 조건이라 헛걸음이 없음) */
   function 기록해두기(n) {
     if (!myNick || !window.db || !(n > 0)) return;
@@ -321,6 +351,7 @@
   function listenPulse() {
     if (!window.db) { stopPulse(); return; }
     if (!boardOn()) { stopPulse(); return; }
+    if (판접힘()) { 판읽기멈춤(); return; }          // 🖼️ 접어 둔 동안은 읽지 않습니다
     const d = ymd(Date.now());
     if (_pulseRef && _pulseDay === d) { drawPulse(); return; }
     stopPulse();
@@ -718,6 +749,7 @@
   let _soloPulseOn = false;
 
   async function 본방현황읽기() {
+    if (판접힘()) return;                           // 🖼️ 접어 둔 동안은 읽지 않습니다
     const 날 = ymd(Date.now());
     try {
       const r = await fetch(`${SOLO_DB_URL}/roomStat/${날}.json`, { cache: "no-store" });
@@ -768,6 +800,16 @@
         }).catch(() => {});
       } catch (e) {}
     }
+  }
+
+  /** 🖼️ 표를 접는 동안 출석 구독을 끊습니다. 펴면 출석듣기() 가 처음부터 다시 붙어요 */
+  function 출석멈추기() {
+    if (_출석듣는곳) {
+      try { _출석듣는곳.ref.off("child_added", _출석듣는곳.h); } catch (e) {}
+      _출석듣는곳 = null;
+    }
+    _출석날 = "";
+    _오늘출석 = 0;
   }
 
   /** 제목 옆 글. 아직 아무것도 못 읽었으면 빈 글 (숫자 0 을 안 보여줍니다) */
@@ -845,8 +887,8 @@
          같이 밀려 올라갑니다. 자리는 CSS 가 absolute 로 잡아요. */
       host.insertBefore(box, host.firstChild);
     }
-    개근듣기();
-    출석듣기();
+    개근듣기();                                       // ★ 접어도 계속 듣습니다 — 카드 🎖️ 배지가 이 자료예요
+    if (판접힘()) 출석멈추기(); else 출석듣기();
 
     /* ★ [바꿈 2026-08-22] 예전에는 이 자리에서 판 전체를 innerHTML 로
        다시 그렸습니다. 개근 명단이 **흘러가는 글**이 되면서 그러면
@@ -872,6 +914,12 @@
           <div class="rb-fb" id="rb-feed"></div>
         </div>
       </div>`;
+    }
+    /* 🖼️ 접혀 있으면 표는 그리지 않고 공지만 살려 둡니다 */
+    if (판접힘()) {
+      공지듣기();
+      try { 공지그리기(); } catch (e) {}
+      return;
     }
     const n = 오늘참여자수();
     const 막대 = box.querySelector("#rb-bars");
@@ -991,11 +1039,49 @@
       done  += Math.max(0, Number(r?.done  || 0));
     });
 
-    if (total <= 0) { wrap.setAttribute("hidden", ""); return; }
+    /* [2026-11-03 콩] 알약이 이제 🖼️ 배경판을 접고 펴는 단추입니다.
+       아무도 안 적은 날 알약이 사라지면 접어 둔 표를 펼 길이 없으니,
+       그날도 알약은 남기고 글만 바꿉니다. */
+    if (total <= 0) {
+      pill.innerHTML = `📌 오늘 할 일 <b>아직 없어요</b>`;
+      wrap.removeAttribute("hidden");
+      판알약맞추기();
+      return;
+    }
     done = Math.min(done, total);                 // 어긋난 값이 와도 넘치지 않게
     pill.innerHTML = `📌 오늘 할 일 <b>${total}개 중 ${done}개</b> 완료`;
     wrap.removeAttribute("hidden");
+    판알약맞추기();
   }
+
+  /* 🖼️ 알약(바깥 단추)의 설명·눌림 표시를 지금 상태에 맞춥니다 */
+  function 판알약맞추기() {
+    const b = document.getElementById("dock-pill-todo");
+    if (!b) return;
+    const 접 = 판접힘();
+    b.title = 접 ? "눌러서 배경판 표 펼치기" : "눌러서 배경판 표 접기";
+    b.setAttribute("aria-pressed", 접 ? "true" : "false");
+  }
+
+  function 판접기(접) {
+    접 = !!접;
+    _boardFold = 접;
+    try { window.AppStore?.setItem(BOARD_FOLD_KEY, 접 ? "1" : "0"); } catch (e) {}
+    document.documentElement.toggleAttribute("data-board-fold", 접);
+    판알약맞추기();
+    if (접) {
+      판읽기멈춤();
+      출석멈추기();
+    } else {
+      listenPulse();                                  // roomStat 다시 붙이기
+      if (window.SOLO) 본방현황읽기();                // 혼자 방은 REST 로 한 번 바로
+      drawBoard();                                    // 출석도 여기서 다시 붙습니다
+    }
+  }
+  window.toggleBoardFold = () => 판접기(!판접힘());
+  document.addEventListener("click", e => {
+    if (e.target?.closest?.("#dock-pill-todo")) window.toggleBoardFold();
+  });
 
   window.listenRoomTodo = listenRoomTodo;
   document.addEventListener("DOMContentLoaded", () => {
