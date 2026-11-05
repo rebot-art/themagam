@@ -2405,8 +2405,8 @@
 
   /* 📌 배경판 공지 (2026-10-07 — 콩) — config/boardNotice = { text, style, at }
      방 쪽은 script_realtime.js 의 공지듣기() 가 듣고 있다가 그 자리에서 고칩니다. */
-  const BNOTICE_MAX = 50;
-  /** 📌 nn/50자 — 적는 대로 셉니다 (2026-10-07 콩) */
+  const BNOTICE_MAX = 100;   // 50자까지 한 줄 · 넘으면 방에서 두 줄 (2026-11-05 콩)
+  /** 📌 nn/100자 — 적는 대로 셉니다 (2026-10-07 콩) */
   function 공지글자수() {
     const n = el("adm-bnotice-n");
     if (n) n.textContent = String((el("adm-bnotice")?.value || "").length);

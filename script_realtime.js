@@ -23,8 +23,10 @@
      ===================================================================== */
   const ADMIN_NICK = "링가링🍄";     // ← 관리자 닉네임 (2026-08-13 그링링🍄 → 링가링🍄)
   /* 🦊 손으로 정해 둔 기본 프사 캐릭터 (2026-10-28 콩 — 방장의 특권). script_profile.js 의 avatarCharIndex 가 읽어요.
-     번호: 0 토끼 · 1 고양이 · 2 곰 · 3 달 · 4 고래 · 5 연필 · 6 책 · 7 별 · 8 양 · 9 머그컵 · 10 구름 · 11 여우 */
-  window.AVATAR_CHAR_PICK = { [ADMIN_NICK]: 11 };
+     번호: 0 토끼 · 1 고양이 · 2 곰 · 3 달 · 4 고래 · 5 연필 · 6 책 · 7 별 · 8 양 · 9 머그컵 · 10 구름 · 11 여우
+       12 해 · 13 나뭇잎 · 14 꽃 · 15 딸기 · 16 병아리 · 17 펭귄 · 18 버섯 · 19 무지개 · 20 하트 · 21 선인장 · 22 컵케이크 · 23 도넛
+     (2026-11-05 콩: 여우 → 선인장 21번) */
+  window.AVATAR_CHAR_PICK = { [ADMIN_NICK]: 21 };
   const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
 
   let _statusCache = null;
@@ -826,11 +828,23 @@
       넣으면 그때 뜨게. 카드 메모처럼, 기울기는 없게. 실시간으로 다 보게."
          config/boardNotice = { text, style: "A"|"B"|"C", at }
      ★ config 는 누구나 읽고 방장만 써서 보안규칙을 안 고칩니다.
-     ★ **한 줄 · 50자.** 넘치면 … 으로 줄어듭니다 (줄이 바뀌면 판이 카드를 가려요).
+     ★ **최대 100자.** 50자까지는 한 줄, 넘으면 가운데쯤에서 두 줄 (2026-11-05 콩). 줄마다 넘치면 … 으로 줄어듭니다.
      ★ 듣고 있다가 값이 바뀌면 그 자리에서 고칩니다 — 새로고침 없이 모두에게.
      ★ 공지가 없으면 요소 자체를 안 만듭니다 (빈자리도 안 생깁니다).
      ===================================================================== */
-  const NOTICE_MAX = 50;
+  const NOTICE_MAX = 100;
+  const NOTICE_ONE_LINE = 50;        // 50자까지는 한 줄 · 넘으면 두 줄 (2026-11-05 콩)
+  /** 50자 넘는 공지는 가운데쯤에서 반으로 접어 두 줄로 — 가까운 띄어쓰기에서 끊어요 */
+  function 두줄로(글) {
+    if (글.length <= NOTICE_ONE_LINE) return 글;
+    const mid = Math.ceil(글.length / 2);
+    let cut = mid;
+    for (let d = 0; d <= 10; d++) {
+      if (글[mid - d] === " ") { cut = mid - d; break; }
+      if (글[mid + d] === " ") { cut = mid + d; break; }
+    }
+    return (글.slice(0, cut).trim() + "\n" + 글.slice(cut).trim());
+  }
   let _boardNotice = null, _boardNoticeOn = false;
   function 공지듣기() {
     if (_boardNoticeOn) return;
@@ -861,8 +875,9 @@
     const 뼈대 = box.querySelector(".rb-inner");
     if (!뼈대) return;
     if (줄.nextSibling !== 뼈대) box.insertBefore(줄, 뼈대);
-    줄.className = "rb-notice s" + 모양;
-    if (줄.textContent !== 글) 줄.textContent = 글;     // textContent — 글자 그대로만
+    const 보임 = 두줄로(글);
+    줄.className = "rb-notice s" + 모양 + (보임.includes("\n") ? " two" : "");
+    if (줄.textContent !== 보임) 줄.textContent = 보임;     // textContent — 글자 그대로만
   }
 
   let _board재시도 = 0;
