@@ -1825,13 +1825,19 @@
     document.addEventListener("change", e => {
       if (e.target?.id === "wce-day") { wceMsg(""); wceLoad(); }
     });
+    /* ★★★ [고침 2026-11-09 — 콩 신고 "눌러도 아무 반응이 없어"]
+       나의 작업 팝업의 안쪽 상자(.modal-content)에는 onclick="event.stopPropagation()" 이 붙어 있어서,
+       그 안에서 누른 click 은 **document 까지 올라오지 못합니다.** (날짜 바꾸기는 change 라 막히지 않아
+       "날짜는 되는데 버튼만 먹통" 이었어요 — script_mywork.js 의 2026-08-06 고침과 같은 함정.)
+       그래서 올라오는 길(버블)이 아니라 **내려가는 길(캡처, 세 번째 인자 true)** 에서 받습니다.
+       캡처는 안쪽 상자의 멈춤보다 먼저 지나가서, 팝업 안이든 어디든 똑같이 동작해요. */
     document.addEventListener("click", e => {
       const b = e.target?.closest?.("#wce-save, #wce-yes, #wce-no");
       if (!b) return;
       if (b.id === "wce-save") wceAsk();
       else if (b.id === "wce-yes") wceDo();
       else { _wceNext = null; const ask = el("wce-ask"); if (ask) ask.innerHTML = ""; }
-    });
+    }, true);
   }
 
   window.wordcountMyWeekHtml = myWeekHtml;
