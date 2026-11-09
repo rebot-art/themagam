@@ -474,6 +474,7 @@
         _upOpen = !_upOpen;
         const up = el("files-up");
         if (up) up.hidden = !_upOpen;
+        if (up && _upOpen) setTimeout(() => { try { up.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }, 30);   // 펴면 아래까지 보이게
         fold.classList.toggle("open", _upOpen);
         fold.setAttribute("aria-expanded", String(_upOpen));
         const t = _upOpen ? "올리기 칸 접기" : "올리기 칸 펴기";
