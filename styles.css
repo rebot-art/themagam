@@ -5393,7 +5393,7 @@ html[data-panelzoom] .dock-panel{
   color: var(--text-3, #8A93A2); font-size: 13px; padding: 2px 4px;
 }
 .fl-x:hover{ color: #B3372B; }
-.fl-up{ flex: none; padding: 4px 10px 12px; }   /* 위 줄은 접기 알약의 선이 대신합니다 — 이중선 없앰 (2026-11-09) */
+.fl-up{ flex: none; padding: 8px 10px 2px; }   /* 위 줄은 접기 알약의 선이 대신합니다 — 이중선 없앰 (2026-11-09) */
 .fl-drop{
   display: block; text-align: center; cursor: pointer;
   border: 1.5px dashed var(--border); border-radius: 12px; padding: 14px 10px;
@@ -12929,7 +12929,7 @@ html[data-lite] .user-card.share-card,
 .fl-find-c{ display: flex; flex-wrap: wrap; gap: 4px; }
 .fl-find-c button{ font: inherit; font-size: 11px; line-height: 1.6; padding: 1px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
 .fl-find-c button.on{ border-color: var(--accent); color: var(--accent); background: var(--accent-softer); font-weight: var(--fw-bold); }
-.fl-foldrow{ display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+.fl-foldrow{ flex: none; display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
 .fl-foldrow i{ flex: 1 1 auto; height: 1px; background: var(--border); display: block; }
 .fl-fold{ flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 22px; padding: 0; border-radius: 99px;
   border: 1px solid var(--border); background: var(--fill-1, transparent); color: var(--muted-strong); cursor: pointer; }
@@ -13043,7 +13043,7 @@ html.side-files #files-modal .modal-content{ display: flex; flex-direction: colu
 html.side-files #files-modal .files-board{ flex: 1 1 auto; min-height: 0; max-height: none; }
 /* 옆 칸에선 찾아보기·목록·올리기 칸이 한꺼번에 펴지면 칸보다 길어 아래가 잘렸어요 — 판 전체를 스크롤되게 하고, 목록은 제 키만큼만 (2026-11-09 콩) */
 html.side-files #files-modal .files-board{ overflow-y: auto; overscroll-behavior: contain; }
-html.side-files #files-modal .fl-list{ flex: none; max-height: 240px; }
+html.side-files #files-modal .fl-list{ flex: 1 1 auto; min-height: 90px; max-height: none; }   /* 목록이 남는 키를 다 먹어서 접기 알약이 맨 아래에 앉고, 올리기 칸은 그 위로 펴집니다 */
 html.side-files #files-modal .modal-x{ display: none; }
 html.side-files #files-modal .modal-title{ display: none; }   /* 칸 머리에 이미 "📁 자료실" 이 있어요 */
 /* 폭 400 안에서는 긴 파일 이름을 **줄바꿈** (콩) — 가운데 창에서는 … 으로 자르던 것 */

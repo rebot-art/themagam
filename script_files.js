@@ -35,7 +35,7 @@
      · 맨 위에 **찾아보기 박스** — 검색어 + 사이트 고르기 → **새 탭**으로 열려요 (구글·네이버·나무위키·국어사전·
        유의어·리디·이미지·유튜브). 고른 사이트는 이 기기에만 기억(AppStore) — 서버 통신 0.
      · 예전 링크 탭의 방장 링크 모음은 이 자료실의 🔗 링크 자료로 옮겨 걸면 됩니다(콩이 직접).
-     · 아래쪽 **올리기 칸(설명·파일·링크 걸기)은 기본이 접힘** — 가운데 ⌃ 알약(접힘=위 화살표, 펴짐=아래 화살표)을 눌러야 펴져요.
+     · 아래쪽 **올리기 칸(설명·파일·링크 걸기)은 기본이 접힘** — 맨 아래 가운데 ⌃ 알약(접힘=위 화살표, 펴짐=아래 화살표)을 누르면 **위로** 펴져요.
        접힌 동안에도 안내·오류 줄(#files-msg)은 보입니다(알약 밖에 있어요).
      ★ 이 판은 목록이 바뀔 때마다 통째로 다시 그려서, 쓰던 검색어·펴짐 상태를 따로 챙깁니다.
 
@@ -231,14 +231,6 @@
       <div class="fl-list">${list.length ? 줄
         : `<p class="fl-empty">아직 올라온 자료가 없어요.<br>아래에서 파일을 골라 올려 보세요.</p>`}</div>
       <p class="fl-msg" id="files-msg"></p>
-      <div class="fl-foldrow">
-        <i></i>
-        <button type="button" class="fl-fold${_upOpen ? " open" : ""}" data-file-fold="1" aria-expanded="${_upOpen}"
-                aria-label="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}" title="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}">
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <i></i>
-      </div>
       <div class="fl-up" id="files-up"${_upOpen ? "" : " hidden"}>
         <!-- ✏️ 한 줄 설명 (2026-10-04 콩) — 파일이든 링크든 함께 붙습니다 -->
         <input type="text" id="files-note" class="fl-in" maxlength="200"
@@ -260,6 +252,14 @@
             <input type="text" id="files-lname" class="fl-in" maxlength="120" placeholder="목록에 보일 이름">
             <button type="button" class="fl-go" data-file-link-go="1">걸기</button>
           </div>` : ""}
+      </div>
+      <div class="fl-foldrow">
+        <i></i>
+        <button type="button" class="fl-fold${_upOpen ? " open" : ""}" data-file-fold="1" aria-expanded="${_upOpen}"
+                aria-label="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}" title="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <i></i>
       </div>`;
     Object.keys(적던).forEach(k => { const x = el(k); if (x) x.value = 적던[k]; });
     if (링크열림 && el("files-linkbox")) el("files-linkbox").hidden = false;
