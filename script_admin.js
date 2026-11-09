@@ -2066,6 +2066,21 @@
        wordfeed — push 키라 닉 필드로 하나하나 걸러야 하는데, 그날치만 남고
          금방 사라지는 구조라 굳이 손대지 않습니다.
      ------------------------------------------------------------------- */
+  /** 입장일("YYYY-MM-DD")에서 7일 앞 날짜 키. 날짜 모양이 아니면 null(= 통째로 읽기) */
+  function 읽기시작일(d) {
+    if (typeof d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+    const t = new Date(d + "T00:00:00Z");
+    if (isNaN(t)) return null;
+    t.setUTCDate(t.getUTCDate() - 7);
+    return t.toISOString().slice(0, 10);
+  }
+
+  /** 날짜 키로 된 노드를 시작일부터만 읽습니다. 시작일이 없으면 통째로. */
+  function 날짜범위읽기(path, 시작일) {
+    const ref = db.ref(path);
+    return (시작일 ? ref.orderByKey().startAt(시작일) : ref).once("value");
+  }
+
   async function removeMember(nick) {
     if (!nick) return;
     if (!ownerOnly("멤버를 명단에서 지우는 것")) return;
@@ -2089,11 +2104,19 @@
       const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
       void uid;
 
-      /* attendance·wordlog 은 날짜별로 흩어져 있어 통째로 읽어 해당 닉만 골라
-         multi-path update 로 한 번에 지웁니다. (날짜마다 remove 하면 요청이 너무 많아요) */
+      /* attendance·wordlog 은 날짜별로 흩어져 있어 읽어서 해당 닉만 골라
+         multi-path update 로 한 번에 지웁니다. (날짜마다 remove 하면 요청이 너무 많아요)
+         ★ [2026-11-09 콩] 통째로 읽으면 기록이 쌓일수록 무거워져요. 그 닉의
+           **입장일(firstSeen) 이후만** 읽습니다 — 입장 전 기록은 있을 수 없으니까요.
+           (입장일에서 7일 앞을 여유로 둡니다. 입장일을 모르면 예전처럼 통째로 읽어요.) */
+      let 시작일 = null;
+      try {
+        const fs0 = (await db.ref(`${FIRSTSEEN_PATH}/map/${nick}`).once("value")).val();
+        시작일 = 읽기시작일(fs0 || (_firstSeen && _firstSeen[nick]));
+      } catch (e) { 시작일 = null; }
       const [attSnap, wlSnap] = await Promise.all([
-        db.ref("attendance").once("value"),
-        db.ref("wordlog").once("value")
+        날짜범위읽기("attendance", 시작일),
+        날짜범위읽기("wordlog", 시작일)
       ]);
 
       const attUpd = {};
@@ -2125,7 +2148,7 @@
       }
       /* todostat 은 날짜별이라 attendance·wordlog 과 같은 방식으로 */
       try {
-        const tsSnap = await db.ref("todostat").once("value");
+        const tsSnap = await 날짜범위읽기("todostat", 시작일);
         const tsUpd = {};
         Object.entries(tsSnap.val() || {}).forEach(([day, byNick]) => {
           if (byNick && Object.prototype.hasOwnProperty.call(byNick, nick)) tsUpd[`${day}/${nick}`] = null;
@@ -3574,6 +3597,83 @@
     }
   }
 
+  /* ------------------------------------------------- ③-4b ✍ 글자수 수정 (2026-11-09 — 콩)
+     "잘못 적은 글자수를 나중에 고치고 싶다" — 초기화는 오늘 것을 통째로 지우는 칼이라
+     어제 이전 날짜의 한 사람 숫자는 못 고쳤습니다. 이건 그 한 칸만 고칩니다.
+     [값] wordlog/{날짜}/{닉}.total 하나만 바꿔요. base·at 은 그대로 둡니다 —
+          (base 는 그날 "글자수 diff" 기준이라 지난 날에는 쓰이지 않고,
+           at 은 그 기록이 처음 올라온 시각이라 바꾸면 업적 시각이 틀어집니다)
+     ★ 흐름(wordfeed)의 말풍선 줄은 건드리지 않습니다 — 그날의 "올라온 기록" 이고 합계에는 안 쓰여요.
+     ★ 방장만. 저장 전에 "12,000 → 1,200" 으로 한 번 더 묻습니다. */
+  const WCE_MAX = 2000000;
+  let _wceRows = {};                                   // 불러온 그날 {닉: {total,…}}
+
+  function wceDay() {
+    const v = (el("adm-wce-day")?.value || "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "";
+  }
+  function wceLock(on) {
+    ["adm-wce-nick", "adm-wce-new", "adm-wce-save"].forEach(id => { const n = el(id); if (n) n.disabled = on; });
+  }
+  function wceShowNow() {
+    const n = el("adm-wce-nick")?.value || "";
+    const r = _wceRows[n];
+    const box = el("adm-wce-now");
+    if (!box) return;
+    box.classList.remove("bad");
+    box.textContent = r ? `지금 ${n}님 ${Number(r.total || 0).toLocaleString()}자로 적혀 있어요.` : "";
+    const inp = el("adm-wce-new");
+    if (inp) inp.value = r ? String(Number(r.total || 0)) : "";
+  }
+  async function wceLoad() {
+    if (!ownerOnly("글자수 수정")) return;
+    const day = wceDay();
+    if (!day) { msg("adm-wce-msg", "날짜를 먼저 골라 주세요.", true); return; }
+    msg("adm-wce-msg", "불러오는 중…");
+    wceLock(true);
+    try {
+      _wceRows = (await db.ref(`wordlog/${day}`).once("value")).val() || {};
+      const nicks = Object.keys(_wceRows).sort((a, b) => a.localeCompare(b, "ko"));
+      const sel = el("adm-wce-nick");
+      if (!nicks.length) {
+        if (sel) sel.innerHTML = `<option value="">그날 글자수 기록이 없어요</option>`;
+        el("adm-wce-now").textContent = "";
+        msg("adm-wce-msg", `${짧은날(day)}에는 적힌 글자수가 없어요.`);
+        return;
+      }
+      sel.innerHTML = nicks.map(n =>
+        `<option value="${escapeHtml(n)}">${escapeHtml(n)} · ${Number(_wceRows[n].total || 0).toLocaleString()}자</option>`).join("");
+      wceLock(false);
+      wceShowNow();
+      msg("adm-wce-msg", `${짧은날(day)} 기록 ${nicks.length}명을 불러왔어요.`);
+    } catch (e) {
+      msg("adm-wce-msg", "불러오지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+  async function wceSave() {
+    if (!ownerOnly("글자수 수정")) return;
+    const day = wceDay();
+    const nick = el("adm-wce-nick")?.value || "";
+    const raw = String(el("adm-wce-new")?.value ?? "").trim();
+    if (!day || !nick || !_wceRows[nick]) { msg("adm-wce-msg", "날짜를 고르고 [불러오기]부터 눌러 주세요.", true); return; }
+    if (!/^\d+$/.test(raw)) { msg("adm-wce-msg", "바꿀 글자수는 0 이상의 숫자로 적어 주세요.", true); return; }
+    const next = Number(raw);
+    if (next > WCE_MAX) { msg("adm-wce-msg", `${WCE_MAX.toLocaleString()}자를 넘는 숫자는 못 넣어요. 자릿수를 확인해 주세요.`, true); return; }
+    const before = Number(_wceRows[nick].total || 0);
+    if (next === before) { msg("adm-wce-msg", "지금 숫자와 같아서 바꿀 게 없어요."); return; }
+    if (!confirm(`${nick}님 ${짧은날(day)} 글자수를\n${before.toLocaleString()}자 → ${next.toLocaleString()}자 로 고칠까요?`)) return;
+    try {
+      await db.ref(`wordlog/${day}/${nick}/total`).set(next);
+      _wceRows[nick].total = next;
+      const opt = Array.from(el("adm-wce-nick").options).find(o => o.value === nick);
+      if (opt) opt.textContent = `${nick} · ${next.toLocaleString()}자`;
+      wceShowNow();
+      msg("adm-wce-msg", `✅ ${nick}님 ${짧은날(day)} 글자수를 ${before.toLocaleString()}자 → ${next.toLocaleString()}자로 고쳤어요.`);
+    } catch (e) {
+      msg("adm-wce-msg", "고치지 못했어요 — 보안규칙을 확인해 주세요. " + (e.code || ""), true);
+    }
+  }
+
   // ------------------------------------------------- ③-5 🎋 대숲 (익명 게시판)
   /* 데이터 구조 — script_forest.js 와 동일:
        forest/{자동키} = { text, color, x, y, rot, at, hearts }
@@ -3707,6 +3807,11 @@
     el("adm-hist-apply")?.addEventListener("click", applyHistory);
     el("adm-chat-clear")?.addEventListener("click", clearChat);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
+    el("adm-wce-load")?.addEventListener("click", wceLoad);
+    el("adm-wce-nick")?.addEventListener("change", wceShowNow);
+    el("adm-wce-save")?.addEventListener("click", wceSave);
+    /* 날짜 칸은 어제로 시작 — 고칠 일은 대개 어제 것이라서요 */
+    { const d = el("adm-wce-day"); if (d && !d.value) d.value = 날더하기(dayKey(new Date()), -1); }
     el("adm-log-open")?.addEventListener("click", openAttendLog);
     el("adm-absent-run")?.addEventListener("click", runAbsent);
     el("adm-honor-run")?.addEventListener("click", runHonor);

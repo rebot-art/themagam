@@ -1,0 +1,576 @@
+<!doctype html>
+<!-- TheMagam © 링가링 · 무단 복제·재배포 금지 -->
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TheMagam — 작업 도구 설명서</title>
+<link rel="icon" href="icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  /* guide2.html 과 같은 색·글꼴이라, 나중에 하나로 엮어도 어울립니다 */
+  :root{ --paper:#FAF6EC; --card:#FFFDF6; --line:#E0D6BC; --ink:#2B2620; --muted:#8A7A5E; --red:#B3372B; --soft:#F3EBDD;
+         --green:#2F7D6D; --greenbg:#E9F4EF; --pinkbg:#FBEBE8;
+         --serif:"Noto Serif KR",serif; --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px 80px}
+
+  /* ── 머리 ── */
+  .hero{padding:48px 0 18px;text-align:center}
+  .hero .tag{display:inline-block;font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--paper);background:var(--red);padding:3px 12px;border-radius:4px;letter-spacing:.08em}
+  .hero h1{margin:14px 0 6px;font-family:var(--serif);font-weight:900;font-size:clamp(30px,5.6vw,46px);line-height:1.15;letter-spacing:-.01em}
+  .hero h1 em{font-style:normal;color:var(--red)}
+  .hero p{margin:0;font-family:var(--serif);font-size:15.5px;color:var(--muted)}
+
+  /* ── 탭 줄 (맨 위에 붙어 다녀요) ── */
+  .tabbar{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 0 12px;margin:0 -20px;padding-left:20px;padding-right:20px;border-bottom:1px solid var(--line)}
+  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .tab{appearance:none;font:inherit;cursor:pointer;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px 6px 9px;text-align:center;color:var(--ink);transition:transform .12s,border-color .12s,background .12s}
+  .tab:hover{transform:translateY(-2px);border-color:var(--red)}
+  .tab .ic{display:block;font-size:22px;line-height:1}
+  .tab .t{display:block;font-weight:800;font-size:14.5px;margin-top:5px}
+  .tab .s{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+  .tab[aria-selected="true"]{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 3px 0 #8d2a20}
+  .tab[aria-selected="true"] .s{color:#F6D9D4}
+  .tab:focus-visible{outline:3px solid #E9A59C;outline-offset:2px}
+  @media(max-width:600px){.tabs{grid-template-columns:repeat(2,1fr)}.tab .s{display:none}}
+
+  /* ── 패널 ── */
+  .panel{display:none;padding-top:26px;animation:fade .25s ease}
+  .panel.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .ph{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:16px}
+  .ph .n{font-size:30px;line-height:1}
+  .ph h2{margin:0;font-family:var(--serif);font-weight:900;font-size:25px}
+  .ph .s{margin-left:auto;font-size:13px;color:var(--muted)}
+  .lead{font-size:15px;margin:0 0 16px;color:#4d443a}
+  .lead b{color:var(--red)}
+
+  /* 한 단계 = 그림(미리보기) + 글 */
+  .step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .step .hd{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
+  .step .no{flex:0 0 32px;height:32px;border-radius:50%;background:var(--red);color:#fff;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .step h3{margin:0;font-size:17px;font-weight:800;padding-top:3px}
+  .step p{margin:6px 0 0 44px;font-size:14px}
+  .step ul{margin:8px 0 0 44px;padding-left:18px;font-size:13.5px}
+  .step li{margin:3px 0}
+  .step b{color:var(--red)}
+  .step .mock{margin:12px 0 0 44px}
+  .tip{margin:10px 0 0 44px;font-size:12.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+  .tip b{color:#6b5f52}
+  @media(max-width:600px){.step p,.step ul,.step .mock,.tip{margin-left:0}}
+  .green .step .no{background:var(--green)}
+  .green .step b,.green .lead b{color:var(--green)}
+
+  /* 안내 상자 */
+  .box{border-radius:14px;padding:14px 18px;margin:0 0 14px;font-size:14px;line-height:1.7}
+  .box.dark{background:#3A1712;color:#F6E9DC}
+  .box.dark b{color:#FFD9A8}
+  .box.dark h4{margin:0 0 6px;font-size:16px;color:#FFD9A8}
+  .box.warn{background:#FFEDEE;border:1.5px solid #F3B3B8}
+  .box.note{background:#FFF6E4;border:1.5px solid #F0DDB5}
+  .box.ok{background:var(--greenbg);border:1.5px solid #B7DCCF}
+  .box b{color:var(--red)}
+  .box.ok b{color:var(--green)}
+
+  /* 두 갈래 고르기 카드 */
+  .pick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}
+  .pick div{border-radius:16px;padding:14px 16px;border:2px solid}
+  .pick b{display:block;font-size:17px;margin-bottom:3px}
+  .pick span{font-size:13.5px;color:#5a4e40}
+  .pick .a{background:var(--pinkbg);border-color:#EBB1A8}.pick .a b{color:var(--red)}
+  .pick .b{background:var(--greenbg);border-color:#A7D3C5}.pick .b b{color:var(--green)}
+  @media(max-width:600px){.pick{grid-template-columns:1fr}}
+  .sec{border-radius:22px;padding:20px 18px 8px;margin:0 0 22px;border:2px solid}
+  .sec.a{background:#FFFCFA;border-color:#EBB1A8}
+  .sec.b{background:#FBFEFD;border-color:#A7D3C5}
+  .sec .sh{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .sec .sh .big{width:42px;height:42px;border-radius:50%;color:#fff;font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center}
+  .sec.a .big{background:var(--red)}.sec.b .big{background:var(--green)}
+  .sec .sh h3{margin:0;font-family:var(--serif);font-size:22px;font-weight:900}
+  .sec .sh small{display:block;font-size:12.5px;color:var(--muted);font-weight:400;font-family:var(--sans)}
+
+  /* 작은 카드 묶음 */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  @media(max-width:600px){.grid{grid-template-columns:1fr 1fr}}
+  .mini{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .mini .ic{font-size:24px;line-height:1}
+  .mini h4{margin:8px 0 4px;font-size:14.5px;font-weight:800}
+  .mini p{margin:0;font-size:12.5px;color:#5a4e40}
+  .mini b{color:var(--red)}
+
+  /* ── 화면 모양 그림(미리보기) ── */
+  .mock{background:#fff;border:1.5px solid #E4D5BF;border-radius:14px;padding:12px 14px;box-shadow:0 3px 0 #EFE3D0;font-size:13.5px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .inp{flex:1;min-width:90px;border:1.5px solid #D2C0A4;border-radius:9px;padding:7px 11px;background:#FFFDF8;color:#A09078}
+  .inp.v{color:var(--ink);font-weight:700}
+  .btn{background:#3A1712;color:#fff;border-radius:9px;padding:7px 14px;font-weight:800;white-space:nowrap}
+  .btn.g{background:var(--green)}.btn.gray{background:#8a7b68}
+  .gbtn{border:1.5px solid #D2C0A4;background:#FFFDF8;border-radius:9px;padding:6px 11px;font-weight:700;font-size:12.5px;white-space:nowrap}
+  .hl{outline:3px solid #FF8A9A;outline-offset:2px}
+  .green .hl{outline-color:#35B08F}
+  .sm{font-size:12px;color:#8a7b68}
+  .cap{font-size:12px;font-weight:800;color:#7a6d5e;margin-bottom:6px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:600px){.two{grid-template-columns:1fr}}
+  .pill{border-radius:20px;padding:2px 11px;font-size:12px;font-weight:800;white-space:nowrap}
+  .s1{background:#FFE08A;color:#7a5a00}.s2{background:#BFE0FF;color:#1b4f7f}.s3{background:#E3D1FF;color:#55309a}.s4{background:#C8F0D4;color:#1d6b3c}.s5{background:#FFC9D0;color:#a3203a}
+  .ep{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F1E7D6}
+  .ep:last-child{border-bottom:0}
+  .chk{width:22px;height:22px;border-radius:7px;border:2px solid #BBAA90;flex:0 0 22px;text-align:center;line-height:18px;font-weight:900;color:#fff;font-size:14px}
+  .chk.on{background:#3FA58B;border-color:#3FA58B}
+  .nm{font-weight:800;color:var(--green);flex:1}
+  .cw{border:1.5px solid #D2C0A4;border-radius:8px;padding:2px 9px;min-width:92px;text-align:right;font-weight:800}
+  .tl{display:flex;align-items:stretch;gap:6px}
+  .tl .pt{flex:1;border-radius:11px;padding:8px 4px;text-align:center;background:#FFF6E4;border:1.5px solid #EBD9B8}
+  .tl .pt .t{font-size:11.5px;color:#8a7b68}.tl .pt .n{font-size:16px;font-weight:900}.tl .pt .d{font-size:12.5px;font-weight:800;color:var(--red)}
+  .tl .ar{align-self:center;font-size:18px;color:#C9A98A;font-weight:900}
+  .sum{margin-top:8px;text-align:center;font-weight:800;background:#FFE9ED;border-radius:9px;padding:6px;color:var(--red)}
+  .feed{margin-top:8px;border-top:1.5px dashed #E4D5BF;padding-top:6px;font-size:12.5px}
+  .feed .f{display:flex;gap:8px;padding:2px 0}.feed .who{color:#8A4B2A;font-weight:800}
+  .day{display:flex;gap:10px;align-items:center;padding:5px 8px;border-radius:8px;font-size:13px}
+  .day.t{background:var(--greenbg)}.day .w{font-weight:800;width:20px;color:#7a6d5e}.day .c{margin-left:auto;font-weight:800;color:var(--green)}
+  .bar{display:flex;height:11px;border-radius:7px;overflow:hidden;margin:6px 0;background:#eee}
+  .bar i{display:block}
+  .stats{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:12px;color:#6B5F52}.stats b{color:var(--ink)}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
+  .pgrid div{font-size:12px;border-radius:6px;padding:3px;text-align:center;font-weight:700}
+
+  /* 달력 그림 */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:12px;text-align:center}
+  .cal .dw{color:#8a7b68;font-weight:800;padding:2px 0}
+  .cal .d{position:relative;border-radius:7px;padding:5px 0 4px;background:#FBF7EE;line-height:1.1;min-height:36px}
+  .cal .d .x{display:block;font-size:11px;min-height:13px;color:var(--red);font-weight:900}
+  .cal .d.v{background:#F5D9D4}.cal .d.today{outline:2px solid var(--ink)}
+  .cal .d.sel{background:#2B2620;color:#fff}.cal .d.sel .x{color:#FFB4A9}
+  .cal .d.e{background:transparent}
+  .cal .d .dot{position:absolute;right:4px;top:3px;width:5px;height:5px;border-radius:50%;background:#C78A2E}
+  .mwtabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .mwtabs span{border:1.5px solid #D9C9AB;border-radius:99px;padding:3px 9px;font-size:12px;font-weight:700;background:#FFFDF8}
+  .mwtabs span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .todo{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #F1E7D6}
+  .todo:last-child{border-bottom:0}
+  .todo .chk{border-color:#BBAA90}
+  .todo.done span.tx{text-decoration:line-through;color:#aaa}
+  .dd{display:inline-block;background:#3A1712;color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:800}
+
+  /* 데드라인 카드 그림 */
+  .dl{border:1.5px solid #D9C9AB;border-radius:12px;overflow:hidden;background:#FFFDF8}
+  .dl .hd2{display:flex;align-items:center;gap:8px;padding:8px 11px;background:#F3EBDD;font-weight:800}
+  .dl .bg{background:var(--green);color:#fff;border-radius:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .dl .hot{background:#FFE0DC;color:#B3372B;border-radius:99px;padding:1px 9px;font-size:12px}
+  .dl .bd2{padding:10px 12px}
+  .dl .bigq b{font-size:26px;font-family:var(--serif);color:var(--green)}
+  .dl .bigq span{font-size:12.5px;color:#6b5f52;margin-left:6px}
+  .dl .meta{display:flex;justify-content:space-between;font-size:12px;color:#6b5f52}
+  .dl .wk{display:flex;gap:5px;align-items:flex-end;margin-top:8px;height:42px}
+  .dl .wk div{flex:1;text-align:center;font-size:11px;color:#8a7b68}
+  .dl .wk i{display:block;background:#9ACBBB;border-radius:3px 3px 0 0;margin:0 auto 2px;width:70%}
+  .dl .wk .t i{background:var(--green)}
+  .dl .wr{margin-top:8px;font-size:13px}
+  .dl .wr em{font-style:normal;display:inline-block;border:1.5px solid #D2C0A4;border-radius:7px;padding:0 10px;font-weight:800;margin:0 4px;background:#fff}
+  .dfld{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px}
+  .dfld label{display:block;font-size:11.5px;font-weight:800;color:#7a6d5e;margin-bottom:2px}
+  .dfld .inp{padding:5px 9px}
+  .dows{display:flex;gap:5px}
+  .dows span{flex:1;text-align:center;border-radius:8px;padding:4px 0;font-size:12px;font-weight:800;border:1.5px solid #D9C9AB}
+  .dows .n{background:#fff}.dows .h{background:#FFF0C2}.dows .o{background:#eee;color:#aaa;text-decoration:line-through}
+
+  /* 뽀모 그림 */
+  .pomo{display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .ring{position:relative;width:132px;height:132px;border-radius:50%;background:conic-gradient(var(--red) 0 62%,#EADFCB 62% 100%);display:flex;align-items:center;justify-content:center}
+  .ring::before{content:"";position:absolute;inset:11px;border-radius:50%;background:conic-gradient(#C78A2E 0 38%,#F1E7D6 38% 100%)}
+  .ring::after{content:"";position:absolute;inset:23px;border-radius:50%;background:#fff}
+  .ring b{position:relative;z-index:2;font-family:var(--serif);font-size:25px;color:var(--ink)}
+  .pbar{width:230px}
+  .pbar .t{font-family:var(--serif);font-size:25px;font-weight:900;text-align:center}
+  .pbar .b1,.pbar .b2{height:10px;border-radius:6px;background:#EADFCB;overflow:hidden;margin-top:6px}
+  .pbar .b1 i{display:block;height:100%;width:62%;background:var(--red)}
+  .pbar .b2{height:7px}.pbar .b2 i{display:block;height:100%;width:38%;background:#C78A2E}
+  .pill-timer{position:relative;overflow:hidden;border:1.5px solid #D9C9AB;border-radius:99px;padding:6px 16px;font-weight:800;background:#FFFDF8;min-width:230px;text-align:center}
+  .pill-timer i{position:absolute;left:0;top:0;bottom:0;width:58%;background:rgba(179,55,43,.18)}
+  .pill-timer span{position:relative}
+  .pill-timer.rest i{background:rgba(47,125,109,.2);width:30%}
+  .ctrl{display:flex;gap:8px;justify-content:center;margin-top:10px}
+  .ctrl span{border:1.5px solid #D2C0A4;background:#FFFDF8;border-radius:10px;padding:5px 12px;font-weight:800}
+
+  .end{margin-top:40px;text-align:center;padding:26px 20px;background:var(--card);border:1px solid var(--line);border-radius:20px}
+  .end p{margin:0;color:var(--muted);font-size:13.5px}
+  .foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:26px}
+</style></head>
+<body><div class="wrap">
+
+<header class="hero">
+  <span class="tag">GUIDE · 작업 도구</span>
+  <h1><em>작업 도구</em> 설명서</h1>
+  <p>쓰는 날을 차곡차곡 — 아래 탭을 눌러 보세요</p>
+</header>
+
+<div class="tabbar"><div class="tabs" role="tablist" aria-label="작업 도구 설명서">
+  <button class="tab" role="tab" id="t-mywork"   aria-controls="p-mywork"   aria-selected="true"><span class="ic">🗂️</span><span class="t">나의 작업</span><span class="s">달력 · 할 일 · 목표</span></button>
+  <button class="tab" role="tab" id="t-worklog"  aria-controls="p-worklog"  aria-selected="false"><span class="ic">✍️</span><span class="t">워크로그</span><span class="s">오늘 몇 자 썼지?</span></button>
+  <button class="tab" role="tab" id="t-deadline" aria-controls="p-deadline" aria-selected="false"><span class="ic">⏰</span><span class="t">데드라인</span><span class="s">하루 몫 계산기</span></button>
+  <button class="tab" role="tab" id="t-pomo"     aria-controls="p-pomo"     aria-selected="false"><span class="ic">🍅</span><span class="t">뽀모도로</span><span class="s">25분 타이머</span></button>
+</div></div>
+
+<!-- ═════════════ 1 · 나의 작업 ═════════════ -->
+<section class="panel on" id="p-mywork" role="tabpanel" aria-labelledby="t-mywork">
+  <div class="ph"><span class="n">🗂️</span><h2>나의 작업</h2><span class="s">나 혼자 쓰는 책상</span></div>
+  <p class="lead"><b>내 카드의 아래칸(닉네임이 있는 칸)</b>을 누르면 열려요. 왼쪽은 <b>출석 달력</b>, 오른쪽은 <b>탭 여섯 개</b>예요. 여기 적는 할 일은 <b>나만 보고 고칠 수 있어요.</b></p>
+
+  <div class="mock" style="margin-bottom:14px">
+    <div class="two" style="grid-template-columns:1.1fr 1fr">
+      <div><div class="cap">📋 출석 달력</div><div class="cal" id="cal-a"></div></div>
+      <div><div class="cap">오른쪽 탭</div>
+        <div class="mwtabs"><span class="on">📌 할 일</span><span>🎯 목표</span><span>⏱️ 작업 시간</span><span>✍️ 글자수</span><span>📮 쪽지</span><span>🏅 업적</span></div>
+        <div class="todo"><div class="chk on">✓</div><span class="tx">모닝페이지 🔁</span></div>
+        <div class="todo"><div class="chk"></div><span class="tx">4화 초고 마무리</span></div>
+        <div class="todo"><div class="chk"></div><span class="tx">시놉 정리</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step"><div class="hd"><div class="no">1</div><h3>📋 출석 달력</h3></div>
+    <p>방에 <b>들어오기만 해도</b> 붉은 <b>✓ 도장</b>이 찍혀요. 그중 <b>60분 넘게</b> 머문 날은 <b>✔ 유효 출석</b>으로 더 진하게 보여요.</p>
+    <ul>
+      <li><b>한 번 클릭</b> — 그 날짜를 골라요. 오른쪽 할 일이 그날 것으로 바뀌어요.</li>
+      <li><b>두 번 클릭</b> — 그날을 <b>🏖️ 휴가</b>로 켜고 꺼요. (본인과 운영진만 봐요)</li>
+      <li>달력 아래에는 이번 달 출석 현황이 떠요. 휴가를 낸 날은 <b>(휴가 적용)</b>으로 반영돼요.</li>
+      <li>그날 할 일이 있으면 칸 오른쪽 위에 <b>작은 점</b>, 디데이를 걸면 <b>🚩</b>이 붙어요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">2</div><h3>📌 할 일</h3></div>
+    <p>달력에서 날짜를 고르고, 입력칸에 적고 <b>Enter</b>(또는 <b>＋</b>)를 눌러요. <b>미리 내일 할 일</b>을 적어 둬도 돼요.</p>
+    <div class="mock">
+      <div class="row" style="margin-bottom:6px"><span class="gbtn">‹</span><b>11월 6일 (금)</b><span class="gbtn">›</span><span class="sm" style="margin-left:auto">3개 중 1개 완료</span></div>
+      <div class="row"><div class="inp hl">금요일에 할 일 추가…</div><div class="btn">＋</div></div>
+      <div class="todo" style="margin-top:6px"><div class="chk on">✓</div><span class="tx">자료 조사</span></div>
+      <div class="todo"><div class="chk"></div><span class="tx">4화 초고 마무리</span></div>
+      <div class="row" style="margin-top:8px"><b>🔁 루틴 (매일 반복)</b><span class="sm">자정이 지나면 체크가 저절로 풀려요</span></div>
+    </div>
+    <ul>
+      <li><b>완료</b> — 앞의 체크 상자를 눌러요. (글자를 눌러도 완료되지 않아요)</li>
+      <li><b>고치기</b> — 글자를 누르면 그 자리에서 고쳐져요. <b>Enter</b>로 저장, <b>Esc</b>로 취소.</li>
+      <li><b>[오늘 하기]</b> — 지난 날짜에 못 끝낸 일에 붙어요. 누르면 오늘 칸으로 옮겨져요.</li>
+      <li><b>🔁 루틴</b> — 아래 칸에 넣은 건 전부 <b>매일 반복</b>이에요. 모닝페이지·산책·필사처럼 날마다 하는 일을 여기 두세요.</li>
+      <li><b>🧹 완료한 것 치우기</b> — 목록에서만 감추고 기록은 남아요.</li>
+      <li><b>📅 디데이</b> — 할 일 탭 맨 위 칸에서 걸어요. 달력에 🚩, 내 카드에 딱지가 붙어요.</li>
+    </ul>
+    <div class="tip"><b>꿀팁</b> — 워크로그 메모칸에 <b>/내일 4화 초고</b>처럼 적어도 할 일이 돼요.</div></div>
+
+  <div class="step"><div class="hd"><div class="no">3</div><h3>🎯 목표</h3></div>
+    <p>오늘 하루를 어떻게 보낼지 정해 두는 곳이에요.</p>
+    <ul>
+      <li><b>오늘의 한줄 목표</b> — 내 카드에 그대로 보여요(공유돼요). 입력하면 바로 저장돼요.</li>
+      <li><b>오늘 목표 작업 시간</b> — 정해 두면 뽀모도로의 <b>바깥 고리</b>가 이 값을 향해 차올라요. 비워 두면 오늘 몇 시간 했는지만 보여요. (이 값은 나만 봐요)</li>
+      <li><b>⏱️ 타이머 리셋</b> — 카드에 보이는 타이머만 0으로 되돌려요. 작업 시간 기록은 그대로예요. 누르면 <b>[되돌리기]</b>가 떠요.</li>
+      <li>내 <b>상태</b>(WORK · 🔥초집중🔥 · multiT · 휴식 · 자리비움)는 <b>카드의 상태표를 눌러서</b> 바꿔요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">4</div><h3>⏱️ 작업 시간 · ✍️ 글자수</h3></div>
+    <p>내 기록을 그래프로 봐요. 눌러서 입력할 건 없어요. 쓰는 만큼 저절로 쌓여요.</p>
+    <ul>
+      <li><b>⏱️ 작업 시간</b> — 요일별 그래프, 지난 주 넘겨보기, 텍스트로 내보내기. 상태가 <b>WORK</b>일 때 저절로 재요. (💻multiT는 70%로 셈해요)</li>
+      <li><b>✍️ 글자수</b> — 한 주 / 최근 7일 막대 / 이번 달 꺾은선, 그래프가 셋이에요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">5</div><h3>📮 쪽지 · 🏅 업적</h3></div>
+    <ul style="margin-top:2px">
+      <li><b>📮 쪽지</b> — 받은 쪽지와 보낸 쪽지. 안 읽은 게 있으면 내 카드에 붉은 표시가 붙어요.</li>
+      <li><b>🏅 업적</b> — 출석·글자수·작업 시간·뽀모를 바탕으로 <b>저절로</b> 붙는 배지예요. 딴 배지를 누르면 <b>대표</b>로 걸려요.</li>
+    </ul></div>
+</section>
+
+<!-- ═════════════ 2 · 워크로그 ═════════════ -->
+<section class="panel green" id="p-worklog" role="tabpanel" aria-labelledby="t-worklog" hidden>
+  <div class="ph"><span class="n">✍️</span><h2>Work Log</h2><span class="s">오늘 얼마나 썼는지, 방에 슬쩍 남겨요</span></div>
+
+  <div class="box dark">
+    <h4>💡 시작하기 전에, 이것만 기억해요</h4>
+    글자수를 기록하는 방식은 <b>크게 두 가지</b>예요.<br>
+    집필량만 가볍게 체크하고 싶다면 <b>① 글자수만 기록하기</b>, 작품 전체를 관리하고 싶다면 <b>② 작품별로 관리하기</b>로 시작해 보세요.
+    <div style="border-top:1.5px dashed #7a4a3a;margin-top:10px;padding-top:10px">
+      ⚠️ 같은 원고는 <b>①과 ② 중 한 가지로만</b> 적어요. 두 군데에 같이 적으면 오늘 글자수가 <b>두 번 더해져요.</b><br>
+      🔒 Work Log에는 <b>숫자와 한 줄 메모만</b> 남아요. 원고 내용은 절대 올라가지 않아요.
+    </div>
+  </div>
+
+  <div class="pick">
+    <div class="a"><b>① 글자수만 적기</b><span>숫자 하나면 끝! 제일 쉽고 빨라요</span></div>
+    <div class="b"><b>② 작품별로 관리</b><span>작품·회차마다 진도까지 차곡차곡 쌓아 봐요</span></div>
+  </div>
+
+  <div class="sec a">
+    <div class="sh"><div class="big">①</div><div><h3>글자수만 적기</h3><small>작품·회차 없이, 전체 글자수만 적는 가장 쉬운 방법</small></div></div>
+
+    <div class="step"><div class="hd"><div class="no" style="background:#E0657A">1</div><h3>전체 글자수를 적고 [기록]</h3></div>
+      <p>지금 쓰는 원고의 <b style="color:var(--red)">'전체' 글자수</b>를 적고 [기록]을 눌러요. <b style="color:var(--red)">처음 적은 숫자가 출발선</b>이 돼요.</p>
+      <div class="mock"><div class="row"><div class="inp v hl">10,000</div><div class="inp">무슨 작업? (다 같이 봐요)</div><div class="btn hl">기록</div></div>
+      <div class="sm" style="margin-top:6px">↑ 첫 칸이 '전체 글자수'예요 · 아침에 처음 적는 숫자는 '오늘의 출발선'이에요</div></div></div>
+
+    <div class="step"><div class="hd"><div class="no" style="background:#E0657A">2</div><h3>쓰다가 또 적으면, 늘어난 만큼만 쌓여요</h3></div>
+      <p>그때그때 <b style="color:var(--red)">전체 글자수</b>를 다시 적기만 하면 돼요. 알아서 <b style="color:var(--red)">차이만</b> 오늘 누적에 더하고, 방 흐름에 <b style="color:var(--red)">'+800자'</b>처럼 올라가요.</p>
+      <div class="mock">
+        <div class="tl">
+          <div class="pt"><div class="t">아침</div><div class="n">10,000</div><div class="d">출발선</div></div><div class="ar">→</div>
+          <div class="pt"><div class="t">점심</div><div class="n">10,800</div><div class="d">+800자</div></div><div class="ar">→</div>
+          <div class="pt"><div class="t">저녁</div><div class="n">12,000</div><div class="d">+1,200자</div></div>
+        </div>
+        <div class="sum">오늘 누적 +2,000자 🎉</div>
+        <div class="feed"><div class="f"><span class="who">내닉</span><b style="color:var(--ink)">+1,200자</b><span class="sm" style="margin-left:auto">방금</span></div>
+        <div class="f"><span class="who">내닉</span><b style="color:var(--ink)">+800자</b><span class="sm" style="margin-left:auto">3시간</span></div></div>
+      </div></div>
+
+    <div class="step"><div class="hd"><div class="no" style="background:#E0657A">3</div><h3>글자수 없이 '무슨 작업?'만 올려도 OK</h3></div>
+      <p>구상·퇴고·시놉 정리처럼 <b style="color:var(--red)">글자수로 안 잡히는 일</b>도 방에 보여줄 수 있어요. 이 칸에 적은 글은 <b style="color:var(--red)">방 모두가 봐요.</b></p>
+      <div class="mock"><div class="row"><div class="inp">전체 글자수</div><div class="inp v hl">4화 퇴고 중</div><div class="btn">기록</div></div></div></div>
+
+    <div class="box note">✂️ 퇴고로 글자가 <b style="color:var(--red)">줄어도</b> 오늘 누적은 깎이지 않아요. 걱정 말고 덜어내요!</div>
+    <div class="box note">🆕 원고를 <b style="color:var(--red)">새 문서</b>로 갈아탔다면 [새 편] · 자정 넘겨 못 적었다면 [🕛 어제 채우기]를 써요.</div>
+  </div>
+
+  <div class="sec b">
+    <div class="sh"><div class="big">②</div><div><h3>작품별로 관리하기</h3><small>작품 → 회차 → 글자수 → 마침 체크. 진도가 눈에 보여요</small></div></div>
+
+    <div class="step"><div class="hd"><div class="no">1</div><h3>[오늘] 탭에서 작품 만들기</h3></div>
+      <p><b>[＋ 작품 먼저]</b>를 눌러 작품 이름을 적어요. 제목을 밝히기 싫으면 <b>A · B 처럼</b> 적어도 돼요.</p>
+      <div class="mock"><div class="row"><div class="btn g hl">＋ 작품 먼저</div><div class="inp">회차 — 1 · 1-5 · 프롤로그</div><div class="btn gray">＋ 만들기</div></div></div></div>
+
+    <div class="step"><div class="hd"><div class="no">2</div><h3>회차 만들기 — '1-5'면 다섯 개가 한 번에!</h3></div>
+      <p>회차 칸에 <b>1</b>, <b>1-5</b>, <b>프롤로그</b>처럼 적고 [＋ 만들기]. 미리 만들어 두고 <b>며칠에 걸쳐</b> 써도 돼요.</p>
+      <div class="mock">
+        <div class="row" style="margin-bottom:4px"><div class="inp" style="flex:0 0 80px;color:var(--green);font-weight:800">A ▾</div><div class="inp v hl">1-5</div><div class="btn g hl">＋ 만들기</div></div>
+        <div class="ep"><div class="chk"></div><span class="nm">A · 1화</span><span class="pill s1">초고</span><span class="cw">0 자</span></div>
+        <div class="ep"><div class="chk"></div><span class="nm">A · 2화</span><span class="pill s1">초고</span><span class="cw">0 자</span></div>
+        <div class="ep"><div class="chk"></div><span class="nm">A · 3화</span><span class="pill s1">초고</span><span class="cw">0 자</span></div>
+        <div class="sm" style="text-align:center;margin-top:4px">… 5화까지 한꺼번에 생겨요</div>
+      </div>
+      <div class="tip" style="border-left-color:#9ED3C3">📖 회차 이름은 기본이 <b>화</b>예요. <b>챕터</b>로 바꾸려면 <b>[작품] 탭</b>에서 작품을 열고 <b>화 ↔ 챕터</b> 단추를 눌러요. (작품마다 따로 정해요)</div></div>
+
+    <div class="step"><div class="hd"><div class="no">3</div><h3>그 회차의 글자수를 적고, 단계를 바꿔요</h3></div>
+      <p>줄의 칸에 <b>그 회차의 전체 글자수</b>를 적으면 <b>늘어난 만큼</b>이 오늘 누적과 방 흐름에 올라가요. 단계 알약을 누르면 <b>초고 → 수정 → 퇴고 → 비축 → 업로드</b>로 바뀌어요.</p>
+      <div class="mock">
+        <div class="ep"><div class="chk"></div><span class="nm">A · 1화</span><span class="pill s2 hl">수정</span><span class="cw hl">6,000 자</span></div>
+        <div class="row" style="margin-top:8px"><span class="pill s1">초고</span><span class="pill s2">수정</span><span class="pill s3">퇴고</span><span class="pill s4">비축</span><span class="pill s5">업로드</span></div>
+      </div></div>
+
+    <div class="step"><div class="hd"><div class="no">4</div><h3>다 썼으면 ✓ 체크!</h3></div>
+      <p>왼쪽 네모를 눌러 <b>마침 체크</b>. 방 흐름에 <b>'1화 마침 🎉'</b>이 떠요. <b>체크한 날이 마친 날</b>이 되어 주간 달력에 남아요.</p>
+      <div class="mock">
+        <div class="ep"><div class="chk on hl">✓</div><span class="nm" style="margin-left:4px">A · 1화</span><span class="pill s4">비축</span><span class="cw">6,000 자</span></div>
+        <div class="feed"><div class="f"><span class="who">내닉</span><b style="color:var(--ink)">1화 마침 · 6,000자 🎉</b><span class="sm" style="margin-left:auto">방금</span></div></div>
+      </div></div>
+
+    <div class="step"><div class="hd"><div class="no">5</div><h3>[주간] · [작품] 탭에서 한눈에 보기</h3></div>
+      <p><b>주간</b>은 어느 날 어떤 회차를 마쳤는지, <b>작품</b>은 진도 막대와 회차표로 전체 진도를 보여줘요.</p>
+      <div class="two" style="margin-top:10px">
+        <div class="mock"><div class="cap">📅 주간 탭</div>
+          <div class="day"><span class="w">수</span><span>—</span><span class="c">·</span></div>
+          <div class="day t"><span class="w">목</span><span><b style="color:var(--ink)">A · 1화</b> 마침</span><span class="c">6,000자</span></div>
+          <div class="day"><span class="w">금</span><span>—</span><span class="c">·</span></div></div>
+        <div class="mock"><div class="cap">📚 작품 탭</div>
+          <div style="font-weight:900;color:var(--green)">A <span class="sm" style="font-weight:600">· 5화까지</span></div>
+          <div class="bar"><i style="width:40%;background:#C8F0D4"></i><i style="width:20%;background:#BFE0FF"></i><i style="width:40%;background:#FFE08A"></i></div>
+          <div class="stats"><span>쓴 편수 <b>5편</b></span><span>비축 <b>2편</b></span><span>모두 <b>28,500자</b></span></div>
+          <div class="pgrid"><div style="background:#C8F0D4">1화</div><div style="background:#C8F0D4">2화</div><div style="background:#BFE0FF">3화</div><div style="background:#FFE08A">4화</div><div style="background:#FFE08A">5화</div><div style="background:#f3f3f3;color:#bbb">6</div></div></div>
+      </div></div>
+
+    <div class="box note">🧹 마친 회차가 쌓이면 <b style="color:var(--red)">[✓ 마친 ○편 치우기]</b>! 목록만 정리되고 <b style="color:var(--red)">작품 탭 기록은 그대로</b> 남아요. (↩ 되돌리기도 돼요)</div>
+    <div class="box warn">⚠️ 줄 끝의 <b>✕(지우기)</b>는 달라요. 작품 탭 기록에서도 <b>같이 사라지니</b> 신중하게!</div>
+  </div>
+
+  <h3 style="font-family:var(--serif);font-size:19px;margin:26px 0 10px">🔎 Work Log 탭 둘러보기</h3>
+  <div class="grid">
+    <div class="mini"><div class="ic">📝</div><h4>오늘</h4><p>글자수 입력과 <b>방 흐름</b>(다 같이 쓰는 모습). 작품별 회차도 여기서 적어요.</p></div>
+    <div class="mini"><div class="ic">📖</div><h4>기록</h4><p>오늘·어제 내 기록. 자정을 넘겨도 <b>어제 마지막 기준</b>을 이어받아요.</p></div>
+    <div class="mini"><div class="ic">📅</div><h4>주간</h4><p>그 주에 <b>어느 날 무엇을 마쳤는지</b>를 달력으로 봐요.</p></div>
+    <div class="mini"><div class="ic">📚</div><h4>작품</h4><p>작품별 진도 막대와 <b>회차표</b>(15회차씩)를 봐요.</p></div>
+    <div class="mini"><div class="ic">💭</div><h4>메모</h4><p>명령 없이 적은 <b>내 혼잣말</b>만 모아 봐요. 나만 볼 수 있어요.</p></div>
+    <div class="mini"><div class="ic">🏆</div><h4>랭킹</h4><p>이번 주 글자수 등수. <b>이름은 내 줄만</b> 보여요.</p></div>
+  </div>
+</section>
+
+<!-- ═════════════ 3 · 데드라인 ═════════════ -->
+<section class="panel green" id="p-deadline" role="tabpanel" aria-labelledby="t-deadline" hidden>
+  <!-- 📝 [2026-11-06] 데드라인은 아직 혼자 방(?solo=1) 전용입니다. 본방에 켤 때 이 설명서도 함께 올려 주세요. -->
+  <div class="ph"><span class="n">⏰</span><h2>데드라인</h2><span class="s">마감일 + 분량 → 오늘 몇 자?</span></div>
+  <p class="lead"><b>마감일</b>과 <b>써야 할 분량</b>을 넣어 두면, <b>오늘 몇 자</b> 쓰면 되는지 하루 몫을 계산해 줘요. 작품은 <b>한 페이지에 카드로 여러 개</b> 둘 수 있어요. 옆 탭의 <b>⏰ 데드라인</b>에서 열어요.</p>
+
+  <div class="mock" style="margin-bottom:14px;max-width:420px">
+    <div class="dl">
+      <div class="hd2"><span class="bg">A</span><span>5월 신작</span><span class="hot">D-12</span><span style="margin-left:auto;color:#8a7b68">▲</span></div>
+      <div class="bd2">
+        <div class="bigq"><b>2,000자</b><span>오늘 몫 ≈ 0.4화</span></div>
+        <div class="bar" style="height:9px"><i style="width:55%;background:#7FBFAE"></i></div>
+        <div class="meta"><span>쓴 글 18,000 / 60,000자</span><span>내일 몫 2,000자</span></div>
+        <div class="wk"><div class="t"><i style="height:26px"></i>금</div><div><i style="height:26px"></i>토</div><div><i style="height:13px"></i>일</div><div><i style="height:26px"></i>월</div><div><i style="height:26px"></i>화</div><div><i style="height:4px"></i>수</div><div><i style="height:26px"></i>목</div></div>
+        <div class="wr">오늘 쓴 글자 <em>1,100</em> 자</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step"><div class="hd"><div class="no">1</div><h3>＋ 작품 추가</h3></div>
+    <p>[＋ 작품 추가]를 누르면 <b>"작품 A를 추가할까요?"</b> 하고 한 번 물어봐요. <b>추가</b>를 눌러야 만들어져요. 이름표는 <b>A, B, C… Z</b> 다음에 <b>AA, AB…</b>로 이어져요. 제목은 <b>나만 보는 꼬리표</b>라서 비워 둬도 돼요. 지운 이름표는 다시 안 써요. (예전 기록과 섞이지 않게요) 한 번에 둘 수 있는 작품은 <b>26개</b>까지예요.</p></div>
+
+  <div class="step"><div class="hd"><div class="no">2</div><h3>카드를 눌러 펼치고 값 넣기</h3></div>
+    <p>카드를 눌러 펼친 뒤 아래 칸을 채워요.</p>
+    <div class="mock">
+      <div class="dfld">
+        <div><label>시작일</label><div class="inp v">2026-11-06</div></div><div><label>마감일</label><div class="inp v">2026-11-30</div></div>
+        <div><label>총 글자수</label><div class="inp v">60,000</div></div><div><label>지금까지 쓴 글자(전체)</label><div class="inp v">0</div></div>
+        <div><label>마감 며칠 전에 끝낼까</label><div class="inp v">2</div></div><div><label>분량 단위</label><div class="inp">글자수 / 화수 중 선택</div></div>
+      </div>
+      <div style="margin-top:8px"><label style="font-size:11.5px;font-weight:800;color:#7a6d5e">요일별 (눌러서 보통 → 적게 → 쉼)</label>
+        <div class="dows" style="margin-top:3px"><span class="n">월</span><span class="n">화</span><span class="n">수</span><span class="n">목</span><span class="n">금</span><span class="h">토</span><span class="o">일</span></div></div>
+    </div>
+    <ul>
+      <li><b>적게</b>는 보통의 절반, <b>쉼</b>은 0이에요. 못 쓴 몫은 남은 날에 자동으로 나뉘어 얹혀요.</li>
+      <li>분량은 <b>글자수</b>나 <b>화수</b> 중에 골라요. 화수는 글자수를 세지 않고 <b>화(반화 단위)</b>로만 계산해요.</li>
+      <li>그러면 카드에 <b>오늘 몫</b>이 나타나요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">3</div><h3>쓴 글자를 알려 주기 — 두 가지 중 편한 쪽</h3></div>
+    <p><b>워크로그에 적거나</b>, <b>카드의 [오늘 쓴 글자] 칸에 직접 적어요.</b></p>
+    <div class="mock">
+      <div class="cap">✍️ 워크로그로 연동할 때 — 예) 글자수 / A</div>
+      <div class="row"><div class="inp v">12,000</div><div class="inp v hl">A</div><div class="btn g">기록</div></div>
+      <div class="sm" style="margin-top:5px">첫 칸 = 전체 글자수 · 둘째 칸('무슨 작업?') = 작품 알파벳</div>
+    </div>
+    <ul>
+      <li>작품이 <b>하나뿐이면</b> 글자수만 적어도 연동돼요.</li>
+      <li>워크로그 작업 칸을 <b>-</b>로 시작하면 데드라인과 상관없는 글로 쳐요.</li>
+      <li>워크로그를 안 쓴다면 카드의 <b>오늘 쓴 글자</b> 칸에 직접 적으면 돼요.</li>
+      <li><b>화수 방식</b>은 워크로그와 연결되지 않아요. 카드에 오늘 몫만큼 <b>1화 박스 · 반화 박스</b>가 생기니, 쓴 만큼 눌러서 칠해요. 다 칠한 뒤엔 점선 <b>+½</b> 박스로 더 쓴 것도 기록해요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">4</div><h3>많이 쓰면 내일 몫이 줄어요 🎉</h3></div>
+    <p>오늘 몫보다 <b>더 많이</b> 쓰면 그 즉시 <b>내일부터의 몫이 줄어들어요</b>. (예: 60,000자·30일이면 하루 2,000자인데, 오늘 2,800자를 쓰면 내일부터는 대략 1,970자씩)</p>
+    <ul>
+      <li><b>오늘 몫은 하루 종일 안 바뀌어요.</b> 쓰는 도중에 목표가 흔들리지 않게요.</li>
+      <li>접속할 때 한 번 <b>자동으로 계산</b>해요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">5</div><h3>적게 썼다면? 🔄 · 🌙 · ☀️</h3></div>
+    <div class="mock"><div class="row"><span class="gbtn">🔄 지금 계산하기</span><span class="gbtn">🌙 작업 마감</span><span class="gbtn">☀️ 재개</span></div></div>
+    <ul>
+      <li><b>🔄 지금 계산하기</b> — 못 쓴 몫은 <b>오늘 안에 쓸 거라고</b> 보고 계산해요. 초과한 만큼만 반영돼요.</li>
+      <li><b>🌙 작업 마감</b> — 오늘 일을 끝낼 때 눌러요. <b>못 채운 몫이 '안 쓴 것'으로 확정</b>되어 내일부터 나뉘어요.</li>
+      <li><b>☀️ 재개</b> — 마감을 풀고 이어서 써요. 쓴 글자는 그대로 이어지고, 같은 날 다시 출근해도 이전 수치에 더해져요.</li>
+    </ul></div>
+
+  <div class="box ok">🔒 <b>제목·글자수는 나만 봐요.</b> 다른 사람 카드에는 내 🎯 목표 줄에 <b>연한 진척 바</b>만 보여요. 마감이 가까워지면 카드 알약에 <b>D-숫자</b>가 떠요.</div>
+  <div class="box note" style="margin-bottom:0">💡 카드 위쪽 <b>❓ 쓰는 법</b> 단추를 누르면 이 순서가 짧게 요약돼서 떠요.</div>
+</section>
+
+<!-- ═════════════ 4 · 뽀모도로 ═════════════ -->
+<section class="panel" id="p-pomo" role="tabpanel" aria-labelledby="t-pomo" hidden>
+  <div class="ph"><span class="n">🍅</span><h2>뽀모도로</h2><span class="s">집중 25분 · 휴식 5분</span></div>
+  <p class="lead">뽀모도로는 <b>집중해서 쓰고, 잠깐 쉬는 것</b>을 반복하는 타이머예요. 두 종류가 있어요. <b>🍅 Pomodoro</b>는 나 혼자 쓰는 타이머, <b>⏱️ 뽀모방</b>은 여럿이 같은 시계로 함께 돌리는 방이에요.</p>
+
+  <div class="pick">
+    <div class="a"><b>🍅 Pomodoro (개인)</b><span>내가 시작하고 멈춰요. 남의 타이머와는 상관없어요.</span></div>
+    <div class="a" style="background:var(--greenbg);border-color:#A7D3C5"><b style="color:var(--green)">⏱️ 뽀모방 (함께)</b><span>늘 돌아가는 공용 타이머. 들어가면 같은 시계로 돌아요.</span></div>
+  </div>
+
+  <div class="step"><div class="hd"><div class="no">1</div><h3>🍅 시작하고 멈추기</h3></div>
+    <p>아래 알약 줄의 <b>🍅 Pomodoro</b>를 눌러 판을 열고 <b>▶</b>를 눌러요. 집중 시간이 끝나면 휴식이 이어져요.</p>
+    <div class="mock">
+      <div class="pomo">
+        <div class="ring"><b>24:59</b></div>
+        <div class="pbar"><div class="t">24:59</div><div class="b1"><i></i></div><div class="b2"><i></i></div><div class="sm" style="text-align:center;margin-top:4px">위 막대 = 지금 뽀모 · 아래 막대 = 오늘 작업 시간</div></div>
+      </div>
+      <div class="ctrl"><span>▶ / ⏸</span><span>■</span><span>♪</span></div>
+    </div>
+    <ul>
+      <li><b>▶ / ⏸</b> — 같은 자리에서 시작과 잠깐 멈춤을 맡아요. 멈추면 남은 시간이 그대로 붙잡혀요.</li>
+      <li><b>■</b> — 정지. <b>내 타이머만</b> 멈춰요. 도는 중에만 나타나요.</li>
+      <li><b>♪</b> — <b>소리만</b> 켜고 꺼요. 급히 음소거할 때 쓰세요. 타이머와 🍅 횟수는 그대로예요.</li>
+      <li>집중·휴식 시간(🍅 / ☕ 분)은 <b>내 것만</b> 바꿀 수 있어요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">2</div><h3>모양 고르기 — 원형 / 가로 바</h3></div>
+    <p><b>⚙️ 설정 → 🍅 뽀모</b>에서 <b>◯ 원형</b>과 <b>▬ 가로 바</b> 중에 골라요. 뽀모 그림을 <b>그냥 눌러도</b> 그 설정이 열려요.</p>
+    <ul>
+      <li>원형은 <b>안쪽 고리 = 지금 뽀모</b>, <b>바깥 고리 = 오늘 작업 시간</b>이에요.</li>
+      <li>가로 바는 세로를 덜 차지해서 <b>아래 글자수 창이 그만큼 넓어져요.</b></li>
+      <li>고른 모양은 <b>이 기기에만</b> 저장돼요. 폰과 PC는 따로 골라야 해요.</li>
+      <li>바깥 고리가 향하는 <b>하루 목표</b>는 <b>🗂️ 나의 작업 → 🎯 목표</b>에서 정해요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">3</div><h3>판을 내려도 계속 돌아요</h3></div>
+    <p>판을 내려 두면 <b>아래 알약이 곧 타이머</b>가 돼요. 알약 배경이 지난 만큼 <b>왼쪽부터 차올라요.</b></p>
+    <div class="mock"><div class="row" style="justify-content:space-around">
+      <div class="pill-timer"><i></i><span>🍅 Pomodoro · 집중 24:59</span></div>
+      <div class="pill-timer rest"><i></i><span>☕ Pomodoro · 휴식 04:12</span></div>
+    </div></div>
+    <ul>
+      <li>알약을 <b>두 번 누르면</b> 판을 안 펴고도 <b>잠깐 멈춤 / 이어가기</b>가 돼요. 한 번만 누르면 판이 펴져요.</li>
+      <li><b>새로고침해도 이어져요.</b> 실수로 창을 닫았다 열어도 남은 시간이 그대로예요. (몇 시간 뒤라 이미 끝난 타이머는 되살리지 않아요)</li>
+      <li>▶를 처음 누를 때 <b>알림 허용</b>을 물어봐요. 허용하면 다른 창을 보고 있어도 세션이 끝난 걸 알려줘요. 거부해도 소리는 나요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no">4</div><h3>다른 사람에게는 이렇게 보여요</h3></div>
+    <ul style="margin-top:2px">
+      <li>뽀모를 돌리는 동안 <b>내 카드에 🍅</b>이 은은하게 깜빡여요. 휴식 중에는 <b>☕</b>로 바뀌어요.</li>
+      <li>카드 맨 아랫줄 왼쪽은 <b>⏱ 오늘 작업 시간</b>, 오른쪽은 <b>🍅 오늘 끝낸 집중 세션</b> 수예요.</li>
+      <li>집중 시작·휴식 알림은 글자수 창의 [오늘] 탭에 한 줄씩 흐르는데, <b>내 화면에만</b> 보여요.</li>
+    </ul></div>
+
+  <div class="step"><div class="hd"><div class="no" style="background:var(--green)">5</div><h3>⏱️ 뽀모방 — 같은 시계로 함께</h3></div>
+    <p>아래 알약 줄의 <b style="color:var(--green)">⏱️ 뽀모방</b>을 누르면 들어가져요. 늘 돌아가는 <b style="color:var(--green)">공용 타이머</b>에 맞춰 집중·휴식을 함께 돌고, 그 안에서 수다도 할 수 있어요. 집필에 집중하고 싶으면 안 들어가면 돼요. 안 들어가면 <b style="color:var(--green)">알림도 안 와요.</b></p>
+    <ul>
+      <li><b style="color:var(--green)">내리기 ≠ 나가기</b> — 알약을 눌러 판을 내려도 방은 계속 돌아가요. 알약에 「🍅 뽀모방 참여 중 · 16:03」이 흘러요. <b style="color:var(--green)">✕</b>를 눌러야 진짜 나가요.</li>
+      <li>대화는 <b style="color:var(--green)">자정마다 정리돼요.</b> 오늘(자정 이후) 나눈 이야기는 들어오면 보이고, 어제까지의 대화는 사라져요.</li>
+      <li>머리말의 <b style="color:var(--green)">n명</b>을 누르면 참여 중인 사람들이 떠요.</li>
+    </ul></div>
+</section>
+
+<div class="foot">TheMagam · 더마감</div>
+</div>
+
+<script>
+(function(){
+  /* ── 달력 그림 (2026년 11월) ── */
+  (function(){
+    var box=document.getElementById("cal-a"); if(!box) return;
+    var dw="일월화수목금토".split(""), h=dw.map(function(d){return '<div class="dw">'+d+'</div>'}).join("");
+    var stamp={1:1,2:1,3:2,4:1,5:2}, mark={9:"🏖️",20:"🚩"}, dot={6:1,7:1,13:1};
+    for(var i=1;i<=30;i++){
+      var c="d", x="";
+      if(stamp[i]){ c+=" v"; x= stamp[i]==2?"✔":"✓"; }
+      if(i==6) c+=" sel";
+      if(mark[i]) x=mark[i];
+      h+='<div class="'+c+'">'+i+'<span class="x">'+x+'</span>'+(dot[i]?'<i class="dot"></i>':'')+'</div>';
+    }
+    box.innerHTML=h;
+  })();
+
+  /* ── 탭 ── */
+  var tabs=Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  var ids=["mywork","worklog","deadline","pomo"];
+  function show(id,push){
+    if(ids.indexOf(id)<0) id="mywork";
+    tabs.forEach(function(t){ t.setAttribute("aria-selected", t.id==="t-"+id ? "true":"false"); });
+    ids.forEach(function(k){
+      var p=document.getElementById("p-"+k);
+      var on = k===id; p.classList.toggle("on",on); if(on) p.removeAttribute("hidden"); else p.setAttribute("hidden","");
+    });
+    if(push){ try{ history.replaceState(null,"","#"+id); }catch(e){} }
+    var bar=document.querySelector(".tabbar");
+    var top=bar.getBoundingClientRect().top + window.scrollY;
+    if(window.scrollY>top) window.scrollTo({top:top,behavior:"smooth"});
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener("click",function(){ show(ids[i],true); });
+    t.addEventListener("keydown",function(e){
+      var n=-1;
+      if(e.key==="ArrowRight") n=(i+1)%tabs.length;
+      else if(e.key==="ArrowLeft") n=(i+tabs.length-1)%tabs.length;
+      if(n>=0){ e.preventDefault(); tabs[n].focus(); show(ids[n],true); }
+    });
+  });
+  function fromHash(){ var h=(location.hash||"").replace("#",""); show(ids.indexOf(h)>=0?h:"mywork",false); }
+  window.addEventListener("hashchange",fromHash);
+  fromHash();
+})();
+</script>
+</body></html>

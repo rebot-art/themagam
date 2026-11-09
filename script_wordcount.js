@@ -61,6 +61,13 @@
   let _tab   = "wl";
   let _today = {};        // { 닉네임: {total, base} }
   let _week  = {};        // { 날짜: { 닉네임: {total} } }
+  /* ✍ 글자수 고치기 상태 (2026-11-09) — ★ bind() 가 파일을 읽는 즉시 불리므로 **위쪽**에 둡니다.
+     let/const 는 끌어올려지지 않아 아래에 두면 "초기화 전에 접근" 으로 터져요. */
+  const WCE_MAX = 2000000;
+  let _wceKeep = null;     // 저장 직후 다시 그릴 때 날짜·안내를 이어 줌
+  let _wceRow = null;      // 지금 고르는 날의 내 기록 (없으면 null)
+  let _wceNext = null;     // 확인을 기다리는 {day, before, next}
+  let _wceBound = false;
   let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
   let _feedY = [];        // 어제 것 — 기록 탭을 볼 때 한 번만 받습니다 (2026-10-10)
   let _feedYDay = "";     // 어느 날짜 것을 받아 뒀나 — 자정이 지나면 다시
@@ -1148,7 +1155,9 @@
         await pushFeed(d, v, what);
         if (what) 작업칸비우기();
         await DL.addWritten(길.L, d, v);
-        say(`+${fmt(d)}자 · ${길.L} 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
+        /* 화수 방식 작품은 데드라인에 글자수를 더하지 않습니다(오늘 기록에만 올라가요) — 알려 줍니다 */
+        if (DL.isEp?.(길.L)) say(`+${fmt(d)}자 · ${DL.msgEpMode(길.L)}`);
+        else say(`+${fmt(d)}자 · ${길.L} 기준 ${fmt(v)}자 · 오늘 누적 ${fmt(next)}자`);
       } else if (d === 0) {
         if (!(await 작업만())) say("그대로예요");
       } else {
@@ -1638,6 +1647,7 @@
       if (_back > 0) { _back--; render(); }
     });
 
+    bindEditBox();
     render();
   }
 
@@ -1686,6 +1696,144 @@
             <div class="rec-foot">이번 달 <b>${fmt(합)}자</b></div>`;
   }
 
+  /* =====================================================================
+     📅 이번 달 내 글자수 합 (2026-11-09 — 콩)
+     "이번 주 4,300자 · 이번 달 4,300자" 한 줄용. 예전에 꺾은선이 하던 한 달치 읽기를
+     그대로 이어받았습니다 — 한 달치를 **한 번에**, 내 것만 더합니다.
+     못 읽으면 null → 이번 달 칸만 조용히 빠집니다.
+     ===================================================================== */
+  async function 이번달합() {
+    const nick = me();
+    if (!nick || !window.db) return null;
+    const ym = dayKey().slice(0, 7);
+    try {
+      const snap = await db.ref("wordlog").orderByKey()
+        .startAt(`${ym}-01`).endAt(`${ym}-31\uf8ff`).once("value");
+      const all = snap.val() || {};
+      return Object.keys(all).reduce((a, k) => a + Number(all[k]?.[nick]?.total || 0), 0);
+    } catch (e) { return null; }
+  }
+
+  /* =====================================================================
+     ✍ 글자수 고치기 (2026-11-09 — 콩)
+     예전 "이번 달 하루하루" 꺾은선 자리에 들어왔습니다. 잘못 적은 글자수를 **본인이** 날짜로 골라 고칩니다.
+
+     [값] wordlog/{날짜}/{내 닉}.total 하나만 바꿉니다. base·at 은 그대로 —
+          (base 는 그날 diff 기준, at 은 처음 올라온 시각이라 건드리면 안 돼요.
+           그날 기록이 아예 없었다면 새로 만들면서 at 만 지금으로 찍습니다.)
+     ★ 보안규칙: 내 노드는 어느 날짜든 내가 쓸 수 있습니다(어제 채우기와 같은 길) — 규칙 수정 없음.
+     ★ 흐름(wordfeed) 말풍선은 건드리지 않습니다. 합계에는 안 쓰이는 "올라온 기록" 이에요.
+     ★ 앞날은 못 고칩니다. 저장 전에 "전 → 후" 를 한 번 더 묻습니다.
+     ★ 패널은 다시 그려질 때마다 새 HTML 이라, 손가락은 document 에 한 번만 답니다(위임). */
+
+  function wceLabel(day) {
+    const p = String(day).split("-");
+    return `${Number(p[1])}/${Number(p[2])}`;
+  }
+  function wceDay() {
+    const v = String(el("wce-day")?.value || "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "";
+  }
+  function wceMsg(t, bad) {
+    const b = el("wce-msg");
+    if (!b) return;
+    b.textContent = t || "";
+    b.classList.toggle("bad", !!bad);
+  }
+
+  function editBoxHtml() {
+    const keep = _wceKeep; _wceKeep = null;
+    const day = keep?.day || dayKey();
+    return `<div class="wce" id="wce">
+      <div class="rec-h2">글자수 고치기</div>
+      <div class="wce-row">
+        <input type="date" id="wce-day" value="${day}" max="${dayKey()}" />
+        <span class="hint">날짜를 바꿔 보세요</span>
+      </div>
+      <div class="wce-now" id="wce-now"></div>
+      <div class="wce-row">
+        <input type="number" id="wce-new" min="0" max="${WCE_MAX}" inputmode="numeric" placeholder="바꿀 글자수" />
+        <button type="button" class="wce-btn" id="wce-save">이 숫자로 고치기</button>
+      </div>
+      <div id="wce-ask"></div>
+      <div class="wce-msg" id="wce-msg">${keep?.msg ? esc(keep.msg) : ""}</div>
+    </div>`;
+  }
+
+  /* 고른 날의 내 글자수를 불러와 보여줍니다 — 오늘·이번 주는 듣고 있는 캐시, 그 밖의 날은 한 번 읽어요 */
+  async function wceLoad() {
+    const now = el("wce-now"), inp = el("wce-new");
+    if (!now || !inp) return;
+    _wceRow = null; _wceNext = null;
+    const ask = el("wce-ask"); if (ask) ask.innerHTML = "";
+    const day = wceDay();
+    if (!day) { now.textContent = ""; inp.value = ""; return; }
+    const nick = me();
+    let row = null;
+    if (day === dayKey()) row = _today[nick] || null;
+    else if (_week[day] && new Set(rollKeys(0)).has(day)) row = _week[day][nick] || null;
+    else {
+      try { row = (await db.ref(`wordlog/${day}/${nick}`).once("value")).val() || null; }
+      catch (e) { now.textContent = "불러오지 못했어요."; return; }
+      if (wceDay() !== day) return;            // 기다리는 사이 날짜를 또 바꿨다면 이 결과는 버립니다
+    }
+    _wceRow = row;
+    const t = Number(row?.total || 0);
+    now.textContent = `${wceLabel(day)} 글자수는 지금 ${fmt(t)}자예요.`;
+    inp.value = String(t);
+  }
+
+  function wceAsk() {
+    wceMsg("");
+    if (!me() || !window.db) return;
+    const day = wceDay();
+    const raw = String(el("wce-new")?.value ?? "").trim();
+    if (!day) { wceMsg("날짜를 골라 주세요.", true); return; }
+    if (day > dayKey()) { wceMsg("앞으로 올 날은 고칠 수 없어요.", true); return; }
+    if (!/^\d+$/.test(raw)) { wceMsg("0 이상의 숫자로 적어 주세요.", true); return; }
+    const next = Number(raw);
+    if (next > WCE_MAX) { wceMsg(`${fmt(WCE_MAX)}자를 넘는 숫자는 못 넣어요. 자릿수를 확인해 주세요.`, true); return; }
+    const before = Number(_wceRow?.total || 0);
+    if (next === before) { wceMsg("지금 숫자와 같아서 바꿀 게 없어요."); return; }
+    _wceNext = { day, before, next };
+    const ask = el("wce-ask");
+    if (ask) ask.innerHTML = `<div class="wce-ask">${wceLabel(day)} 글자수를<br><b>${fmt(before)}자 → ${fmt(next)}자</b>로 고칠까요?
+      <div class="wce-row"><button type="button" class="wce-btn" id="wce-yes">고치기</button>
+      <button type="button" class="wce-btn ghost" id="wce-no">취소</button></div></div>`;
+  }
+
+  async function wceDo() {
+    const p = _wceNext;
+    const nick = me();
+    if (!p || !nick || !window.db) return;
+    _wceNext = null;
+    try {
+      await db.ref(`wordlog/${p.day}/${nick}`)
+        .update(_wceRow ? { total: p.next } : { total: p.next, at: Date.now() });
+    } catch (e) {
+      const ask = el("wce-ask"); if (ask) ask.innerHTML = "";
+      wceMsg(denyMsg(e), true);
+      return;
+    }
+    _wceKeep = { day: p.day, msg: `✅ ${wceLabel(p.day)} 글자수를 ${fmt(p.before)}자 → ${fmt(p.next)}자로 고쳤어요.` };
+    if (typeof window.renderMyRecordPanel === "function") window.renderMyRecordPanel();
+  }
+
+  function bindEditBox() {
+    if (_wceBound) return;
+    _wceBound = true;
+    document.addEventListener("change", e => {
+      if (e.target?.id === "wce-day") { wceMsg(""); wceLoad(); }
+    });
+    document.addEventListener("click", e => {
+      const b = e.target?.closest?.("#wce-save, #wce-yes, #wce-no");
+      if (!b) return;
+      if (b.id === "wce-save") wceAsk();
+      else if (b.id === "wce-yes") wceDo();
+      else { _wceNext = null; const ask = el("wce-ask"); if (ask) ask.innerHTML = ""; }
+    });
+  }
+
   window.wordcountMyWeekHtml = myWeekHtml;
   /* ---------------------------------------------------------------
      설정 → 📊 나의 기록 에 넣을 글자수 요약.
@@ -1725,6 +1873,7 @@
       vals.push([DOW_LABEL[(d.getDay() + 6) % 7], total]);
     }
     const week = vals.reduce((a, b) => a + b[1], 0);
+    const 월합 = await 이번달합();     // [2026-11-09 — 콩] 이번 주 옆에 이번 달도 나란히
     const today = Number(myRow().total || 0);
     const base = myRow().base;
     const weekLabel = isThisWeek ? "이번 주" : `${wcBack}주 전`;
@@ -1762,7 +1911,8 @@
                 onclick="renderMyRecordPanel(${timeBack}, ${wcBack - 1})">›</button>
       </div>
       <div class="wc-rows" style="max-height:none">${drawRows(vals, isThisWeek ? vals.length - 1 : -1)}</div>
-      <div class="rec-foot">${weekLabel} <b>${fmt(week)}자</b></div>
+      <div class="rec-foot rec-foot2"><span>${weekLabel} <b>${fmt(week)}자</b></span>${
+        월합 === null ? "" : `<i class="rec-sep"></i><span>이번 달 <b>${fmt(월합)}자</b></span>`}</div>
       <div class="rec-h2">최근 7일</div>
       ${barChartHtml(linePts)}
       ${isThisWeek && (base === null || base === undefined)
@@ -1923,7 +2073,7 @@
   window.closeWcAll = closeWcAll;
 
   window.Wordcount = { dayKey, weekDays, weekKeys, rollKeys, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
-                       myMonthLineHtml, lineChartHtml,
+                       myMonthLineHtml, lineChartHtml, editBoxHtml, editBoxInit: wceLoad,
                        _state: () => ({ today: _today, week: _week, feed: _feed,
                                         pomoLines: _pomoLines, tab: _tab }) };
 })();

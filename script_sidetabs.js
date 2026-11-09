@@ -38,6 +38,10 @@
     { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
     { id: "help",   label: "📓 표현 공부", open: "openHelp", close: "closeHelp" },
     { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" },
+    /* [2026-11-09 콩] 📚 작품 추천 — **📁 자료실 바로 위.** 익명 · 한 줄 목록 · 👍만.
+       혼자 방에서 먼저(solo) — 본방에 켤 때는 solo 를 지웁니다.
+       알맹이는 script_bookrec.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다(LINK 와 같은 방식). */
+    { id: "bookrec", label: "📚 작품 추천", open: "openBookrec", close: "closeBookrec", solo: true },
     /* [2026-10-09 콩] 📁 자료실 — Q&A 아래. 공지와 같은 **가운데 창**(#files-modal)이라
        공지와 똑같이 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시입니다. */
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
@@ -71,6 +75,7 @@
       /* 🔗 LINK 는 알약이 없어 점의 원본(#dock-dot-links)이 없습니다 — 숨은 자리를 하나 만들어
          script_dock.js 의 dot()/newmark 가 그대로 칠하게 하고, 아래 비추기가 탭으로 옮깁니다. */
       `<span class="dock-dot hidden" id="dock-dot-links" hidden aria-hidden="true"></span>` +
+      `<span class="dock-dot hidden" id="dock-dot-bookrec" hidden aria-hidden="true"></span>` +
       `</div>
        <div class="side-pane" id="side-pane">
          <div class="side-pane-head"><b id="side-pane-title"></b>

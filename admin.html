@@ -1152,6 +1152,22 @@
             <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
             <div class="adm-msg" id="adm-wc-msg"></div>
           </div>
+          <!-- ✍ 글자수 수정 (2026-11-09 — 콩) — 지난 날짜의 한 사람 숫자만 정확히 고칩니다. 방장만. -->
+          <div id="adm-wce" style="border-top:1px dashed rgba(150,120,80,.45); margin-top:12px; padding-top:12px;">
+            <div class="adm-sub" style="margin-bottom:8px"><b>✍ 글자수 수정</b> — 날짜와 멤버를 고르면 그날 글자수가 떠요. 숫자만 바꿔서 저장해요.</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <input type="date" id="adm-wce-day" />
+              <button class="adm-btn ghost" id="adm-wce-load">🔍 그날 기록 불러오기</button>
+            </div>
+            <div class="adm-gap"></div>
+            <select id="adm-wce-nick" disabled><option value="">먼저 불러와 주세요</option></select>
+            <div class="adm-msg" id="adm-wce-now"></div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <input type="number" id="adm-wce-new" min="0" max="2000000" placeholder="바꿀 글자수" disabled />
+              <button class="adm-btn" id="adm-wce-save" disabled>💾 이 숫자로 고치기</button>
+            </div>
+            <div class="adm-msg" id="adm-wce-msg"></div>
+          </div>
         </div>
       </div>
 
@@ -1171,7 +1187,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202611051002"></script>
+  <script src="script_admin.js?v=202611090406"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

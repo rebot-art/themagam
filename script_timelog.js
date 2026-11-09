@@ -897,10 +897,12 @@
           <div id="mw-wc-month"></div>
         </div>
         ${exportBlock()}`;
-      window.Wordcount?.myMonthLineHtml?.().then(h => {
-        const box = document.getElementById("mw-wc-month");
-        if (box && h) box.innerHTML = h;
-      }).catch(() => {});
+      /* ✍ 글자수 고치기 — 예전 "이번 달 하루하루" 꺾은선이 있던 자리 (2026-11-09 — 콩) */
+      const eb = document.getElementById("mw-wc-month");
+      if (eb) {
+        eb.innerHTML = window.Wordcount?.editBoxHtml?.() || "";
+        window.Wordcount?.editBoxInit?.();
+      }
     }
   }
   /* =====================================================================
