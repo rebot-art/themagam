@@ -89,6 +89,13 @@
   let _rows = [];
   let _ref = null;
   let _bound = false;
+  /* 방장 판정 — 닉네임(isRoomOwner)이거나 **방장 계정(uid)**이면 방장. 혼자 방에서 다른 닉으로 들어가도
+     🔗 링크 걸기가 보이게 합니다(2026-11-09 콩 — 링크 입력칸이 안 보였음). 진짜 자물쇠는 보안규칙(uid)이라 화면 문고리일 뿐이에요. */
+  const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+  function 방장() {
+    try { if (window.isRoomOwner?.()) return true; } catch (e) {}
+    try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; }
+  }
   let _upOpen = false;                   // 올리기 칸 — 기본은 접힘 (2026-11-09 콩)
 
   /* 🔎 찾아보기 — 사이트 목록 (콩트 WEB_ENGINES 그대로) */
@@ -241,7 +248,7 @@
         </label>
         <input type="file" id="files-pick" hidden
                accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.csv,.txt,.pdf,.zip">
-        ${window.isRoomOwner?.() ? `
+        ${방장() ? `
           <button type="button" class="fl-link" data-file-link="1">
             🔗 링크 걸기 (유튜브 · 큰 파일 등)
           </button>
@@ -407,7 +414,7 @@
      ★ https 만 받습니다 — http 는 중간에서 바꿔치기가 됩니다.
      ===================================================================== */
   async function 링크걸기() {
-    if (!window.isRoomOwner?.()) {
+    if (!방장()) {
       알림("링크는 방장만 걸 수 있어요.", "bad"); return;
     }
     const 주소 = String(el("files-url")?.value || "").trim();
