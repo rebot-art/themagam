@@ -4,7 +4,7 @@
    ---------------------------------------------------------------------
    [무엇인가]
    "이 작품 재밌었어요" 를 한 줄로 남기는 옆 탭. 📁 자료실 **바로 위**에 앉습니다.
-   한 줄 = 장르 · 제목 · 작가 · 한 줄 감상평 · 👍.
+   한 줄 = 장르 · 제목 · 작가 · 감상평 · 👍.
 
    [콩이 정한 것]
      · 모양  : A 한 줄 목록형 (카드형 아님) — 옆 칸이 400px 라 목록이 맞아요.
@@ -16,14 +16,15 @@
      · 👍    : 따봉만 있습니다. 점수·순위·댓글 없음. 한 기기에서 한 번(다시 누르면 취소).
 
    [좁은 폭에서 — 이 탭에서 제일 신경 쓴 자리]
-     · 한 줄 = [장르 딱지][제목 / 작가] ……… [👍 n]. 제목은 한 줄로 잘리고(…),
-       감상평도 한 줄로 잘립니다. **줄을 누르면** 제목·감상평이 줄바꿈으로 펼쳐져요.
+     · [2026-11-09 콩] 모양 — **장르 딱지만 왼쪽으로 튀어나오고**, 제목+작가(한 줄) · 감상평은
+       **같은 세로줄(제목 시작점)** 에 나란히 섭니다. 작가는 제목 바로 옆.
+     · 제목·작가는 한 줄로 잘리고(…), 감상평은 두 줄까지 보입니다. **줄을 누르면** 줄바꿈으로 전부 펼쳐져요.
      · 👍 는 펼치지 않고도 바로 누릅니다.
      · 추천 쓰는 칸은 [＋ 추천하기] 를 눌러야 열려요 — 평소엔 자리를 안 차지합니다.
 
    [서버]  bookrec/{id} = { g, t, a?, c, at, up }
            g 장르(여섯 중 하나) · t 제목(40자) · a 작가(30자, 없어도 됨)
-           c 감상평(60자) · at 올린 시각 · up 👍 수
+           c 감상평(300자 — 콩 2026-11-09, 60→300) · at 올린 시각 · up 👍 수
    [통신량] 탭을 열 때 한 번 듣고(on), 닫으면 끊습니다(off) — 공지·Q&A·LINK 와 같은 원칙.
             글 하나가 100~200바이트라 수백 개가 쌓여도 수십 KB. 한 번에 PAGE 개만 그립니다.
    [새 글 점] 올리면 newmark/bookrec 에 시각을 찍고(dockMarkNew) 탭의 점이 켜집니다.
@@ -37,7 +38,7 @@
 
   const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
   const GENRES = ["현로", "로판", "BL", "현판", "무협", "GL"];
-  const MAX_T = 40, MAX_A = 30, MAX_C = 60;
+  const MAX_T = 40, MAX_A = 30, MAX_C = 300;
   const PAGE = 30;                       // 한 번에 그리는 줄 수
   const MINE_KEY = "bookrecMine";        // 이 기기가 올린 글
   const UP_KEY   = "bookrecUps";         // 이 기기가 👍 누른 글
@@ -80,7 +81,7 @@
     if (!v || typeof v !== "object") return null;
     const g = String(v.g || "");
     const t = String(v.t || "").trim().slice(0, MAX_T);
-    const c = String(v.c || "").trim().slice(0, MAX_C);
+    const c = String(v.c || "").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_C);
     if (GENRES.indexOf(g) < 0 || !t) return null;
     return {
       id, g, t, c,
@@ -105,7 +106,7 @@
         <div class="br-gpick" id="br-gpick">${GENRES.map(g => `<button type="button" data-br-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
         <input type="text" id="br-t" maxlength="${MAX_T}" placeholder="제목" autocomplete="off">
         <input type="text" id="br-a" maxlength="${MAX_A}" placeholder="작가 (모르면 비워 둬도 돼요)" autocomplete="off">
-        <input type="text" id="br-c" maxlength="${MAX_C}" placeholder="한 줄 감상평" autocomplete="off">
+        <textarea id="br-c" rows="3" maxlength="${MAX_C}" placeholder="감상평 (${MAX_C}자까지 · Shift+Enter 로 줄바꿈)"></textarea>
         <div class="br-form-r">
           <span class="br-cnt" id="br-cnt">0/${MAX_C}</span>
           <button type="button" class="ghost-btn compact" id="br-cancel">닫기</button>
@@ -149,13 +150,11 @@
       const 눌렀나 = didUp(r.id);
       return `
       <div class="br-row${열림 ? " open" : ""}" data-br="${esc(r.id)}">
-        <div class="br-main" data-br-t="${esc(r.id)}" role="button" tabindex="0" aria-expanded="${열림}">
-          <span class="br-g">${esc(r.g)}</span>
-          <span class="br-m"><span class="br-t">${esc(r.t)}</span>${r.a ? `<span class="br-a">${esc(r.a)}</span>` : ""}</span>
-        </div>
+        <span class="br-g" data-br-t="${esc(r.id)}">${esc(r.g)}</span>
+        <div class="br-main" data-br-t="${esc(r.id)}" role="button" tabindex="0" aria-expanded="${열림}"><span class="br-t">${esc(r.t)}</span>${r.a ? `<span class="br-a">${esc(r.a)}</span>` : ""}</div>
         <button type="button" class="br-up${눌렀나 ? " on" : ""}" data-br-up="${esc(r.id)}"
                 aria-pressed="${눌렀나}" aria-label="따봉" title="${눌렀나 ? "따봉을 뗍니다" : "따봉"}">👍<b>${r.up || ""}</b></button>
-        <div class="br-c">${esc(r.c)}</div>
+        <div class="br-c" data-br-t="${esc(r.id)}">${esc(r.c)}</div>
         ${열림 && 지울수있나 ? `<div class="br-del"><button type="button" data-br-del="${esc(r.id)}">지우기</button></div>` : ""}
       </div>`;
     }).join("") + (전부.length > 보일.length
@@ -180,10 +179,10 @@
     if (_busy || !window.db) return;
     const t = String(el("br-t")?.value || "").trim().slice(0, MAX_T);
     const a = String(el("br-a")?.value || "").trim().slice(0, MAX_A);
-    const c = String(el("br-c")?.value || "").trim().slice(0, MAX_C);
+    const c = String(el("br-c")?.value || "").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_C);
     if (!_고른장르) return say("장르를 골라 주세요.", true);
     if (!t) return say("제목을 적어 주세요.", true);
-    if (!c) return say("한 줄 감상평을 적어 주세요.", true);
+    if (!c) return say("감상평을 적어 주세요.", true);
     _busy = true;
     const 짐 = { g: _고른장르, t, c, at: Date.now(), up: 0 };
     if (a) 짐.a = a;
@@ -261,7 +260,7 @@
     });
     box.addEventListener("keydown", (e) => {
       /* 한글 조합 중 엔터는 무시 — 글자가 반쯤 올라가는 사고 방지 */
-      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && e.target.closest("#br-t, #br-a, #br-c")) {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229 && e.target.closest("#br-t, #br-a, #br-c")) {
         e.preventDefault(); 올리기(); return;
       }
       if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-br-t]") && e.target.matches("[data-br-t]")) {

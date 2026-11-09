@@ -12968,27 +12968,31 @@ html[data-lite] .user-card.share-card,
 .br-gpick button.on{ border-color: var(--accent); color: var(--accent); background: var(--accent-softer); font-weight: var(--fw-bold); }
 .br-form input{ display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 6px 11px; margin-bottom: 6px;
   border: 1px solid var(--border); border-radius: var(--r-full); background: var(--bg); color: var(--text); }
+.br-form textarea{ display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); line-height: 1.5; padding: 7px 11px; margin-bottom: 6px; resize: vertical;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); color: var(--text); }
 .br-form-r{ display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
 .br-form-r .ghost-btn{ flex: none; white-space: nowrap; }
 .br-cnt{ margin-right: auto; font-size: 10.5px; color: var(--muted); }
 .br-msg{ font-size: var(--fs-xs); color: var(--muted); min-height: 1.3em; margin: 0 0 4px; }
 .br-msg.bad{ color: var(--danger); }
 .br-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 20px 0; line-height: 1.6; }
-.br-row{ display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: start; padding: 9px 2px; border-top: 1px solid var(--border); }
+.br-row{ display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 8px; align-items: start; padding: 9px 2px; border-top: 1px solid var(--border); }
 .br-row:first-child{ border-top: 0; }
-.br-main{ display: flex; gap: 8px; align-items: flex-start; min-width: 0; cursor: pointer; }
-.br-g{ flex: none; font-size: 10.5px; font-weight: var(--fw-bold); line-height: 1.6; padding: 0 8px; border-radius: 99px; background: var(--accent-softer); color: var(--accent); margin-top: 1px; }
-.br-m{ min-width: 0; display: flex; flex-direction: column; }
-.br-t{ font-size: var(--fs-sm); font-weight: var(--fw-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-a{ font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-up{ flex: none; display: inline-flex; align-items: center; gap: 3px; font: inherit; font-size: 12px; line-height: 1.5; padding: 1px 9px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
+/* 장르 딱지만 왼쪽 칸에 튀어나오고, 제목+작가 · 감상평은 같은 세로줄(가운데 칸)에 나란히 선다 (2026-11-09 콩) */
+.br-g{ grid-column: 1; grid-row: 1; font-size: 10.5px; font-weight: var(--fw-bold); line-height: 1.6; padding: 0 8px; border-radius: 99px; background: var(--accent-softer); color: var(--accent); margin-top: 1px; cursor: pointer; }
+.br-main{ grid-column: 2; grid-row: 1; min-width: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.br-t{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.br-a{ font-size: var(--fs-xs); color: var(--muted); margin-left: 6px; }
+.br-up{ grid-column: 3; grid-row: 1; display: inline-flex; align-items: center; gap: 3px; font: inherit; font-size: 12px; line-height: 1.5; padding: 1px 9px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
 .br-up b{ font-weight: var(--fw-bold); min-width: 0; }
 .br-up.on{ border-color: var(--accent); background: var(--accent-softer); color: var(--accent); }
-.br-c{ grid-column: 1 / -1; margin-top: 4px; font-size: var(--fs-xs); color: var(--muted-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-del{ grid-column: 1 / -1; text-align: right; margin-top: 4px; }
+.br-c{ grid-column: 2 / -1; margin-top: 4px; font-size: var(--fs-xs); color: var(--muted-strong); cursor: pointer;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-line; word-break: break-word; }
+.br-del{ grid-column: 2 / -1; text-align: right; margin-top: 4px; }
 .br-del button{ border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; padding: 2px 4px; }
 .br-del button:hover{ color: var(--danger); }
-.br-row.open .br-t, .br-row.open .br-a, .br-row.open .br-c{ white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; }
+.br-row.open .br-main{ white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; }
+.br-row.open .br-c{ display: block; overflow: visible; -webkit-line-clamp: unset; }
 .br-more{ display: block; width: 100%; margin-top: 8px; font: inherit; font-size: var(--fs-xs); padding: 6px 0; border: 1px solid var(--border); border-radius: var(--r-full); background: transparent; color: var(--muted-strong); cursor: pointer; }
 
 /* [고침 2026-10-09] 탭 줄 상자가 Member 탭 자리(벌려 둔 틈)를 덮어 눌림을 가로챘습니다 — 상자는 비켜 주고 탭만 눌리게 */
