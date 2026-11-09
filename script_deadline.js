@@ -35,13 +35,12 @@
    [통신량] 입장할 때 한 번 읽고(once), 탭을 열 때 한 번 더 읽습니다. 쓰기는 고칠 때만.
      듣기(on)는 없습니다. 글자 더하기는 transaction 이라 창이 둘 열려 있어도 서로 덮지 않아요.
 
-   ★ DEADLINE_SOLO_ONLY — 지금은 **혼자 방(?solo=1)에서만** 켭니다 (새 기능은 혼자 방 먼저 — 콩).
-     본방에 켤 때는 이 값을 false 로, 그리고 script_sidetabs.js 의 deadline 탭 solo 표시를 지웁니다.
+   ★ 열리는 때 — 혼자 방(?solo=1)은 언제나, 본방은 **크리스마스 에디션 날(2026-12-18 0시 KST)부터** 자동으로 (2026-11-09 콩).
+     날짜 기준은 script_sidetabs.js 의 window.renewalOpen() 하나 — 손으로 바꿀 스위치는 없습니다.
    ===================================================================== */
 (function () {
   "use strict";
-  const DEADLINE_SOLO_ONLY = true;
-  const MAX_WORKS = 26;            // 한 번에 둘 수 있는 작품
+    const MAX_WORKS = 26;            // 한 번에 둘 수 있는 작품
   const MAX_LABELS = 26 + 676 + 17576;   // A~Z · AA~ZZ · AAA~ZZZ
   const MAX_TITLE = 20;
   const W = { n: 1, h: 0.5, o: 0 };
@@ -54,7 +53,7 @@
     try { if (typeof myNick === "string" && myNick) return myNick; } catch (e) {}
     return window.myNick || "";
   }
-  const enabled = () => !DEADLINE_SOLO_ONLY || window.SOLO === true;
+  const enabled = () => window.SOLO === true || (typeof window.renewalOpen === "function" && window.renewalOpen());   // 12/18 0시(KST)부터 본방에도
   const num = (v) => Math.max(0, parseInt(String(v == null ? "" : v).replace(/,/g, ""), 10) || 0);
   const comma = (n) => Math.round(n).toLocaleString("ko-KR");
   /* 화수 방식 — 반화(0.5) 단위 · 이 작품 단위로 읽고 쓰기 */
@@ -573,7 +572,7 @@
   }
 
   /* =====================================================================
-     옆 탭이 부르는 문 — 칸(#side-pane-body) 안에 직접 그립니다 (script_links.js 와 같은 수)
+     옆 탭이 부르는 문 — 칸(#side-pane-body) 안에 직접 그립니다 (script_bookrec.js 와 같은 수)
      ===================================================================== */
   async function openDeadline() {
     const pane = el("side-pane-body");

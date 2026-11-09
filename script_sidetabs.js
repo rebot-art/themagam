@@ -23,32 +23,36 @@
      본방에 켤 때는 이 값을 true 로, 그리고 TABS 에 pub 을 넣습니다.
    ===================================================================== */
 (function () {
+  /* 🎄 크리스마스 에디션(신년 리뉴얼) 오픈 시각 — 이때부터 본방에도 작품 추천·데드라인이 열립니다.
+     혼자 방(?solo=1)은 언제나 열려 있어요. script_deadline.js 도 이 함수를 같이 씁니다. */
+  const RENEWAL_AT = Date.parse("2026-12-18T00:00:00+09:00");
+  window.renewalOpen = function () { return window.SOLO === true || Date.now() >= RENEWAL_AT; };
+  window.RENEWAL_AT = RENEWAL_AT;
   const SIDE_MAIN_ON = true;   // [2026-10-09 콩] 혼자 방 시험을 마치고 본방에도 켰습니다
   if (!window.SOLO && !SIDE_MAIN_ON) return;
 
   const W = 400;
   const TABS = [
     { id: "notice", label: "📢 공지" },
-    /* [2026-10-12 콩] ⏰ 데드라인 — 📢 공지와 🏢 출판사 품평 사이. **혼자 방에서 먼저** (solo 표시) —
-       본방에 켤 때는 solo 를 지우고 script_deadline.js 의 DEADLINE_SOLO_ONLY 를 false 로.
-       알맹이는 script_deadline.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
-    { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", solo: true },
-    /* [2026-10-09 콩] 차례 — 본방: 공지·품평·표현 공부·Q&A / 혼자 방: 공지·Member·표현 공부·Q&A
-       (혼자 방엔 품평이 없고, 그 자리에 Member 탭이 끼어듭니다 — 자리맞추기 가 틈을 벌려요) */
+    /* [2026-11-09 콩] 차례 — 📢 공지 · 🏢 품평(본방) · 📓 표현 공부 · 🤔 Q&A · 📁 자료실 · 📚 작품 추천 … ⏰ 데드라인(맨 아래)
+       (🔗 링크 & 검색 탭은 📁 자료실 맨 위 '찾아보기'로 합쳐서 없앴어요.)
+       renewal 표시가 있는 탭(작품 추천·데드라인)은 **크리스마스 에디션 날(12/18 0시 KST)부터** 본방에도 열립니다.
+       그 전엔 본방에는 **이름을 가린 맛보기 탭(📚◻︎◻︎◻︎◻︎ · ⏰◻︎◻︎◻︎◻︎)**만 있고, 열면 "준비 중 · 12/18 오픈" 안내만 떠요(통신 0).
+       혼자 방(?solo=1)에서는 진짜 기능이 바로 보여요 — 날짜가 되면 새로고침만으로 열립니다(손댈 것 없음). */
     { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
     { id: "help",   label: "📓 표현 공부", open: "openHelp", close: "closeHelp" },
     { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" },
-    /* [2026-11-09 콩] 📚 작품 추천 — **📁 자료실 바로 위.** 익명 · 한 줄 목록 · 👍만.
-       혼자 방에서 먼저(solo) — 본방에 켤 때는 solo 를 지웁니다.
-       알맹이는 script_bookrec.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다(LINK 와 같은 방식). */
-    { id: "bookrec", label: "📚 작품 추천", open: "openBookrec", close: "closeBookrec", solo: true },
-    /* [2026-10-09 콩] 📁 자료실 — Q&A 아래. 공지와 같은 **가운데 창**(#files-modal)이라
-       공지와 똑같이 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시입니다. */
+    /* [2026-10-09 콩] 📁 자료실 — **가운데 창**(#files-modal)을 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시.
+       [2026-11-09] 맨 위에 🔎 찾아보기가 들어갔어요(옛 링크 & 검색). */
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
-    /* [2026-10-10 콩] 🔗 LINK — **맨 아래, 다른 탭들과 떨어져서** (bottom → CSS margin-top:auto).
-       알맹이는 script_links.js 가 옆 칸(#side-pane-body) 안에 직접 그립니다. */
-    { id: "links",  label: "🔗 링크 & 검색", open: "openLinks", close: "closeLinks", bottom: true }
-  ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.solo && !window.SOLO));
+    /* [2026-11-09 콩] 📚 작품 추천 — 자료실 바로 아래. 익명 · 한 줄 목록 · 👍만. 알맹이는 script_bookrec.js 가 칸 안에 직접 그립니다. */
+    { id: "bookrec", label: "📚 작품 추천", open: "openBookrec", close: "closeBookrec", renewal: true, soon: "📚◻︎◻︎◻︎◻︎" },
+    /* [2026-10-12 콩] ⏰ 데드라인 — 맨 아래(bottom → CSS margin-top:auto), 워크로그와 가까워 눈에 띄게(2026-11-09).
+       알맹이는 script_deadline.js 가 칸 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
+    { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true }
+  ].filter(t => !(t.main && window.SOLO)).map(t => (t.renewal && !window.renewalOpen())
+    ? { id: t.id, label: t.soon, soonTab: true, bottom: t.bottom }   // 🎁 오픈 전 맛보기 — 이름은 아직 비밀, 열면 "준비 중" 안내만
+    : t);
   const el = (id) => document.getElementById(id);
   const root = document.documentElement;
   const OPEN_KEY = "sideTabOpen";
@@ -72,9 +76,8 @@
       `<div class="side-tabs-col" id="side-tabs-col">` +
       TABS.map(t => `<button type="button" class="member-tab side-tab${t.bottom ? " side-tab-bottom" : ""}" id="side-tab-${t.id}" data-side="${t.id}"
           aria-expanded="false"><span>${t.label}</span><i class="side-tab-dot hidden" id="side-dot-${t.id}"></i></button>`).join("") +
-      /* 🔗 LINK 는 알약이 없어 점의 원본(#dock-dot-links)이 없습니다 — 숨은 자리를 하나 만들어
+      /* 📚 작품 추천은 알약이 없어 점의 원본(#dock-dot-bookrec)이 없습니다 — 숨은 자리를 하나 만들어
          script_dock.js 의 dot()/newmark 가 그대로 칠하게 하고, 아래 비추기가 탭으로 옮깁니다. */
-      `<span class="dock-dot hidden" id="dock-dot-links" hidden aria-hidden="true"></span>` +
       `<span class="dock-dot hidden" id="dock-dot-bookrec" hidden aria-hidden="true"></span>` +
       `</div>
        <div class="side-pane" id="side-pane">
@@ -146,6 +149,9 @@
     if (id === "notice") {
       root.classList.add("side-notice");
       _nOpen?.();
+    } else if (t.soonTab) {
+      /* 🎁 오픈 전 맛보기 — 아무것도 읽지 않고 안내만 그립니다 */
+      el("side-pane-body").innerHTML = `<div class="side-teaser"><div class="st-ic">🎁</div><b>준비 중이에요</b><p>12/18 크리스마스 에디션과 함께<br>오픈됩니다 🎄</p><small>어떤 기능일지는 비밀 ㅎㅎ</small></div>`;
     } else if (t.seat) {
       /* 가운데 창을 옆 칸에 앉히는 쪽(자료실) — 창은 그대로 두고 CSS 만 */
       root.classList.add(t.seat);
@@ -171,6 +177,8 @@
     if (id === "notice") {
       _nClose?.();
       root.classList.remove("side-notice");
+    } else if (t.soonTab) {
+      el("side-pane-body").querySelector(".side-teaser")?.remove();
     } else if (t.seat) {
       window[t.close]?.();
       root.classList.remove(t.seat);

@@ -12916,42 +12916,27 @@ html[data-lite] .user-card.share-card,
 /* 🔗 LINK — 맨 아래, 다른 탭들과 떨어져서 (2026-10-10 콩) */
 .side-tabs-col > .side-tab-bottom{ margin-top: auto; }
 /* 🔗 LINK 칸 */
-.links-board{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
-.lk-row{ display: flex; align-items: center; gap: 10px; padding: 9px 11px; margin-bottom: 7px; text-decoration: none; color: var(--text);
-  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--fill-1, rgba(255,255,255,.5)); }
-.lk-row:hover{ border-color: var(--accent); }
-.lk-ic{ flex: none; width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-  font-size: 16px; background: var(--accent-softer, rgba(179,55,43,.08)); }
-.lk-m{ flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.lk-t{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
-.lk-u{ font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lk-memo{ font-size: var(--fs-xs); color: var(--muted-strong); margin-top: 2px; }
-.lk-go{ flex: none; color: var(--accent); font-size: 13px; }
-.lk-x{ flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; }
-.lk-x:hover{ color: var(--danger); }
-.lk-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 20px 0; }
-/* 🔎 찾아보기 (2026-10-31 콩) — 링크 목록 아래 · 올리기 칸 위. 새 탭으로 열립니다 */
-.lk-find{ border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel, var(--fill-1)); padding: 10px 12px 11px; margin: 4px 0 8px; }
-.lk-find-h{ display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
-.lk-find-h i{ width: 14px; height: 3px; border-radius: 2px; background: var(--accent); display: block; }
-.lk-find-h b{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
-.lk-find-h span{ font-size: 10.5px; color: var(--muted); }
-.lk-find-r{ display: flex; gap: 6px; margin-bottom: 8px; }
-.lk-find-r input{ flex: 1 1 auto; min-width: 0; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 7px 11px; border-radius: var(--r-full, 99px); border: 1px solid var(--border); background: var(--fill-1); color: var(--text); outline: none; }
-.lk-find-r input:focus{ border-color: var(--accent); }
-.lk-find-r button{ flex: none; font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 6px 13px; border-radius: var(--r-full, 99px); border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
-.lk-find-c{ display: flex; flex-wrap: wrap; gap: 4px; }
-.lk-find-c button{ font: inherit; font-size: 11px; line-height: 1.6; padding: 1px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
-.lk-find-c button.on{ border-color: var(--accent); color: var(--accent); background: var(--accent-softer); font-weight: var(--fw-bold); }
-.lk-add{ border: 1.5px dashed var(--border); border-radius: var(--r-md); padding: 10px 11px; margin-top: 6px; }
-.lk-add-h{ font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--muted-strong); margin-bottom: 6px; }
-.lk-add input{ display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 6px 11px; margin-bottom: 6px;
-  border: 1px solid var(--border); border-radius: var(--r-full); background: var(--bg); color: var(--text); }
-.lk-add-r{ display: flex; gap: 6px; align-items: center; }
-.lk-add-r input{ margin-bottom: 0; flex: 1 1 auto; }
-.lk-add-r .ghost-btn{ flex: none; white-space: nowrap; }
-.lk-msg{ font-size: var(--fs-xs); color: var(--muted); min-height: 1.3em; margin: 6px 0 0; }
-.lk-msg.bad{ color: var(--danger); }
+/* 🔎 찾아보기 (자료실 맨 위) + ⌄ 올리기 칸 접기 (2026-11-09 콩 — 링크&검색 탭을 자료실에 합침) */
+.fl-find{ border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel, var(--fill-1)); padding: 10px 12px 11px; margin: 0 0 10px; }
+.fl-find-h{ display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.fl-find-h i{ width: 14px; height: 3px; border-radius: 2px; background: var(--accent); display: block; }
+.fl-find-h b{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.fl-find-h span{ font-size: 10.5px; color: var(--muted); }
+.fl-find-r{ display: flex; gap: 6px; margin-bottom: 8px; }
+.fl-find-r input{ flex: 1 1 auto; min-width: 0; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 7px 11px; border-radius: var(--r-full, 99px); border: 1px solid var(--border); background: var(--fill-1); color: var(--text); outline: none; }
+.fl-find-r input:focus{ border-color: var(--accent); }
+.fl-find-r button{ flex: none; font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 6px 13px; border-radius: var(--r-full, 99px); border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+.fl-find-c{ display: flex; flex-wrap: wrap; gap: 4px; }
+.fl-find-c button{ font: inherit; font-size: 11px; line-height: 1.6; padding: 1px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
+.fl-find-c button.on{ border-color: var(--accent); color: var(--accent); background: var(--accent-softer); font-weight: var(--fw-bold); }
+.fl-foldrow{ display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+.fl-foldrow i{ flex: 1 1 auto; height: 1px; background: var(--border); display: block; }
+.fl-fold{ flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 22px; padding: 0; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--fill-1, transparent); color: var(--muted-strong); cursor: pointer; }
+.fl-fold:hover{ border-color: var(--accent); color: var(--accent); }
+.fl-fold svg{ transition: transform .15s; }
+.fl-fold.open svg{ transform: rotate(180deg); }
+.fl-up[hidden]{ display: none; }
 
 /* 📚 작품 추천 (2026-11-09 콩) — 옆 칸(400px) 안의 한 줄 목록. 제목·감상평은 한 줄로 잘리고 줄을 누르면 펼쳐집니다. */
 .bookrec-board{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
@@ -13235,3 +13220,10 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
   content: ""; position: absolute; inset: -1px; z-index: 3;
   border: 2.5px solid #E0A82E; border-radius: 0 6px 6px 0; pointer-events: none;
 }
+
+/* 🎁 오픈 전 맛보기 탭 안내 (2026-11-09 콩 — 12/18 오픈 예정, 이름은 비밀) */
+.side-teaser{ text-align: center; padding: 56px 24px; color: var(--muted-strong); }
+.side-teaser .st-ic{ font-size: 34px; margin-bottom: 10px; }
+.side-teaser b{ display: block; font-size: var(--fs-md, 15px); color: var(--text); margin-bottom: 8px; }
+.side-teaser p{ margin: 0 0 14px; font-size: var(--fs-sm); line-height: 1.6; }
+.side-teaser small{ color: var(--muted); font-size: var(--fs-xs); }

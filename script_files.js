@@ -29,6 +29,17 @@
         실행 파일(.exe .bat …)이 목록에 없는 이유이기도 해요.
 
    =====================================================================
+   🔎 찾아보기 + 📥 올리기 칸 접기 (2026-11-09 — 콩 "자료실과 링크&검색을 합치자")
+   ---------------------------------------------------------------------
+   [왜] 옆 탭이 너무 많아져서 🔗 링크 & 검색 탭을 없애고 이 자료실에 합쳤습니다.
+     · 맨 위에 **찾아보기 박스** — 검색어 + 사이트 고르기 → **새 탭**으로 열려요 (구글·네이버·나무위키·국어사전·
+       유의어·리디·이미지·유튜브). 고른 사이트는 이 기기에만 기억(AppStore) — 서버 통신 0.
+     · 예전 링크 탭의 방장 링크 모음은 이 자료실의 🔗 링크 자료로 옮겨 걸면 됩니다(콩이 직접).
+     · 아래쪽 **올리기 칸(설명·파일·링크 걸기)은 기본이 접힘** — 가운데 ⌄ 알약을 눌러야 펴져요.
+       접힌 동안에도 안내·오류 줄(#files-msg)은 보입니다(알약 밖에 있어요).
+     ★ 이 판은 목록이 바뀔 때마다 통째로 다시 그려서, 쓰던 검색어·펴짐 상태를 따로 챙깁니다.
+
+   =====================================================================
    🔗 링크 자료 (2026-08-28 — 콩)
    ---------------------------------------------------------------------
    [왜 생겼나] 콩이 만든 편집기 프로그램(설치 파일)을 방에 두고 싶은데,
@@ -78,6 +89,42 @@
   let _rows = [];
   let _ref = null;
   let _bound = false;
+  let _upOpen = false;                   // 올리기 칸 — 기본은 접힘 (2026-11-09 콩)
+
+  /* 🔎 찾아보기 — 사이트 목록 (콩트 WEB_ENGINES 그대로) */
+  const ENGINES = [
+    { id: "google", label: "구글",     url: q => "https://www.google.com/search?q=" + q },
+    { id: "naver",  label: "네이버",   url: q => "https://search.naver.com/search.naver?query=" + q },
+    { id: "namu",   label: "나무위키", url: q => "https://namu.wiki/Search?q=" + q },
+    { id: "dict",   label: "국어사전", url: q => "https://ko.dict.naver.com/#/search?query=" + q },
+    { id: "thes",   label: "유의어",   url: q => "https://www.wordsisters.com/search/" + q },
+    { id: "ridi",   label: "리디",     url: q => "https://ridibooks.com/search?q=" + q },
+    { id: "image",  label: "이미지",   url: q => "https://www.google.com/search?tbm=isch&q=" + q },
+    { id: "yt",     label: "유튜브",   url: q => "https://www.youtube.com/results?search_query=" + q }
+  ];
+  const ENGINE_KEY = "linkSearchEngine";   // 링크 탭 시절 이름 그대로 — 고른 사이트가 이어집니다
+  function 사이트() {
+    let id = "";
+    try { id = (window.AppStore || localStorage).getItem(ENGINE_KEY) || ""; } catch (e) {}
+    return ENGINES.find(e => e.id === id) || ENGINES[0];
+  }
+  function 사이트고르기(id) {
+    try { (window.AppStore || localStorage).setItem(ENGINE_KEY, id); } catch (e) {}
+    document.querySelectorAll("#files-find-c button").forEach(b => b.classList.toggle("on", b.dataset.eng === id));
+  }
+  function 찾기() {
+    const t = String(el("files-q")?.value || "").trim();
+    if (!t) return;
+    window.open(사이트().url(encodeURIComponent(t)), "_blank", "noopener");   // 클릭·엔터 안에서 불러야 팝업 차단에 안 걸립니다
+  }
+  function 찾기칸() {
+    const 지금 = 사이트().id;
+    return `<div class="fl-find" id="files-find">
+      <div class="fl-find-h"><i></i><b>찾아보기</b><span>새 탭으로 열려요</span></div>
+      <div class="fl-find-r"><input type="text" id="files-q" maxlength="100" placeholder="검색어를 넣고 엔터" autocomplete="off"><button type="button" id="files-find-go">찾기</button></div>
+      <div class="fl-find-c" id="files-find-c">${ENGINES.map(e => `<button type="button" data-eng="${e.id}" class="${e.id === 지금 ? "on" : ""}">${e.label}</button>`).join("")}</div>
+    </div>`;
+  }
   let _busy = false;
 
   const el = (id) => document.getElementById(id);
@@ -170,9 +217,10 @@
 
     /* ✏️ [2026-10-04 콩] 목록이 새로 그려질 때 적던 설명·주소가 날아가지 않게 */
     const 적던 = {};
-    ["files-note", "files-url", "files-lname"].forEach(k => { const x = el(k); if (x) 적던[k] = x.value; });
+    ["files-q", "files-note", "files-url", "files-lname"].forEach(k => { const x = el(k); if (x) 적던[k] = x.value; });
     const 링크열림 = !!el("files-linkbox") && !el("files-linkbox").hidden;
     box.innerHTML = `
+      ${찾기칸()}
       <div class="fl-usage">
         <span>${list.length}개 · ${크기글(총량)}</span>
         <span class="fl-bar"><i style="width:${참}%"></i></span>
@@ -182,7 +230,16 @@
       </div>
       <div class="fl-list">${list.length ? 줄
         : `<p class="fl-empty">아직 올라온 자료가 없어요.<br>아래에서 파일을 골라 올려 보세요.</p>`}</div>
-      <div class="fl-up">
+      <p class="fl-msg" id="files-msg"></p>
+      <div class="fl-foldrow">
+        <i></i>
+        <button type="button" class="fl-fold${_upOpen ? " open" : ""}" data-file-fold="1" aria-expanded="${_upOpen}"
+                aria-label="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}" title="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <i></i>
+      </div>
+      <div class="fl-up" id="files-up"${_upOpen ? "" : " hidden"}>
         <!-- ✏️ 한 줄 설명 (2026-10-04 콩) — 파일이든 링크든 함께 붙습니다 -->
         <input type="text" id="files-note" class="fl-in" maxlength="200"
                placeholder="✏️ 한 줄 설명 (선택) — 올릴 파일·링크에 함께 붙어요">
@@ -203,7 +260,6 @@
             <input type="text" id="files-lname" class="fl-in" maxlength="120" placeholder="목록에 보일 이름">
             <button type="button" class="fl-go" data-file-link-go="1">걸기</button>
           </div>` : ""}
-        <p class="fl-msg" id="files-msg"></p>
       </div>`;
     Object.keys(적던).forEach(k => { const x = el(k); if (x) x.value = 적던[k]; });
     if (링크열림 && el("files-linkbox")) el("files-linkbox").hidden = false;
@@ -408,6 +464,22 @@
       const d = e.target.closest("[data-file-del]");
       if (d) { 지우기(d.dataset.fileDel); return; }
       if (e.target.closest("[data-file-link-go]")) { 링크걸기(); return; }
+      /* 🔎 찾아보기 */
+      const eng = e.target.closest("#files-find-c [data-eng]");
+      if (eng) { 사이트고르기(eng.dataset.eng); return; }
+      if (e.target.closest("#files-find-go")) { 찾기(); return; }
+      /* ⌄ 올리기 칸 접고 펴기 — 목록을 다시 그리지 않고 그 자리에서만 바꿉니다 */
+      const fold = e.target.closest("[data-file-fold]");
+      if (fold) {
+        _upOpen = !_upOpen;
+        const up = el("files-up");
+        if (up) up.hidden = !_upOpen;
+        fold.classList.toggle("open", _upOpen);
+        fold.setAttribute("aria-expanded", String(_upOpen));
+        const t = _upOpen ? "올리기 칸 접기" : "올리기 칸 펴기";
+        fold.setAttribute("aria-label", t); fold.setAttribute("title", t);
+        return;
+      }
       if (e.target.closest("[data-file-link]")) {
         /* 🔗 누르면 적는 칸이 열리고 닫힙니다 */
         const bx = el("files-linkbox");
@@ -417,6 +489,10 @@
     });
     host.addEventListener("change", (e) => {
       if (e.target?.id === "files-pick") 골랐을때(e.target.files?.[0]);
+    });
+    /* 한글 조합 중 엔터는 무시 — 글자가 반쯤 넘어가는 사고 방지 */
+    host.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && e.target?.id === "files-q") { e.preventDefault(); 찾기(); }
     });
   }
 
