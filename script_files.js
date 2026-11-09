@@ -35,7 +35,7 @@
      · 맨 위에 **찾아보기 박스** — 검색어 + 사이트 고르기 → **새 탭**으로 열려요 (구글·네이버·나무위키·국어사전·
        유의어·리디·이미지·유튜브). 고른 사이트는 이 기기에만 기억(AppStore) — 서버 통신 0.
      · 예전 링크 탭의 방장 링크 모음은 이 자료실의 🔗 링크 자료로 옮겨 걸면 됩니다(콩이 직접).
-     · 아래쪽 **올리기 칸(설명·파일·링크 걸기)은 기본이 접힘** — 가운데 ⌄ 알약을 눌러야 펴져요.
+     · 아래쪽 **올리기 칸(설명·파일·링크 걸기)은 기본이 접힘** — 가운데 ⌃ 알약(접힘=위 화살표, 펴짐=아래 화살표)을 눌러야 펴져요.
        접힌 동안에도 안내·오류 줄(#files-msg)은 보입니다(알약 밖에 있어요).
      ★ 이 판은 목록이 바뀔 때마다 통째로 다시 그려서, 쓰던 검색어·펴짐 상태를 따로 챙깁니다.
 
@@ -235,7 +235,7 @@
         <i></i>
         <button type="button" class="fl-fold${_upOpen ? " open" : ""}" data-file-fold="1" aria-expanded="${_upOpen}"
                 aria-label="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}" title="${_upOpen ? "올리기 칸 접기" : "올리기 칸 펴기"}">
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <i></i>
       </div>
