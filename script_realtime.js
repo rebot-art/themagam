@@ -1339,6 +1339,26 @@
         }
       } catch (e) {}
 
+      /* ★★ [2026-11-15 콩 "아이패드 새로고침해서 입장하자마자 빨간불"] ──────
+         새로고침 직전 창의 **끊김 예약(onDisconnect)** 이 서버에서 늦게 돌면(아이패드는 옛 소켓이 늦게 닫힙니다),
+         새 창이 "끊김 표시 지우기"를 쓴 **뒤에** disconnectedAt 이 도로 찍혀 — 연결돼 있는데도 내 카드가 빨갛게 보입니다.
+         내 줄에 끊김 표시가 남아 있는데 **나는 지금 연결돼 있고 화면이 보이면**, 3초 뒤(늦은 예약이 다 돈 뒤) 한 칸만 지웁니다.
+         (20초에 한 번만 · 진짜 끊긴 중(conn-down)이거나 나가는 중이면 안 합니다 · 쓰기는 이 한 칸뿐이라 통신량 거의 0) */
+      try {
+        const mine2 = myNick && data ? data[myNick] : null;
+        if (mine2 && Number(mine2.disconnectedAt || 0) > 0 && !window.__leaving
+            && !document.body.classList.contains("conn-down") && document.visibilityState === "visible"
+            && Date.now() - _discHealAt > 20000) {
+          _discHealAt = Date.now();
+          setTimeout(() => {
+            try {
+              if (window.__leaving || document.body.classList.contains("conn-down")) return;
+              db.ref(`status/${myNick}/disconnectedAt`).remove();
+            } catch (e) {}
+          }, 3000);
+        }
+      } catch (e) {}
+
       detectJoins(data);
       updateChatHeader();
       renderUserCards(data);
@@ -2458,6 +2478,7 @@
      null 이면 "서버에 뭐가 있는지 모른다" 는 뜻이라 통째로 다시 씁니다. */
   let _lastSentObj = null;
   let _selfHealAt = 0;          // 내 줄이 반쪽으로 되살아났을 때 통째로 다시 보낸 시각
+  let _discHealAt = 0;   // 내 줄의 "끊김 표시"를 걷어내는 자가 복구 — 20초에 한 번만 (2026-11-15)
   const STATUS_KEEPALIVE_MS = 5 * 60 * 1000;   // 아무것도 안 변해도 5분에 한 번은
 
   /** 기억해 둔 지문을 지웁니다 — 다시 이어졌을 때처럼 "서버에 뭐가 남아
