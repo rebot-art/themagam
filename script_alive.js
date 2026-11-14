@@ -72,6 +72,36 @@
   let _gain    = null;
   let _armed   = false;   // "다음 클릭에 다시 시도" 보험이 걸려 있나
   let _userOff = false;   // 이 접속에서 손으로 껐나 — 보험이 도로 켜지 않게
+  let _wake    = null;    // 화면 켜짐 유지(Wake Lock) 열쇠 — 폰·아이패드만
+
+  /* 📱 폰·아이패드인가 — 아이패드 사파리는 "Macintosh" 로 자기를 소개해서 터치 점 수로도 봅니다
+     (script_ui.js 의 isMobile 과 같은 기준). 아래 두 가지 보강(화면 켜짐 유지·돌아올 때 되살리기)은
+     이 기기들에만 켭니다 — PC 는 지금 그대로. */
+  function _mobile() {
+    return window.isMobile === true ||
+      /Android|iPhone|iPod|iPad/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+  }
+
+  /* 🔆 화면 켜짐 유지 (2026-11-14 콩 — 아이패드 접속이 자꾸 끊김)
+     아이패드는 화면이 저절로 꺼지는 순간 탭이 잠들어 소켓이 끊깁니다. 더마감이 **보이는 동안**
+     화면이 꺼지지 않게 부탁해 둡니다(사파리 16.4+). 실패해도 조용히 넘어가요.
+     ★ 화면이 가려지면 브라우저가 자동으로 풀어 버리니, 돌아올 때 다시 겁니다(아래 visibilitychange). */
+  async function _wakeOn() {
+    if (!_mobile() || !_on || _userOff) return;
+    if (_wake) return;
+    if (!navigator.wakeLock || typeof navigator.wakeLock.request !== "function") return;
+    if (document.visibilityState !== "visible") return;
+    try {
+      const w = await navigator.wakeLock.request("screen");
+      _wake = w;
+      w.addEventListener("release", () => { if (_wake === w) _wake = null; });
+    } catch (e) { _wake = null; }
+  }
+  function _wakeOff() {
+    const w = _wake; _wake = null;
+    try { w && w.release(); } catch (e) {}
+  }
 
   function _supported() {
     return typeof (window.AudioContext || window.webkitAudioContext) === "function";
@@ -93,7 +123,11 @@
      --------------------------------------------------------------- */
   async function _startTone() {
     if (!_supported()) return false;
-    if (_on) return true;
+    if (_on) {
+      /* 이미 켜진 채인데 소리가 끊겨 있으면(전화·다른 앱) 여기서 다시 깨웁니다 */
+      if (_ctx && _ctx.state !== "running") { try { await _ctx.resume(); } catch (e) {} }
+      return !_ctx || _ctx.state === "running";
+    }
     try {
       const C = window.AudioContext || window.webkitAudioContext;
       if (!_ctx) _ctx = new C();
@@ -116,6 +150,7 @@
       _on = true;
       _watchInterrupt();
       _renderAll();
+      _wakeOn();
       return true;
     } catch (e) {
       console.warn("[무음 접속유지 시작 실패]", e);
@@ -129,8 +164,21 @@
     try { _gain?.disconnect(); } catch (e) {}
     _osc = null; _gain = null;
     _on = false;
+    _wakeOff();
     _renderAll();
   }
+
+  /* 📱 화면으로 **돌아오는 순간** — 소리가 끊겨 있으면 되살리고, 화면 켜짐 유지를 다시 겁니다.
+     (폰·아이패드만. 못 살리면 다음 터치 한 번에 다시 시도합니다.)
+     연결(서버 소켓)과 카드 복구는 script_core.js 의 _bindPresenceWakeup 이 이미 같은 순간에 합니다. */
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !_mobile()) return;
+    if (_on && _ctx && _ctx.state !== "running") {
+      try { await _ctx.resume(); } catch (e) {}
+      if (_ctx.state !== "running") _armFirstClick();
+    }
+    _wakeOn();
+  });
 
   /* ---------------------------------------------------------------
      끊김 대비

@@ -96,6 +96,11 @@
      안전망이었고, 그 탓에 꺼진 사람이 반나절 초록불로 남았어요.
      며칠 지켜보고 진짜 접속자가 사라지면 1시간으로 늘려 보세요. */
   const ONLINE_STALE_MS     = 30 * 60 * 1000;      // 고아 기록 정리용
+  /* [2026-11-14 콩] 📱 폰·아이패드(row.onPhone) 는 유예를 **30분**으로, 고아 기록 정리선은 45분으로.
+     아이패드는 화면이 잠기거나 앱을 오가면 소켓이 끊겨 빨간 점이 되는데, 5분이 넘으면 카드가 목록에서 빠졌다가
+     돌아올 때 "다시 입장했어요" 알림이 되풀이됐습니다. PC 는 그대로(5분) — 빨간 점은 폰도 똑같이 보여요. */
+  const PHONE_DISCONNECT_GRACE_MS = 30 * 60 * 1000;
+  const PHONE_ONLINE_STALE_MS     = 45 * 60 * 1000;
   const HEADER_TICK_MS      = 30 * 1000;
 
   /** 이 사람을 접속 중으로 볼 것인가 */
@@ -103,11 +108,12 @@
     if (!row) return false;
 
     const disc = Number(row.disconnectedAt || 0);
-    if (disc > 0 && now - disc >= DISCONNECT_GRACE_MS) return false;
+    const phone = !!row.onPhone;   // (status 의 onPhone — updateStatus 참고)
+    if (disc > 0 && now - disc >= (phone ? PHONE_DISCONNECT_GRACE_MS : DISCONNECT_GRACE_MS)) return false;
 
     // 고아 기록만 걷어냅니다 (하루 지난 기록 등)
     const seen = Number(row.lastSeen || 0);
-    if (seen > 0 && now - seen >= ONLINE_STALE_MS) return false;
+    if (seen > 0 && now - seen >= (phone ? PHONE_ONLINE_STALE_MS : ONLINE_STALE_MS)) return false;
     /* [2026-10-03] lastSeen 이 **아예 없는** 줄은 사람이 아닙니다 — 퇴근으로
        status 를 지운 뒤 끊김 예약(onDisconnect)만 뒤늦게 돌아 남긴
        { disconnectedAt } 토막이에요 (script_core.js leaveRoom 참고).
