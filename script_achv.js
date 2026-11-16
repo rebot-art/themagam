@@ -44,6 +44,22 @@
    **날짜가 바뀐 날 한 번만** 훑습니다. 결과는 이 기기에 적어 둬요.
    ===================================================================== */
 (function () {
+  /* =====================================================================
+     🔒 ACHV_HIDDEN — 업적 잠시 닫기 (2026-11-16 콩)
+     ---------------------------------------------------------------------
+     [왜] 업적 숫자에 오류가 있어(화공 진척 바가 안 켠 사람도 참) 완전히 정비하기 전까지 숨겨요.
+          내년 봄쯤 정비해서 다시 엽니다.
+     [닫혀 있는 동안]
+       · 바텀 바 🏅 업적 알약 · 🗂️ 나의 작업의 업적 탭 · 카드 프사를 눌러 보는 남의 업적 — 모두 안 보입니다
+         (CSS: html.achv-hidden — styles.css 맨 아래)
+       · 새로 세지도 않고(achvBump), 업적 알림도 안 뜹니다. **이미 딴 업적·쌓인 기록은 서버에 그대로 있어요.**
+       · 단 하나 — start() 가 **화공(👀 관심이 필요해) 기록을 각자 한 번씩 지웁니다**(화공 기록 새로 시작, 콩 결정).
+     [다시 열 때] 아래 값을 false 로 바꾸면 됩니다. (화공 세는 버그는 script_share.js 에서 이미 고쳤어요)
+     ===================================================================== */
+  const ACHV_HIDDEN = true;
+  window.ACHV_HIDDEN = ACHV_HIDDEN;
+  if (ACHV_HIDDEN) { try { document.documentElement.classList.add("achv-hidden"); } catch (e) {} }
+
   "use strict";
 
   const SCAN_DAYS = 200;              // 훑을 날짜 수 (약 반년)
@@ -267,6 +283,7 @@
 
   window.achvBump = function (key, member) {
     try {
+      if (ACHV_HIDDEN) return;       // 🔒 닫아 둔 동안은 새로 세지 않습니다
       if (!me()) return;
       if (member === undefined) {
         _c[key] = (Number(_c[key]) || 0) + 1;
@@ -339,6 +356,7 @@
   function shareKey(day) { return "achvShareMs_" + day; }
 
   function shareTick(ms) {
+    if (ACHV_HIDDEN) return;
     if (!me()) return;
     _shareAcc += Number(ms) || 0;
     if (_shareAcc - _shareFlushed < SHARE_FLUSH_MS) return;
@@ -347,6 +365,7 @@
 
   function shareFlush() {
     try {
+      if (ACHV_HIDDEN) return;
       if (!me() || _shareAcc <= 0) return;
       const k = dayKey();
       const cur = Number(window.AppStore?.getItem(shareKey(k)) || 0) + _shareAcc;
@@ -886,7 +905,29 @@
   /* =====================================================================
      시작
      ===================================================================== */
+  /* 🧹 화공(👀 관심이 필요해) 기록 새로 시작 — 내 기록만, 이 기기에서 **한 번만** (2026-11-16 콩).
+     버그로 안 켠 사람의 공유 시간이 쌓였어요. 하루 기록(c/shr_*) · 딴 표시(got/share30) · 대표(rep/pick) 를 지웁니다.
+     다른 업적은 건드리지 않아요. 서버에서 읽는 건 내 업적 한 줄뿐이고, 지운 뒤엔 이 기기에 표시를 남겨 다시 안 읽습니다. */
+  async function 화공기록새로시작() {
+    const nick = me();
+    if (!nick) return;
+    const FLAG = "achvShrReset_20261116";
+    try { if (window.AppStore?.getItem(FLAG) === "1") return; } catch (e) {}
+    try {
+      const snap = await window.db.ref(`achv/${nick}`).once("value");
+      const v = snap.val() || {};
+      const up = {};
+      Object.keys(v.c || {}).forEach(k => { if (k.startsWith("shr_")) up["c/" + k] = null; });
+      if (v.got && v.got.share30 != null) up["got/share30"] = null;
+      if (v.rep && v.rep.share30 != null) up["rep/share30"] = null;
+      if (v.pick === "share30") up["pick"] = "";
+      if (Object.keys(up).length) await window.db.ref(`achv/${nick}`).update(up);
+      try { window.AppStore?.setItem(FLAG, "1"); } catch (e) {}
+    } catch (e) { console.warn("[업적] 화공 기록 새로 시작 실패", e); }
+  }
+
   async function start() {
+    if (ACHV_HIDDEN) { await 화공기록새로시작(); return; }   // 🔒 닫아 둔 동안은 기록 지우기만
     if (_busy || !me()) return;
     _busy = true;
     try {
@@ -931,6 +972,7 @@
 
   /* 🗂️ 나의 작업 · 🏅 업적 탭이 쓰는 창구 */
   window.achvPanelHtml = function () {
+    if (ACHV_HIDDEN) return "";
     renderPanel();
     return el("achv-panel")?.innerHTML || "";
   };
@@ -939,7 +981,7 @@
   window.achvNoteTagDay  = noteTagDay;
   window.achvShareTick   = shareTick;
   window.achvShareFlush  = shareFlush;
-  window.openAchvOf    = openOther;
+  window.openAchvOf    = ACHV_HIDDEN ? function () {} : openOther;   // 🔒 닫아 둔 동안 남의 업적도 안 엽니다
   window.closeAchvOther = closeOther;
   window.achvEvaluate  = evaluate;
   window.achvRescan    = async () => { await scan(true); evaluate(); };

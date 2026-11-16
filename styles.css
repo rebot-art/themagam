@@ -13230,3 +13230,14 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 .side-teaser b{ display: block; font-size: var(--fs-md, 15px); color: var(--text); margin-bottom: 8px; }
 .side-teaser p{ margin: 0 0 14px; font-size: var(--fs-sm); line-height: 1.6; }
 .side-teaser small{ color: var(--muted); font-size: var(--fs-xs); }
+
+/* 🔒 업적 잠시 닫기 (2026-11-16 콩) — script_achv.js 의 ACHV_HIDDEN 이 켜지면 html 에 achv-hidden 이 붙습니다.
+   다시 열 때는 그 값만 false 로 바꾸면 이 줄들은 저절로 힘을 잃어요(지울 필요 없음). */
+html.achv-hidden #dock-pill-achv,
+html.achv-hidden #dock-panel-achv,
+html.achv-hidden #achv-bar,
+html.achv-hidden #achv-pill,
+html.achv-hidden #achv-panel,
+html.achv-hidden #achv-other,
+html.achv-hidden .mw-tab[data-mw-tab="achv"],
+html.achv-hidden #mywork-panel-achv{ display: none !important; }

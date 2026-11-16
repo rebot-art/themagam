@@ -774,7 +774,7 @@
   }
 
   function switchMyWorkTab(name) {
-    _tab = MW_TABS.includes(name) ? name : "todo";
+    _tab = (MW_TABS.includes(name) && !(name === "achv" && window.ACHV_HIDDEN)) ? name : "todo";   // 🏅 업적을 닫아 둔 동안은 그 탭으로 못 갑니다 (2026-11-16)
     syncTabs();
     if (_tab === "todo") renderTodoPanel();
     else if (_tab === "goal") renderGoalPanel();
