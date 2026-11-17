@@ -20,7 +20,7 @@
 
    [알파벳] 작품을 만들면 A, B, C… Z, AA, AB… ZZ, AAA… ZZZ 순서로 이름표가 자동으로 붙습니다 (2026-11-09 — 콩).
      지운 이름표는 다시 안 씁니다(예전 워크로그 기록과 섞이지 않게). **한 번에 둘 수 있는 작품은 26개까지**(탭이 길어지지 않게).
-     워크로그 연동은 **이름표로만** — 제목은 나만 보는 꼬리표. 작품 추가는 [추가/취소] 확인을 한 번 거칩니다.
+     워크로그 연동은 **이름표로만** — 제목은 나만 보는 꼬리표. 작품 추가는 빈 카드(초안)가 먼저 열리고, 맨 밑 [추가]를 눌러야 실제로 만들어집니다 (눌러만 보고 [취소]하면 아무것도 안 생겨요).
 
    [계산 = 도장 하나] "지금까지 쓴 글(done)을 기준으로 **내일부터의 몫**을 다시 나눈다" 가 전부입니다.
      오늘 몫은 d0(오늘 아침)으로 정해져 하루 종일 그대로고, 계산은 sn=done 을 찍을 뿐이라
@@ -86,7 +86,7 @@
   let _box = null;
   let _day = "";             // 마지막으로 본 날짜(자정 감시)
   let _msg = "";
-  let _askAdd = false;       // [＋ 작품 추가]를 눌러 확인을 기다리는 중
+  let _draft = null;         // [＋ 작품 추가]를 눌러 열린 초안 카드 — [추가]를 누르기 전엔 저장도 이름표도 안 씁니다
 
   const base = () => `users/${me()}/deadlines`;
   const letters = () => Object.keys(_d.works || {}).sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0));
@@ -303,7 +303,7 @@
     else 카드에알리기();
     _day = today();
   }
-  function detachDeadline() { _d = { n: 0, works: {} }; _loaded = false; _box = null; _open = ""; _askAdd = false; }
+  function detachDeadline() { _d = { n: 0, works: {} }; _loaded = false; _box = null; _open = ""; _draft = null; }
 
   /* 접속한 채 자정을 넘기면 새 날 첫 계산 */
   function 자정보기() { if (_loaded && _day && _day !== today()) 계산하기(); }
@@ -341,6 +341,34 @@
       const on = !it.next && it.acc <= c.wrote + 1e-9;
       return `<button type="button" class="dl-b ${it.k}${on ? " on" : ""}" data-dl-bx="${L}" data-dl-acc="${it.acc}" data-dl-v="${it.v}" aria-pressed="${on}" title="${it.v === 1 ? "1화" : "반화"}">${it.v === 1 ? "1화" : (it.k === "x" ? "+½" : "½")}</button>`;
     }).join("")}</div>`;
+  }
+
+  /* 초안 카드 — [추가]를 누르기 전까지는 화면에만 있고 DB·이름표는 건드리지 않습니다 */
+  function newDraft() { const t = today(); return { t: "", s: t, d: shift(t, 30), b: 0, u: "ch", e: 0, c: 0, done: 0, w: {} }; }
+  function draftHtml() {
+    const w = _draft, L = labelOf(_d.n), ep = isEp(w);
+    return `
+      <div class="dl-card is-open dl-draft">
+        <div class="dl-hd"><span class="dl-badge">${L}</span><span class="dl-t">새 작품 (아직 만들기 전이에요)</span></div>
+        <div class="dl-ed">
+          <label>제목 (나만 보여요)</label>
+          <div class="dl-nm"><span class="dl-badge">${L}</span><input type="text" maxlength="${MAX_TITLE}" data-dl-dr="t" value="${esc(w.t || "")}" placeholder="비워도 돼요"></div>
+          <p class="dl-hint">${ep ? "화수 방식은 워크로그와 연결되지 않아요. 카드의 <b>박스</b>를 눌러 체크해요." : `워크로그에는 <b>${L}</b>로 적어요. 예) 글자수 / ${L}`}</p>
+          <div class="dl-two"><div><label>시작일</label><input type="date" data-dl-dr="s" value="${esc(w.s || "")}"></div>
+            <div><label>마감일</label><input type="date" data-dl-dr="d" value="${esc(w.d || "")}"></div></div>
+          <label>분량</label>
+          <div class="dl-seg"><button type="button" data-dl-dru="ep" class="${ep ? "on" : ""}">화수</button><button type="button" data-dl-dru="ch" class="${ep ? "" : "on"}">글자수</button></div>
+          ${ep
+            ? `<label>총 화수 (반화 단위)</label><input type="number" min="0" step="0.5" inputmode="decimal" data-dl-dr="e" value="${half(w.e) || ""}">`
+            : `<label>총 글자수</label><input type="number" min="0" data-dl-dr="c" value="${num(w.c) || ""}">`}
+          <div class="dl-two"><div><label>${ep ? "지금까지 쓴 화수" : "지금까지 쓴 글자(전체)"}</label><input type="number" min="0"${ep ? ' step="0.5" inputmode="decimal"' : ""} data-dl-dr="done" value="${un(w, w.done) || ""}" placeholder="0"></div>
+            <div><label>마감 며칠 전에 끝낼까</label><input type="number" min="0" data-dl-dr="b" value="${num(w.b) || ""}" placeholder="0"></div></div>
+          <label>요일별 (눌러서 보통 → 적게 → 쉼)</label>
+          <div class="dl-dows">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="${(w.w || {})[d] === "h" ? "h" : (w.w || {})[d] === "o" ? "o" : "n"}" data-dl-drdow="${d}">${DN[d]}</button>`).join("")}</div>
+          <p class="dl-hint">적게 = 보통의 절반 · 쉼 = 0. 못 쓴 몫은 남은 날에 자동으로 나뉘어 얹혀요.</p>
+          <div class="dl-edf"><button type="button" class="ghost-btn compact" id="dl-add-no">취소</button><button type="button" class="ghost-btn compact dl-yes" id="dl-add-yes">추가</button></div>
+        </div>
+      </div>`;
   }
 
   function cardHtml(L) {
@@ -402,8 +430,8 @@
   function helpHtml() {
     return `<div class="dl-help">
       <ol>
-        <li><b>＋ 작품 추가</b>를 누르고 <b>추가</b>를 확인하면 <b>A, B…</b> 이름표가 붙어요. (Z 다음은 AA)</li>
-        <li>카드를 눌러 펼치고 <b>시작일 · 마감일 · 분량</b>을 넣어요. 분량은 <b>글자수</b>나 <b>화수</b> 중에 골라요.</li>
+        <li><b>＋ 작품 추가</b>를 누르면 빈 카드가 열려요. <b>시작일 · 마감일 · 분량</b>을 넣고 맨 밑 <b>추가</b>를 누르면 <b>A, B…</b> 이름표가 붙어요. (Z 다음은 AA) 그냥 구경만 하고 <b>취소</b>해도 돼요.</li>
+        <li>분량은 <b>글자수</b>나 <b>화수</b> 중에 골라요. 나중에 카드를 눌러 펼치면 고칠 수 있어요.</li>
         <li>그러면 <b>오늘 몇 자(또는 몇 화)</b> 쓰면 되는지(오늘 몫)가 나와요.</li>
         <li>글자수 방식은 <b>워크로그</b>에 적어요. 예) <b>글자수 / A</b><br>작품이 하나면 글자수만 써도 돼요.</li>
         <li>워크로그를 안 쓰면 카드의 <b>오늘 쓴 글자</b> 칸에 직접 적어요.</li>
@@ -440,8 +468,8 @@
     }
     h += ks.map(cardHtml).join("");
     const 꽉참 = ks.length >= MAX_WORKS || _d.n >= MAX_LABELS;
-    if (_askAdd && !꽉참) {
-      h += `<div class="dl-ask">작품 <b>${labelOf(_d.n)}</b> 를 추가할까요?<div class="dl-asks"><button type="button" class="ghost-btn compact dl-yes" id="dl-add-yes">추가</button><button type="button" class="ghost-btn compact" id="dl-add-no">취소</button></div></div>`;
+    if (_draft && !꽉참) {
+      h += draftHtml();
     } else {
       h += `<button type="button" class="dl-addw" id="dl-add"${꽉참 ? " disabled" : ""}>＋ 작품 추가${꽉참 ? "" : ` <span>(다음 이름표 ${labelOf(_d.n)})</span>`}</button>`;
     }
@@ -454,8 +482,8 @@
   /* =====================================================================
      손 — 이벤트
      ===================================================================== */
-  async function 작품추가() {
-    _askAdd = false;
+  async function 작품추가(draft) {
+    _draft = null;
     if (letters().length >= MAX_WORKS) { _msg = "작품은 한 번에 26개까지예요. 안 쓰는 작품을 지워 주세요."; draw(); return; }
     if (_d.n >= MAX_LABELS) { _msg = "이름표를 다 썼어요 (ZZZ까지)."; draw(); return; }
     const L = labelOf(_d.n);
@@ -463,7 +491,11 @@
     /* 1개 → 2개가 되는 순간, 첫 작품의 워크로그 기준(bs)이 비어 있으면 지금 기준을 옮겨 줍니다 —
        안 그러면 A 의 첫 글자수가 "출발선 잡기"로만 쓰여요. */
     const one = letters().length === 1 ? letters()[0] : "";
-    const w = { t: "", s: t, d: shift(t, 30), b: 0, u: "ch", e: 0, c: 0, done: 0, d0: 0, sn: 0, k0: t };
+    const g = draft || {}, ep = g.u === "ep";
+    const w = { t: String(g.t || "").trim().slice(0, MAX_TITLE), s: isDate(g.s) ? g.s : t, d: isDate(g.d) ? g.d : shift(t, 30), b: num(g.b), u: ep ? "ep" : "ch",
+      e: ep ? half(g.e) : 0, c: ep ? 0 : num(g.c), done: 0, d0: 0, sn: 0, k0: t };
+    { const dn = ep ? half(g.done) : num(g.done); w.done = dn; w.d0 = dn; w.sn = dn; }      // 지금까지 쓴 분량 = 오늘 아침 기준이라 오늘 진척은 0부터
+    if (g.w && Object.keys(g.w).length) w.w = { ...g.w };
     _d.n += 1; _d.works[L] = w;
     const upd = { n: _d.n, [`works/${L}`]: w };
     if (one && letterBase(one) === null) {
@@ -530,6 +562,25 @@
     draw(); 카드에알리기();
   }
 
+  /** 초안 칸 값을 초안에만 담습니다 (저장 없음) */
+  function 초안칸(inp) {
+    const f = inp.dataset.dlDr, v = inp.value;
+    if (f === "t") _draft.t = String(v).trim().slice(0, MAX_TITLE);
+    else if (f === "s" || f === "d") _draft[f] = isDate(v) ? v : (f === "s" ? today() : shift(today(), 30));
+    else if (f === "e") _draft.e = half(v);
+    else if (f === "done") _draft.done = un(_draft, v);
+    else if (f === "b" || f === "c") _draft[f] = num(v);
+  }
+  /** 초안의 [추가] — 여기서 처음으로 작품이 생깁니다 */
+  async function 초안추가() {
+    if (!_draft) return;
+    if (_box) _box.querySelectorAll("input[data-dl-dr]").forEach(초안칸);   // 마지막으로 만진 칸까지 담기
+    const w = _draft;
+    if (isDate(w.s) && isDate(w.d) && w.d < w.s) { _msg = "마감일이 시작일보다 빨라요. 날짜를 다시 봐 주세요."; draw(); return; }
+    if (un(w, isEp(w) ? w.e : w.c) <= 0) { _msg = isEp(w) ? "총 화수를 넣어 주세요." : "총 글자수를 넣어 주세요."; draw(); return; }
+    await 작품추가(w);
+  }
+
   function bind(box) {
     if (box.dataset.dlBound === "true") return;
     box.dataset.dlBound = "true";
@@ -540,9 +591,18 @@
       if (e.target.closest("#dl-close")) { 마감하기(); return; }
       if (e.target.closest("#dl-reopen")) { 재개하기(); return; }
       if (e.target.closest("#dl-help")) { _help = !_help; draw(); return; }
-      if (e.target.closest("#dl-add-yes")) { 작품추가(); return; }
-      if (e.target.closest("#dl-add-no")) { _askAdd = false; draw(); return; }
-      if (e.target.closest("#dl-add")) { _askAdd = true; _msg = ""; draw(); return; }
+      if (e.target.closest("#dl-add-yes")) { 초안추가(); return; }
+      if (e.target.closest("#dl-add-no")) { _draft = null; _msg = ""; draw(); return; }
+      if (e.target.closest("#dl-add")) { _draft = newDraft(); _open = ""; _msg = ""; draw(); try { _box.scrollTop = _box.scrollHeight; } catch (er) {} return; }
+      const dru = e.target.closest("[data-dl-dru]");
+      if (dru && _draft) { _draft.u = dru.dataset.dlDru === "ep" ? "ep" : "ch"; draw(); return; }
+      const drd = e.target.closest("[data-dl-drdow]");
+      if (drd && _draft) {
+        const d = drd.dataset.dlDrdow, cur = (_draft.w || {})[d] === "h" ? "h" : (_draft.w || {})[d] === "o" ? "o" : "n";
+        const nx = NEXT[cur], map = { ...(_draft.w || {}) };
+        if (nx === "n") delete map[d]; else map[d] = nx;
+        _draft.w = map; draw(); return;
+      }
       const bx = e.target.closest("[data-dl-bx]");
       if (bx) { 박스누름(bx.dataset.dlBx, Number(bx.dataset.dlAcc), Number(bx.dataset.dlV)); return; }
       const u = e.target.closest("[data-dl-u]");
@@ -562,13 +622,16 @@
     });
     box.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.isComposing) {
-        const i = e.target.closest("input[data-dl-f]");
+        const i = e.target.closest("input[data-dl-f],input[data-dl-dr]");
         if (i) { e.preventDefault(); i.blur(); return; }
         const o = e.target.closest("[data-dl-open]");
         if (o && o.getAttribute("role") === "button") { e.preventDefault(); o.click(); }
       }
     });
-    box.addEventListener("change", (e) => { const i = e.target.closest("input[data-dl-f]"); if (i) 입력바뀜(i); });
+    box.addEventListener("change", (e) => {
+      const i = e.target.closest("input[data-dl-f]"); if (i) { 입력바뀜(i); return; }
+      const r = e.target.closest("input[data-dl-dr]"); if (r && _draft) 초안칸(r);
+    });
   }
 
   /* =====================================================================
@@ -580,7 +643,7 @@
     let box = el("deadline-board");
     if (!box) { box = document.createElement("div"); box.id = "deadline-board"; box.className = "dock-body deadline-board"; }
     pane.appendChild(box);
-    _box = box; _msg = ""; _askAdd = false;
+    _box = box; _msg = ""; _draft = null;
     bind(box);
     draw();
     if (await load()) { _day = today(); draw(); }        // 탭 열 때 한 번 다시 읽기 (다른 창에서 고친 것)
@@ -596,7 +659,7 @@
   window.listenDeadline = listenDeadline;
   window.detachDeadline = detachDeadline;
   window.Deadline = { route, loneLetter, msgNeed, msgUnknown, msgNoNum, msgEpMode, isEp: (L) => isEp(W_(L)),
-    _label: labelOf, _boxes: (L) => boxesHtml(L, calc(W_(L))), _add: 작품추가, _unit: 단위바꾸기, _box: 박스누름, letterBase, setLetterBase, addWritten,
+    _label: labelOf, _boxes: (L) => boxesHtml(L, calc(W_(L))), _add: 작품추가, _addDraft: 초안추가, _unit: 단위바꾸기, _box: 박스누름, letterBase, setLetterBase, addWritten,
     count: () => (enabled() && _loaded ? letters().length : 0), _calc: calc, _state: () => _d, close: 마감하기, reopen: 재개하기, calcNow: 계산하기 };
 
   (function install() {

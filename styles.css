@@ -13152,6 +13152,8 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 .dl-ask{ margin-top: 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--r-md); text-align: center; font-size: var(--fs-sm); }
 .dl-asks{ display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
 .dl-yes{ font-weight: 800; }
+.dl-draft{ border-style: dashed; }
+.dl-draft .dl-edf{ justify-content: flex-end; gap: 8px; }
 .dl-dows{ display: flex; gap: 4px; }
 .dl-dows button{ flex: 1; border: 1px solid var(--border); border-radius: 9px; padding: 6px 0; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; background: none; color: var(--text); }
 .dl-dows button.n{ background: var(--accent); border-color: var(--accent); color: #fff; }
