@@ -931,7 +931,7 @@
               if (stay < SHORT_STAY_MIN && dk !== todayKey && !(rec && rec.ok)) cls += " short20";
               tip = ` title="${hhmm(inAt)} 첫 입장 · ${머문글(stay)} 머묾${
                 stay >= VALID_STAY_MIN ? " — ✔ 유효 출석" : ` (유효 출석은 ${VALID_STAY_MIN}분부터)`}${
-                stay < SHORT_STAY_MIN && dk !== todayKey ? (rec && rec.ok ? " · ✅ 방장 인정" : ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 인정·취소`) : ""}"`;
+                stay < SHORT_STAY_MIN && dk !== todayKey ? (rec && rec.ok ? (rec.rc ? " · ✅ 자정 재접속 인정" : " · ✅ 방장 인정") : ` · ⛔ ${SHORT_STAY_MIN}분 미만 — 눌러서 인정·취소`) : ""}"`;
             }
             /* 🌸 인사를 빼먹은 날 (2026-10-16 콩) — 분홍. 1시간도 안 머물렀으면(하늘색 조건) 진한 분홍.
                ★ 휴가·개인사정 칸은 위에서 이미 갈렸으니 여기 오지 않습니다(예외).
@@ -2890,8 +2890,9 @@
       segs = Object.values(best).sort((x, y) => x.a - y.a);
     } catch (e) {}
 
-    let 인정됨 = false;
+    let 인정됨 = false, 재접속인정 = false;
     try { 인정됨 = (await db.ref(`attendance/${dk}/${nick}/ok`).once("value")).val() === true; } catch (e) {}
+    try { 재접속인정 = 인정됨 && (await db.ref(`attendance/${dk}/${nick}/rc`).once("value")).val() === true; } catch (e) {}
     let 빼먹음 = false;
     try { 빼먹음 = !!(await db.ref(`greetMiss/${nick}/${dk}`).once("value")).val(); } catch (e) {}
     const GAP_MS = 5 * 60 * 1000;
@@ -2917,7 +2918,7 @@
         <span style="font-weight:400; opacity:.7;">— 상태를 안 가린 자리 지킨 시간이에요</span></div>
       ${(isOwner && dk !== dayKey(new Date()) && total < SHORT_STAY_MIN * 60000) ? (인정됨 ? `
       <div class="adm-dig-cancel ok">
-        ✅ 방장이 인정한 날이에요.
+        ${재접속인정 ? "✅ 자정을 넘겨 다시 접속해서 자동으로 인정된 날이에요." : "✅ 방장이 인정한 날이에요."}
         <button type="button" class="adm-dig-ok-btn" data-ok="0">인정 풀기</button>
       </div>` : `
       <div class="adm-dig-cancel">

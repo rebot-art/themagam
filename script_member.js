@@ -37,6 +37,11 @@
      · 색은 아래 알약들과 같은 결 — 닫힘은 옅은 바탕, 열림은 강조색.
      · 좁은 화면은 신경 쓰지 않습니다 (혼자 방에서만 보는 것이라 — 콩).
      · 열어 둔 채 새로고침하면 열린 채로 다시 뜹니다 (이 기기에 기억).
+
+   [2026-11-17 콩] 명단 **맨 아래**에 [11/17 총 mm명 중 nn명 출석] 한 줄.
+     총원·출석은 출석부 맨 위 숫자와 같은 값입니다 — 총원 = nickOwner 개수(방장 포함),
+     출석 = attendance/{오늘} 의 열쇠 개수. 둘 다 REST 의 shallow 로 **닉 목록만** 읽어서
+     (사람당 20바이트쯤) **명단이 열려 있는 동안만 1분마다** 읽고, 총원은 한 번만 읽습니다.
    ===================================================================== */
 (function () {
   if (!window.SOLO) return;   // 본방에서는 아무것도 안 합니다
@@ -63,6 +68,38 @@
 
   let _timer = null, _rows = null, _err = "";
   let _lastFetch = 0;
+
+  /* 📅 오늘 출석 — 총원은 한 번, 출석은 명단이 열려 있는 동안 1분마다 */
+  let _att = null;            // { day, total, att }
+  let _attAt = 0, _attBusy = false;
+  const ATT_TICK_MS = 60 * 1000;
+  const 오늘키 = () => (window.ymd ? window.ymd(Date.now()) : new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10));
+  async function 출석읽기() {
+    if (_attBusy) return;
+    _attBusy = true;
+    try {
+      const day = 오늘키();
+      const next = { day, total: _att ? _att.total : 0, att: _att && _att.day === day ? _att.att : 0 };
+      try {
+        const r = await fetch(`${DB_URL}/attendance/${day}.json?shallow=true`, { cache: "no-store" });
+        if (r.ok) next.att = Object.keys((await r.json()) || {}).length;
+      } catch (e) {}
+      if (!next.total) {
+        try {
+          const r = await fetch(`${DB_URL}/nickOwner.json?shallow=true`, { cache: "no-store" });
+          if (r.ok) next.total = Object.keys((await r.json()) || {}).length;
+        } catch (e) {}
+      }
+      _att = next;
+    } finally { _attBusy = false; }
+    render();
+  }
+  /* [11/17 총 68명 중 41명 출석] — 못 읽었으면(총원 0) 줄을 아예 안 그립니다 */
+  function 출석줄() {
+    if (!_att || !_att.total) return "";
+    const [, m, d] = _att.day.split("-");
+    return `<div class="member-att">${Number(m)}/${Number(d)} 총 <b>${_att.total}</b>명 중 <b>${_att.att}</b>명 출석</div>`;
+  }
 
   /* 프사 — users/{닉}/profile 은 누구나 읽을 수 있어서 REST 로 한 사람씩.
      한 번 읽은 건 이 창이 살아 있는 동안 다시 안 읽습니다 (옛 글자 사진은
@@ -159,10 +196,11 @@
     if (!host) return;
     /* 프사는 판이 열려 있을 때만 읽습니다 (알약 숫자에는 필요 없어요) */
     if (_rows && isOpen()) _rows.forEach(x => loadPhoto(x.nick));
-    if (_rows === null) { host.innerHTML = `<div class="member-empty">본방을 들여다보는 중…</div>`; return; }
-    if (_err) { host.innerHTML = `<div class="member-empty">${esc(_err)}</div>`; return; }
-    if (!_rows.length) { host.innerHTML = `<div class="member-empty">지금 본방엔 아무도 없어요 🌙</div>`; return; }
-    host.innerHTML = `
+    const 바닥 = 출석줄();
+    if (_rows === null) { host.innerHTML = `<div class="member-body"><div class="member-empty">본방을 들여다보는 중…</div></div>${바닥}`; return; }
+    if (_err) { host.innerHTML = `<div class="member-body"><div class="member-empty">${esc(_err)}</div></div>${바닥}`; return; }
+    if (!_rows.length) { host.innerHTML = `<div class="member-body"><div class="member-empty">지금 본방엔 아무도 없어요 🌙</div></div>${바닥}`; return; }
+    host.innerHTML = `<div class="member-body">
       <div class="member-head">본방 <b>${_rows.length}명</b> 접속 중 <span class="member-when">${new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 기준</span></div>
       <ul class="member-list">${_rows.map(({ nick, row }) => {
         const st = row.status || "idle";
@@ -172,7 +210,7 @@
           <span class="card-state ${CLS[st] || "status-rest"} member-state">${esc(row.statusLabel || LABEL[st] || "휴식")}</span>
           <span class="member-wh">⏱ ${whText(row.workMs)}</span>
         </li>`; }).join("")}
-      </ul>`;
+      </ul></div>${바닥}`;
   }
 
   function isOpen() { return _open; }
@@ -184,10 +222,11 @@
     if (!옆칸만들기()) return;
     자리맞추기();                              // 배치가 바뀌어도(머리말 줄 수·창 크기) 따라갑니다 — 값 두 개 적는 일
     const open = isOpen();
-    if (open && !_wasOpen) render();          // 막 열었을 때 — 쥐고 있던 명단을 바로 그립니다
+    if (open && !_wasOpen) { _attAt = 0; render(); }          // 막 열었을 때 — 쥐고 있던 명단을 바로 그립니다
     _wasOpen = open;
     if (document.hidden) return;
     const now = Date.now();
+    if (open && now - _attAt >= ATT_TICK_MS) { _attAt = now; 출석읽기(); }   // 열려 있는 동안만 1분마다
     if (now - _lastFetch < (open ? TICK_MS : PILL_TICK_MS)) return;
     _lastFetch = now;
     fetchStatus();

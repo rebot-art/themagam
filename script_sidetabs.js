@@ -34,19 +34,22 @@
   const W = 400;
   const TABS = [
     { id: "notice", label: "📢 공지" },
-    /* [2026-11-09 콩] 차례 — 📢 공지 · 🏢 품평(본방) · 📓 표현 공부 · 🤔 Q&A · 📁 자료실 · 📚 작품 추천 … ⏰ 데드라인(맨 아래)
+    /* [2026-11-09 콩] 차례 — 📢 공지 · 🏢 품평(본방) · 📓 표현 공부 · 🤔 Q&A · 📰 새소식 · 📚 작품 추천 · 📁 자료실 … ⏰ 데드라인(맨 아래) (2026-11-17 콩이 다시 정함)
        (🔗 링크 & 검색 탭은 📁 자료실 맨 위 '찾아보기'로 합쳐서 없앴어요.)
-       renewal 표시가 있는 탭(작품 추천·데드라인)은 **크리스마스 에디션 날(12/18 0시 KST)부터** 본방에도 열립니다.
-       그 전엔 본방에는 **이름을 가린 맛보기 탭(📚◻︎◻︎◻︎◻︎ · ⏰◻︎◻︎◻︎◻︎)**만 있고, 열면 "준비 중 · 12/18 오픈" 안내만 떠요(통신 0).
+       renewal 표시가 있는 탭(새소식·작품 추천·데드라인)은 **크리스마스 에디션 날(12/18 0시 KST)부터** 본방에도 열립니다.
+       그 전엔 본방에는 **이름을 가린 맛보기 탭(📰◻︎◻︎◻︎◻︎ · 📚◻︎◻︎◻︎◻︎ · ⏰◻︎◻︎◻︎◻︎)**만 있고, 열면 "준비 중 · 12/18 오픈" 안내만 떠요(통신 0).
        혼자 방(?solo=1)에서는 진짜 기능이 바로 보여요 — 날짜가 되면 새로고침만으로 열립니다(손댈 것 없음). */
     { id: "pub",    label: "🏢 출판사 품평", open: "openPubReview", close: "closePubReview", main: true },
     { id: "help",   label: "📓 표현 공부", open: "openHelp", close: "closeHelp" },
     { id: "qna",    label: "🤔 Q&A",      open: "openQna",  close: "closeQna" },
+    /* [2026-11-17 콩] 📰 새소식 — Q&A 바로 아래. 누구나 올리는 공모전·프로모션 소식, 글은 1년 뒤 사라집니다. 알맹이는 script_news.js 가 칸 안에 직접 그립니다.
+       작품 추천과 함께 크리스마스 에디션 날 열려요(그 전 본방엔 맛보기 탭). */
+    { id: "news", label: "📰 새소식", open: "openNews", close: "closeNews", renewal: true, soon: "📰◻︎◻︎◻︎◻︎" },
+    /* [2026-11-09 콩] 📚 작품 추천 — 자료실 바로 아래. 익명 · 한 줄 목록 · 👍만. 알맹이는 script_bookrec.js 가 칸 안에 직접 그립니다. */
+    { id: "bookrec", label: "📚 작품 추천", open: "openBookrec", close: "closeBookrec", renewal: true, soon: "📚◻︎◻︎◻︎◻︎" },
     /* [2026-10-09 콩] 📁 자료실 — **가운데 창**(#files-modal)을 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시.
        [2026-11-09] 맨 위에 🔎 찾아보기가 들어갔어요(옛 링크 & 검색). */
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
-    /* [2026-11-09 콩] 📚 작품 추천 — 자료실 바로 아래. 익명 · 한 줄 목록 · 👍만. 알맹이는 script_bookrec.js 가 칸 안에 직접 그립니다. */
-    { id: "bookrec", label: "📚 작품 추천", open: "openBookrec", close: "closeBookrec", renewal: true, soon: "📚◻︎◻︎◻︎◻︎" },
     /* [2026-10-12 콩] ⏰ 데드라인 — 맨 아래(bottom → CSS margin-top:auto), 워크로그와 가까워 눈에 띄게(2026-11-09).
        알맹이는 script_deadline.js 가 칸 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
     { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true }
@@ -79,6 +82,7 @@
       /* 📚 작품 추천은 알약이 없어 점의 원본(#dock-dot-bookrec)이 없습니다 — 숨은 자리를 하나 만들어
          script_dock.js 의 dot()/newmark 가 그대로 칠하게 하고, 아래 비추기가 탭으로 옮깁니다. */
       `<span class="dock-dot hidden" id="dock-dot-bookrec" hidden aria-hidden="true"></span>` +
+      `<span class="dock-dot hidden" id="dock-dot-news" hidden aria-hidden="true"></span>` +
       `</div>
        <div class="side-pane" id="side-pane">
          <div class="side-pane-head"><b id="side-pane-title"></b>

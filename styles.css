@@ -7717,7 +7717,15 @@ html[data-theme-style="studio"] .user-card{
   background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
   border-left: 0 solid var(--border);
 }
-html.member-open .member-side-list{ width: 250px; overflow-y: auto; border-left-width: 1px; }
+html.member-open .member-side-list{ width: 250px; overflow-y: auto; border-left-width: 1px; display: flex; flex-direction: column; }
+/* [2026-11-17 콩] 명단 맨 아래 [11/17 총 mm명 중 nn명 출석] — 명단이 짧아도 아래에 붙고, 길어도 스크롤 중에 아래에 남습니다 */
+.member-side-list .member-body{ flex: 1 0 auto; }
+.member-side-list .member-att{
+  position: sticky; bottom: 0; flex: none; margin-top: auto; padding: 8px 10px 9px;
+  border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted-strong);
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
+}
+.member-side-list .member-att b{ color: var(--text); }
 html.member-open .cards-area{ padding-right: 250px; }
 /* [2026-10-07 콩] 배경판(접속 현황·개근·지금 방에서)은 **제자리에 둡니다** — 처음엔 명단만큼
    같이 비키게 했는데, 아래 알약 줄과 가운데가 어긋나 보였어요. 밀리는 건 카드뿐입니다. */
@@ -12978,6 +12986,37 @@ html[data-lite] .user-card.share-card,
 .br-del button:hover{ color: var(--danger); }
 .br-row.open .br-main{ white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; }
 .br-row.open .br-c{ display: block; overflow: visible; -webkit-line-clamp: unset; }
+/* [2026-11-17 콩] 💬 댓글 + 맨 위 안내 문구 */
+.br-kind{ margin: 0 0 9px; padding: 0 2px; text-align: center; font-size: 11.5px; line-height: 1.55; color: var(--muted-strong); }
+.br-acts{ grid-column: 3; grid-row: 1; display: inline-flex; align-items: center; gap: 4px; }
+.br-cmb{ display: inline-flex; align-items: center; gap: 3px; font: inherit; font-size: 12px; line-height: 1.5; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
+.br-cmb b{ font-weight: var(--fw-bold); min-width: 0; }
+.br-cmb.on{ border-color: var(--accent); color: var(--accent); }
+.br-cm{ grid-column: 2 / -1; margin-top: 8px; padding: 8px 9px; border-radius: var(--r-md); background: var(--fill-1); }
+.br-cm-empty{ margin: 0 0 6px; font-size: 11.5px; color: var(--muted); }
+.br-cmi{ display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; font-size: var(--fs-xs); line-height: 1.5; color: var(--muted-strong); }
+.br-cmt{ flex: 1; min-width: 0; word-break: break-word; white-space: pre-wrap; }
+.br-cmx{ flex: none; border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; padding: 0 3px; }
+.br-cmx:hover{ color: var(--danger); }
+.br-cmw{ display: flex; gap: 5px; margin-top: 6px; }
+.br-cmin{ flex: 1; min-width: 0; box-sizing: border-box; font: inherit; font-size: var(--fs-xs); padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--r-full); background: var(--bg, #fff); color: var(--text); }
+.br-cmsend{ flex: none; font: inherit; font-size: var(--fs-xs); padding: 4px 11px; border-radius: var(--r-full); border: 1px solid var(--border); background: transparent; color: var(--muted-strong); cursor: pointer; }
+.br-cmsend:hover{ color: var(--accent); border-color: var(--accent); }
+/* [2026-11-17 콩] 📰 새소식(script_news.js) — 올리는 칸·버튼은 작품 추천(.br-*)과 같은 모양을 씁니다 */
+.nw-kind{ margin: 0 0 9px; padding: 0 2px; text-align: center; font-size: 11.5px; line-height: 1.55; color: var(--muted-strong); }
+.nw-kind span{ display: block; font-size: 10.5px; color: var(--muted); }
+.nw-row{ padding: 10px 2px; border-top: 1px solid var(--border); }
+.nw-row:first-child{ border-top: 0; }
+.nw-h{ display: flex; align-items: baseline; gap: 8px; }
+.nw-t{ flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); line-height: 1.5; word-break: break-word; }
+.nw-when{ flex: none; font-size: 10.5px; color: var(--muted); }
+.nw-c{ margin-top: 4px; font-size: var(--fs-xs); line-height: 1.6; color: var(--muted-strong); white-space: pre-wrap; word-break: break-word; }
+.nw-c.clamp{ display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.nw-link{ color: var(--accent); text-decoration: underline; text-underline-offset: 2px; word-break: break-all; cursor: pointer; }
+.nw-f{ display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+.nw-tog, .nw-del{ border: 0; background: none; font: inherit; font-size: 11px; color: var(--muted); cursor: pointer; padding: 2px 4px; }
+.nw-tog:hover{ color: var(--text); }
+.nw-del:hover{ color: var(--danger); }
 .br-more{ display: block; width: 100%; margin-top: 8px; font: inherit; font-size: var(--fs-xs); padding: 6px 0; border: 1px solid var(--border); border-radius: var(--r-full); background: transparent; color: var(--muted-strong); cursor: pointer; }
 
 /* [고침 2026-10-09] 탭 줄 상자가 Member 탭 자리(벌려 둔 틈)를 덮어 눌림을 가로챘습니다 — 상자는 비켜 주고 탭만 눌리게 */
@@ -13201,7 +13240,7 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
 :root[data-is-dark="true"] .greet-card.gk-out { background: rgba(189,179,166,.16); color: #D8CFC3; }
 
 /* 🎖️ 명예 멤버 훈장 (2026-10-27 콩) — 글자 딱지 대신 **훈장 그림**.
-   금 톱니 원판 + 와인 별 + 와인 리본(끝은 제비 꼬리). 방장 딱지(오른쪽 7도)와 반대로 **왼쪽 13도**.
+   민트 원판 + 진초록 별 + 진초록 두 톤 꼬리(끝은 제비 꼬리) — 2026-11-17 라인 메달로 교체. 방장 딱지(오른쪽 7도)와 반대로 **왼쪽 13도**.
    자리는 방장·부방장 딱지와 같은 프사 오른쪽 아래 — 원판이 프사 모서리에 걸치고 리본이 아래로 늘어집니다.
    ★ 딱지 공통 규칙(.card-admin-stamp)의 바탕·테두리·그림자는 여기서 모두 지웁니다 — 훈장 그림이 직접 그려요.
    ★ pointer-events: none 은 공통 규칙에서 물려받아요(프사 클릭을 안 가림) — 그래서 마우스를 올려도 말풍선은 안 뜹니다. */

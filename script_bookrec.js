@@ -22,7 +22,13 @@
      · 👍 는 펼치지 않고도 바로 누릅니다.
      · 추천 쓰는 칸은 [＋ 추천하기] 를 눌러야 열려요 — 평소엔 자리를 안 차지합니다.
 
-   [서버]  bookrec/{id} = { g, t, a?, c, at, up }
+   [2026-11-17 콩] 💬 댓글 + 맨 위 안내 문구
+     · 줄을 펼치면 그 아래에 댓글(익명 · 200자)이 보이고, 쓰는 칸이 나옵니다. 줄 옆 💬 에 댓글 수.
+     · 제목 줄 바로 아래 "우리 중에 그분이 계실지 몰라요. 모두 아름다운 말만 씁시다!" 한 줄.
+     · [통신량] 댓글 **내용**은 줄을 펼쳤을 때만 듣고(on), 접으면 끊습니다(off) — 목록 쪽 읽기는 줄마다 숫자 n 하나(몇 바이트)만 늘어요.
+
+   [서버]  bookrec/{id} = { g, t, a?, c, at, up, n? }   (n = 댓글 수, 없으면 0)
+           bookrecCm/{글id}/{댓글id} = { c(200자), at }   ← 댓글 내용은 따로 — 목록을 내려받을 때 같이 안 딸려 옵니다
            g 장르(여섯 중 하나) · t 제목(40자) · a 작가(30자, 없어도 됨)
            c 감상평(300자 — 콩 2026-11-09, 60→300) · at 올린 시각 · up 👍 수
    [통신량] 탭을 열 때 한 번 듣고(on), 닫으면 끊습니다(off) — 공지·Q&A·LINK 와 같은 원칙.
@@ -38,10 +44,11 @@
 
   const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
   const GENRES = ["현로", "로판", "BL", "현판", "무협", "GL"];
-  const MAX_T = 40, MAX_A = 30, MAX_C = 300;
+  const MAX_T = 40, MAX_A = 30, MAX_C = 300, MAX_CM = 200;
   const PAGE = 30;                       // 한 번에 그리는 줄 수
   const MINE_KEY = "bookrecMine";        // 이 기기가 올린 글
   const UP_KEY   = "bookrecUps";         // 이 기기가 👍 누른 글
+  const CM_KEY   = "bookrecCmMine";      // 이 기기가 쓴 댓글 (댓글id)
 
   let _rows = [];
   let _ref = null;
@@ -53,6 +60,11 @@
   let _보임 = PAGE;
   const _펼침 = new Set();
   const _누르는중 = new Set();
+  const _댓글 = {};                        // { 글id: [{id,c,at}] } — 펼친 줄만
+  const _댓글귀 = {};                      // { 글id: ref } — 펼친 줄만 듣습니다
+  const _초안 = {};                        // { 글id: 쓰던 댓글 } — 목록이 다시 그려져도 안 날아가게
+  let _포커스글 = "", _쓰고있나 = false;                       // 댓글 칸에 커서가 있던 글
+  let _조합중 = false, _다시그림 = false;   // 한글 조합 중에는 다시 그리지 않습니다
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
@@ -69,6 +81,7 @@
     try { window.AppStore?.setItem(key, JSON.stringify(arr.slice(-500))); } catch (e) {}
   }
   const isMine = (id) => readSet(MINE_KEY).indexOf(id) >= 0;
+  const isMineCm = (id) => readSet(CM_KEY).indexOf(id) >= 0;
   const didUp  = (id) => readSet(UP_KEY).indexOf(id) >= 0;
   function remember(key, id) {
     const arr = readSet(key);
@@ -87,7 +100,8 @@
       id, g, t, c,
       a: String(v.a || "").trim().slice(0, MAX_A),
       at: Number(v.at) || 0,
-      up: Math.max(0, Math.round(Number(v.up) || 0))
+      up: Math.max(0, Math.round(Number(v.up) || 0)),
+      n: Math.max(0, Math.round(Number(v.n) || 0))
     };
   }
 
@@ -96,6 +110,7 @@
     if (!_box || _box.querySelector("#br-list")) return;
     /* 쓰는 칸·장르 칩은 한 번만 — 목록이 갱신돼도 쓰던 글이 지워지지 않게 */
     _box.innerHTML = `
+      <p class="br-kind">우리 중에 그분이 계실지 몰라요. 모두 아름다운 말만 씁시다!</p>
       <div class="br-chips" id="br-chips"></div>
       <div class="br-bar">
         <button type="button" class="ghost-btn compact primary" id="br-new" aria-expanded="false">＋ 추천하기</button>
@@ -133,9 +148,24 @@
     });
   }
 
+  function 댓글칸(r) {
+    const 줄들 = (_댓글[r.id] || []).map(m => {
+      const 내것 = 방장() || isMineCm(m.id);
+      return `<div class="br-cmi"><span class="br-cmt">${esc(m.c)}</span>${내것 ? `<button type="button" class="br-cmx" data-br-cdel="${esc(r.id)}|${esc(m.id)}" aria-label="댓글 지우기" title="지우기">✕</button>` : ""}</div>`;
+    }).join("");
+    return `<div class="br-cm">
+      ${줄들 || (_댓글[r.id] ? `<p class="br-cm-empty">아직 댓글이 없어요.</p>` : `<p class="br-cm-empty">불러오는 중…</p>`)}
+      <div class="br-cmw">
+        <input type="text" class="br-cmin" data-br-cin="${esc(r.id)}" maxlength="${MAX_CM}" placeholder="댓글 (익명이에요 · ${MAX_CM}자까지)" autocomplete="off">
+        <button type="button" class="br-cmsend" data-br-csend="${esc(r.id)}">등록</button>
+      </div>
+    </div>`;
+  }
+
   function 목록그리기() {
     const box = el("br-list");
     if (!box) return;
+    if (_조합중) { _다시그림 = true; return; }      // 한글 조합 중에 다시 그리면 글자가 끊깁니다
     const 전부 = _rows.filter(r => !_필터 || r.g === _필터);
     const 보일 = 전부.slice(0, _보임);
     if (!전부.length) {
@@ -144,6 +174,10 @@
         : "아직 추천이 없어요. 재밌게 본 작품을 첫 번째로 소개해 주세요."}</p>`;
       return;
     }
+    /* 쓰던 댓글·커서 자리를 기억해 뒀다가 다시 그린 뒤 돌려놓습니다 */
+    const 쓰는칸 = box.querySelector(".br-cmin:focus");
+    const 되살릴글 = 쓰는칸 ? 쓰는칸.dataset.brCin : "";
+    if (쓰는칸) { _초안[되살릴글] = 쓰는칸.value; }
     box.innerHTML = 보일.map(r => {
       const 열림 = _펼침.has(r.id);
       const 지울수있나 = 방장() || isMine(r.id);
@@ -152,13 +186,22 @@
       <div class="br-row${열림 ? " open" : ""}" data-br="${esc(r.id)}">
         <span class="br-g" data-br-t="${esc(r.id)}">${esc(r.g)}</span>
         <div class="br-main" data-br-t="${esc(r.id)}" role="button" tabindex="0" aria-expanded="${열림}"><span class="br-t">${esc(r.t)}</span>${r.a ? `<span class="br-a">${esc(r.a)}</span>` : ""}</div>
-        <button type="button" class="br-up${눌렀나 ? " on" : ""}" data-br-up="${esc(r.id)}"
-                aria-pressed="${눌렀나}" aria-label="따봉" title="${눌렀나 ? "따봉을 뗍니다" : "따봉"}">👍<b>${r.up || ""}</b></button>
+        <div class="br-acts">
+          <button type="button" class="br-cmb${열림 ? " on" : ""}" data-br-t="${esc(r.id)}" aria-label="댓글" title="댓글">💬<b>${r.n || ""}</b></button>
+          <button type="button" class="br-up${눌렀나 ? " on" : ""}" data-br-up="${esc(r.id)}"
+                  aria-pressed="${눌렀나}" aria-label="따봉" title="${눌렀나 ? "따봉을 뗍니다" : "따봉"}">👍<b>${r.up || ""}</b></button>
+        </div>
         <div class="br-c" data-br-t="${esc(r.id)}">${esc(r.c)}</div>
         ${열림 && 지울수있나 ? `<div class="br-del"><button type="button" data-br-del="${esc(r.id)}">지우기</button></div>` : ""}
+        ${열림 ? 댓글칸(r) : ""}
       </div>`;
     }).join("") + (전부.length > 보일.length
       ? `<button type="button" class="br-more" id="br-more">더 보기 (${전부.length - 보일.length})</button>` : "");
+    box.querySelectorAll(".br-cmin").forEach(i => {
+      const id = i.dataset.brCin;
+      if (_초안[id]) i.value = _초안[id];
+      if (되살릴글 === id) { i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} }
+    });
   }
 
   function say(t, bad) {
@@ -228,13 +271,65 @@
     if (!confirm(`「${r ? r.t : ""}」 추천을 지울까요?`)) return;
     try {
       await window.db.ref("bookrec/" + id).remove();
-      forget(MINE_KEY, id); forget(UP_KEY, id); _펼침.delete(id);
+      try { await window.db.ref("bookrecCm/" + id).remove(); } catch (e) {}
+      forget(MINE_KEY, id); forget(UP_KEY, id); _펼침.delete(id); 댓글끊기(id);
+    } catch (e) { say("지우지 못했어요.", true); }
+  }
+
+  /* ---- 💬 댓글 — 펼친 줄만 듣습니다 ---- */
+  function 댓글듣기(id) {
+    if (_댓글귀[id] || !window.db) return;
+    const ref = window.db.ref("bookrecCm/" + id);
+    _댓글귀[id] = ref;
+    ref.on("value", snap => {
+      const raw = snap.val() || {};
+      _댓글[id] = Object.keys(raw).map(k => {
+        const v = raw[k] || {};
+        const c = String(v.c || "").trim().slice(0, MAX_CM);
+        return c ? { id: k, c, at: Number(v.at) || 0 } : null;
+      }).filter(Boolean).sort((a, b) => (a.at - b.at) || a.id.localeCompare(b.id));   // 오래된 것이 위 — 대화 순서
+      목록그리기();
+    }, () => {});
+  }
+  function 댓글끊기(id) {
+    try { _댓글귀[id] && _댓글귀[id].off(); } catch (e) {}
+    delete _댓글귀[id]; delete _댓글[id];
+  }
+  function 댓글모두끊기() { Object.keys(_댓글귀).forEach(댓글끊기); }
+
+  async function 댓글올리기(id) {
+    if (!window.db || !id || _busy) return;
+    const input = _box && _box.querySelector(`.br-cmin[data-br-cin="${CSS.escape(id)}"]`);
+    const c = String((input && input.value) || "").replace(/\s+/g, " ").trim().slice(0, MAX_CM);
+    if (!c) return;
+    _busy = true;
+    try {
+      const r = window.db.ref("bookrecCm/" + id).push();
+      await r.set({ c, at: Date.now() });
+      remember(CM_KEY, r.key);
+      try { await window.db.ref("bookrec/" + id + "/n").transaction(n => Math.max(0, (Number(n) || 0) + 1)); } catch (e) {}
+      delete _초안[id]; _포커스글 = id;
+      if (input) input.value = "";
+      say("");
+    } catch (e) {
+      say("댓글을 올리지 못했어요. 연결을 확인해 주세요.", true);
+    } finally { _busy = false; }
+  }
+
+  async function 댓글지우기(id, cid) {
+    if (!window.db || !id || !cid) return;
+    if (!confirm("이 댓글을 지울까요?")) return;
+    try {
+      await window.db.ref(`bookrecCm/${id}/${cid}`).remove();
+      forget(CM_KEY, cid);
+      try { await window.db.ref("bookrec/" + id + "/n").transaction(n => (Number(n) > 0 ? Number(n) - 1 : n)); } catch (e) {}
     } catch (e) { say("지우지 못했어요.", true); }
   }
 
   /* ---- 손가락 ---- */
   function 펼치기(id) {
-    if (_펼침.has(id)) _펼침.delete(id); else _펼침.add(id);
+    if (_펼침.has(id)) { _펼침.delete(id); 댓글끊기(id); }
+    else { _펼침.add(id); 댓글듣기(id); }
     목록그리기();
   }
 
@@ -253,6 +348,10 @@
       if (e.target.closest("#br-more")) { _보임 += PAGE; 목록그리기(); return; }
       const up = e.target.closest("[data-br-up]");
       if (up) { 따봉(up.dataset.brUp); return; }
+      const cs = e.target.closest("[data-br-csend]");
+      if (cs) { 댓글올리기(cs.dataset.brCsend); return; }
+      const cx = e.target.closest("[data-br-cdel]");
+      if (cx) { const [b, c] = String(cx.dataset.brCdel).split("|"); 댓글지우기(b, c); return; }
       const x = e.target.closest("[data-br-del]");
       if (x) { 지우기(x.dataset.brDel); return; }
       const t = e.target.closest("[data-br-t]");
@@ -263,11 +362,22 @@
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229 && e.target.closest("#br-t, #br-a, #br-c")) {
         e.preventDefault(); 올리기(); return;
       }
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && e.target.matches(".br-cmin")) {
+        e.preventDefault(); 댓글올리기(e.target.dataset.brCin); return;
+      }
       if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-br-t]") && e.target.matches("[data-br-t]")) {
         e.preventDefault(); 펼치기(e.target.dataset.brT);
       }
     });
-    box.addEventListener("input", (e) => { if (e.target.id === "br-c") 글자수세기(); });
+    box.addEventListener("input", (e) => {
+      if (e.target.id === "br-c") 글자수세기();
+      if (e.target.matches && e.target.matches(".br-cmin")) { _초안[e.target.dataset.brCin] = e.target.value; _포커스글 = e.target.dataset.brCin; }
+    });
+    /* 댓글 칸에 커서가 있는지 / 한글 조합 중인지 — 목록이 다시 그려질 때 칸을 지켜 주려고 */
+    box.addEventListener("focusin",  (e) => { if (e.target.matches && e.target.matches(".br-cmin")) { _쓰고있나 = true; _포커스글 = e.target.dataset.brCin; } });
+    box.addEventListener("focusout", (e) => { if (e.target.matches && e.target.matches(".br-cmin")) _쓰고있나 = false; });
+    box.addEventListener("compositionstart", () => { _조합중 = true; });
+    box.addEventListener("compositionend", () => { _조합중 = false; if (_다시그림) { _다시그림 = false; 목록그리기(); } });
   }
 
   /** 옆 탭이 부릅니다 — 칸(#side-pane-body) 안에 그립니다 */
@@ -294,6 +404,7 @@
   function closeBookrec() {
     try { _ref && _ref.off(); } catch (e) {}
     _ref = null;
+    댓글모두끊기(); _펼침.clear();
     _rows = [];
     const box = el("bookrec-board");
     if (box) box.remove();                       // 다음 탭의 알맹이와 섞이지 않게
@@ -303,5 +414,5 @@
   }
   window.openBookrec = openBookrec;
   window.closeBookrec = closeBookrec;
-  window._bookrec = { GENRES, normalize, MAX_T, MAX_A, MAX_C };   // 점검용
+  window._bookrec = { GENRES, normalize, MAX_T, MAX_A, MAX_C, MAX_CM };   // 점검용
 })();

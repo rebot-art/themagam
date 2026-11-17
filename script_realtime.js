@@ -1225,10 +1225,11 @@
 
   /* 카드 프사에 붙는 이름표 — 방장이 먼저입니다 (방장이 부방장 명단에도
      들어 있으면 '방장' 하나만 붙어요. 둘 다 붙으면 겹칩니다). */
-  /* 🎖️ 명예 훈장 (2026-10-27 콩) — 금 톱니 원판 + 와인 별 + 와인 리본(끝은 제비 꼬리).
-     글자 없이 훈장만 답니다. 모양·기울기(왼쪽 13도)는 styles.css 의 .is-honor 가 정해요.
-     ★ 그라데이션 id 가 카드마다 같은 것은 **모양이 같아서** 괜찮습니다. */
-  const HONOR_MEDAL_SVG = `<svg viewBox="0 0 48 64"><defs><linearGradient id="hmG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE99A"/><stop offset="1" stop-color="#D9A21F"/></linearGradient></defs><g transform="rotate(14 16 28)"><polygon points="10,28 22,28 22,62 16,55 10,62" fill="#A92B4B" stroke="#6E1430" stroke-width="1.2" stroke-linejoin="round"/><rect x="14.5" y="28.6" width="3" height="31" fill="#F2CF6B"/></g><g transform="rotate(-14 32 28)"><polygon points="26,28 38,28 38,62 32,55 26,62" fill="#A92B4B" stroke="#6E1430" stroke-width="1.2" stroke-linejoin="round"/><rect x="30.5" y="28.6" width="3" height="31" fill="#F2CF6B"/></g><polygon points="40.50,20.00 37.94,23.18 38.87,27.16 35.18,28.92 34.29,32.90 30.20,32.88 27.67,36.09 24.00,34.30 20.33,36.09 17.80,32.88 13.71,32.90 12.82,28.92 9.13,27.16 10.06,23.18 7.50,20.00 10.06,16.82 9.13,12.84 12.82,11.08 13.71,7.10 17.80,7.12 20.33,3.91 24.00,5.70 27.67,3.91 30.20,7.12 34.29,7.10 35.18,11.08 38.87,12.84 37.94,16.82" fill="url(#hmG)" stroke="#8A5A00" stroke-width="1.4" stroke-linejoin="round"/><circle cx="24" cy="20" r="11" fill="none" stroke="#FFF3C4" stroke-width="1"/><polygon points="24.00,12.00 26.12,17.59 32.08,17.87 27.42,21.61 29.00,27.38 24.00,24.10 19.00,27.38 20.58,21.61 15.92,17.87 21.88,17.59" fill="#A92B4B" stroke="#6E1430" stroke-width=".8" stroke-linejoin="round"/></svg>`;
+  /* 🎖️ 명예 훈장 (2026-11-17 콩 — 라인 메달) — 민트 원판 + 초록 점선 고리 + 진초록 별 + 진초록 두 톤 꼬리(왼쪽 밝은 초록, 오른쪽 진초록).
+     글자 없이 훈장만 답니다. 기울기(왼쪽 13도)와 자리는 styles.css 의 .is-honor 가 정해요.
+     (이전 모양: 금 톱니 원판 + 와인 별 + 와인 리본 — 2026-10-27)
+     ★ 그라데이션을 쓰지 않으므로 카드마다 같은 id 가 겹칠 일이 없습니다. */
+  const HONOR_MEDAL_SVG = `<svg viewBox="0 0 48 64"><polygon points="13,31 23,31 23,61 18,55 13,61" fill="#2E7D4F" stroke="#123B25" stroke-width="1.2" stroke-linejoin="round"/><polygon points="25,31 35,31 35,61 30,55 25,61" fill="#1F5C3A" stroke="#123B25" stroke-width="1.2" stroke-linejoin="round"/><circle cx="24" cy="22" r="16" fill="#E1F5EE" stroke="#1F5C3A" stroke-width="2.4"/><circle cx="24" cy="22" r="12.4" fill="none" stroke="#2E8B57" stroke-width="1.1" stroke-dasharray="2.2 2.4"/><polygon points="24.00,14.00 26.17,19.61 32.18,19.94 27.52,23.74 29.05,29.56 24.00,26.30 18.95,29.56 20.48,23.74 15.82,19.94 21.83,19.61" fill="#1F5C3A" stroke="#1F5C3A" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   function stampHtml(u) {
     if (u === ADMIN_NICK) return `<span class="card-admin-stamp" aria-label="방장">방장</span>`;
     if (_vice[u] === true) return `<span class="card-admin-stamp is-vice" aria-label="부방장">부방장</span>`;
@@ -3415,16 +3416,28 @@
        23:30 입장 → 00:10 퇴근이 이틀로 찍히니 그건 하지 마세요.
      ===================================================================== */
 
-  /* 🔗 어제 출근의 연장인가 — 어제 줄에 출근 도장이 있고, 나간 지 60분이 안 됐으면 참 (콩 결정 2026-10-23) */
-  const 이어짐_분 = 60;
-  function 이어진작업인가(어제줄, 지금) {
-    if (!어제줄 || !(어제줄.firstAt || 어제줄.at)) return false;
-    const 떠난때 = Number(어제줄.leftAt || 0);
-    if (!(떠난때 > 0)) return false;
-    const 간격 = 지금 - 떠난때;
-    return 간격 < 이어짐_분 * 60000;
+  /* 🌙 자정 넘겨 **직접 재접속**한 사람 — 새 날 출석을 바로 인정합니다 (콩 결정 2026-11-17)
+     예전(2026-10-23)에는 "어제 줄의 퇴장이 60분 안이면 어제 작업의 연장" 으로 보고 새 날 도장을 안 찍었는데,
+     출석 때문에 일부러 나갔다 다시 들어오는 분들이 많아서 **재접속은 본인 의지**로 보고 바로 인정합니다.
+       · 어제 줄(도장)이 있고, 어제 머문 시간이 출석 인정 시간(15분 — 관리자 SHORT_STAY_MIN) 이상이면
+         오늘 줄에 ok:true(출석부의 "방장 인정" 과 같은 표시) + rc:true(자정 재접속이라는 꼬리표)를 얹습니다.
+         → 오늘 잠깐만 머물다 나가도 "15분 미만" 붉은 사선이 안 그어져요.
+       · 도장은 어제 머문 시간과 상관없이 늘 찍힙니다. 어제가 15분 미만이면 평소 입장과 똑같이 처리됩니다.
+       · 창을 연 채로 자정을 넘긴 경우·자동 새로고침(__carryOver)은 이 길이 아닙니다 — 위에서 이미 따로 걸러져요.
+       · 인사 규칙은 그대로입니다. 오늘 줄이 새로 생기니 평소 "그날 첫 입장" 으로 다룹니다. */
+  const 인정_분 = 15;
+  function 어제머문분(어제줄) {
+    if (!어제줄 || !(어제줄.firstAt || 어제줄.at)) return null;
+    if (어제줄.m != null && isFinite(Number(어제줄.m))) return Math.max(0, Number(어제줄.m));
+    const 시작 = Number(어제줄.firstAt || 어제줄.at || 0);
+    const 끝 = Number(어제줄.leftAt || 어제줄.at || 0);
+    return (시작 > 0 && 끝 >= 시작) ? Math.round((끝 - 시작) / 60000) : null;
   }
-  window.__이어진작업인가 = 이어진작업인가;
+  function 자정재접속인정인가(어제줄) {
+    const 분 = 어제머문분(어제줄);
+    return 분 != null && 분 >= 인정_분;
+  }
+  window.__자정재접속인정인가 = 자정재접속인정인가;
 
   async function recordAttendance() {
     if (!myNick) return;
@@ -3449,29 +3462,24 @@
       const aref = db.ref(`attendance/${day}/${myNick}`);
       const prevSnap = await aref.once("value");
       const prev = prevSnap.val();
-      /* ★★ [2026-10-23 콩 "자정까지 작업하다 잠깐 재접속했는데 인사 확인이 떴어요"]
-           오늘 줄이 아직 없는데(=새 날 첫 입장처럼 보이는데), 어제 줄의 퇴장 시각이 60분 안이면
-           어제 작업이 이어진 거예요. 새 도장도 인사 확인도 하지 않고, 어제 줄의 퇴장 표시만 지웁니다.
-           (60분이 넘어 돌아오면 지금처럼 새 날 도장 + 인사 확인) — 어제 줄 한 줄만 더 읽습니다. */
+      /* ★★ [2026-11-17 콩 "자정 지나고 재접속이면 출석으로 바로 인정"] (2026-10-23 의 60분 연장 규칙을 걷었습니다)
+           오늘 줄이 아직 없는데(=새 날 첫 입장) 어제 줄이 있고 어제 15분 이상 머물렀으면,
+           오늘 도장을 찍으면서 ok·rc 를 함께 얹어 짧게 머물러도 출석으로 인정합니다. 어제 줄 한 줄만 읽어요. */
+      let 자정재접속 = false;
       if (!(prev && (prev.firstAt || prev.at))) {
         try {
           const 어제 = ymd(Date.now() - DAY_MS);
           const ysnap = await db.ref(`attendance/${어제}/${myNick}`).once("value");
-          if (이어진작업인가(ysnap.val(), Date.now())) {
-            window.__attendDay = 어제;
-            await db.ref(`attendance/${어제}/${myNick}`).update({ leftAt: null });
-            try { window.reloadStart?.(); } catch (e) {}
-            try { updateStatus(true); } catch (e) {}
-            return;
-          }
-        } catch (e) { console.warn("[이어진 작업 확인]", e); }
+          자정재접속 = 자정재접속인정인가(ysnap.val());
+        } catch (e) { console.warn("[자정 재접속 확인]", e); }
       }
       /* ★ [2026-10-16] set → update. 인사 도장(gAt)·머문 분(m)·방장 인정(ok)을
            같은 날 다시 들어와도 지우지 않기 위해서예요. 퇴장 시각만 비웁니다(예전 set 과 같은 효과). */
       await aref.update({
         firstAt: prev?.firstAt || prev?.at || Date.now(),
         at: Date.now(),
-        leftAt: null
+        leftAt: null,
+        ...(자정재접속 ? { ok: true, rc: true } : {})
       });
       /* 👋 인사 규칙 — 입장 도장이 찍힌 뒤에 시작 (script_greet.js) */
       try { window.greetStart?.({ day, prev }); } catch (e) {}
