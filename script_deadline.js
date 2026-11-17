@@ -345,6 +345,19 @@
 
   /* 초안 카드 — [추가]를 누르기 전까지는 화면에만 있고 DB·이름표는 건드리지 않습니다 */
   function newDraft() { const t = today(); return { t: "", s: t, d: shift(t, 30), b: 0, u: "ch", e: 0, c: 0, done: 0, w: {} }; }
+  /** 초안으로 미리 계산해 본 "오늘 몫" — 저장 없이 계산만 합니다 */
+  function draftPreview() {
+    const w = _draft, ep = isEp(w), dn = ep ? half(w.done) : num(w.done);
+    const tmp = { ...w, done: dn, d0: dn, sn: dn };
+    const c = calc(tmp), T = c.T;
+    if (c.state === "none") return `<span class="dl-pvw">날짜를 넣으면 오늘 몫이 나와요</span>`;
+    if (c.total <= 0) return `<span class="dl-pvw">${ep ? "총 화수" : "총 글자수"}를 넣으면 오늘 몫이 나와요</span>`;
+    if (c.state === "late") return `<span class="dl-pvw">마감일이 이미 지났어요</span>`;
+    if (c.state === "wait") return `<span class="dl-pvw">시작 전이에요 · ${esc(w.s)} 부터 시작</span>`;
+    const tm = c.tom !== null && c.state === "ok" ? ` · 내일 몫 ${fmtN(w, c.tom)}` : "";
+    if (T <= 0) return `<b>오늘은 쉼</b>${tm}`;
+    return `오늘 몫 <b>${fmtN(w, T)}</b>${c.state === "buf" ? " (여유 없이 오늘 안에!)" : ""}${tm}`;
+  }
   function draftHtml() {
     const w = _draft, L = labelOf(_d.n), ep = isEp(w);
     return `
@@ -366,6 +379,7 @@
           <label>요일별 (눌러서 보통 → 적게 → 쉼)</label>
           <div class="dl-dows">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="${(w.w || {})[d] === "h" ? "h" : (w.w || {})[d] === "o" ? "o" : "n"}" data-dl-drdow="${d}">${DN[d]}</button>`).join("")}</div>
           <p class="dl-hint">적게 = 보통의 절반 · 쉼 = 0. 못 쓴 몫은 남은 날에 자동으로 나뉘어 얹혀요.</p>
+          <div class="dl-pv" id="dl-draft-pv">${draftPreview()}</div>
           <div class="dl-edf"><button type="button" class="ghost-btn compact" id="dl-add-no">취소</button><button type="button" class="ghost-btn compact dl-yes" id="dl-add-yes">추가</button></div>
         </div>
       </div>`;
@@ -570,6 +584,8 @@
     else if (f === "e") _draft.e = half(v);
     else if (f === "done") _draft.done = un(_draft, v);
     else if (f === "b" || f === "c") _draft[f] = num(v);
+    const pv = _box && _box.querySelector("#dl-draft-pv");
+    if (pv) pv.innerHTML = draftPreview();                  // 화면을 다시 그리지 않고 그 줄만 바꿔요 (추가 단추 클릭이 씹히지 않게)
   }
   /** 초안의 [추가] — 여기서 처음으로 작품이 생깁니다 */
   async function 초안추가() {
