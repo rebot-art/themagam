@@ -287,6 +287,12 @@
          같은 날이면 재입장(prev 로 취급), 아니면 첫 입장이라 새로 적습니다. 도장은 접속 시간이 기준을 넘을 때 찍혀요. */
     if (NEW()) {
       let 방문 = null;
+      if (SOLO() && RESET) {   // 시험 되돌리기(&greetreset=1): 오늘의 접속 기록·도장·인사 기록을 모두 지우고 "오늘 첫 입장"으로 다시 시작
+        for (const q of [`users/${nick}/attend/visit`, `attendance/${day}/${nick}`, `users/${nick}/attend/days/${day}`, `users/${nick}/attend/mins/${day}`, `greetMiss/${nick}/${day}`]) {
+          try { await DB().ref(q).remove(); } catch (e) {}
+        }
+        A.stamped[day] = false;
+      }
       try { const vs = await DB().ref(`users/${nick}/attend/visit`).once("value"); const v = vs.val(); if (v && v.day === day) 방문 = v; } catch (e) {}
       if (!S || S.nick !== nick) return;
       const 지금 = Date.now();
