@@ -146,6 +146,7 @@
     _prevStatus = cur;                     // 돌아올 곳을 기억
     _autoAway = true;
     _saveTag();
+    try { window.Activity?.markAuto?.("away"); } catch (e) {}   // 🔔 활동 타임라인에 "자동 감지" 표시용 (로컬)
     _setStatus("away");
     console.log("[자동감지] 무입력 20분 →", cur, "→ away 자동 전환");
   }
@@ -162,6 +163,7 @@
     _autoAway = false;
     _prevStatus = null;
     _saveTag();
+    try { window.Activity?.markAuto?.("back"); } catch (e) {}
     _setStatus(back);
     console.log("[자동감지] 입력 재감지 → away →", back, "자동 복귀");
   }

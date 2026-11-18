@@ -1130,38 +1130,42 @@
 })();
 
 /* =====================================================================
-   🔔 활동 (2026-11-18 — 콩) — Work Log 의 맨 왼쪽 탭
+   🔔 활동 (2026-11-18 — 콩) — 오른쪽 옆 탭(⏰ 데드라인 바로 위), 오늘 하루 24시간 타임라인
    ---------------------------------------------------------------------
-   "내가 접속해서 한 일" 을 시간순으로 한 곳에 모아 보여줍니다.
-     11:00 입장 / 11:01 오늘도 건필! / 11:10 상태를 Write 로 전환 / 11:30 ○번째 출석!
-     11:40 작업 30분 쌓임 / 워크로그에 ○자 기록 / ⏰ 데드라인 오늘 몫 …
-   ★ 통신량 0 — 서버에 아무것도 안 적고 읽지도 않습니다. 이 기기의 AppStore 에만 적어 두고
-     (오늘·어제 이틀치, 하루 200줄까지), 다른 기능이 일어난 자리에서 Activity.add() 로 알려 줘요.
-   ★ 작업 30분 쌓임은 "무게 친 작업 시간" 기준입니다 (WRITE·JOB·multiT 100%, 수리 30%).
-   ★ 혼자 방에서만 켜집니다 (window.wlSide) — 본방은 아직 옛 Work Log 그대로.
+   시(00~23) 한 줄마다 ① 그 시간의 상태 막대(Write·Job·multiT·Break·Away 색) ② 그 시각까지 쌓은 작업 시간(무게 친 값)
+   ③ 막대 아래: 그 시간에 있었던 일(입장·인사·출석·워크로그·데드라인) 칩 + 상태가 바뀐 지점(자동 감지로 자리비움이 된 때 포함).
+   활동이 없는 시간은 얇게 줄입니다. 지금 시각엔 빨간 선, 아직 안 온 시간은 흐리게.
+   ★ 통신량: 탭을 열 때 "내 오늘 구간 묶음"을 딱 한 번 읽습니다. 이후(상태 바뀜·30초 갱신)는 전부 이 기기 안에서 계산 — 추가 읽기 0.
+   ★ 이벤트·자동 감지 표시는 이 기기 AppStore(오늘·어제 이틀치) 에만 적습니다 — 서버에 쓰는 것 0.
+   ★ 혼자 방에서만 켜집니다 (window.actSide).
    ===================================================================== */
 (function () {
   "use strict";
   const KEY = "actLog";
-  const KEEP_DAYS = 2, MAX_ROWS = 200, STEP_MIN = 30;
+  const KEEP_DAYS = 2, MAX_ROWS = 200, HOUR = 3600000, ATT_TOTAL = 18, GAP_MS = 5 * 60000, AUTO_NEAR = 150000;
   /* 아이콘은 코드 안의 작은 선 그림(SVG)입니다 — 이미지 파일을 받지 않아 통신량 0 */
   const ICON = {
     in: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
     hi: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>',
-    status: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
     att: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
-    work: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     wl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
     dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>',
   };
   const nick = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
   const dayOf = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
-  const hm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const two = (n) => String(n).padStart(2, "0");
+  const hm = (t) => { const d = new Date(t); return two(d.getHours()) + ":" + two(d.getMinutes()); };
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const on = () => !!(window.wlSide && window.wlSide());
+  const on = () => !!(window.actSide && window.actSide());
+  const dayStart = (day) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : 0; };
+  const dur = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + "시간 " + (m % 60 ? (m % 60) + "분" : "") : m + "분"; };
+  const durS = (ms) => { const m = Math.round(ms / 60000); return m <= 0 ? "" : Math.floor(m / 60) + ":" + two(m % 60); };
+  const ST = () => window.TimeLog?.STATUSES || [];
+  const stOf = (id) => ST().find(x => x.id === id) || { id, label: id, color: "#999" };
+  const stName = (id) => String(stOf(id).label).split("(")[0];
 
-  let _db = null;                      // { nick, days: { 날짜: { rows: [], m: 0 } } }
+  let _db = null;                      // { nick, days: { 날짜: { rows: [], auto: [] } } }
   function load() {
     const n = nick();
     if (_db && _db.nick === n) return _db;
@@ -1177,50 +1181,147 @@
       window.AppStore?.setItem(KEY, JSON.stringify(_db));
     } catch (e) {}
   }
-  function bucket(day) { const d = load(); return d.days[day] || (d.days[day] = { rows: [], m: null }); }
+  function bucket(day) { const d = load(); const b = d.days[day] || (d.days[day] = { rows: [], auto: [] }); if (!b.auto) b.auto = []; return b; }
 
   function add(kind, text, opt) {
     if (!on() || !nick()) return;
     opt = opt || {};
-    const t = opt.at || Date.now(), day = dayOf(t), b = bucket(day);
+    const t = opt.at || Date.now(), b = bucket(dayOf(t));
     if (opt.key && b.rows.some(r => r.key === opt.key)) return;
     b.rows.push({ t, k: kind, x: String(text || "").slice(0, 120), key: opt.key || "" });
     if (b.rows.length > MAX_ROWS) b.rows.splice(0, b.rows.length - MAX_ROWS);
     save();
-    try { if (window.wcTab && window.wcTab() === "act") window.renderWordcount?.(); } catch (e) {}
+    redraw();
   }
-
-  const 짧은이름 = (s) => {
-    const st = (window.TimeLog?.STATUSES || []).find(x => x.id === s);
-    return st ? String(st.label).split("(")[0] : String(s || "");
-  };
-  function status(prev, next) { if (prev && next && prev !== next) add("status", `상태를 '${짧은이름(next)}'(으)로 전환`); }
-
-  function html() {
-    if (!on()) return "";
-    const rows = (load().days[dayOf(Date.now())] || { rows: [] }).rows;
-    if (!rows.length) return `<div class="wc-empty">오늘 활동이 아직 없어요.<br>입장·상태 전환·출석·작업 시간이 여기 차곡차곡 쌓입니다.</div>`;
-    return rows.map(r => `<div class="act-row act-${esc(r.k)}"><span class="act-t">${hm(r.t)}</span>` +
-      `<span class="act-ic">${ICON[r.k] || ICON.info}</span><span class="act-x">${esc(r.x)}</span></div>`).join("");
-  }
-  const count = () => ((load().days[dayOf(Date.now())] || { rows: [] }).rows.length);
-
-  /* 작업 30분 쌓임 — 30초마다 로컬 계산(통신 0). 오늘 처음 보는 사람이면 이미 쌓인 만큼은 조용히 기준으로만 잡습니다 */
-  async function tick() {
-    if (!on() || !nick() || !window.TimeLog || !window.TimeLog.liveWorkMs) return;
-    const day = dayOf(Date.now());
-    try { if (!window.TimeLog.stayPrimed(day)) await window.TimeLog.primeStay(day); } catch (e) {}
-    if (!window.TimeLog.stayPrimed(day)) return;
-    const n = Math.floor(window.TimeLog.liveWorkMs(day) / (STEP_MIN * 60000));
-    const b = bucket(day);
-    if (b.m == null) { b.m = n; save(); return; }
-    while (b.m < n) {
-      b.m++;
-      add("work", `'${짧은이름(window.TimeLog.curStatus ? window.TimeLog.curStatus() : "")}' 작업 ${b.m * STEP_MIN}분 쌓임`, { key: "w" + b.m });
-    }
+  /** 자동 감지가 상태를 바꾸려는 순간 script_idledetect.js 가 알려 줍니다 ("away" = 무입력으로 자리비움, "back" = 입력 감지로 복귀) */
+  function markAuto(to) {
+    if (!on() || !nick()) return;
+    const b = bucket(dayOf(Date.now()));
+    b.auto.push({ t: Date.now(), to });
+    if (b.auto.length > 60) b.auto.splice(0, b.auto.length - 60);
     save();
   }
-  setInterval(tick, 30000);
+  function status() { setTimeout(redraw, 120); }          // 상태가 바뀌면 열린 판만 다시 그림 (읽기 없음)
 
-  window.Activity = { add, status, html, count, tick, _t: { load } };
+  /* ---------- 구간 모으기 ---------- */
+  let _box = null, _timer = 0, _segs = [], _segDay = "", _last = null, _first = true;
+  function allSegs(day) {
+    const T = window.TimeLog, live = T?.liveSeg?.();
+    /* 열린 구간이 바뀌었으면 직전 열린 구간을 닫힌 목록에 보태 둡니다 (서버를 다시 읽지 않으려고) */
+    if (_last && (!live || live.a !== _last.a)) {
+      const 끝 = live ? live.a : _last.b;
+      if (!_segs.some(x => x.a === _last.a)) _segs.push({ s: _last.s, a: _last.a, b: Math.min(_last.b > 끝 ? _last.b : 끝, 끝) });
+    }
+    _last = live ? { s: live.s, a: live.a, b: live.b } : null;
+    const ds = dayStart(day), de = ds + 24 * HOUR;
+    const list = _segs.filter(x => !live || x.a < live.a).map(x => ({ s: x.s, a: x.a, b: live && x.b > live.a ? live.a : x.b }));
+    if (live) list.push(live);
+    return list.map(x => ({ s: x.s, a: Math.max(x.a, ds), b: Math.min(x.b, de) })).filter(x => x.b > x.a).sort((p, q) => p.a - q.a);
+  }
+  /** 같은 상태로 이어지는 짧은 틈(1분 이하)은 붙입니다 */
+  function merge(list) {
+    const out = [];
+    list.forEach(x => {
+      const p = out[out.length - 1];
+      if (p && p.s === x.s && x.a - p.b <= 60000) p.b = Math.max(p.b, x.b); else out.push({ s: x.s, a: x.a, b: x.b });
+    });
+    return out;
+  }
+  function workIn(segs, upTo) {
+    const W = window.TimeLog?.workMs; if (!W) return 0;
+    let n = 0;
+    segs.forEach(x => { const e = Math.min(x.b, upTo); if (e > x.a) n += W(x.s, e - x.a); });
+    return n;
+  }
+
+  /* ---------- 상태가 바뀐 지점 ---------- */
+  function marks(segs, auto) {
+    const out = [];
+    for (let i = 1; i < segs.length; i++) {
+      const p = segs[i - 1], c = segs[i];
+      if (c.a - p.b > GAP_MS) { out.push({ t: p.b, kind: "gap", text: `${hm(p.b)} 연결 끊김 → ${hm(c.a)} 다시 접속`, to: c.s }); continue; }
+      if (c.s === p.s) continue;
+      const near = (to) => auto.some(m => m.to === to && Math.abs(m.t - c.a) <= AUTO_NEAR);
+      let extra = "";
+      if (c.s === "away" && near("away")) extra = "auto-away";
+      else if (p.s === "away" && near("back")) extra = "auto-back";
+      out.push({ t: c.a, kind: "chg", to: c.s, from: p.s, extra });
+    }
+    return out;
+  }
+
+  function board(day) {
+    const T = window.TimeLog, now = Date.now(), ds = dayStart(day), isToday = day === dayOf(now);
+    const b = (load().days[day] || { rows: [], auto: [] });
+    const segs = merge(allSegs(day));
+    const ev = (b.rows || []).filter(r => r.k !== "status" && r.k !== "work");
+    const mk = marks(segs, b.auto || []);
+    const workAll = workIn(segs, ds + 24 * HOUR);
+    const stayAll = segs.reduce((n, x) => n + (x.b - x.a), 0);
+    let attN = 0; (b.rows || []).forEach(r => { if (r.k === "att") { const m = /(\d+)번째/.exec(r.x); if (m) attN = +m[1]; } });
+
+    let h = `<div class="tl-top"><div class="tl-met"><small>오늘 작업</small><b>${workAll > 0 ? dur(workAll) : "0분"}</b></div>` +
+      `<div class="tl-met"><small>접속 시간</small><b>${stayAll > 0 ? dur(stayAll) : "0분"}</b></div>` +
+      `<div class="tl-met"><small>출석</small><b>${attN ? attN + "/" + ATT_TOTAL : "–"}</b></div></div>`;
+    h += `<div class="tl-legend">` + ST().map(x => `<span><i style="background:${x.color}"></i>${esc(String(x.label).split("(")[0])}</span>`).join("") + `</div>`;
+    h += `<div class="tl-list">`;
+    for (let k = 0; k < 24; k++) {
+      const hs = ds + k * HOUR, he = hs + HOUR;
+      const inH = segs.filter(x => x.a < he && x.b > hs);
+      const evH = ev.filter(r => r.t >= hs && r.t < he);
+      const mkH = mk.filter(m => m.t >= hs && m.t < he);
+      const isNow = isToday && now >= hs && now < he, future = isToday && hs > now;
+      const empty = !inH.length && !evH.length && !mkH.length && !isNow;
+      const cum = workIn(segs, Math.min(he, now > he || !isToday ? he : now));
+      const spans = inH.map(x => {
+        const a = Math.max(x.a, hs), e = Math.min(x.b, he);
+        return `<i class="tl-seg" title="${esc(stName(x.s))} ${hm(a)}~${hm(e)}" style="left:${((a - hs) / HOUR * 100).toFixed(2)}%;width:${Math.max(0.8, (e - a) / HOUR * 100).toFixed(2)}%;background:${stOf(x.s).color}"></i>`;
+      }).join("");
+      const chips = evH.map(r => `<span class="tl-chip tl-chip-${esc(r.k)}"><em>${hm(r.t)}</em><span class="tl-ic">${ICON[r.k] || ICON.info}</span>${esc(r.x)}</span>`).join("");
+      const mks = mkH.map(m => {
+        if (m.kind === "gap") return `<div class="tl-mark"><i class="tl-dot" style="background:#B0B4BA"></i>${esc(m.text)}</div>`;
+        const tag = m.extra === "auto-away" ? `<span class="tl-auto">자동 감지 · 무입력 → 자리비움</span>`
+          : m.extra === "auto-back" ? `<span class="tl-auto">입력 감지 · 자동 복귀</span>` : "";
+        return `<div class="tl-mark"><i class="tl-dot" style="background:${stOf(m.to).color}"></i><em>${hm(m.t)}</em> ${esc(stName(m.from))} → <b>${esc(stName(m.to))}</b>${tag}</div>`;
+      }).join("");
+      h += `<div class="tl-hr${isNow ? " now" : ""}${future ? " future" : ""}${empty ? " thin" : ""}" data-h="${k}">` +
+        `<div class="tl-h">${two(k)}</div><div class="tl-mid"><div class="tl-bar">${spans}${isNow ? `<u class="tl-now" style="left:${((now - hs) / HOUR * 100).toFixed(2)}%"></u>` : ""}</div>${chips || mks ? `<div class="tl-sub">${chips}${mks}</div>` : ""}</div>` +
+        `<div class="tl-c">${empty || future ? "" : durS(cum)}</div></div>`;
+    }
+    return h + `</div>`;
+  }
+
+  function redraw() {
+    if (!_box || !_box.isConnected || !on()) return;
+    const list = _box.querySelector(".tl-list"), keep = list ? list.scrollTop : 0, first = _first;
+    _box.innerHTML = board(_segDay);
+    const l = _box.querySelector(".tl-list");
+    if (!l) return;
+    if (first) { _first = false; const n = l.querySelector(".tl-hr.now"); if (n) l.scrollTop = Math.max(0, n.offsetTop - l.clientHeight / 2 + n.clientHeight / 2); }
+    else l.scrollTop = keep;
+  }
+  async function openActivity() {
+    const pane = document.getElementById("side-pane-body");
+    if (!pane || !on()) return;
+    let box = document.getElementById("activity-board");
+    if (!box) { box = document.createElement("div"); box.id = "activity-board"; box.className = "dock-body activity-board"; }
+    pane.appendChild(box);
+    _box = box; _first = true; _segDay = dayOf(Date.now()); _segs = []; _last = null;
+    redraw();
+    try { _segs = (await window.TimeLog?.readSegs?.(_segDay)) || []; } catch (e) {}   // 이 탭을 열 때 단 한 번 (내 오늘 구간 묶음)
+    redraw();
+    clearInterval(_timer_());
+    _timer = setInterval(() => { const d = dayOf(Date.now()); if (d !== _segDay) { _segDay = d; _segs = []; _last = null; _first = true; } redraw(); }, 30000);
+  }
+  const _timer_ = () => _timer;
+  function closeActivity() {
+    clearInterval(_timer); _timer = 0;
+    document.getElementById("activity-board")?.remove();
+    _box = null;
+  }
+  window.openActivity = openActivity;
+  window.closeActivity = closeActivity;
+
+  const count = () => ((load().days[dayOf(Date.now())] || { rows: [] }).rows.length);
+  window.Activity = { add, status, markAuto, count, redraw, _t: { load, board, marks, merge } };
 })();

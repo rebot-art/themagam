@@ -71,12 +71,16 @@
   let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
   let _feedY = [];        // 어제 것 — 기록 탭을 볼 때 한 번만 받습니다 (2026-10-10)
   let _feedYDay = "";     // 어느 날짜 것을 받아 뒀나 — 자정이 지나면 다시
+  /** wordfeed 값에 서버 키(_k)를 붙여 돌려줍니다 — 기록을 지우려면 키가 필요해요 (2026-11-18) */
+  function withKeys(v) {
+    return Object.entries(v || {}).map(([k, f]) => (f && typeof f === "object") ? Object.assign({}, f, { _k: k }) : f);
+  }
   function loadYdayFeed() {
     const k = ydayKey();
     if (_feedYDay === k || !window.db) return;
     _feedYDay = k;
     window.db.ref(`wordfeed/${k}`).orderByChild("at").limitToLast(FEED_MAX).once("value").then(snap => {
-      _feedY = Object.values(snap.val() || {}).filter(f => f && f.type !== "pomo")
+      _feedY = withKeys(snap.val()).filter(f => f && f.type !== "pomo")
         .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
       if (_tab === "me") render();
     }).catch(() => {});
@@ -436,7 +440,6 @@
     if (!big || !rows) return;
 
     const mine = myRow();
-    try { renderRankBox(); } catch (e) {}      // 🏆 랭킹 알약 판 (혼자 방)
     상태줄();      // 🟢 초록 줄 — 탭·팝업이 바뀌어도 늘 채웁니다 (아래 say 위 주석 참고)
 
     /* =====================================================================
@@ -468,18 +471,6 @@
     });
     /* 🕛 어제 채우기 서랍은 새 탭에서 늘 닫습니다 — 새 탭은 ‹ › 로
        지난 날에 직접 적을 수 있어서 이 서랍이 할 일이 없어요. */
-    if (_tab === "act") {
-      /* 🔔 활동 (2026-11-18 콩) — 오늘 내가 접속해서 한 일을 시간순으로. 입력줄은 오늘 탭 몫이라 감춥니다 */
-      ["wc-memoline", "wc-inputline", "wc-minirow"].forEach(c => { const n = 찾기(c); if (n) n.hidden = true; });
-      const y = 찾기("wc-yday"); if (y) y.hidden = true;
-      const nav = el("wc-daynav"); if (nav) nav.hidden = true;
-      big.textContent  = String(window.Activity?.count?.() || 0);
-      unit.textContent = "건 · 오늘 내 활동";
-      if (hint) hint.textContent = "";
-      rows.innerHTML = window.Activity?.html?.() || "";
-      rows.scrollTop = rows.scrollHeight;
-      return;
-    }
     if (새탭) {
       const y = 찾기("wc-yday");
       if (y) y.hidden = true;
@@ -509,6 +500,7 @@
          어제 흐름은 이 탭을 처음 볼 때 한 번만 받아요(아래 loadYdayFeed). */
       const 내것 = (arr) => { const a = arr.filter(f => f.nick === me() && f.type !== "pomo"); a.__mine = true; return a; };
       const myFeed = 내것(_feed), myY = 내것(_feedY);
+      myFeed.__del = true;                 // 오늘 내 기록만 한 줄씩 지울 수 있습니다 (어제 것은 못 지워요)
       loadYdayFeed();
       rows.innerHTML = drawRows(vals, vals.length - 1)
         + (myY.length ? `<div class="wc-me-h">어제 내 기록</div>` + drawFeed(myY) : "")
@@ -796,6 +788,11 @@
 
      한 줄로 줄이면 "누가 얼마"만 남아 순위표처럼 보입니다. 두 줄로
      두면 대화 기록처럼 읽혀요. 캡쳐로 보여주신 그 느낌입니다. */
+  /** 🗑 내 오늘 기록 한 줄 지우기 단추 — 기록 탭의 오늘 내 줄에만 */
+  function delBtn(list, f) {
+    return (list && list.__del && f && f._k && f.nick === me())
+      ? ` <button type="button" class="wc-del" data-wc-del="${esc(f._k)}" title="이 기록 지우기" aria-label="이 기록 지우기">✕</button>` : "";
+  }
   function drawFeed(list) {
     if (!list.length) {
       return `<div class="wc-empty">아직 올라온 기록이 없어요.<br>
@@ -862,7 +859,7 @@
       if (!(Number(f.add) > 0)) {
         if (!작업) return "";
         return `<div class="wc-feed${isMe ? " me" : ""}">
-          <div class="wc-feed-sys">[<b>${nick}</b>님 🏷️ <span class="wc-note">${esc(작업)}</span>]</div>
+          <div class="wc-feed-sys">[<b>${nick}</b>님 🏷️ <span class="wc-note">${esc(작업)}</span>]${delBtn(list, f)}</div>
         </div>`;
       }
       return `<div class="wc-feed${isMe ? " me" : ""}">
@@ -878,7 +875,7 @@
         <div class="wc-feed-sys">
           [<b>${nick}</b>님 <b>+${fmt(f.add)}자</b>${
             snap === null ? "" : ` / 전체 ${fmt(snap)}자`}${
-            작업 ? ` · <span class="wc-note">${esc(작업)}</span>` : ""}]
+            작업 ? ` · <span class="wc-note">${esc(작업)}</span>` : ""}]${delBtn(list, f)}
         </div>
       </div>`;
     }).join("");
@@ -913,19 +910,6 @@
        한 번이라도 올린 사람 수입니다 — 콩이 그렇게 요청했습니다.
      ★ 목록이 길어지면(최대 41줄) .wc-rows 가 이미 scroll 을 겁니다 —
        내 줄로 자동 스크롤해서 41줄을 눈으로 세지 않게 합니다. */
-  /** 🏆 랭킹 알약 판 — 혼자 방에서 Work Log 가 옆 탭으로 간 뒤, 아래 알약 자리에 남는 것 */
-  function renderRankBox() {
-    const b = el("wc-rank-box");
-    if (!b) return;
-    const 랭킹 = Object.entries(sumWeek()).filter(([, v]) => v > 0).sort((a, c) => c[1] - a[1]);
-    const 내등수 = 랭킹.findIndex(([n]) => n === me());
-    b.innerHTML = `<div class="wc-rank-head"><span class="wc-big">${내등수 >= 0 ? 내등수 + 1 : "–"}</span>` +
-      `<span class="wc-unit">위 · 이번 주 글자수 랭킹 · 전체 ${랭킹.length}명 중</span></div>` +
-      `<div class="wc-rows">${weekRankHtml()}</div>`;
-    const 내줄 = b.querySelector(".wc-row.me"), 칸 = b.querySelector(".wc-rows");
-    if (내줄 && 칸) 칸.scrollTop = Math.max(0, 내줄.offsetTop - 칸.clientHeight / 2 + 내줄.clientHeight / 2);
-  }
-
   function weekRankHtml() {
     const 랭킹 = Object.entries(sumWeek())
       .filter(([, v]) => v > 0)
@@ -1072,13 +1056,14 @@
      글자수 없이 **작업 글만** 올릴 수도 있어요 — 그때는 add·snap 이 없는 줄입니다.
      ★ 그래서 이 흐름을 읽는 쪽(오늘 탭 · Work Log 흐름 · 바탕화면)은
        add 가 없는 줄을 만나도 "+NaN자" 를 찍지 않게 되어 있어야 합니다. */
-  async function pushFeed(add, snap, note) {
+  async function pushFeed(add, snap, note, L) {
     const 글 = 작업글(note);
     if (!me() || !window.db || (!(add > 0) && !글)) return;
     const 짐 = { nick: me(), at: Date.now() };
     try { window.Activity?.add("wl", add > 0 ? `워크로그에 ${fmt(add)}자 기록${글 ? " · " + 글 : ""}` : `워크로그에 올림 · ${글}`); } catch (e) {}
     if (add > 0) { 짐.add = Number(add); 짐.snap = Number(snap); }
     if (글) 짐.note = 글;
+    if (L && add > 0) 짐.L = String(L);       // 어느 작품에 더했는지 — 기록을 지울 때 데드라인에서도 같이 빼려고 (2026-11-18)
     try {
       await window.db.ref(`wordfeed/${dayKey()}`)
         .push(짐);
@@ -1087,6 +1072,59 @@
       console.warn("[wordfeed push failed]", e);
     }
   }
+
+  /* =====================================================================
+     🗑 기록 한 줄 지우기 (2026-11-18 콩 — 데드라인이 생기면 입력 실수가 잦을 것 같아서)
+     ---------------------------------------------------------------------
+     기록 탭의 "오늘 내 기록" 줄마다 ✕ 가 있습니다. 누르면
+       ① 그 줄(wordfeed)을 지우고  ② 오늘 누적(total)에서 그 줄의 +n자를 빼며
+       ③ 그 줄이 지금 기준(base)을 만든 **가장 최근 줄**이면 기준도 그 전 값(snap - add)으로 되돌립니다
+          — 안 그러면 "5,000 을 잘못 올림 → 지움" 뒤에 500 을 다시 적어도 "줄었네요" 로 읽혀요.
+          (그 뒤에 이미 다른 기록·기준이 있으면 기준은 그대로 둡니다)
+       ④ 그 줄에 작품(L)이 적혀 있으면 ⏰ 데드라인의 그 작품 쓴 글에서도 같이 뺍니다 (옛 줄엔 L 이 없어 데드라인은 그대로)
+     서버엔 한 번에(여러 자리를 한꺼번에 쓰는 update) 보냅니다 — 반만 지워지는 일이 없어요.
+     ★ 보안규칙: wordfeed/$day/$id 에 "내 줄이면 지우기 허용" 이 추가돼 있어야 합니다(보안규칙.json). */
+  async function deleteFeed(key) {
+    const nick = me(), day = dayKey();
+    const f = _feed.find(x => x && x._k === key);
+    if (!nick || !f || f.nick !== nick || !window.db) return;
+    const add = Number(f.add) > 0 ? Number(f.add) : 0;
+    const 글 = 작업글(f.note);
+    const 말 = add > 0 ? `+${fmt(add)}자 기록${글 ? " (" + 글 + ")" : ""}` : `작업 글 기록${글 ? " (" + 글 + ")" : ""}`;
+    if (!window.confirm(`이 기록을 지울까요?\n${말}${add > 0 ? `\n오늘 누적 글자수가 ${fmt(add)}자 줄어듭니다.` : ""}`)) return;
+    const mine = myRow(), 옛 = { ...mine };
+    const upd = {};
+    upd[`wordfeed/${day}/${key}`] = null;
+    let 새 = null;
+    if (add > 0) {
+      새 = { total: Math.max(0, Number(mine.total || 0) - add), at: Date.now() };
+      const 앞값 = (f.snap === undefined || f.snap === null) ? null : Number(f.snap) - add;
+      const 이기준 = 앞값 !== null && Number(mine.base) === Number(f.snap);
+      if (이기준 && 앞값 >= 0) 새.base = 앞값;
+      Object.keys(새).forEach(k => { upd[`wordlog/${day}/${nick}/${k}`] = 새[k]; });
+    }
+    /* 손안의 값 먼저 (save() 와 같은 이유) */
+    const before = _today[nick];
+    if (새) _today[nick] = { ...(before || { total: 0, base: null }), ...새 };
+    render();
+    try {
+      await window.db.ref().update(upd);
+    } catch (e) {
+      if (새) { if (before === undefined) delete _today[nick]; else _today[nick] = before; }
+      render();
+      say(/permission|PERMISSION_DENIED/i.test(String(e && (e.code || e.message))) ? "지우지 못했어요. 새 보안규칙이 아직 안 올라간 것 같아요 (방장님께 알려 주세요)." : "지우지 못했어요. 잠시 뒤 다시 해주세요.");
+      console.warn("[wordfeed delete failed]", e);
+      return;
+    }
+    _feed = _feed.filter(x => x._k !== key);
+    if (add > 0 && f.L && window.Deadline?.subtractWritten) {
+      try { await window.Deadline.subtractWritten(f.L, add, (새 && 새.base !== undefined && window.Deadline.letterBase?.(f.L) === Number(f.snap)) ? 새.base : null); } catch (e) {}
+    }
+    try { window.renderRoomBoard?.(); } catch (e) {}
+    render();
+    say(add > 0 ? `기록을 지웠어요 · 오늘 누적 ${fmt(새.total)}자` : "기록을 지웠어요");
+  }
+  window.wcDeleteFeed = deleteFeed;
 
   /* 서버가 거절했을 때 무슨 일인지 알려줍니다.
 
@@ -1179,7 +1217,7 @@
         const next = Number(mine.total || 0) + d;
         const okSave = await save({ total: next });
         if (okSave === false) { clearInput(); return; }
-        await pushFeed(d, v, what);
+        await pushFeed(d, v, what, 길.L);
         if (what) 작업칸비우기();
         await DL.addWritten(길.L, d, v);
         /* 화수 방식 작품은 데드라인에 글자수를 더하지 않습니다(오늘 기록에만 올라가요) — 알려 줍니다 */
@@ -1214,7 +1252,7 @@
          한쪽만 남으면 숫자와 기록이 어긋나 보입니다. */
       const okSave = await save({ base: v, total: next });
       if (okSave === false) { clearInput(); return; }
-      await pushFeed(diff, v, what);
+      await pushFeed(diff, v, what, 길.kind === "single" ? 길.L : "");
       if (what) 작업칸비우기();
       /* ⏰ 데드라인 작품이 하나뿐이면 글자수만으로 그 작품에 더합니다 (2026-10-12) */
       if (길.kind === "single") { try { await DL.addWritten(길.L, diff, null); } catch (e) {} }
@@ -1503,7 +1541,7 @@
       const v = snap.val() || {};
       /* 옛 방식(공용 뽀모)으로 서버에 쌓인 알림은 걸러냅니다.
          내 뽀모 알림은 _pomoLines 로 따로 들어와요. */
-      _feed = Object.values(v)
+      _feed = withKeys(v)
         .filter(f => f && f.type !== "pomo")
         .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
       render();
@@ -1653,19 +1691,6 @@
     el("wc-all-btn")?.addEventListener("click", openWcAll);
     el("wcall-pill")?.addEventListener("click", openWcAll);
 
-    /* ✍️ [2026-11-18 콩] 혼자 방 — 랭킹 탭은 아래 알약(🏆)으로 빠지고, 맨 왼쪽에 🔔 활동 탭이 생깁니다 */
-    if (window.wlSide?.() && !host.querySelector('[data-wc-tab="act"]')) {
-      host.querySelector('[data-wc-tab="rank"]')?.remove();
-      const 오늘탭 = host.querySelector('[data-wc-tab="wl"]');
-      if (오늘탭) {
-        const a = document.createElement("button");
-        a.className = "wc-tab"; a.type = "button"; a.dataset.wcTab = "act"; a.setAttribute("role", "tab"); a.setAttribute("aria-selected", "false");
-        a.textContent = "활동";
-        오늘탭.parentNode.insertBefore(a, 오늘탭);
-        _tab = "act"; a.classList.add("on"); a.setAttribute("aria-selected", "true");
-        오늘탭.classList.remove("on"); 오늘탭.setAttribute("aria-selected", "false");
-      }
-    }
     host.querySelectorAll("[data-wc-tab]").forEach(b => {
       b.addEventListener("click", () => {
         _tab = b.dataset.wcTab;
@@ -1677,6 +1702,12 @@
         });
         render();
       });
+    });
+
+    /* 🗑 기록 탭 — 내 오늘 기록 한 줄 지우기 (2026-11-18) */
+    el("wc-rows")?.addEventListener("click", (ev) => {
+      const b = ev.target.closest?.("[data-wc-del]");
+      if (b) deleteFeed(b.dataset.wcDel);
     });
 
     /* 📅 날짜 넘기기 */

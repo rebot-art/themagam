@@ -12926,14 +12926,36 @@ html[data-lite] .user-card.share-card,
 /* ✍️ Work Log 는 데드라인 바로 아래 — 아래 붙는 탭이 둘이어도 틈은 첫 탭 앞에만 (2026-11-18 콩) */
 .side-tabs-col > .side-tab-bottom + .side-tab-bottom{ margin-top: 0; }
 /* 🔔 활동 탭 (Work Log) — 시간 · 아이콘 · 글 한 줄씩 */
-.act-row{ display: flex; align-items: baseline; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
-.act-row:last-child{ border-bottom: none; }
-.act-t{ flex: 0 0 auto; width: 40px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); }
-.act-ic{ flex: 0 0 auto; width: 20px; align-self: center; color: var(--text-dim, #555); }
-.act-ic svg{ width: 18px; height: 18px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.act-att .act-ic{ color: #2E7D32; }
-.act-x{ flex: 1 1 auto; min-width: 0; word-break: keep-all; }
-.act-att .act-x, .act-hi .act-x{ font-weight: var(--fw-bold); }
+/* 🔔 활동 — 24시간 타임라인 (2026-11-18) */
+.activity-board{ display: flex; flex-direction: column; min-height: 0; height: 100%; font-size: var(--fs-sm); }
+.tl-top{ display: flex; gap: 8px; padding: 2px 0 8px; }
+.tl-met{ flex: 1 1 0; background: var(--surface-2, rgba(0,0,0,.04)); border-radius: 10px; padding: 6px 10px; }
+.tl-met small{ display: block; color: var(--muted); font-size: var(--fs-xs); }
+.tl-met b{ font-size: var(--fs-md, 15px); }
+.tl-legend{ display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 0 0 8px; color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.tl-legend i{ display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+.tl-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: 4px; }
+.tl-hr{ display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+.tl-h{ flex: 0 0 22px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); line-height: 14px; }
+.tl-mid{ flex: 1 1 auto; min-width: 0; }
+.tl-bar{ position: relative; height: 14px; border-radius: 4px; background: var(--surface-2, rgba(0,0,0,.05)); overflow: hidden; }
+.tl-seg{ position: absolute; top: 0; bottom: 0; }
+.tl-now{ position: absolute; top: -2px; bottom: -2px; width: 2px; background: #E5484D; text-decoration: none; }
+.tl-c{ flex: 0 0 40px; text-align: right; color: var(--text-dim, #555); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); line-height: 14px; }
+.tl-sub{ margin-top: 4px; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.tl-chip{ display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 6px; border-radius: 999px; background: var(--surface-2, rgba(0,0,0,.06)); font-size: var(--fs-xs); word-break: keep-all; }
+.tl-chip em, .tl-mark em{ font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tl-ic svg{ width: 13px; height: 13px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tl-chip-att{ color: #2E7D32; font-weight: var(--fw-bold); }
+.tl-chip-hi{ font-weight: var(--fw-bold); }
+.tl-mark{ font-size: var(--fs-xs); color: var(--text-dim, #555); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.tl-dot{ width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.tl-auto{ margin-left: 4px; padding: 0 6px; border-radius: 999px; background: rgba(138,143,152,.18); color: var(--muted); }
+.tl-hr.future{ opacity: .38; }
+.tl-hr.now{ background: rgba(229,72,77,.06); border-radius: 8px; margin: 0 -4px; padding-left: 4px; padding-right: 4px; }
+.tl-hr.thin{ padding: 1px 0; align-items: center; }
+.tl-hr.thin .tl-h{ line-height: 6px; font-size: 10px; opacity: .6; }
+.tl-hr.thin .tl-bar{ height: 3px; }
 .wc-rank-head{ display: flex; align-items: baseline; gap: 5px; flex: none; margin-bottom: 6px; }
 .wc-rank-box .wc-rows{ max-height: 320px; overflow-y: auto; }
 /* 🔗 LINK 칸 */
@@ -13302,3 +13324,7 @@ html.achv-hidden #achv-panel,
 html.achv-hidden #achv-other,
 html.achv-hidden .mw-tab[data-mw-tab="achv"],
 html.achv-hidden #mywork-panel-achv{ display: none !important; }
+
+/* 🗑 기록 탭 — 한 줄 지우기 단추 (2026-11-18) */
+.wc-del{ margin-left: 6px; border: none; background: transparent; color: var(--muted); font-size: var(--fs-xs); line-height: 1; padding: 2px 5px; border-radius: 6px; cursor: pointer; opacity: .55; }
+.wc-del:hover, .wc-del:focus-visible{ opacity: 1; background: var(--surface-2, #eee); color: var(--text); }

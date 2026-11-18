@@ -162,11 +162,6 @@
        세로 탭**으로 갔어요 (script_member.js 가 탭과 명단을 직접 만듭니다). */
   ];
 
-  /* [2026-11-18 콩] 혼자 방 — Work Log 는 옆 탭(script_sidetabs.js)으로 가고, 이 알약 자리는 🏆 랭킹만 보여 줍니다 (본방은 옛 그대로) */
-  if (window.SOLO === true) {
-    const 랭킹알약 = DOCK.find(d => d.id === "wc");
-    if (랭킹알약) { 랭킹알약.label = "🏆 랭킹"; 랭킹알약.size = 0.9; 랭킹알약.move = null; }
-  }
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */
   const BASE_H = 430;
@@ -400,20 +395,11 @@
        갈렸으니 여기서 떼어 냅니다 — 떼는 순서가 중요해요.
        (뽀모를 먼저 옮기면 글자수가 딸려 들어갑니다)
      ===================================================================== */
-  /* ✍️ 글자수 칸 자리 잡기 — 혼자 방(2026-11-18)은 숨은 집(#wl-home)에 두고 옆 탭이 꺼내 쓰며, 이 알약 판에는 🏆 랭킹 상자를 둡니다 */
-  function 글자수자리(wc, wcBody) {
-    if (window.SOLO === true) {
-      let 집 = document.getElementById("wl-home");
-      if (!집) { 집 = document.createElement("div"); 집.id = "wl-home"; 집.hidden = true; 집.style.display = "none"; document.body.appendChild(집); }
-      집.appendChild(wc);
-      wcBody.innerHTML = `<div id="wc-rank-box" class="wc-block wc-rank-box"></div>`;
-    } else wcBody.appendChild(wc);
-  }
   function relocate() {
     /* 글자수를 **먼저** 떼어 냅니다 */
     const wc = document.querySelector("#wordcount-block");
     const wcBody = el("dock-body-wc");
-    if (wc && wcBody) 글자수자리(wc, wcBody);
+    if (wc && wcBody) wcBody.appendChild(wc);
 
     DOCK.forEach(d => {
       if (!d.move) return;

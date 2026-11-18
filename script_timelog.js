@@ -374,6 +374,26 @@
   }
   function curStatus() { return _cur ? _cur.s : ""; }
 
+  /** 🔔 활동 타임라인용 — 그날 닫혀 저장된 구간 목록(내 것 한 묶음 읽기). [{s,a,b}] 시간순 */
+  async function readSegs(day) {
+    const out = [];
+    if (!myNick || !db) return out;
+    try {
+      const snap = await db.ref(`users/${myNick}/timeSegs/${day}`).once("value");
+      snap.forEach((c) => {
+        const v = c.val() || {};
+        if (v.s && Number(v.b) > Number(v.a)) out.push({ s: v.s, a: Number(v.a), b: Number(v.b) });
+      });
+    } catch (e) {}
+    return out.sort((x, y) => x.a - y.a);
+  }
+  /** 지금 열려 있는 구간 {s,a,b} — b 는 지금(끊겨 있으면 끊긴 시각)까지 */
+  function liveSeg() {
+    if (!_cur || !_cur.a) return null;
+    const a = Number(_cur.a), 끝 = _offlineSince ? _offlineSince : nowMs();
+    return { s: _cur.s, a, b: a + Math.max(0, Math.min(끝 - a, SEG_CAP_MS)) };
+  }
+
   async function 공개시간올리기(updates) {
     if (!myNick || !db) return;
     /* 이번에 손댄 날짜들만 다시 셈합니다 — 대개 하루, 자정 걸치면 이틀 */
@@ -1209,7 +1229,7 @@
   };
 
   window.workMs = workMs; window.workSum = workSum; window.isWorkStatus = isWorkStatus;
-  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus, liveStayMs, liveWorkMs, curStatus, primeStay, stayPrimed,
+  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus, liveStayMs, liveWorkMs, curStatus, readSegs, liveSeg, primeStay, stayPrimed,
                      GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;

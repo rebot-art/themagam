@@ -34,9 +34,9 @@
   /* ★ [2026-11-18 콩] 📓 표현 공부를 🤔 Q&A 에 합치고(표현 공부 탭 없앰), ✍️ Work Log 를 옆 탭(데드라인 바로 아래)으로 옮깁니다.
        둘 다 **혼자 방 먼저** — 본방에 켤 때는 아래 두 값을 true 로 바꾸면 돼요.
        (랭킹은 아래 알약 줄의 🏆 랭킹 자리로 따로 빠집니다 — script_dock.js) */
-  const QNA_MERGE_MAIN = true, WL_MAIN = false;   // 표현 공부→Q&A 합침은 본방도 켬 (2026-11-18 콩: 글 다 옮김)
+  const QNA_MERGE_MAIN = true, ACT_MAIN = false;   // 표현 공부→Q&A 합침은 본방도 켬 (2026-11-18 콩: 글 다 옮김)
   window.qnaMerged = () => window.SOLO === true || QNA_MERGE_MAIN;
-  window.wlSide = () => window.SOLO === true || WL_MAIN;
+  window.actSide = () => window.SOLO === true || ACT_MAIN;
 
   const W = 400;
   const TABS = [
@@ -57,12 +57,13 @@
     /* [2026-10-09 콩] 📁 자료실 — **가운데 창**(#files-modal)을 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시.
        [2026-11-09] 맨 위에 🔎 찾아보기가 들어갔어요(옛 링크 & 검색). */
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
+    /* [2026-11-18 콩] 🔔 활동 — 데드라인 바로 위. 오늘 24시간 타임라인(상태 바·누적 작업시간·전환 지점). 혼자 방 먼저(ACT_MAIN=false).
+       알맹이는 script_worklog.js 의 Activity 가 칸 안에 직접 그립니다. */
+    { id: "activity", label: "🔔 활동", open: "openActivity", close: "closeActivity", act: true, bottom: true },
     /* [2026-10-12 콩] ⏰ 데드라인 — 맨 아래(bottom → CSS margin-top:auto), 워크로그와 가까워 눈에 띄게(2026-11-09).
        알맹이는 script_deadline.js 가 칸 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
-    { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true },
-    /* [2026-11-18 콩] ✍️ Work Log — 데드라인 바로 아래. 작업 관련 두 탭이 아래에 따로 떨어져 있어요. 알맹이(#wordcount-block)를 통째로 옮겨 옵니다. */
-    { id: "wc", label: "✍️ Work Log", wl: true, bottom: true }
-  ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.id === "help" && window.qnaMerged()) && !(t.wl && !window.wlSide())).map(t => (t.renewal && !window.renewalOpen())
+    { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true }
+  ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.id === "help" && window.qnaMerged()) && !(t.act && !window.actSide())).map(t => (t.renewal && !window.renewalOpen())
     ? { id: t.id, label: t.soon, soonTab: true, bottom: t.bottom }   // 🎁 오픈 전 맛보기 — 이름은 아직 비밀, 열면 "준비 중" 안내만
     : t);
   const el = (id) => document.getElementById(id);
@@ -165,14 +166,6 @@
     } else if (t.soonTab) {
       /* 🎁 오픈 전 맛보기 — 아무것도 읽지 않고 안내만 그립니다 */
       el("side-pane-body").innerHTML = `<div class="side-teaser"><div class="st-ic">🎁</div><b>준비 중이에요</b><p>12/18 크리스마스 에디션과 함께<br>오픈됩니다 🎄</p><small>어떤 기능일지는 비밀 ㅎㅎ</small></div>`;
-    } else if (t.wl) {
-      /* ✍️ Work Log — 숨겨 둔 집(#wl-home)에서 알맹이를 꺼내 이 칸에 앉힙니다 */
-      const blk = el("wordcount-block");
-      let wrap = el("wl-wrap");
-      if (!wrap) { wrap = document.createElement("div"); wrap.id = "wl-wrap"; wrap.className = "dock-body"; }
-      if (blk) wrap.appendChild(blk);
-      el("side-pane-body").appendChild(wrap);
-      try { window.renderWordcount?.(); } catch (e) {}
     } else if (t.seat) {
       /* 가운데 창을 옆 칸에 앉히는 쪽(자료실) — 창은 그대로 두고 CSS 만 */
       root.classList.add(t.seat);
@@ -200,10 +193,6 @@
       root.classList.remove("side-notice");
     } else if (t.soonTab) {
       el("side-pane-body").querySelector(".side-teaser")?.remove();
-    } else if (t.wl) {
-      const blk = el("wordcount-block"), 집 = el("wl-home");
-      if (blk && 집) 집.appendChild(blk);
-      el("wl-wrap")?.remove();
     } else if (t.seat) {
       window[t.close]?.();
       root.classList.remove(t.seat);

@@ -282,6 +282,17 @@
     return true;
   }
 
+  /** 워크로그에서 기록 한 줄을 지웠을 때(2026-11-18) 그 작품 쓴 글에서 그만큼 뺍니다. bs 가 있으면 그 작품 출발선도 되돌려요 */
+  async function subtractWritten(L, add, bs) {
+    const w = W_(L);
+    if (!w || isEp(w) || !(add > 0)) return false;
+    const ok = await 더하기(L, -add, false);
+    if (!ok) return false;
+    if (bs !== undefined && bs !== null) await 칸쓰기(L, { bs: num(bs) });
+    draw(); 카드에알리기();
+    return true;
+  }
+
   /* =====================================================================
      불러오기 · 접속할 때 한 번 계산
      ===================================================================== */
@@ -684,7 +695,7 @@
   window.listenDeadline = listenDeadline;
   window.detachDeadline = detachDeadline;
   window.Deadline = { route, loneLetter, msgNeed, msgUnknown, msgNoNum, msgEpMode, isEp: (L) => isEp(W_(L)),
-    _label: labelOf, _boxes: (L) => boxesHtml(L, calc(W_(L))), _add: 작품추가, _addDraft: 초안추가, _unit: 단위바꾸기, _box: 박스누름, letterBase, setLetterBase, addWritten,
+    _label: labelOf, _boxes: (L) => boxesHtml(L, calc(W_(L))), _add: 작품추가, _addDraft: 초안추가, _unit: 단위바꾸기, _box: 박스누름, letterBase, setLetterBase, addWritten, subtractWritten,
     count: () => (enabled() && _loaded ? letters().length : 0), _calc: calc, _state: () => _d, close: 마감하기, reopen: 재개하기, calcNow: 계산하기 };
 
   (function install() {
