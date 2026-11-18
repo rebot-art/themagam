@@ -42,7 +42,7 @@
      · 인사 = 「○○님, 오늘도 건필!」(hi 카드). 기준 시간이 됐는데 인사가 아직 없으면 노란 카드
        「○○님, n번째 출석입니다. 인사를 아직 안 하셨어요」 → 이 창이 깨어 있던 5분 안에 인사 없으면 분홍 「빼먹었어요 (n회)」.
      · 창을 열어 둔 채 자정을 넘겨도 새 날 몫이 따로 쌓여서 30분이 되면 그 날 도장이 찍힙니다(인사는 그날 첫 입장에만).
-   켜짐: 혼자 방은 늘, 본방은 ATT_MAIN=true 일 때 (본방은 아직 옛 방식 — 입장하면 바로 도장).
+   켜짐: 혼자 방은 늘, 본방은 ATT_MAIN=true 일 때 (2026-11-18 본방 켬. 옛 방식은 &att30=0 으로만 남아 있어요).
 
    [시험] 혼자 방 먼저 시험했고 2026-10-16 본방을 켰습니다(MAIN_ON=true). 주소 끝에 &greetspeed=1 을 붙이면
    1분이 1초로 줄어듭니다 (10분→10초, 15분→15초).
@@ -53,7 +53,7 @@
   const MAIN_ON = true;                          // 2026-10-16 콩: 혼자 방 시험 통과 → 본방 켬 (끄려면 false)
   const SOLO = () => !!window.SOLO;
   const ON = () => SOLO() || MAIN_ON;
-  const ATT_MAIN = false;                        // 2026-11-18: 새 출석 방식(접속 시간 합산) — 혼자 방 시험 후 본방에서 true
+  const ATT_MAIN = true;                         // 2026-11-18 콩: 새 출석 방식(접속 시간 합산) 본방 켬 (되돌리려면 false)
   const OLD_FORCE = /[?&]att30=0/.test((typeof location !== "undefined" && location.search) || "");   // 혼자 방에서 옛 방식과 비교·되돌리기용 (&att30=0)
   const NEW = () => !OLD_FORCE && (SOLO() || ATT_MAIN);
   const ATT_MIN_DEFAULT = 30;                    // 출석 인정 시간(분) 기본값 — 관리자가 config/attendMin 으로 바꿉니다
