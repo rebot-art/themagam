@@ -166,15 +166,15 @@
     host.appendChild(body);               // ★ 옮깁니다 — 손가락·구독이 따라와요
     스크롤되살리기(body, 스크롤);
 
-    /* 본 탭의 판은 "따로 보는 중" 한 줄만 남깁니다 */
+    /* 본 탭의 판은 통째로 숨기고, 비밀방 알약이 "따로 보는 중" 을 색으로 알려 줍니다
+       (2026-11-18 콩 — 되돌리기는 따로 창에도 있고, 알약을 누르면 되돌아와요) */
     const panel = document.getElementById("dock-panel-sroom");
-    if (panel) {
-      panel.classList.add("is-popped");
-      const ph = document.createElement("div");
-      ph.className = "dock-popped-note";
-      ph.innerHTML = `↗ 따로 창에서 보는 중 <button type="button" data-sroom-unpop="1">되돌리기</button>`;
-      ph.querySelector("button").addEventListener("click", close);
-      panel.appendChild(ph);
+    if (panel) panel.classList.add("is-popped");
+    const pill = document.getElementById("dock-pill-sroom");
+    if (pill) {
+      pill.classList.add("is-popped");
+      pill.dataset.titleBak = pill.title || "";
+      pill.title = "따로 창에서 보는 중 — 누르면 되돌려요";
     }
 
     /* 테마를 바꾸면 창도 따라갑니다 */
@@ -224,6 +224,8 @@
       스크롤되살리기(body, 스크롤);
       panel?.querySelector(".dock-popped-note")?.remove();
       panel?.classList.remove("is-popped");
+      const pill = document.getElementById("dock-pill-sroom");
+      if (pill) { pill.classList.remove("is-popped"); pill.title = pill.dataset.titleBak || ""; delete pill.dataset.titleBak; }
       try { _mo?.disconnect(); } catch (e) {}
     } catch (e) {}
     _mo = null; _win = null; _doc = null;

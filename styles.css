@@ -12465,6 +12465,13 @@ html[data-is-dark="true"] .card-share{ --bub: #F2E8DC; --play: #FF4A3D; }
 /* 따로 보는 동안 본 탭의 판은 머리말 + 한 줄만 */
 .dock-panel.is-popped{ height: auto !important; min-height: 0; }
 .dock-panel.is-popped .dock-grip{ display: none; }
+/* 따로 창으로 나간 동안은 판을 아예 숨깁니다 — 알약이 색으로 알려 주고, 누르면 되돌아와요 (2026-11-18 콩) */
+.dock-panel.is-popped{ display: none !important; }
+#dock-pill-sroom.is-popped{
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+#dock-pill-sroom.is-popped:hover{ background: var(--accent); color: #fff; filter: brightness(.94); }
+#dock-pill-sroom.is-popped::after{ content: "↗"; font-size: .9em; margin-left: 2px; }
 .dock-popped-note{
   padding: 4px var(--sp-3) 12px; font-size: var(--fs-2xs); color: var(--muted);
   display: flex; align-items: center; gap: 8px;
