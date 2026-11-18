@@ -239,6 +239,18 @@
     try { if (w && !w.closed) w.close(); } catch (e) {}
   }
 
+  /* 따로 창이 열려 있는 동안 비밀방 알약을 누르면 "되돌리기" (2026-11-19 콩)
+     — 알약의 원래 동작(판 닫기)은 따로 창만 닫고 판도 같이 닫아 버려서, 먼저 가로채 제자리로 되돌립니다.
+     capture 로 document 에서 받아야 알약 자신의 손가락보다 앞섭니다. */
+  document.addEventListener("click", (e) => {
+    try {
+      if (!window.srpopOpen()) return;
+      if (!e.target.closest?.("#dock-pill-sroom")) return;
+      e.stopImmediatePropagation(); e.preventDefault();
+      close();                 // 판은 열린 채 제자리로 — 알약 색도 원래대로
+    } catch (err) {}
+  }, true);
+
   function toggle() { window.srpopOpen() ? close() : open(); }
   window.srpopToggle = toggle;
   window.srpopClose  = close;
