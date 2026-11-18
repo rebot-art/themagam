@@ -1261,6 +1261,22 @@ function halloweenIndex(nick) {
 /** 보여 줄 사진 — 할로윈 기간엔 모두 "사진 없음"으로 (기본 프사 자리에 할로윈 캐릭터가 뜹니다) */
 function photoShown(prof) { return seasonOn() ? "" : photoSrcOf(prof); }
 window.photoShown = photoShown;
+
+/* ── 사진이 깨지면 기본 캐릭터로 ───────────────────────────────
+   (2026-11-18 콩: 카드·채팅 프사가 깨진 그림으로 보임)
+   창고 사진이 지워졌거나 잠깐 못 받아져도 깨진 아이콘 대신 기본 프사가 뜹니다.
+   img 의 error 는 거품이 안 올라와서 capture 로 한 번만 걸어 둡니다 (통신량 0). */
+document.addEventListener("error", (e) => {
+  try {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG") return;
+    const box = img.closest("[data-avatar-of], .card-avatar[data-av-nick]");
+    if (!box || !box.classList.contains("has-photo")) return;
+    const nick = box.dataset.avatarOf || box.dataset.avNick || "";
+    box.classList.remove("has-photo"); box.classList.add("has-snow");
+    box.innerHTML = snowmanSvg(nick);
+  } catch (err) {}
+}, true);
 /* 켜 둔 창에서도 기간이 시작·끝나는 순간 프사가 저절로 바뀝니다.
    setTimeout 은 약 24일이 한계라 **최대 6시간마다 다시 살펴보며** 다음 경계에 맞춥니다 (통신량 0). */
 let _hwShown = seasonOn();
