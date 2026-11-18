@@ -909,6 +909,17 @@
              글도 안 쓰고 말도 안 했으면 남는 게 없거든요. 그런 분은 본인이
              말해 주면 손으로 넣는 수밖에 없습니다.
            ===================================================================== -->
+      <div class="adm-card" id="adm-attmin-card">
+        <h2>⏱ 출석 인정 시간</h2>
+        <p class="adm-sub">그날 접속해 있던 시간(모든 상태 합)이 이 분을 넘는 순간 출석 도장이 찍힙니다.
+          <b>새 방식을 켠 뒤부터</b> 적용돼요. 비워 두면 30분.</p>
+        <div class="adm-inline">
+          <input type="number" id="adm-attmin" min="1" max="600" placeholder="30" style="width:90px"> 분
+          <button class="adm-btn" id="adm-attmin-save">저장</button>
+        </div>
+        <div class="adm-msg" id="adm-attmin-msg"></div>
+      </div>
+
       <div class="adm-card" id="adm-fix-card">
         <h2>🩹 출석 복구</h2>
         <p class="adm-sub">사고로 빠진 출석을 <b>남은 자취로 되짚어</b> 채웁니다 —
@@ -1187,7 +1198,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202611171757"></script>
+  <script src="script_admin.js?v=202611180701"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

@@ -877,6 +877,13 @@ window.AppSession = AppSession;
           let ok3 = false;
           try { ok3 = navigator.sendBeacon(withAuth(atUrl), new Blob([body], { type: "text/plain" })); } catch(e) {}
           if (!ok3) fetch(withAuth(atUrl), { method: "POST", body, keepalive: true });
+          /* ★ [2026-11-18] 새 출석 방식 — 도장은 30분 뒤에 찍히니, 나간 시각은 접속 기록(visit)에도 적어 둡니다 */
+          if (window.attend30On && window.attend30On()) {
+            const vUrl = `${firebaseConfig.databaseURL}/users/${encodeURIComponent(myNick)}/attend/visit.json?x-http-method-override=PATCH`;
+            let ok4 = false;
+            try { ok4 = navigator.sendBeacon(withAuth(vUrl), new Blob([body], { type: "text/plain" })); } catch(e) {}
+            if (!ok4) fetch(withAuth(vUrl), { method: "POST", body, keepalive: true });
+          }
         }
       }
     } catch(e) {}

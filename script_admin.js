@@ -2404,6 +2404,21 @@
     } catch (e) {}
   }
 
+  /* ⏱ 출석 인정 시간 (2026-11-18) — config/attendMin (방장만 씀, 모두 읽음) */
+  async function loadAttMin() {
+    const i = el("adm-attmin"); if (!i) return;
+    try { const v = (await db.ref("config/attendMin").once("value")).val(); if (v) i.value = String(v); } catch (e) {}
+  }
+  async function saveAttMin() {
+    const raw = String(el("adm-attmin")?.value || "").trim();
+    const n = raw === "" ? 30 : Number(raw);
+    if (!(n >= 1 && n <= 600)) { msg("adm-attmin-msg", "1~600 사이의 분으로 적어 주세요.", true); return; }
+    try {
+      await db.ref("config/attendMin").set(Math.round(n));
+      msg("adm-attmin-msg", `⏱ ${Math.round(n)}분으로 저장했어요. 새로 들어오는 창부터 적용됩니다.`);
+    } catch (e) { msg("adm-attmin-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true); }
+  }
+
   async function saveHello() {
     const t = String(el("adm-hello")?.value || "").trim().slice(0, 200);
     if (!t) { msg("adm-hello-msg", "문구를 적어 주세요. (내리려면 [내리기])", true); return; }
@@ -3204,7 +3219,7 @@
      ★ 대신 checks.js 가 **두 표를 직접 견줘서** 다르면 실패합니다.
        한쪽만 고치면 방에서 본 숫자와 관리자 돋보기가 조용히 어긋나요.
      ===================================================================== */
-  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7, repair: 0.3 };
+  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 1, repair: 0.3 };
   function 작업ms(status, ms) {
     const w = WORK_WEIGHT[status] || 0;
     return w ? Math.round((Number(ms) || 0) * w) : 0;
@@ -3914,6 +3929,8 @@
     /* 🔐 입장 승인 · 🚫 내보내기 */
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
+    el("adm-attmin-save")?.addEventListener("click", saveAttMin);
+    loadAttMin();
     el("adm-force-send")?.addEventListener("click", sendForceReload);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
     el("adm-bnotice-save")?.addEventListener("click", saveBoardNotice);

@@ -91,7 +91,8 @@
      오후 → 확정), 그때마다 위 숫자만 고치니 지난 기록까지 한꺼번에
      다시 셈해졌습니다. 이 방식의 값어치가 바로 그것이에요.
      ===================================================================== */
-  const WORK_WEIGHT = { writing: 1, focus: 0.7, multi: 0.7, repair: 0.3 };
+  /* ★ [2026-11-18 콩] 초집중·멀티도 100% 인정 (수리만 30%) */
+  const WORK_WEIGHT = { writing: 1, focus: 1, multi: 1, repair: 0.3 };
 
   /** 한 구간(또는 상태별 합)이 작업 시간에 얼마나 들어가는가 */
   function workMs(status, ms) {
@@ -277,6 +278,7 @@
      ===================================================================== */
   const _공개보낸 = {};      // 날짜 → 마지막으로 보낸 분
   const _머문보낸 = {};      // 날짜 → 마지막으로 보낸 **머문 분** (아래 참고)
+  const _닫힌머문 = {};      // 날짜 → 서버에 닫혀 저장된 구간들의 합(ms, 모든 상태) — liveStayMs 의 바닥값
 
   /* =====================================================================
      🕰️ 머문 시간 — 유효 출석의 잣대 (2026-09-21 — 콩)
@@ -314,6 +316,47 @@
      이라 어긋날 일이 없습니다 (attendance 와 attend/days 가 이미 그런 사이).
      ===================================================================== */
 
+  /* =====================================================================
+     ⏳ 그날 접속한 시간 — 지금 이 순간까지 (2026-11-18 콩 "출석 = 접속 30분")
+     ---------------------------------------------------------------------
+     출석 도장을 "입장"이 아니라 "그날 연결돼 있던 시간이 기준을 넘는 순간"에 찍기 위한 시계입니다.
+       · 닫혀 저장된 구간들의 합(_닫힌머문) + 지금 열려 있는 구간(_cur)의 그날 몫
+       · 모든 상태(Write·Job·multiT·Break·Away)를 똑같이 셉니다 — 연결이 끊기지 않으면 인정
+       · 연결이 끊긴 구간은 구간에 안 적히고(OFFLINE_MIN_MS), 끊겨 있는 동안 열린 구간도 끊긴 시각까지만 셉니다
+       · 자정을 넘기면 날짜별로 몫을 가릅니다 — 창을 며칠 열어 둬도 날마다 따로 셈해요
+     primeStay(day) 는 그날 닫힌 구간의 합을 서버에서 한 번 읽어 둡니다(내 것 한 줄 묶음, 통신량 미미).
+     ===================================================================== */
+  function dayStartOfKey(day) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ""));
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() : 0;
+  }
+  async function primeStay(day) {
+    if (!myNick || !db) return;
+    try {
+      const snap = await db.ref(`users/${myNick}/timeSegs/${day}`).once("value");
+      const 합 = {};
+      snap.forEach((c) => {
+        const v = c.val() || {};
+        const ms = Number(v.b) - Number(v.a);
+        if (ms > 0) 합[v.s] = (합[v.s] || 0) + ms;
+      });
+      _닫힌머문[day] = staySum(합);
+    } catch (e) { /* 못 읽으면 다음에 다시 */ }
+  }
+  function stayPrimed(day) { return _닫힌머문[day] !== undefined; }
+  function liveStayMs(day) {
+    let n = _닫힌머문[day] || 0;
+    if (_cur && _cur.a) {
+      const ds = dayStartOfKey(day);
+      if (ds > 0) {
+        const 끝 = Math.min(_offlineSince ? _offlineSince : nowMs(), ds + 24 * 60 * 60 * 1000);
+        const 시작 = Math.max(Number(_cur.a), ds);
+        if (끝 > 시작) n += Math.min(끝 - 시작, SEG_CAP_MS);
+      }
+    }
+    return n;
+  }
+
   async function 공개시간올리기(updates) {
     if (!myNick || !db) return;
     /* 이번에 손댄 날짜들만 다시 셈합니다 — 대개 하루, 자정 걸치면 이틀 */
@@ -343,6 +386,8 @@
           await db.ref(`worktime/${day}/${myNick}`).set(분);
         }
       } catch (e) { /* 공개 칸은 곁다리라 조용히 넘깁니다 */ }
+
+      _닫힌머문[day] = staySum(합);             // 지금 열린 구간을 더하면 "그날 지금까지" 가 됩니다 (liveStayMs)
 
       /* ② 머문 분 (무게 없음) → attendance 의 m · 개인 달력용 mins
          ★ ①이 실패해도 ②는 따로 시도합니다 — 둘은 서로 곁다리예요. */
@@ -1144,7 +1189,7 @@
   };
 
   window.workMs = workMs; window.workSum = workSum; window.isWorkStatus = isWorkStatus;
-  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus,
+  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus, liveStayMs, primeStay, stayPrimed,
                      GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;

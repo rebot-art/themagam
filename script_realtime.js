@@ -3439,70 +3439,8 @@
   }
   window.__자정재접속인정인가 = 자정재접속인정인가;
 
-  async function recordAttendance() {
-    if (!myNick) return;
-    const day = ymd(Date.now());
-
-    /* ★ [2026-10-17 콩 "자정 넘겨 퇴근하면 새 날 도장이 찍혀요"] 이어진 작업은 도장을 새로 찍지 않습니다.
-         자정 전에 출근해 일하다가 새로고침(20시간·새 판·방장)으로 자정을 넘겨 돌아온 경우는
-         "어제 출근의 연장"이에요. 시간만 재고(새로고침 시계·접속 표시), 새 날짜의 출석·인사는 건드리지 않습니다.
-         몇 시간 뒤 나갔다 **새로 들어오면** 그때는 이 길이 아니라서 오늘 도장과 인사 확인이 정상으로 이뤄져요. */
-    const 이어짐 = !!window.__carryOver;
-    window.__carryOver = false;
-    if (이어짐) {
-      window.__attendDay = window.__carryDay || window.__attendDay || day;
-      try { window.reloadStart?.(); } catch (e) {}
-      try { updateStatus(true); } catch (e) {}
-      return;
-    }
-    window.__attendDay = day;           // 오늘 도장을 찍은 날 — 자정을 넘겨 나가도 퇴장 시각은 이 날에 적습니다
-
-    try {
-      // ---- 공용 로그 ----
-      const aref = db.ref(`attendance/${day}/${myNick}`);
-      const prevSnap = await aref.once("value");
-      const prev = prevSnap.val();
-      /* ★★ [2026-11-17 콩 "자정 지나고 재접속이면 출석으로 바로 인정"] (2026-10-23 의 60분 연장 규칙을 걷었습니다)
-           오늘 줄이 아직 없는데(=새 날 첫 입장) 어제 줄이 있고 어제 15분 이상 머물렀으면,
-           오늘 도장을 찍으면서 ok·rc 를 함께 얹어 짧게 머물러도 출석으로 인정합니다. 어제 줄 한 줄만 읽어요. */
-      let 자정재접속 = false;
-      if (!(prev && (prev.firstAt || prev.at))) {
-        try {
-          const 어제 = ymd(Date.now() - DAY_MS);
-          const ysnap = await db.ref(`attendance/${어제}/${myNick}`).once("value");
-          자정재접속 = 자정재접속인정인가(ysnap.val());
-        } catch (e) { console.warn("[자정 재접속 확인]", e); }
-      }
-      /* ★ [2026-10-16] set → update. 인사 도장(gAt)·머문 분(m)·방장 인정(ok)을
-           같은 날 다시 들어와도 지우지 않기 위해서예요. 퇴장 시각만 비웁니다(예전 set 과 같은 효과). */
-      await aref.update({
-        firstAt: prev?.firstAt || prev?.at || Date.now(),
-        at: Date.now(),
-        leftAt: null,
-        ...(자정재접속 ? { ok: true, rc: true } : {})
-      });
-      /* 👋 인사 규칙 — 입장 도장이 찍힌 뒤에 시작 (script_greet.js) */
-      try { window.greetStart?.({ day, prev }); } catch (e) {}
-      /* 🔄 8시간 자동 새로고침 시계 · 방장 전원 새로고침 신호 (script_reload.js) */
-      try { window.reloadStart?.(); } catch (e) {}
-
-      /* 입장 기록 — 3시간에 한 번만 (들락날락은 안 적힙니다) */
-      writeAttendLog("in");
-      sweepAttendLog();
-
-      /* 보관 기간이 지난 것만 골라 지웁니다.
-         예전에는 attendance 전체를 내려받아 훑었는데, 1000일치가 쌓이면
-         접속할 때마다 그 전부를 받게 됩니다. 오래된 구간만 조회하도록 바꿨습니다.
-         ★ [2026-08-17] 이 정리도 방장 몫입니다 — 위 정리할차례인가() 주석 참고.
-           덕분에 남는 사람들은 이 조회조차 안 하게 되어 통신량도 줍니다. */
-      if (정리할차례인가()) {
-        const cutoff = ymd(Date.now() - (ATTEND_KEEP_DAYS - 1) * DAY_MS);
-        const oldSnap = await db.ref("attendance").orderByKey().endAt(cutoff).once("value");
-        const updates = {};
-        oldSnap.forEach(c => { if (c.key && c.key < cutoff) updates[c.key] = null; });
-        if (Object.keys(updates).length) await db.ref("attendance").update(updates);
-      }
-
+  /* ★ [2026-11-18] 개인 출석맵·연속 출석 — 옛 방식(입장 즉시)과 새 방식(attendStamp) 둘 다 씁니다 */
+  async function 개인출석기록(day) {
       // ---- 개인 출석맵 ----
       const uref = db.ref(`users/${myNick}/attend`);
       await uref.child(`days/${day}`).set(true);
@@ -3555,6 +3493,97 @@
          연속일수는 남겨둡니다 — 나중에 다시 쓸 수도 있고, 저장 비용이
          거의 없습니다. 화면에는 아무것도 안 나옵니다. */
       window._myAch = { streak };
+  }
+
+  /* ★ [2026-11-18] 새 방식의 출석 도장 — 그날 접속 시간이 기준(30분)을 넘는 순간 script_greet.js 가 부릅니다.
+       attendance/{날}/{닉} 줄을 이때 처음 만들고, 개인 맵·연속 출석도 이때 적습니다. 퇴장 때 쓰던 leftAt 은 접속 기록(visit)에 따로 있어요. */
+  async function attendStamp(day, o) {
+    if (!myNick) return;
+    o = o || {};
+    const now = Date.now();
+    await db.ref(`attendance/${day}/${myNick}`).update({
+      firstAt: o.firstAt || now,
+      at: now,
+      ...(o.gAt ? { gAt: o.gAt } : {})
+    });
+    await 개인출석기록(day);
+    try { writeAttendLog("in"); } catch (e) {}
+  }
+  window.attendStamp = attendStamp;
+
+  async function recordAttendance() {
+    if (!myNick) return;
+    const day = ymd(Date.now());
+
+    /* ★ [2026-10-17 콩 "자정 넘겨 퇴근하면 새 날 도장이 찍혀요"] 이어진 작업은 도장을 새로 찍지 않습니다.
+         자정 전에 출근해 일하다가 새로고침(20시간·새 판·방장)으로 자정을 넘겨 돌아온 경우는
+         "어제 출근의 연장"이에요. 시간만 재고(새로고침 시계·접속 표시), 새 날짜의 출석·인사는 건드리지 않습니다.
+         몇 시간 뒤 나갔다 **새로 들어오면** 그때는 이 길이 아니라서 오늘 도장과 인사 확인이 정상으로 이뤄져요. */
+    const 이어짐 = !!window.__carryOver;
+    window.__carryOver = false;
+    if (이어짐) {
+      window.__attendDay = window.__carryDay || window.__attendDay || day;
+      try { window.reloadStart?.(); } catch (e) {}
+      try { updateStatus(true); } catch (e) {}
+      return;
+    }
+    window.__attendDay = day;           // 오늘 도장을 찍은 날 — 자정을 넘겨 나가도 퇴장 시각은 이 날에 적습니다
+
+    /* ★ [2026-11-18] 새 방식 — 입장 때는 도장을 찍지 않습니다. 접속 기록·인사·30분 확인은 script_greet.js 가 맡아요. */
+    if (window.attend30On?.()) {
+      try { window.greetStart?.({ day, prev: null }); } catch (e) {}
+      try { window.reloadStart?.(); } catch (e) {}
+      try { updateStatus(true); } catch (e) {}
+      return;
+    }
+
+    try {
+      // ---- 공용 로그 ----
+      const aref = db.ref(`attendance/${day}/${myNick}`);
+      const prevSnap = await aref.once("value");
+      const prev = prevSnap.val();
+      /* ★★ [2026-11-17 콩 "자정 지나고 재접속이면 출석으로 바로 인정"] (2026-10-23 의 60분 연장 규칙을 걷었습니다)
+           오늘 줄이 아직 없는데(=새 날 첫 입장) 어제 줄이 있고 어제 15분 이상 머물렀으면,
+           오늘 도장을 찍으면서 ok·rc 를 함께 얹어 짧게 머물러도 출석으로 인정합니다. 어제 줄 한 줄만 읽어요. */
+      let 자정재접속 = false;
+      if (!(prev && (prev.firstAt || prev.at))) {
+        try {
+          const 어제 = ymd(Date.now() - DAY_MS);
+          const ysnap = await db.ref(`attendance/${어제}/${myNick}`).once("value");
+          자정재접속 = 자정재접속인정인가(ysnap.val());
+        } catch (e) { console.warn("[자정 재접속 확인]", e); }
+      }
+      /* ★ [2026-10-16] set → update. 인사 도장(gAt)·머문 분(m)·방장 인정(ok)을
+           같은 날 다시 들어와도 지우지 않기 위해서예요. 퇴장 시각만 비웁니다(예전 set 과 같은 효과). */
+      await aref.update({
+        firstAt: prev?.firstAt || prev?.at || Date.now(),
+        at: Date.now(),
+        leftAt: null,
+        ...(자정재접속 ? { ok: true, rc: true } : {})
+      });
+      /* 👋 인사 규칙 — 입장 도장이 찍힌 뒤에 시작 (script_greet.js) */
+      try { window.greetStart?.({ day, prev }); } catch (e) {}
+      /* 🔄 8시간 자동 새로고침 시계 · 방장 전원 새로고침 신호 (script_reload.js) */
+      try { window.reloadStart?.(); } catch (e) {}
+
+      /* 입장 기록 — 3시간에 한 번만 (들락날락은 안 적힙니다) */
+      writeAttendLog("in");
+      sweepAttendLog();
+
+      /* 보관 기간이 지난 것만 골라 지웁니다.
+         예전에는 attendance 전체를 내려받아 훑었는데, 1000일치가 쌓이면
+         접속할 때마다 그 전부를 받게 됩니다. 오래된 구간만 조회하도록 바꿨습니다.
+         ★ [2026-08-17] 이 정리도 방장 몫입니다 — 위 정리할차례인가() 주석 참고.
+           덕분에 남는 사람들은 이 조회조차 안 하게 되어 통신량도 줍니다. */
+      if (정리할차례인가()) {
+        const cutoff = ymd(Date.now() - (ATTEND_KEEP_DAYS - 1) * DAY_MS);
+        const oldSnap = await db.ref("attendance").orderByKey().endAt(cutoff).once("value");
+        const updates = {};
+        oldSnap.forEach(c => { if (c.key && c.key < cutoff) updates[c.key] = null; });
+        if (Object.keys(updates).length) await db.ref("attendance").update(updates);
+      }
+
+      await 개인출석기록(day);
 
       try { updateStatus(true); } catch (e) {}
     } catch (e) { console.warn("[recordAttendance failed]", e); }
@@ -3568,6 +3597,12 @@
       /* ★ [2026-10-17] 자정을 넘겨 나가도 퇴장 시각은 **출근 도장을 찍은 날**에 적습니다.
            예전에는 나가는 날짜(ymd(now))에 적어서, 23시 출근 → 01시 퇴근이면 새 날짜 줄이 생겨 출석으로 보였어요. */
       const day = window.__attendDay || ymd(Date.now());
+      if (window.attend30On?.()) {                 // 새 방식 — 퇴장은 접속 기록에, 도장이 이미 있을 때만 출석 줄에도
+        await db.ref(`users/${myNick}/attend/visit`).update({ leftAt: Date.now() });
+        if (window.attendStamped?.(day)) await db.ref(`attendance/${day}/${myNick}`).update({ leftAt: Date.now(), at: Date.now() });
+        window.__attendDay = "";
+        return;
+      }
       await db.ref(`attendance/${day}/${myNick}`).update({ leftAt: Date.now(), at: Date.now() });
       window.__attendDay = "";
       /* [2026-08-14] 입장 기록으로 간소화되며 퇴장 로그는 안 적습니다 —

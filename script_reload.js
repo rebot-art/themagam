@@ -250,7 +250,11 @@
         db.ref(`attendance/${이어짐 ? 기준날 : 오늘}/${m.nick}`).once("value")
       ]);
       if (owner.val() !== user.uid || ban.val()) { 안내걸기(안내문(m.kind, m.day, 오늘, "login")); return; }
-      if (!stamp.exists()) { 안내걸기(안내문(m.kind, m.day, 오늘)); return; }
+      let 찍힘 = stamp.exists();
+      if (!찍힘) {      // ★ 새 출석 방식(2026-11-18): 30분 전엔 도장이 없어도 오늘 접속 기록(visit)이 있으면 같은 사람의 이어진 작업입니다
+        try { const vd = await db.ref(`users/${m.nick}/attend/visit/day`).once("value"); 찍힘 = vd.val() === (이어짐 ? 기준날 : 오늘); } catch (e) {}
+      }
+      if (!찍힘) { 안내걸기(안내문(m.kind, m.day, 오늘)); return; }
 
       const input = document.getElementById("nick-input");
       if (!input) return;
