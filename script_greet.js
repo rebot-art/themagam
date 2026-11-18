@@ -180,6 +180,7 @@
     if (!ON() || !S || S.greeted || (S.done && !S.warned)) return;
     if (Number(data && data.time) < S.joinAt - 2000) return;     // 옛 기록은 인사가 아닙니다
     S.greeted = true;
+    try { window.Activity?.add("hi", "오늘도 건필!", { key: "hi-" + S.day }); } catch (e) {}
     const nick = S.nick, day = S.day;
     if (S.re) { await 올리기("re", 문구("re", nick, 0, day)); 멈추기(); return; }   // 재접속 인사 — 카드만, 기록은 없음
     const 이미경고 = S.warned;
@@ -235,6 +236,7 @@
     } else {
       await 올리기("att", 문구("att", nick, n), ctx);
     }
+    try { window.Activity?.add("att", `${n}번째 출석! (${n}/18)`, { key: "att-" + day }); } catch (e) {}
   }
 
   async function 확정틱() {
@@ -301,6 +303,7 @@
         else await DB().ref(`users/${nick}/attend/visit`).set({ day, firstAt: 지금, at: 지금 });
       } catch (e) { console.warn("[greet visit]", e); }
       _visit = 방문 || { day, firstAt: 지금, at: 지금 };
+      if (!window.__silentJoin) { try { window.Activity?.add("in", 방문 ? "다시 입장" : "입장"); } catch (e) {} }
       if (방문) { if (!prev) prev = 방문; if (방문.gAt) S.greeted = true; }
     }
     확정시작();

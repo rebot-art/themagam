@@ -86,7 +86,8 @@
   function writeSet(key, arr) {
     try { window.AppStore?.setItem(key, JSON.stringify(arr.slice(-500))); } catch (e) {}
   }
-  function isMine(id)  { return readSet(MINE_KEY).indexOf(id) >= 0; }
+  /* [2026-11-18] 📓 표현 공부를 합쳤어요 — 옮겨 온 글 중 이 기기에서 쓴 글(helpMine)도 내 글로 칩니다 */
+  function isMine(id)  { return readSet(MINE_KEY).indexOf(id) >= 0 || (window.qnaMerged?.() && readSet("helpMine").indexOf(id) >= 0); }
   function didHeart(id){ return readSet(HEART_KEY).indexOf(id) >= 0; }
   function remember(key, id) {
     const arr = readSet(key);
@@ -252,7 +253,7 @@
 
     const 머리 = `
       <div class="qna-head">
-        <span class="qna-sub">🆘 업계 관련한 무엇이든 묻고 답해요‼️ 궁금해요. 도와주세요.🙏</span>
+        <span class="qna-sub">${window.qnaMerged?.() ? "🆘 업계와 집필에 관련한 무엇이든 묻고 답해요‼️ 궁금해요. 도와주세요.🙏" : "🆘 업계 관련한 무엇이든 묻고 답해요‼️ 궁금해요. 도와주세요.🙏"}</span>
         <span class="qna-sp"></span>
         ${기다림 ? `<span class="qna-tag wait">답 기다리는 중 ${기다림}</span>` : ""}
       </div>`;

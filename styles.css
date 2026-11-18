@@ -12923,6 +12923,17 @@ html[data-lite] .user-card.share-card,
 .side-tabs-col{ display: flex; flex-direction: column; gap: 6px; align-items: flex-end; height: 100%; }
 /* 🔗 LINK — 맨 아래, 다른 탭들과 떨어져서 (2026-10-10 콩) */
 .side-tabs-col > .side-tab-bottom{ margin-top: auto; }
+/* ✍️ Work Log 는 데드라인 바로 아래 — 아래 붙는 탭이 둘이어도 틈은 첫 탭 앞에만 (2026-11-18 콩) */
+.side-tabs-col > .side-tab-bottom + .side-tab-bottom{ margin-top: 0; }
+/* 🔔 활동 탭 (Work Log) — 시간 · 아이콘 · 글 한 줄씩 */
+.act-row{ display: flex; align-items: baseline; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
+.act-row:last-child{ border-bottom: none; }
+.act-t{ flex: 0 0 auto; width: 40px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); }
+.act-ic{ flex: 0 0 auto; width: 20px; text-align: center; }
+.act-x{ flex: 1 1 auto; min-width: 0; word-break: keep-all; }
+.act-att .act-x, .act-hi .act-x{ font-weight: var(--fw-bold); }
+.wc-rank-head{ display: flex; align-items: baseline; gap: 5px; flex: none; margin-bottom: 6px; }
+.wc-rank-box .wc-rows{ max-height: 320px; overflow-y: auto; }
 /* 🔗 LINK 칸 */
 /* 🔎 찾아보기 (자료실 맨 위) + ⌄ 올리기 칸 접기 (2026-11-09 콩 — 링크&검색 탭을 자료실에 합침) */
 .fl-find{ border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel, var(--fill-1)); padding: 10px 12px 11px; margin: 0 0 10px; }

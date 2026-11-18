@@ -299,14 +299,23 @@
   async function listenDeadline() {
     if (!enabled() || !me()) return;
     if (!(await load())) return;
-    if (letters().length) await 계산하기();                      // 접속할 때 한 번
+    if (letters().length) { await 계산하기(); 활동알림(); }     // 접속할 때 한 번
     else 카드에알리기();
     _day = today();
   }
   function detachDeadline() { _d = { n: 0, works: {} }; _loaded = false; _box = null; _open = ""; _draft = null; }
 
+  /** 🔔 활동 탭에 "오늘 몫" 한 줄 (하루 한 번) */
+  function 활동알림() {
+    try {
+      const parts = [];
+      letters().forEach((L) => { const w = W_(L), c = calc(w); if ((c.state === "ok" || c.state === "buf") && c.T > 0) parts.push(`${L} ${fmtN(w, c.T)}`); });
+      if (parts.length) window.Activity?.add("dl", `데드라인 — 오늘 몫 ${parts.join(" · ")}`, { key: "dl-" + today() });
+    } catch (e) {}
+  }
+
   /* 접속한 채 자정을 넘기면 새 날 첫 계산 */
-  function 자정보기() { if (_loaded && _day && _day !== today()) 계산하기(); }
+  function 자정보기() { if (_loaded && _day && _day !== today()) 계산하기().then(활동알림); }
   setInterval(자정보기, 60000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") 자정보기(); });
 

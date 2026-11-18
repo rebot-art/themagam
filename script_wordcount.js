@@ -436,6 +436,7 @@
     if (!big || !rows) return;
 
     const mine = myRow();
+    try { renderRankBox(); } catch (e) {}      // 🏆 랭킹 알약 판 (혼자 방)
     상태줄();      // 🟢 초록 줄 — 탭·팝업이 바뀌어도 늘 채웁니다 (아래 say 위 주석 참고)
 
     /* =====================================================================
@@ -467,6 +468,18 @@
     });
     /* 🕛 어제 채우기 서랍은 새 탭에서 늘 닫습니다 — 새 탭은 ‹ › 로
        지난 날에 직접 적을 수 있어서 이 서랍이 할 일이 없어요. */
+    if (_tab === "act") {
+      /* 🔔 활동 (2026-11-18 콩) — 오늘 내가 접속해서 한 일을 시간순으로. 입력줄은 오늘 탭 몫이라 감춥니다 */
+      ["wc-memoline", "wc-inputline", "wc-minirow"].forEach(c => { const n = 찾기(c); if (n) n.hidden = true; });
+      const y = 찾기("wc-yday"); if (y) y.hidden = true;
+      const nav = el("wc-daynav"); if (nav) nav.hidden = true;
+      big.textContent  = String(window.Activity?.count?.() || 0);
+      unit.textContent = "건 · 오늘 내 활동";
+      if (hint) hint.textContent = "";
+      rows.innerHTML = window.Activity?.html?.() || "";
+      rows.scrollTop = rows.scrollHeight;
+      return;
+    }
     if (새탭) {
       const y = 찾기("wc-yday");
       if (y) y.hidden = true;
@@ -900,6 +913,19 @@
        한 번이라도 올린 사람 수입니다 — 콩이 그렇게 요청했습니다.
      ★ 목록이 길어지면(최대 41줄) .wc-rows 가 이미 scroll 을 겁니다 —
        내 줄로 자동 스크롤해서 41줄을 눈으로 세지 않게 합니다. */
+  /** 🏆 랭킹 알약 판 — 혼자 방에서 Work Log 가 옆 탭으로 간 뒤, 아래 알약 자리에 남는 것 */
+  function renderRankBox() {
+    const b = el("wc-rank-box");
+    if (!b) return;
+    const 랭킹 = Object.entries(sumWeek()).filter(([, v]) => v > 0).sort((a, c) => c[1] - a[1]);
+    const 내등수 = 랭킹.findIndex(([n]) => n === me());
+    b.innerHTML = `<div class="wc-rank-head"><span class="wc-big">${내등수 >= 0 ? 내등수 + 1 : "–"}</span>` +
+      `<span class="wc-unit">위 · 이번 주 글자수 랭킹 · 전체 ${랭킹.length}명 중</span></div>` +
+      `<div class="wc-rows">${weekRankHtml()}</div>`;
+    const 내줄 = b.querySelector(".wc-row.me"), 칸 = b.querySelector(".wc-rows");
+    if (내줄 && 칸) 칸.scrollTop = Math.max(0, 내줄.offsetTop - 칸.clientHeight / 2 + 내줄.clientHeight / 2);
+  }
+
   function weekRankHtml() {
     const 랭킹 = Object.entries(sumWeek())
       .filter(([, v]) => v > 0)
@@ -1050,6 +1076,7 @@
     const 글 = 작업글(note);
     if (!me() || !window.db || (!(add > 0) && !글)) return;
     const 짐 = { nick: me(), at: Date.now() };
+    try { window.Activity?.add("wl", add > 0 ? `워크로그에 ${fmt(add)}자 기록${글 ? " · " + 글 : ""}` : `워크로그에 올림 · ${글}`); } catch (e) {}
     if (add > 0) { 짐.add = Number(add); 짐.snap = Number(snap); }
     if (글) 짐.note = 글;
     try {
@@ -1626,6 +1653,19 @@
     el("wc-all-btn")?.addEventListener("click", openWcAll);
     el("wcall-pill")?.addEventListener("click", openWcAll);
 
+    /* ✍️ [2026-11-18 콩] 혼자 방 — 랭킹 탭은 아래 알약(🏆)으로 빠지고, 맨 왼쪽에 🔔 활동 탭이 생깁니다 */
+    if (window.wlSide?.() && !host.querySelector('[data-wc-tab="act"]')) {
+      host.querySelector('[data-wc-tab="rank"]')?.remove();
+      const 오늘탭 = host.querySelector('[data-wc-tab="wl"]');
+      if (오늘탭) {
+        const a = document.createElement("button");
+        a.className = "wc-tab"; a.type = "button"; a.dataset.wcTab = "act"; a.setAttribute("role", "tab"); a.setAttribute("aria-selected", "false");
+        a.textContent = "활동";
+        오늘탭.parentNode.insertBefore(a, 오늘탭);
+        _tab = "act"; a.classList.add("on"); a.setAttribute("aria-selected", "true");
+        오늘탭.classList.remove("on"); 오늘탭.setAttribute("aria-selected", "false");
+      }
+    }
     host.querySelectorAll("[data-wc-tab]").forEach(b => {
       b.addEventListener("click", () => {
         _tab = b.dataset.wcTab;
@@ -1659,6 +1699,7 @@
 
   window.startWordcount = startWordcount;
   window.renderWordcount = render;
+  window.wcTab = () => _tab;
   /* =====================================================================
      ✍️ 이번 달 나의 글자수 — 꺾은선 (2026-08-22, 콩)
      ---------------------------------------------------------------------

@@ -278,6 +278,7 @@
      ===================================================================== */
   const _공개보낸 = {};      // 날짜 → 마지막으로 보낸 분
   const _머문보낸 = {};      // 날짜 → 마지막으로 보낸 **머문 분** (아래 참고)
+  const _닫힌작업 = {};      // 날짜 → 닫힌 구간들의 "무게 친 작업" 합(ms) — liveWorkMs 의 바닥값 (활동 탭의 30분 쌓임)
   const _닫힌머문 = {};      // 날짜 → 서버에 닫혀 저장된 구간들의 합(ms, 모든 상태) — liveStayMs 의 바닥값
 
   /* =====================================================================
@@ -341,6 +342,7 @@
         if (ms > 0) 합[v.s] = (합[v.s] || 0) + ms;
       });
       _닫힌머문[day] = staySum(합);
+      _닫힌작업[day] = workSum(합);
     } catch (e) { /* 못 읽으면 다음에 다시 */ }
   }
   function stayPrimed(day) { return _닫힌머문[day] !== undefined; }
@@ -356,6 +358,21 @@
     }
     return n;
   }
+
+  /** 그날 지금까지 쌓인 "무게 친 작업" 시간(ms) — 닫힌 구간 + 지금 열린 구간 × 상태 무게 */
+  function liveWorkMs(day) {
+    let n = _닫힌작업[day] || 0;
+    if (_cur && _cur.a) {
+      const ds = dayStartOfKey(day);
+      if (ds > 0) {
+        const 끝 = Math.min(_offlineSince ? _offlineSince : nowMs(), ds + 24 * 60 * 60 * 1000);
+        const 시작 = Math.max(Number(_cur.a), ds);
+        if (끝 > 시작) n += workMs(_cur.s, Math.min(끝 - 시작, SEG_CAP_MS));
+      }
+    }
+    return n;
+  }
+  function curStatus() { return _cur ? _cur.s : ""; }
 
   async function 공개시간올리기(updates) {
     if (!myNick || !db) return;
@@ -387,6 +404,7 @@
         }
       } catch (e) { /* 공개 칸은 곁다리라 조용히 넘깁니다 */ }
 
+      _닫힌작업[day] = workSum(합);
       _닫힌머문[day] = staySum(합);             // 지금 열린 구간을 더하면 "그날 지금까지" 가 됩니다 (liveStayMs)
 
       /* ② 머문 분 (무게 없음) → attendance 의 m · 개인 달력용 mins
@@ -467,7 +485,9 @@
     if (_cur && _cur.s === next) return;      // 같은 상태면 그대로
 
     const closes = _cur ? segUpdates(_cur.s, _cur.a, t) : {};
+    const 이전상태 = _cur ? _cur.s : "";
     _cur = { s: next, a: t, sid: SID };
+    try { window.Activity?.status(이전상태, next); } catch (e) {}   // 🔔 활동 탭에 한 줄
     await commitSegs(closes, _cur);
   }
 
@@ -1189,7 +1209,7 @@
   };
 
   window.workMs = workMs; window.workSum = workSum; window.isWorkStatus = isWorkStatus;
-  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus, liveStayMs, primeStay, stayPrimed,
+  window.TimeLog = { STATUSES, STATUS_IDS, WORK_WEIGHT, workMs, workSum, staySum, VALID_STAY_MIN, isWorkStatus, liveStayMs, liveWorkMs, curStatus, primeStay, stayPrimed,
                      GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;

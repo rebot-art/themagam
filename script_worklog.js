@@ -1128,3 +1128,89 @@
     document.querySelector('[data-wc-tab="wl"]')?.click();
   };
 })();
+
+/* =====================================================================
+   🔔 활동 (2026-11-18 — 콩) — Work Log 의 맨 왼쪽 탭
+   ---------------------------------------------------------------------
+   "내가 접속해서 한 일" 을 시간순으로 한 곳에 모아 보여줍니다.
+     11:00 입장 / 11:01 오늘도 건필! / 11:10 상태를 Write 로 전환 / 11:30 ○번째 출석!
+     11:40 작업 30분 쌓임 / 워크로그에 ○자 기록 / ⏰ 데드라인 오늘 몫 …
+   ★ 통신량 0 — 서버에 아무것도 안 적고 읽지도 않습니다. 이 기기의 AppStore 에만 적어 두고
+     (오늘·어제 이틀치, 하루 200줄까지), 다른 기능이 일어난 자리에서 Activity.add() 로 알려 줘요.
+   ★ 작업 30분 쌓임은 "무게 친 작업 시간" 기준입니다 (WRITE·JOB·multiT 100%, 수리 30%).
+   ★ 혼자 방에서만 켜집니다 (window.wlSide) — 본방은 아직 옛 Work Log 그대로.
+   ===================================================================== */
+(function () {
+  "use strict";
+  const KEY = "actLog";
+  const KEEP_DAYS = 2, MAX_ROWS = 200, STEP_MIN = 30;
+  const ICON = { in: "🚪", hi: "🌱", status: "🔄", att: "✅", work: "⏱️", wl: "✍️", dl: "⏰", info: "🔔" };
+  const nick = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
+  const dayOf = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
+  const hm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const on = () => !!(window.wlSide && window.wlSide());
+
+  let _db = null;                      // { nick, days: { 날짜: { rows: [], m: 0 } } }
+  function load() {
+    const n = nick();
+    if (_db && _db.nick === n) return _db;
+    let v = null;
+    try { v = JSON.parse(window.AppStore?.getItem(KEY) || "null"); } catch (e) {}
+    _db = (v && v.nick === n && v.days) ? v : { nick: n, days: {} };
+    return _db;
+  }
+  function save() {
+    try {
+      const keep = Object.keys(_db.days).sort().slice(-KEEP_DAYS);
+      Object.keys(_db.days).forEach(d => { if (!keep.includes(d)) delete _db.days[d]; });
+      window.AppStore?.setItem(KEY, JSON.stringify(_db));
+    } catch (e) {}
+  }
+  function bucket(day) { const d = load(); return d.days[day] || (d.days[day] = { rows: [], m: null }); }
+
+  function add(kind, text, opt) {
+    if (!on() || !nick()) return;
+    opt = opt || {};
+    const t = opt.at || Date.now(), day = dayOf(t), b = bucket(day);
+    if (opt.key && b.rows.some(r => r.key === opt.key)) return;
+    b.rows.push({ t, k: kind, x: String(text || "").slice(0, 120), key: opt.key || "" });
+    if (b.rows.length > MAX_ROWS) b.rows.splice(0, b.rows.length - MAX_ROWS);
+    save();
+    try { if (window.wcTab && window.wcTab() === "act") window.renderWordcount?.(); } catch (e) {}
+  }
+
+  const 짧은이름 = (s) => {
+    const st = (window.TimeLog?.STATUSES || []).find(x => x.id === s);
+    return st ? String(st.label).split("(")[0] : String(s || "");
+  };
+  function status(prev, next) { if (prev && next && prev !== next) add("status", `상태를 '${짧은이름(next)}'(으)로 전환`); }
+
+  function html() {
+    if (!on()) return "";
+    const rows = (load().days[dayOf(Date.now())] || { rows: [] }).rows;
+    if (!rows.length) return `<div class="wc-empty">오늘 활동이 아직 없어요.<br>입장·상태 전환·출석·작업 시간이 여기 차곡차곡 쌓입니다.</div>`;
+    return rows.map(r => `<div class="act-row act-${esc(r.k)}"><span class="act-t">${hm(r.t)}</span>` +
+      `<span class="act-ic">${ICON[r.k] || ICON.info}</span><span class="act-x">${esc(r.x)}</span></div>`).join("");
+  }
+  const count = () => ((load().days[dayOf(Date.now())] || { rows: [] }).rows.length);
+
+  /* 작업 30분 쌓임 — 30초마다 로컬 계산(통신 0). 오늘 처음 보는 사람이면 이미 쌓인 만큼은 조용히 기준으로만 잡습니다 */
+  async function tick() {
+    if (!on() || !nick() || !window.TimeLog || !window.TimeLog.liveWorkMs) return;
+    const day = dayOf(Date.now());
+    try { if (!window.TimeLog.stayPrimed(day)) await window.TimeLog.primeStay(day); } catch (e) {}
+    if (!window.TimeLog.stayPrimed(day)) return;
+    const n = Math.floor(window.TimeLog.liveWorkMs(day) / (STEP_MIN * 60000));
+    const b = bucket(day);
+    if (b.m == null) { b.m = n; save(); return; }
+    while (b.m < n) {
+      b.m++;
+      add("work", `'${짧은이름(window.TimeLog.curStatus ? window.TimeLog.curStatus() : "")}' 작업 ${b.m * STEP_MIN}분 쌓임`, { key: "w" + b.m });
+    }
+    save();
+  }
+  setInterval(tick, 30000);
+
+  window.Activity = { add, status, html, count, tick, _t: { load } };
+})();
