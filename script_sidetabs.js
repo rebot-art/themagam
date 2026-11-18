@@ -34,7 +34,7 @@
   /* ★ [2026-11-18 콩] 📓 표현 공부를 🤔 Q&A 에 합치고(표현 공부 탭 없앰), ✍️ Work Log 를 옆 탭(데드라인 바로 아래)으로 옮깁니다.
        둘 다 **혼자 방 먼저** — 본방에 켤 때는 아래 두 값을 true 로 바꾸면 돼요.
        (랭킹은 아래 알약 줄의 🏆 랭킹 자리로 따로 빠집니다 — script_dock.js) */
-  const QNA_MERGE_MAIN = true, ACT_MAIN = false;   // 표현 공부→Q&A 합침은 본방도 켬 (2026-11-18 콩: 글 다 옮김)
+  const QNA_MERGE_MAIN = true, ACT_MAIN = true;   // 표현 공부→Q&A 합침·🧵 타임라인은 본방도 켬 (2026-11-18 콩)
   window.qnaMerged = () => window.SOLO === true || QNA_MERGE_MAIN;
   window.actSide = () => window.SOLO === true || ACT_MAIN;
 
@@ -57,9 +57,9 @@
     /* [2026-10-09 콩] 📁 자료실 — **가운데 창**(#files-modal)을 CSS 로 오른쪽 칸에 앉힙니다(html.side-files). seat 가 그 표시.
        [2026-11-09] 맨 위에 🔎 찾아보기가 들어갔어요(옛 링크 & 검색). */
     { id: "files",  label: "📁 자료실",   open: "openFiles", close: "closeFiles", seat: "side-files" },
-    /* [2026-11-18 콩] 🔔 활동 — 데드라인 바로 위. 오늘 24시간 타임라인(상태 바·누적 작업시간·전환 지점). 혼자 방 먼저(ACT_MAIN=false).
+    /* [2026-11-18 콩] 🧵 타임라인(옛 이름 활동) — 데드라인 바로 위. 오늘 24시간 타임라인(상태 바·누적 작업시간·전환 지점). 본방 오픈(ACT_MAIN=true, 2026-11-18).
        알맹이는 script_worklog.js 의 Activity 가 칸 안에 직접 그립니다. */
-    { id: "activity", label: "🔔 활동", open: "openActivity", close: "closeActivity", act: true, bottom: true },
+    { id: "activity", label: "🧵 타임라인", open: "openActivity", close: "closeActivity", act: true, bottom: true },
     /* [2026-10-12 콩] ⏰ 데드라인 — 맨 아래(bottom → CSS margin-top:auto), 워크로그와 가까워 눈에 띄게(2026-11-09).
        알맹이는 script_deadline.js 가 칸 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
     { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true }
