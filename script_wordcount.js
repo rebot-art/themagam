@@ -1121,6 +1121,7 @@
       try { await window.Deadline.subtractWritten(f.L, add, (새 && 새.base !== undefined && window.Deadline.letterBase?.(f.L) === Number(f.snap)) ? 새.base : null); } catch (e) {}
     }
     try { window.renderRoomBoard?.(); } catch (e) {}
+    try { window.Activity?.add("del", add > 0 ? `워크로그 기록 삭제 · ${fmt(add)}자${글 ? " · " + 글 : ""}` : `워크로그 기록 삭제${글 ? " · " + 글 : ""}`); } catch (e) {}
     render();
     say(add > 0 ? `기록을 지웠어요 · 오늘 누적 ${fmt(새.total)}자` : "기록을 지웠어요");
   }

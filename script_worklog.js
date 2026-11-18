@@ -1150,6 +1150,7 @@
     att: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
     wl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
     dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>',
   };
   const nick = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
@@ -1181,7 +1182,7 @@
       window.AppStore?.setItem(KEY, JSON.stringify(_db));
     } catch (e) {}
   }
-  function bucket(day) { const d = load(); const b = d.days[day] || (d.days[day] = { rows: [], auto: [] }); if (!b.auto) b.auto = []; return b; }
+  function bucket(day) { const d = load(); const b = d.days[day] || (d.days[day] = { rows: [], auto: [], chg: [] }); if (!b.auto) b.auto = []; if (!b.chg) b.chg = []; return b; }
 
   function add(kind, text, opt) {
     if (!on() || !nick()) return;
@@ -1201,7 +1202,17 @@
     if (b.auto.length > 60) b.auto.splice(0, b.auto.length - 60);
     save();
   }
-  function status() { setTimeout(redraw, 120); }          // 상태가 바뀌면 열린 판만 다시 그림 (읽기 없음)
+  /** 상태가 바뀌는 **그 순간**을 이 기기에 적어 둡니다 (서버 구간이 저장되길 기다리지 않아요 — 2026-11-18, 방금 바꾼 게 안 보이던 원인).
+      열린 판은 다시 그립니다(읽기 없음). */
+  function status(prev, next) {
+    if (on() && nick() && prev && next && prev !== next) {
+      const b = bucket(dayOf(Date.now()));
+      b.chg.push({ t: Date.now(), from: prev, to: next });
+      if (b.chg.length > 120) b.chg.splice(0, b.chg.length - 120);
+      save();
+    }
+    setTimeout(redraw, 150); setTimeout(redraw, 2500);
+  }
 
   /* ---------- 구간 모으기 ---------- */
   let _box = null, _timer = 0, _segs = [], _segDay = "", _last = null, _first = true;
@@ -1235,19 +1246,26 @@
   }
 
   /* ---------- 상태가 바뀐 지점 ---------- */
-  function marks(segs, auto) {
+  function marks(segs, auto, chg) {
     const out = [];
+    const near = (to, t) => auto.some(m => m.to === to && Math.abs(m.t - t) <= AUTO_NEAR);
+    (chg || []).forEach(c => {          // 바뀐 순간 그대로 기록한 것 (가장 정확)
+      let extra = "";
+      if (c.to === "away" && near("away", c.t)) extra = "auto-away";
+      else if (c.from === "away" && near("back", c.t)) extra = "auto-back";
+      out.push({ t: c.t, kind: "chg", to: c.to, from: c.from, extra });
+    });
+    const 기록됨 = (t, to) => (chg || []).some(c => c.to === to && Math.abs(c.t - t) <= 120000);
     for (let i = 1; i < segs.length; i++) {
       const p = segs[i - 1], c = segs[i];
       if (c.a - p.b > GAP_MS) { out.push({ t: p.b, kind: "gap", text: `${hm(p.b)} 연결 끊김 → ${hm(c.a)} 다시 접속`, to: c.s }); continue; }
-      if (c.s === p.s) continue;
-      const near = (to) => auto.some(m => m.to === to && Math.abs(m.t - c.a) <= AUTO_NEAR);
+      if (c.s === p.s || 기록됨(c.a, c.s)) continue;      // 이미 순간 기록이 있으면 구간에서 뽑은 건 건너뜀
       let extra = "";
-      if (c.s === "away" && near("away")) extra = "auto-away";
-      else if (p.s === "away" && near("back")) extra = "auto-back";
+      if (c.s === "away" && near("away", c.a)) extra = "auto-away";
+      else if (p.s === "away" && near("back", c.a)) extra = "auto-back";
       out.push({ t: c.a, kind: "chg", to: c.s, from: p.s, extra });
     }
-    return out;
+    return out.sort((x, y) => x.t - y.t);
   }
 
   function board(day) {
@@ -1255,7 +1273,7 @@
     const b = (load().days[day] || { rows: [], auto: [] });
     const segs = merge(allSegs(day));
     const ev = (b.rows || []).filter(r => r.k !== "status" && r.k !== "work");
-    const mk = marks(segs, b.auto || []);
+    const mk = marks(segs, b.auto || [], b.chg || []);
     const workAll = workIn(segs, ds + 24 * HOUR);
     const stayAll = segs.reduce((n, x) => n + (x.b - x.a), 0);
     let attN = 0; (b.rows || []).forEach(r => { if (r.k === "att") { const m = /(\d+)번째/.exec(r.x); if (m) attN = +m[1]; } });
@@ -1265,7 +1283,19 @@
       `<div class="tl-met"><small>출석</small><b>${attN ? attN + "/" + ATT_TOTAL : "–"}</b></div></div>`;
     h += `<div class="tl-legend">` + ST().map(x => `<span><i style="background:${x.color}"></i>${esc(String(x.label).split("(")[0])}</span>`).join("") + `</div>`;
     h += `<div class="tl-list">`;
+    /* 활동이 없는 시간(접속이 끊겼던 시간·아직 안 온 시간)이 이어지면 한 칸으로 줄이고 처음·끝 시각만 보여 줍니다 (2026-11-18 콩) */
+    const emptyAt = (kk) => {
+      const s0 = ds + kk * HOUR, e0 = s0 + HOUR;
+      return !segs.some(x => x.a < e0 && x.b > s0) && !ev.some(r => r.t >= s0 && r.t < e0) && !mk.some(m => m.t >= s0 && m.t < e0) && !(isToday && now >= s0 && now < e0);
+    };
     for (let k = 0; k < 24; k++) {
+      if (emptyAt(k)) {
+        let e = k; while (e + 1 < 24 && emptyAt(e + 1)) e++;
+        if (e > k) {
+          h += `<div class="tl-hr skip${isToday && ds + k * HOUR > now ? " future" : ""}"><div class="tl-h"><span>${two(k)}</span><span>${two(e)}</span></div><div class="tl-mid"><div class="tl-bar"></div></div><div class="tl-c"></div></div>`;
+          k = e; continue;
+        }
+      }
       const hs = ds + k * HOUR, he = hs + HOUR;
       const inH = segs.filter(x => x.a < he && x.b > hs);
       const evH = ev.filter(r => r.t >= hs && r.t < he);

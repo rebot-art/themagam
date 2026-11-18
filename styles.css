@@ -13328,3 +13328,10 @@ html.achv-hidden #mywork-panel-achv{ display: none !important; }
 /* 🗑 기록 탭 — 한 줄 지우기 단추 (2026-11-18) */
 .wc-del{ margin-left: 6px; border: none; background: transparent; color: var(--muted); font-size: var(--fs-xs); line-height: 1; padding: 2px 5px; border-radius: 6px; cursor: pointer; opacity: .55; }
 .wc-del:hover, .wc-del:focus-visible{ opacity: 1; background: var(--surface-2, #eee); color: var(--text); }
+
+/* 🔔 활동 — 비어 있는 시간 묶음 줄 (처음·끝 시각만) */
+.tl-hr.skip{ align-items: stretch; padding: 2px 0; }
+.tl-hr.skip .tl-h{ display: flex; flex-direction: column; justify-content: space-between; min-height: 30px; font-size: 10px; line-height: 10px; opacity: .6; }
+.tl-hr.skip .tl-mid{ display: flex; align-items: center; }
+.tl-hr.skip .tl-bar{ flex: 1 1 auto; height: 0; border-radius: 0; background: transparent; border-top: 2px dotted var(--border); overflow: visible; }
+.tl-chip-del .tl-ic{ color: var(--muted); }
