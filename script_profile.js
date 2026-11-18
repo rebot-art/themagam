@@ -1270,9 +1270,9 @@ document.addEventListener("error", (e) => {
   try {
     const img = e.target;
     if (!img || img.tagName !== "IMG") return;
-    const box = img.closest("[data-avatar-of], .card-avatar[data-av-nick]");
+    const box = img.closest("[data-avatar-of], .card-avatar");
     if (!box || !box.classList.contains("has-photo")) return;
-    const nick = box.dataset.avatarOf || box.dataset.avNick || "";
+    const nick = box.dataset.avatarOf || box.closest("[data-card-nick]")?.dataset.cardNick || "";
     box.classList.remove("has-photo"); box.classList.add("has-snow");
     box.innerHTML = snowmanSvg(nick);
   } catch (err) {}

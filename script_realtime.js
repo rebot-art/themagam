@@ -1876,7 +1876,7 @@
                사파리는 새 img 를 "빈 칸 먼저, 사진 나중"으로 그려서 카드를
                다시 그릴 때마다 프사가 깜빡였습니다. sync 는 사진을 다 풀고
                나서 화면에 내보내므로 빈 칸이 없어요. */
-            ? `<div class="card-avatar has-photo" data-av-nick="${escapeHtml(u)}"><img src="${escapeHtml(photo)}" alt="" decoding="sync"></div>`
+            ? `<div class="card-avatar has-photo"><img src="${escapeHtml(photo)}" alt="" decoding="sync"></div>`
             : `<div class="card-avatar has-snow">${window.snowmanSvg?.(u) || ""}</div>`;
 
           // 내 카드에만 편집(연필) 버튼. 프사 위에 떠 있다가 마우스를 올리면 나타납니다.
