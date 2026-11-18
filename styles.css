@@ -12929,7 +12929,9 @@ html[data-lite] .user-card.share-card,
 .act-row{ display: flex; align-items: baseline; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
 .act-row:last-child{ border-bottom: none; }
 .act-t{ flex: 0 0 auto; width: 40px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); }
-.act-ic{ flex: 0 0 auto; width: 20px; text-align: center; }
+.act-ic{ flex: 0 0 auto; width: 20px; align-self: center; color: var(--text-dim, #555); }
+.act-ic svg{ width: 18px; height: 18px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.act-att .act-ic{ color: #2E7D32; }
 .act-x{ flex: 1 1 auto; min-width: 0; word-break: keep-all; }
 .act-att .act-x, .act-hi .act-x{ font-weight: var(--fw-bold); }
 .wc-rank-head{ display: flex; align-items: baseline; gap: 5px; flex: none; margin-bottom: 6px; }

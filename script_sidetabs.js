@@ -34,7 +34,7 @@
   /* ★ [2026-11-18 콩] 📓 표현 공부를 🤔 Q&A 에 합치고(표현 공부 탭 없앰), ✍️ Work Log 를 옆 탭(데드라인 바로 아래)으로 옮깁니다.
        둘 다 **혼자 방 먼저** — 본방에 켤 때는 아래 두 값을 true 로 바꾸면 돼요.
        (랭킹은 아래 알약 줄의 🏆 랭킹 자리로 따로 빠집니다 — script_dock.js) */
-  const QNA_MERGE_MAIN = false, WL_MAIN = false;
+  const QNA_MERGE_MAIN = true, WL_MAIN = false;   // 표현 공부→Q&A 합침은 본방도 켬 (2026-11-18 콩: 글 다 옮김)
   window.qnaMerged = () => window.SOLO === true || QNA_MERGE_MAIN;
   window.wlSide = () => window.SOLO === true || WL_MAIN;
 
