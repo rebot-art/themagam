@@ -13381,8 +13381,12 @@ html.achv-hidden #mywork-panel-achv{ display: none !important; }
   background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
   border-right: 0 solid var(--border);
 }
-html.left-members .lside-pane{ width: 250px; border-right-width: 1px; }
-html.lside-notice .lside-pane{ width: 400px; border-right-width: 1px; }
+/* 오른쪽 사이드 바와 겹치지 않게 — 창 폭에서 (왼쪽 탭 줄 + 오른쪽 탭 줄 + 오른쪽 칸)을 뺀 만큼만 열립니다 (2026-11-19 콩 "오른쪽 바 뒤로 가려요") */
+:root{ --lside-avail: calc(100vw - 90px); }
+html.side-open{ --lside-avail: calc(100vw - 90px - 400px); }
+html.member-open{ --lside-avail: calc(100vw - 90px - 250px); }
+html.left-members .lside-pane{ width: min(250px, max(130px, var(--lside-avail))); border-right-width: 1px; }
+html.lside-notice .lside-pane{ width: min(400px, max(130px, var(--lside-avail))); border-right-width: 1px; }
 /* 탭 — 오른쪽 탭의 거울 (돌리지 않고, 화면 쪽(왼쪽)이 평평·바깥쪽이 둥글게) */
 .left-tab{
   transform: none; writing-mode: vertical-rl; text-orientation: sideways;
@@ -13404,7 +13408,7 @@ html.lside-notice .lside-pane{ width: 400px; border-right-width: 1px; }
 .lm-heart{ flex: 0 0 auto; font-size: 11px; }
 /* 📢 공지 — 가운데 창을 왼쪽 칸 자리에 앉힙니다 (머리줄 아래) */
 html.lside-notice #notice-modal{
-  inset: auto; left: 0; right: auto; top: calc(var(--lside-top, 60px) + 37px); width: 400px;
+  inset: auto; left: 0; right: auto; top: calc(var(--lside-top, 60px) + 37px); width: min(400px, max(130px, var(--lside-avail)));
   height: calc(var(--lside-h, 60vh) - 37px);
   padding: 0; background: none; align-items: stretch; justify-content: stretch; z-index: 31;
 }
@@ -13419,10 +13423,6 @@ html.lefttabs-on #dock-pill-notice{ display: none !important; }
 /* 카드 마당 — 왼쪽 여백 (탭 줄 40px + 열린 칸) */
 @media (min-width: 901px){
   html.lefttabs-on .cards-area{ padding-left: var(--side-strip, 40px); }
-  html.left-members.lefttabs-on .cards-area{ padding-left: calc(250px + var(--side-strip, 40px)); }
-  html.lside-notice.lefttabs-on .cards-area{ padding-left: calc(400px + var(--side-strip, 40px)); }
-}
-@media (max-width: 900px){
-  html.left-members .lside-pane{ width: min(250px, calc(100vw - 44px)); }
-  html.lside-notice .lside-pane, html.lside-notice #notice-modal{ width: min(400px, calc(100vw - 44px)); }
+  html.left-members.lefttabs-on .cards-area{ padding-left: calc(min(250px, max(130px, var(--lside-avail))) + var(--side-strip, 40px)); }
+  html.lside-notice.lefttabs-on .cards-area{ padding-left: calc(min(400px, max(130px, var(--lside-avail))) + var(--side-strip, 40px)); }
 }
