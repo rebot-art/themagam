@@ -1151,8 +1151,10 @@
     wl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
     dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
     del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    memo: null,
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>',
   };
+  ICON.memo = ICON.wl;
   const nick = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
   const dayOf = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
   const two = (n) => String(n).padStart(2, "0");
@@ -1167,19 +1169,49 @@
   const stName = (id) => String(stOf(id).label).split("(")[0];
 
   let _db = null;                      // { nick, days: { 날짜: { rows: [], auto: [] } } }
+  /* ★ [2026-11-19 콩 "입장할 때마다 이전 입장 기록이 사라져"]
+     기록은 이 기기의 저장 공간(localStorage)에 적히는데, **같은 브라우저의 다른 탭**(혼자 방·두 번째 본방 창 등)이
+     각자 쥐고 있던 옛 사본을 통째로 덮어써서, 새로고침으로 다시 읽을 때 앞선 기록이 사라져 있었습니다.
+     그래서 ① 닉네임별 열쇠(actLog_닉)로 나누고 ② 저장할 때마다 저장 공간의 최신 것을 읽어 **합쳐서** 씁니다
+     (같은 기록은 한 번만 — 시각·종류로 가림). 서버 쓰기는 여전히 0 입니다. */
+  const keyOf = (n) => KEY + "_" + n;
+  function readStore(n) {
+    let v = null;
+    try { v = JSON.parse(window.AppStore?.getItem(keyOf(n)) || "null"); } catch (e) {}
+    if (!(v && v.days)) {                                   // 옛 열쇠(닉 하나만 담던 것)에서 한 번 옮겨옵니다
+      try { const o = JSON.parse(window.AppStore?.getItem(KEY) || "null"); if (o && o.nick === n && o.days) v = o; } catch (e) {}
+    }
+    return (v && v.days) ? v : { nick: n, days: {} };
+  }
+  function union(a, b, same, cap) {
+    const out = (a || []).slice();
+    (b || []).forEach(x => { if (!out.some(y => same(x, y))) out.push(x); });
+    out.sort((p, q) => Number(p.t) - Number(q.t));
+    if (cap && out.length > cap) out.splice(0, out.length - cap);
+    return out;
+  }
+  function mergeDays(into, from) {
+    Object.keys(from.days || {}).forEach(d => {
+      const f = from.days[d] || {}, t = into.days[d] || (into.days[d] = { rows: [], auto: [], chg: [] });
+      t.rows = union(t.rows, f.rows, (x, y) => x.t === y.t && x.k === y.k && x.x === y.x, MAX_ROWS);
+      t.auto = union(t.auto, f.auto, (x, y) => x.t === y.t && x.to === y.to, 60);
+      t.chg  = union(t.chg,  f.chg,  (x, y) => x.t === y.t && x.from === y.from && x.to === y.to, 120);
+    });
+    return into;
+  }
   function load() {
     const n = nick();
     if (_db && _db.nick === n) return _db;
-    let v = null;
-    try { v = JSON.parse(window.AppStore?.getItem(KEY) || "null"); } catch (e) {}
-    _db = (v && v.nick === n && v.days) ? v : { nick: n, days: {} };
+    _db = readStore(n); _db.nick = n;
     return _db;
   }
   function save() {
     try {
+      const n = _db.nick;
+      mergeDays(_db, readStore(n));                         // 다른 탭이 그새 적은 것을 합칩니다
       const keep = Object.keys(_db.days).sort().slice(-KEEP_DAYS);
       Object.keys(_db.days).forEach(d => { if (!keep.includes(d)) delete _db.days[d]; });
-      window.AppStore?.setItem(KEY, JSON.stringify(_db));
+      window.AppStore?.setItem(keyOf(n), JSON.stringify(_db));
     } catch (e) {}
   }
   function bucket(day) { const d = load(); const b = d.days[day] || (d.days[day] = { rows: [], auto: [], chg: [] }); if (!b.auto) b.auto = []; if (!b.chg) b.chg = []; return b; }
@@ -1268,11 +1300,16 @@
     return out.sort((x, y) => x.t - y.t);
   }
 
+  /* 📝 메모 칸 — 솔로방에서 먼저. 본방에 켤 때는 MEMO_MAIN 을 true 로 */
+  const MEMO_MAIN = false;
+  const memoOn = () => window.SOLO === true || MEMO_MAIN;
   function board(day) {
     const T = window.TimeLog, now = Date.now(), ds = dayStart(day), isToday = day === dayOf(now);
     const b = (load().days[day] || { rows: [], auto: [] });
     const segs = merge(allSegs(day));
-    const ev = (b.rows || []).filter(r => r.k !== "status" && r.k !== "work");
+    const ev = (b.rows || []).filter(r => r.k !== "status" && r.k !== "work")
+      .concat(memoOn() ? ((window.wcMemosOf && window.wcMemosOf(day)) || []).map(m => ({ t: m.t, k: "memo", x: m.x })) : [])
+      .sort((p, q) => p.t - q.t);
     const mk = marks(segs, b.auto || [], b.chg || []);
     const workAll = workIn(segs, ds + 24 * HOUR);
     const stayAll = segs.reduce((n, x) => n + (x.b - x.a), 0);
@@ -1321,11 +1358,33 @@
     return h + `</div>`;
   }
 
+  /* 판(.tl-body)과 메모 칸(.tl-memo)을 따로 둡니다 — 30초마다 판을 다시 그려도 적던 글자가 안 날아가게 */
+  function bodyOf(box) {
+    let b = box.querySelector(".tl-body");
+    if (!b) {
+      box.innerHTML = '<div class="tl-body"></div>';
+      b = box.querySelector(".tl-body");
+    }
+    if (memoOn() && !box.querySelector(".tl-memo")) {
+      const f = document.createElement("div");
+      f.className = "tl-memo";
+      f.innerHTML = '<input type="text" class="tl-memo-in" maxlength="300" placeholder="메모… (내 메모 탭과 같아요 · 나만 보여요)" autocomplete="off">';
+      const inp = f.firstChild;
+      inp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.isComposing) return;
+        e.preventDefault();
+        if (window.wcAddMemo && window.wcAddMemo(inp.value)) { inp.value = ""; _first = false; redraw(); }
+      });
+      box.appendChild(f);
+    }
+    return b;
+  }
   function redraw() {
     if (!_box || !_box.isConnected || !on()) return;
-    const list = _box.querySelector(".tl-list"), keep = list ? list.scrollTop : 0, first = _first;
-    _box.innerHTML = board(_segDay);
-    const l = _box.querySelector(".tl-list");
+    const body = bodyOf(_box);
+    const list = body.querySelector(".tl-list"), keep = list ? list.scrollTop : 0, first = _first;
+    body.innerHTML = board(_segDay);
+    const l = body.querySelector(".tl-list");
     if (!l) return;
     if (first) { _first = false; const n = l.querySelector(".tl-hr.now"); if (n) l.scrollTop = Math.max(0, n.offsetTop - l.clientHeight / 2 + n.clientHeight / 2); }
     else l.scrollTop = keep;

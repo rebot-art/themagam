@@ -646,6 +646,10 @@
     }
     return null;
   }
+  /* 📝 타임라인 연동 (2026-11-19 콩) — 내 메모 탭의 메모를 ⏱ 타임라인에서도 읽고 쓰게 합니다.
+     같은 곳간(_mineLines)을 쓰므로 어느 쪽에서 적어도 두 군데에 똑같이 보여요. 나만 보는 줄이고 서버 통신량 0. */
+  window.wcMemosOf = (day) => _mineLines.filter(x => x && x.kind === "memo" && x.day === day).map(x => ({ t: x.at, x: x.msg }));
+  window.wcAddMemo = (text) => { const v = String(text || "").trim(); if (!v) return false; addMine("memo", v); return true; };
   window.wcParseSlash = parseSlash;      // 검사와 시험이 씁니다
 
   /** 날짜를 사람 말로 — "오늘" · "8/18(월)" */

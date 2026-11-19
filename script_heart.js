@@ -248,6 +248,8 @@
     _toastT = setTimeout(() => t.classList.remove("on"), 1400);
   }
   window.heartToast = toast;
+  window.heartSend = (to, el) => sendHeart(to, el);        // 왼쪽 멤버스 명단의 더블클릭이 씁니다 (2026-11-19)
+  window.heartSentTo = (n) => sentTo(n);
   /* 카드에서 ❤️ 가 퐁 떠오릅니다 — 눌렸다는 손맛 */
   function fly(card) {
     if (!card) return;

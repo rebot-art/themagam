@@ -13351,3 +13351,10 @@ html.achv-hidden #mywork-panel-achv{ display: none !important; }
 .tl-mid, .tl-sub{ min-width: 0; max-width: 100%; }
 .tl-chip{ max-width: 100%; white-space: normal; }
 .tl-mark{ max-width: 100%; }
+
+/* 📝 타임라인 메모 칸 (2026-11-19) — 판은 .tl-body, 입력은 아래 고정 */
+.activity-board .tl-body{ display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.tl-memo{ flex: 0 0 auto; padding: 8px 0 2px; border-top: 1px solid var(--border); }
+.tl-memo-in{ width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2, rgba(0,0,0,.04)); color: var(--text); font: inherit; font-size: var(--fs-sm); }
+.tl-memo-in:focus{ outline: none; border-color: var(--accent); }
+.tl-chip-memo{ background: var(--accent-soft, rgba(0,0,0,.06)); }

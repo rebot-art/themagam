@@ -1764,6 +1764,30 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", 지원군체크칸);
   else 지원군체크칸();
 
+  /* 🧪 시험용 가짜 접속자 (혼자 방 전용, 주소 끝에 &fakemembers=25) — 왼쪽 멤버스 시험용 (2026-11-19 콩).
+     진짜 카드 길(프로필 없는 멤버)로 그려서 20명 넘는 방을 혼자 흉내 냅니다. 서버로는 아무것도 안 나가요. */
+  function 가짜멤버얹기(data, now) {
+    if (!window.SOLO || !data) return data;
+    let n = 0;
+    try { n = Math.max(0, Math.min(60, Number(new URLSearchParams(location.search).get("fakemembers")) || 0)); } catch (e) {}
+    if (!n) return data;
+    const out = Object.assign({}, data);
+    const 분 = Math.floor(now / 60000);
+    const ST = ["writing", "focus", "multi", "rest", "away"];
+    for (let i = 0; i < n; i++) {
+      const name = "시험" + String(i + 1).padStart(2, "0");
+      if (out[name]) continue;
+      out[name] = {
+        status: ST[(i + Math.floor(분 / 20)) % ST.length],
+        workMs: (((분 + i * 83) % 420) + 12) * 60000,
+        todayGoalText: "시험용 가짜 멤버 " + (i + 1),
+        lastSeen: 분 * 60000,
+        joinedAt: 7e15 + i
+      };
+    }
+    return out;
+  }
+
   function renderUserCards(data) {
     _pickSet = null;   // ⭐ 이번 렌더에서 고른 멤버 명단을 한 번만 읽습니다
       const list = document.getElementById("user-cards");
@@ -1789,6 +1813,7 @@
 
       /* 🤝 지원군 — 사람이 적으면 그리는 명단의 **사본**에 가짜 줄을 얹습니다 (위 설명) */
       data = 지원군얹기(data, now);
+      data = 가짜멤버얹기(data, now);
 
       const parts = [];
 
@@ -1842,9 +1867,14 @@
         }
       }
 
+      /* 👥 왼쪽 멤버스 (script_sidetabs.js) — 이번에 접속 중인 사람 명단을 그대로 넘기고,
+         멤버스가 열려 있으면 내 카드(와 화면 공유 중인 사람)만 카드 마당에 그립니다. 서버 읽기는 없어요. */
+      const _roster = [];
       for (const u of orderedNicks) {
         const row = data[u] || {};
         if (isOnline(row, now)) {
+          _roster.push({ nick: u, row, prof: (row._helper === true) ? (row._prof || {}) : ((window._profileCache && window._profileCache[u]) || {}) });
+          if (u !== myNick && window.leftMembersHide?.(u)) continue;
           const st = row.status || "idle";
           const cls = statusClass(st);
           const badge = st === "writing" ? `<span class="rec-dot"></span>` : "";
@@ -2186,6 +2216,8 @@
       }
 
       // 결과가 직전과 같으면 DOM을 그대로 둡니다 (이미지 재디코딩 방지)
+      window._cardRoster = _roster;
+      try { window.leftRoster?.(); } catch (e) {}
       const html = parts.join("");
       if (html !== _lastCardsHtml) {
         /* [수술 2026-08-13] 통째로 갈지 않고 **바뀐 카드만** 갈아 끼웁니다.

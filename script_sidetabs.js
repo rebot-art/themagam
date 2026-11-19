@@ -28,6 +28,10 @@
   const RENEWAL_AT = Date.parse("2026-12-18T00:00:00+09:00");
   window.renewalOpen = function () { return window.SOLO === true || Date.now() >= RENEWAL_AT; };
   window.RENEWAL_AT = RENEWAL_AT;
+  /* ⬅️ 왼쪽 사이드 바 (📢 공지 · 🙋 멤버스) — 2026-11-19 콩. 지금은 **혼자 방에서만** 시험합니다.
+     본방에 켤 때는 LEFT_MAIN 을 true 로 (그러면 오른쪽 탭에서 공지가 왼쪽으로 이사합니다). */
+  const LEFT_MAIN = false;
+  window.leftSide = () => window.SOLO === true || LEFT_MAIN;
   const SIDE_MAIN_ON = true;   // [2026-10-09 콩] 혼자 방 시험을 마치고 본방에도 켰습니다
   if (!window.SOLO && !SIDE_MAIN_ON) return;
 
@@ -63,7 +67,7 @@
     /* [2026-10-12 콩] ⏰ 데드라인 — 맨 아래(bottom → CSS margin-top:auto), 워크로그와 가까워 눈에 띄게(2026-11-09).
        알맹이는 script_deadline.js 가 칸 안에 직접 그립니다. 점(새 글 표시)은 없어요. */
     { id: "deadline", label: "⏰ 데드라인", open: "openDeadline", close: "closeDeadline", renewal: true, soon: "⏰◻︎◻︎◻︎◻︎", bottom: true }
-  ].filter(t => !(t.main && window.SOLO)).filter(t => !(t.id === "help" && window.qnaMerged()) && !(t.act && !window.actSide())).map(t => (t.renewal && !window.renewalOpen())
+  ].filter(t => !(t.id === "notice" && window.leftSide())).filter(t => !(t.main && window.SOLO)).filter(t => !(t.id === "help" && window.qnaMerged()) && !(t.act && !window.actSide())).map(t => (t.renewal && !window.renewalOpen())
     ? { id: t.id, label: t.soon, soonTab: true, bottom: t.bottom }   // 🎁 오픈 전 맛보기 — 이름은 아직 비밀, 열면 "준비 중" 안내만
     : t);
   const el = (id) => document.getElementById(id);
@@ -74,6 +78,7 @@
   /* 공지 여닫기 원본을 쥐어 둡니다 — 채팅 머리말의 [📢 공지] 단추도 옆 탭으로 오게 */
   let _nOpen = null, _nClose = null;
   function 공지가로채기() {
+    if (window.leftSide()) return;                 // 왼쪽 사이드 바가 공지를 맡습니다 (아래 ⬅️ 블록)
     if (_nOpen || typeof window.openNoticeBoard !== "function") return;
     _nOpen = window.openNoticeBoard; _nClose = window.closeNoticeBoard;
     window.openNoticeBoard  = () => 열기("notice");
@@ -141,6 +146,10 @@
     if (m && n && 다음) {
       m.style.marginTop = (Math.round(n.getBoundingClientRect().height) + 6) + "px";
       다음.style.marginTop = (Math.round(m.getBoundingClientRect().height) + 6) + "px";
+    } else if (m && !n && TABS[0] && el("side-tab-" + TABS[0].id)) {
+      /* 공지가 왼쪽으로 간 방 — Member 탭이 맨 위, 그 아래로 첫 탭 */
+      m.style.marginTop = "0px";
+      el("side-tab-" + TABS[0].id).style.marginTop = (Math.round(m.getBoundingClientRect().height) + 6) + "px";
     }
   }
   window.addEventListener("resize", 자리맞추기);
@@ -234,4 +243,211 @@
 
   window.sideTabOpen = 열기;
   window.sideTabClose = () => 닫기();
+})();
+
+/* =====================================================================
+   ⬅️ 왼쪽 사이드 바 — 📢 공지 · 🙋 멤버스 (2026-11-19 콩) — 지금은 혼자 방(?solo=1)에서만
+   ---------------------------------------------------------------------
+   [왜] 접속자가 스무 명이 넘으면 작은 화면에서는 카드가 다 안 보입니다.
+        멤버스를 열면 **나 말고 접속자는 왼쪽 명단**으로 가고, 카드 마당에는 내 카드만 남습니다.
+        (내가 화면 공유 중이면 공유 중인 사람의 카드·화공 카드도 남아요.) 닫으면 전원이 다시 보입니다.
+   [어떻게]
+     · 오른쪽 옆 탭과 거울 — 탭 줄은 화면 왼쪽 끝, 명단(250px)·공지(400px)는 탭 줄 오른쪽에 열립니다.
+     · 📢 공지는 오른쪽 탭에서 **이사**합니다 (열고 닫는 법은 그대로 — 가운데 창을 CSS 로 왼쪽 칸에 앉힘).
+     · 명단은 카드를 그리는 길(script_realtime.js renderUserCards)이 매번 넘겨 주는 window._cardRoster 를
+       그대로 씁니다 — **서버에서 새로 읽는 것이 없어요(통신량 0)**.
+     · 명단의 줄을 **더블클릭**하면 💘 하트 (script_heart.js 의 heartSend). 쪽지는 없습니다.
+     · 시험: 주소 끝에 &fakemembers=25 (혼자 방 전용 — 가짜 접속자 25명).
+   ===================================================================== */
+(function () {
+  if (typeof window.leftSide !== "function" || !window.leftSide()) return;
+
+  const el = (id) => document.getElementById(id);
+  const root = document.documentElement;
+  const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s == null ? "" : s));
+  const KEY = "leftTabOpen";
+  const W_MEM = 250, W_NOTICE = 400;
+  const TABS = [
+    { id: "notice",  label: "📢 공지" },
+    { id: "members", label: "🙋 멤버스" }
+  ];
+  let _cur = "";
+
+  /* 상태 이름 — script_member.js 와 같은 표 */
+  const LABEL = { idle: "☕BREAK☕", writing: "🔥WRITE🔥", focus: "💻JOB💻", multi: "💻multiT📓",
+                  rest: "☕BREAK☕", away: "💤AWAY💤", repair: "🛠️REPAIR🛠️" };
+  const CLS   = { idle: "status-rest", writing: "status-writing", focus: "status-focus", multi: "status-multi",
+                  rest: "status-rest", away: "status-away", repair: "status-repair" };
+  function whText(ms) {
+    const m = Math.round(Math.max(0, Number(ms || 0)) / 60000);
+    if (m < 60) return `${m}m`;
+    return `${Math.floor(m / 60)}h${m % 60 ? " " + (m % 60) + "m" : ""}`;
+  }
+
+  /* ── 카드 마당에 남길 사람 — 멤버스가 열려 있을 때 내 카드 말고는 감춥니다 ── */
+  const membersOn = () => _cur === "members";
+  function keepNick(u) {
+    /* 내가 화면 공유 중일 때만, 공유 중인 사람의 카드(와 그 옆 화공 카드)를 남깁니다 */
+    try { if (window.isScreenSharing?.() || window.SOLO) return (window.shareNicks?.() || []).indexOf(u) >= 0; } catch (e) {}
+    return false;
+  }
+  window.leftMembersHide = (u) => membersOn() && !keepNick(u);
+
+  /* ── 명단 그리기 ── */
+  let _lastHtml = "";
+  function paint() {
+    const host = el("left-pane-body");
+    if (!host || !membersOn()) return;
+    const me = (typeof myNick === "string" && myNick) ? myNick : (window.myNick || "");
+    const rows = (window._cardRoster || []).filter(x => x.nick !== me);
+    const li = rows.map(({ nick, row, prof }) => {
+      const st = row.status || "idle";
+      const photo = (window.photoShown || window.photoSrcOf) ? (window.photoShown || window.photoSrcOf)(prof || {}) : "";
+      const ava = photo
+        ? `<span class="member-ava lm-ava has-photo" data-avatar-of="${esc(nick)}"><img src="${esc(photo)}" alt="" loading="lazy"></span>`
+        : `<span class="member-ava lm-ava has-snow" data-avatar-of="${esc(nick)}">${window.snowmanSvg?.(nick) || esc(String(nick).slice(0, 1))}</span>`;
+      const sent = window.heartSentTo?.(nick) ? `<span class="lm-heart" title="오늘 하트를 보냈어요">❤️</span>` : "";
+      return `<li class="member-row lm-row" data-lm-nick="${esc(nick)}" title="더블클릭 — 하트 보내기">
+        ${ava}<span class="member-nick">${esc(nick)}</span>${sent}
+        <span class="card-state ${CLS[st] || "status-rest"} member-state">${esc(row.statusLabel || LABEL[st] || "휴식")}</span>
+        <span class="member-wh">⏱ ${whText(row.workMs)}</span></li>`;
+    }).join("");
+    const html = rows.length
+      ? `<div class="member-body"><div class="member-head">나 말고 <b>${rows.length}명</b> 접속 중 <span class="member-when">더블클릭 = 💘</span></div><ul class="member-list">${li}</ul></div>`
+      : `<div class="member-body"><div class="member-empty">지금은 나 혼자예요 🌙</div></div>`;
+    if (html === _lastHtml) return;          // 같으면 건드리지 않습니다 (더블클릭 도중에 줄이 새로 태어나지 않게)
+    _lastHtml = html;
+    host.innerHTML = html;
+  }
+  window.leftRoster = paint;
+
+  /* ── 만들기 ── */
+  function build() {
+    if (el("left-tabs")) return true;
+    if (!document.body || !el("dock-bar")) return false;
+    const box = document.createElement("aside");
+    box.id = "left-tabs"; box.className = "left-tabs";
+    box.innerHTML =
+      `<div class="lside-pane" id="left-pane">
+         <div class="side-pane-head"><b id="left-pane-title"></b>
+           <button type="button" class="dock-x" id="left-pane-x" aria-label="닫기" title="닫기">✕</button></div>
+         <div class="side-pane-body" id="left-pane-body"></div>
+       </div>
+       <div class="side-tabs-col left-tabs-col" id="left-tabs-col">` +
+      TABS.map(t => `<button type="button" class="member-tab side-tab left-tab" id="left-tab-${t.id}" data-left="${t.id}"
+          aria-expanded="false"><span>${t.label}</span><i class="side-tab-dot hidden" id="left-dot-${t.id}"></i></button>`).join("") +
+      `</div>`;
+    document.body.appendChild(box);
+    root.classList.add("lefttabs-on");
+    box.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-left]");
+      if (t) { const id = t.dataset.left; if (_cur === id) close(); else open(id); return; }
+      if (e.target.closest("#left-pane-x")) close();
+    });
+    /* 명단 줄 더블클릭 → 하트 (쪽지는 없습니다) */
+    el("left-pane-body").addEventListener("dblclick", (e) => {
+      const row = e.target.closest("[data-lm-nick]");
+      if (!row) return;
+      e.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch (x) {}
+      const nick = row.getAttribute("data-lm-nick");
+      window.heartSend?.(nick, row);
+      setTimeout(() => { _lastHtml = ""; paint(); }, 600);     // 보낸 줄에 ❤️ 표시
+    });
+    /* 📢 새 공지 붉은 점 — 알약의 점(#dock-dot-notice)을 탭에 비춥니다 */
+    const src = el("dock-dot-notice"), dst = el("left-dot-notice");
+    if (src && dst) {
+      const 비추기 = () => dst.classList.toggle("hidden", src.classList.contains("hidden") || _cur === "notice");
+      new MutationObserver(비추기).observe(src, { attributes: true, attributeFilter: ["class"] });
+      비추기();
+    }
+    let 기억 = "";
+    try { 기억 = window.AppStore?.getItem(KEY) || ""; } catch (e) {}
+    if (기억 && TABS.some(t => t.id === 기억)) setTimeout(() => open(기억, true), 300);
+    return true;
+  }
+
+  function place() {
+    const box = el("left-tabs"), 마당 = document.querySelector(".cards-area");
+    if (!box || !마당) return;
+    const r = 마당.getBoundingClientRect();
+    if (r.height < 40) return;
+    const top = Math.round(r.top), h = Math.round(r.height);
+    box.style.top = top + "px"; box.style.height = h + "px";
+    root.style.setProperty("--lside-top", top + "px");
+    root.style.setProperty("--lside-h", h + "px");
+  }
+  window.addEventListener("resize", place);
+
+  function relayout() {
+    try { window.relayoutCards?.(); } catch (e) {}
+    setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 280);
+    setTimeout(() => { try { window.relayoutCards?.(); } catch (e) {} }, 800);
+  }
+
+  /* 📢 공지 여닫기 원본 — 채팅 머리말의 [📢 공지] 단추도 왼쪽 칸으로 옵니다 */
+  let _nOpen = null, _nClose = null;
+  function hookNotice() {
+    if (_nOpen || typeof window.openNoticeBoard !== "function") return;
+    _nOpen = window.openNoticeBoard; _nClose = window.closeNoticeBoard;
+    window.openNoticeBoard  = () => open("notice");
+    window.closeNoticeBoard = () => { if (_cur === "notice") close(); else _nClose?.(); };
+  }
+
+  function open(id, 처음) {
+    const t = TABS.find(x => x.id === id);
+    if (!t || !el("left-tabs")) return;
+    if (_cur && _cur !== id) close(true);
+    _cur = id;
+    root.classList.add("left-open");
+    el("left-pane-title").textContent = t.label;
+    if (id === "notice") {
+      root.classList.add("lside-notice");
+      _nOpen?.();
+    } else {
+      root.classList.add("left-members");
+      _lastHtml = "";
+      paint();
+      try { window.renderUserCards?.(); } catch (e) {}      // 카드 마당을 내 카드만으로 다시 그립니다
+    }
+    TABS.forEach(x => el("left-tab-" + x.id)?.setAttribute("aria-expanded", String(x.id === id)));
+    el("left-dot-" + id)?.classList.add("hidden");
+    if (!처음) { try { window.AppStore?.setItem(KEY, id); } catch (e) {} }
+    place(); relayout();
+  }
+
+  function close(바꾸는중) {
+    const id = _cur;
+    if (!id) return;
+    _cur = "";
+    if (id === "notice") {
+      _nClose?.();
+      root.classList.remove("lside-notice");
+    } else {
+      root.classList.remove("left-members");
+      el("left-pane-body").innerHTML = ""; _lastHtml = "";
+      try { window.renderUserCards?.(); } catch (e) {}      // 접속자 전원이 다시 보입니다
+    }
+    el("left-tab-" + id)?.setAttribute("aria-expanded", "false");
+    if (바꾸는중) return;
+    root.classList.remove("left-open");
+    try { window.AppStore?.setItem(KEY, ""); } catch (e) {}
+    relayout();
+  }
+
+  /* Esc — 공지 쪽 손가락은 창만 감추고 가서, 이쪽 칸도 같이 닫아 줍니다 */
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && _cur === "notice") setTimeout(() => { if (_cur === "notice") close(); }, 0); });
+
+  /* 화면 공유를 켜고 끄면 "남길 사람"이 달라지니 카드를 다시 그립니다 (값 하나 비교 — 서버 읽기 없음) */
+  let _sh = "";
+  setInterval(() => {
+    hookNotice();
+    if (build()) place();
+    if (!membersOn()) return;
+    const now = (window.isScreenSharing?.() ? "1" : "0") + (window.shareNicks?.() || []).join(",");
+    if (now !== _sh) { _sh = now; try { window.renderUserCards?.(); } catch (e) {} }
+  }, 1000);
+
+  window.leftTabOpen = open;
+  window.leftTabClose = () => close();
 })();

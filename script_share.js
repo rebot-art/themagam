@@ -1750,6 +1750,7 @@
   /* 접속자 정보가 바뀔 때 script_realtime.js 가 다시 칠해 줍니다 */
   window.renderShareButton = renderShareButton;
   window.renderShareCards  = renderShareCards;
+  window.shareNicks        = () => { try { return shareRows().map(r => r.nick); } catch (e) { return []; } };   // 왼쪽 멤버스가 "공유 중인 사람"을 가릴 때
   /* 입장이 끝난 뒤에 한 번 물어봅니다 (카드·채팅이 먼저 떠야 하니 조금 뒤에) */
   window.addEventListener("load", () => {
     setTimeout(() => { try { offerResume(); } catch (e) {} }, 4000);
