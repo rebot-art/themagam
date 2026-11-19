@@ -384,6 +384,22 @@
   /** 방장이 일부러 새로고침을 시킨 사람 — 인사 시간 5분 보너스 */
   function 보너스(ms) { if (S) S.extra += Number(ms) || 5 * MIN; }
 
+  /* ★ [2026-11-20 콩 "자정에 전체 새로고침 했는데 30분 지나도 출석이 안 찍혀요"]
+       자정 전에 일하다 새로고침으로 자정을 넘겨 돌아온 "이어진 작업"(__carryOver)은 recordAttendance 가
+       일찍 돌아가서 greetStart 를 안 불렀고, 그래서 30분 확인 시계(확정시작)가 아예 안 켜졌습니다.
+       이어진 작업도 새 날 접속 시간이 30분을 넘으면 도장이 찍혀야 해요 (인사 확인은 하지 않습니다 — S 가 없어서 노란·분홍 카드도 없음). */
+  async function 이어짐시작(day) {
+    if (!NEW()) return;
+    const nick = 나();
+    if (!nick || !DB()) return;
+    try {
+      const v = (await DB().ref(`users/${nick}/attend/visit`).once("value")).val();
+      if (v && v.day === day) _visit = v;
+      else { const t = Date.now(); _visit = { day, firstAt: t, at: t }; await DB().ref(`users/${nick}/attend/visit`).set(_visit); }
+    } catch (e) { console.warn("[carry visit]", e); }
+    확정시작();
+  }
+  window.attendCarry = 이어짐시작;
   window.attend30On = () => NEW();
   window.attendStamped = (d) => !!A.stamped[d];
   window.attendMinNow = () => (_attMinV != null ? _attMinV : ATT_MIN_DEFAULT);

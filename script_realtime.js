@@ -3559,6 +3559,7 @@
     if (이어짐) {
       window.__attendDay = window.__carryDay || window.__attendDay || day;
       try { window.reloadStart?.(); } catch (e) {}
+      try { window.attendCarry?.(day); } catch (e) {}   // 2026-11-20: 이어진 작업도 새 날 접속 30분이 되면 출석 도장 (새 출석 방식)
       try { updateStatus(true); } catch (e) {}
       return;
     }
