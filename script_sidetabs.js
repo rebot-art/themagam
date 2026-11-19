@@ -30,7 +30,7 @@
   window.RENEWAL_AT = RENEWAL_AT;
   /* ⬅️ 왼쪽 사이드 바 (📢 공지 · 🙋 멤버스) — 2026-11-19 콩. 지금은 **혼자 방에서만** 시험합니다.
      본방에 켤 때는 LEFT_MAIN 을 true 로 (그러면 오른쪽 탭에서 공지가 왼쪽으로 이사합니다). */
-  const LEFT_MAIN = false;
+  const LEFT_MAIN = true;
   window.leftSide = () => window.SOLO === true || LEFT_MAIN;
   const SIDE_MAIN_ON = true;   // [2026-10-09 콩] 혼자 방 시험을 마치고 본방에도 켰습니다
   if (!window.SOLO && !SIDE_MAIN_ON) return;
