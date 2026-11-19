@@ -13361,3 +13361,68 @@ html.achv-hidden #mywork-panel-achv{ display: none !important; }
 .tl-chip-out{ color: #8A5A5A; }
 .tl-chip-share .tl-ic, .tl-chip-heart .tl-ic{ color: var(--accent); }
 .tl-chip-tomato .tl-ic, .tl-chip-pomo .tl-ic, .tl-chip-proom .tl-ic, .tl-chip-note .tl-ic{ color: var(--accent); }
+
+/* =====================================================================
+   ⬅️ 왼쪽 사이드 바 — 📢 공지 · 🙋 멤버스 (2026-11-19 콩 · 혼자 방 먼저)
+   ---------------------------------------------------------------------
+   · 오른쪽 옆 탭(.side-tabs)과 **거울**입니다. 칸(.lside-pane)이 화면 왼쪽 끝에, 탭 줄이 그 오른쪽에 섭니다.
+   · 멤버스(명단) 250px · 공지 400px. 열리면 카드 마당이 그만큼 왼쪽 여백을 비웁니다.
+   · 공지는 가운데 창(#notice-modal)을 CSS 로 이 칸 자리에 앉힙니다 (오른쪽 칸과 똑같은 방식).
+   ===================================================================== */
+.left-tabs{
+  position: fixed; left: 0; top: 60px; height: 60vh; z-index: 30;
+  display: flex; align-items: flex-start; pointer-events: none;
+}
+.left-tabs > *{ pointer-events: auto; }
+.left-tabs > .left-tabs-col{ pointer-events: none; align-items: flex-start; }
+.left-tabs-col > .left-tab{ pointer-events: auto; }
+.lside-pane{
+  width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column;
+  background: linear-gradient(var(--panel), var(--panel)), var(--bg, #fff);
+  border-right: 0 solid var(--border);
+}
+html.left-members .lside-pane{ width: 250px; border-right-width: 1px; }
+html.lside-notice .lside-pane{ width: 400px; border-right-width: 1px; }
+/* 탭 — 오른쪽 탭의 거울 (돌리지 않고, 화면 쪽(왼쪽)이 평평·바깥쪽이 둥글게) */
+.left-tab{
+  transform: none; writing-mode: vertical-rl; text-orientation: sideways;
+  border: 1px solid var(--border); border-left: 0; border-radius: 0 14px 14px 0;
+}
+/* 명단 */
+#left-pane-body .member-body{ flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#left-pane-body .member-head{ font-size: 12px; padding: 8px 10px 6px; }
+#left-pane-body .member-when{ float: none; display: block; }
+#left-pane-body .member-list{ padding: 2px 6px 8px; }
+#left-pane-body .member-row{ gap: 6px; padding: 5px 2px; }
+#left-pane-body .member-nick{ font-size: 13px; }
+#left-pane-body .member-state{ font-size: 9.5px; padding: 1px 5px; }
+#left-pane-body .member-wh{ min-width: 0; font-size: 12px; }
+.lm-row{ cursor: pointer; user-select: none; -webkit-user-select: none; }
+.lm-row:hover{ background: var(--fill-1, rgba(0,0,0,.04)); }
+.lm-ava{ flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: #EDE3D2; }
+.lm-ava img, .lm-ava svg{ width: 100%; height: 100%; object-fit: cover; display: block; }
+.lm-heart{ flex: 0 0 auto; font-size: 11px; }
+/* 📢 공지 — 가운데 창을 왼쪽 칸 자리에 앉힙니다 (머리줄 아래) */
+html.lside-notice #notice-modal{
+  inset: auto; left: 0; right: auto; top: calc(var(--lside-top, 60px) + 37px); width: 400px;
+  height: calc(var(--lside-h, 60vh) - 37px);
+  padding: 0; background: none; align-items: stretch; justify-content: stretch; z-index: 31;
+}
+html.lside-notice #notice-modal .modal-content{
+  width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; border: 0;
+  background: transparent; zoom: 1;
+}
+html.lside-notice #notice-modal .modal-x{ display: none; }
+html.lside-notice #notice-modal .nt-eyebrow{ display: none; }
+/* 아래 알약 줄의 공지 알약은 왼쪽 탭이 맡습니다 */
+html.lefttabs-on #dock-pill-notice{ display: none !important; }
+/* 카드 마당 — 왼쪽 여백 (탭 줄 40px + 열린 칸) */
+@media (min-width: 901px){
+  html.lefttabs-on .cards-area{ padding-left: var(--side-strip, 40px); }
+  html.left-members.lefttabs-on .cards-area{ padding-left: calc(250px + var(--side-strip, 40px)); }
+  html.lside-notice.lefttabs-on .cards-area{ padding-left: calc(400px + var(--side-strip, 40px)); }
+}
+@media (max-width: 900px){
+  html.left-members .lside-pane{ width: min(250px, calc(100vw - 44px)); }
+  html.lside-notice .lside-pane, html.lside-notice #notice-modal{ width: min(400px, calc(100vw - 44px)); }
+}
