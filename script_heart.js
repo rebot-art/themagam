@@ -230,6 +230,7 @@
         [`${NODE_ON}/${day}/${to}`]:       true,
         [`${NODE_BY}/${day}/${from}/${to}`]: true
       });
+      try { window.Activity?.add("heart", `'${to}'님께 ❤️ 하트`); } catch (e) {}
     } catch (e) {
       /* 서버가 거절 = 이미 쐈다 (다른 창에서 쐈다든지). 화면만 맞춰 줍니다 */
       console.warn("[heart]", e);

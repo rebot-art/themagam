@@ -1353,15 +1353,17 @@
         const a = Math.max(x.a, hs), e = Math.min(x.b, he);
         return `<i class="tl-seg" title="${esc(stName(x.s))} ${hm(a)}~${hm(e)}" style="left:${((a - hs) / HOUR * 100).toFixed(2)}%;width:${Math.max(0.8, (e - a) / HOUR * 100).toFixed(2)}%;background:${stOf(x.s).color}"></i>`;
       }).join("");
-      const chips = evH.map(r => `<span class="tl-chip tl-chip-${esc(r.k)}"><em>${hm(r.t)}</em><span class="tl-ic">${ICON[r.k] || ICON.info}</span>${esc(r.x)}</span>`).join("");
-      const mks = mkH.map(m => {
+      const chipItems = evH.map(r => ({ t: r.t, h: `<span class="tl-chip tl-chip-${esc(r.k)}"><em>${hm(r.t)}</em><span class="tl-ic">${ICON[r.k] || ICON.info}</span>${esc(r.x)}</span>` }));
+      const mkItems = mkH.map(m => ({ t: m.t, h: (() => {
         if (m.kind === "gap") return `<div class="tl-mark"><i class="tl-dot" style="background:#B0B4BA"></i>${esc(m.text)}</div>`;
         const tag = m.extra === "auto-away" ? `<span class="tl-auto">자동 감지 · 무입력 → 자리비움</span>`
           : m.extra === "auto-back" ? `<span class="tl-auto">입력 감지 · 자동 복귀</span>` : "";
         return `<div class="tl-mark"><i class="tl-dot" style="background:${stOf(m.to).color}"></i><em>${hm(m.t)}</em> ${esc(stName(m.from))} → <b>${esc(stName(m.to))}</b>${tag}</div>`;
-      }).join("");
+      })() }));
+      /* 활동 칩과 상태 변화 줄을 한 줄로 합쳐 **시간순**으로 (2026-11-19 콩) */
+      const subHtml = chipItems.concat(mkItems).sort((p, q) => p.t - q.t).map(x => x.h).join("");
       h += `<div class="tl-hr${isNow ? " now" : ""}${future ? " future" : ""}${empty ? " thin" : ""}" data-h="${k}">` +
-        `<div class="tl-h">${two(k)}</div><div class="tl-mid"><div class="tl-bar">${spans}${isNow ? `<u class="tl-now" style="left:${((now - hs) / HOUR * 100).toFixed(2)}%"></u>` : ""}</div>${chips || mks ? `<div class="tl-sub">${chips}${mks}</div>` : ""}</div>` +
+        `<div class="tl-h">${two(k)}</div><div class="tl-mid"><div class="tl-bar">${spans}${isNow ? `<u class="tl-now" style="left:${((now - hs) / HOUR * 100).toFixed(2)}%"></u>` : ""}</div>${subHtml ? `<div class="tl-sub">${subHtml}</div>` : ""}</div>` +
         `<div class="tl-c">${empty || future ? "" : durS(cum)}</div></div>`;
     }
     return h + `</div>`;
