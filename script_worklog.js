@@ -1308,7 +1308,7 @@
   }
 
   /* 📝 메모 칸 — 솔로방에서 먼저. 본방에 켤 때는 MEMO_MAIN 을 true 로 */
-  const MEMO_MAIN = false;
+  const MEMO_MAIN = true;
   const memoOn = () => window.SOLO === true || MEMO_MAIN;
   function board(day) {
     const T = window.TimeLog, now = Date.now(), ds = dayStart(day), isToday = day === dayOf(now);
