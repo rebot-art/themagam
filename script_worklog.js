@@ -1185,10 +1185,11 @@
   function readStore(n) {
     let v = null;
     try { v = JSON.parse(window.AppStore?.getItem(keyOf(n)) || "null"); } catch (e) {}
-    if (!(v && v.days)) {                                   // 옛 열쇠(닉 하나만 담던 것)에서 한 번 옮겨옵니다
-      try { const o = JSON.parse(window.AppStore?.getItem(KEY) || "null"); if (o && o.nick === n && o.days) v = o; } catch (e) {}
-    }
-    return (v && v.days) ? v : { nick: n, days: {} };
+    if (!(v && v.days)) v = { nick: n, days: {} };
+    /* ★ 옛 열쇠(닉 하나만 담던 것)는 새 열쇠가 이미 있어도 **늘 합칩니다** (2026-11-19 — 혼자 방이 새 코드로 먼저 열려
+       새 열쇠를 만들어 두면, 본방이 옛 열쇠의 오늘 앞부분 기록을 건너뛰던 일이 있었어요). 같은 기록은 한 번만 남아요. */
+    try { const o = JSON.parse(window.AppStore?.getItem(KEY) || "null"); if (o && o.nick === n && o.days) mergeDays(v, o); } catch (e) {}
+    return v;
   }
   function union(a, b, same, cap) {
     const out = (a || []).slice();
@@ -1408,6 +1409,12 @@
     redraw();
     try { _segs = (await window.TimeLog?.readSegs?.(_segDay)) || []; } catch (e) {}   // 이 탭을 열 때 단 한 번 (내 오늘 구간 묶음)
     redraw();
+    /* ★ 새로고침 직후 탭을 바로 열면 다시 들어오는 중이라 구간을 못 읽고 빈손일 수 있습니다 (2026-11-19 "오늘 작업·접속 시간이 0분").
+       비었으면 잠시 뒤 최대 3번만 다시 읽어 채웁니다 (읽기 3번이 끝 — 채워지면 바로 멈춥니다) */
+    [4000, 12000, 30000].forEach((ms) => setTimeout(async () => {
+      if (_box !== box || _segs.length) return;
+      try { const r = (await window.TimeLog?.readSegs?.(_segDay)) || []; if (r.length && _box === box) { _segs = r; redraw(); } } catch (e) {}
+    }, ms));
     clearInterval(_timer_());
     _timer = setInterval(() => { const d = dayOf(Date.now()); if (d !== _segDay) { _segDay = d; _segs = []; _last = null; _first = true; } redraw(); }, 30000);
   }
