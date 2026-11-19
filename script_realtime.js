@@ -2933,6 +2933,7 @@
       window.notifyPomodoro?.("rest");
     }
     _showMyPomoLine(next);
+    try { window.Activity?.add("pomo", next === "work" ? "개인 뽀모 · 집중 시작" : "개인 뽀모 · 휴식 시작"); } catch (e) {}
 
     window.updatePomoSetupUI?.({ running: true, workMin: _pomo.workMin, restMin: _pomo.restMin });
     updateStatus();                 // 카드의 🍅 갱신
@@ -3053,6 +3054,7 @@
     renderPomoButtons();
     window.playPomodoroSound?.("work_start");
     _showMyPomoLine("work");
+    try { window.Activity?.add("pomo", `개인 뽀모 시작 (${workMin}분 집중)`); } catch (e) {}
     updateStatus();                 // 카드에 🍅 붙이기
     _pomoStartLoop();
   }
@@ -3066,6 +3068,7 @@
     renderPomoButtons();
     if (wasRunning) {
       _showMyPomoLine("stop");
+      try { window.Activity?.add("pomo", "개인 뽀모 종료"); } catch (e) {}
       updateStatus();               // 카드에서 🍅 떼기
     }
   }

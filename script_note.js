@@ -65,6 +65,13 @@
     _inRef = db.ref(`notes/${myNick}`);
     _inRef.on("value", snap => {
       _inbox = snap.val() || {};
+      /* 타임라인에 "쪽지 수신" — 이미 받아 둔 서버 값을 이 기기 기록에 옮길 뿐, 서버는 안 건드립니다. key 로 한 번만 */
+      try {
+        const lim = Date.now() - 2 * 86400000;
+        Object.entries(_inbox).forEach(([id, v]) => {
+          if (v && v.from && Number(v.at) > lim) window.Activity?.add("note", `'${v.from}'님으로부터 쪽지 수신`, { at: Number(v.at), key: "note-in-" + id });
+        });
+      } catch (e) {}
       renderNoteBadge();
       renderNotePanel();
     });
@@ -145,6 +152,7 @@
       /* 내 보낸 쪽지함 — 실패해도 보낸 것 자체는 이미 갔습니다 */
       try { await db.ref(`notesOut/${myNick}`).push({ to, text, at }); } catch (e) {}
       closeNote();
+      try { window.Activity?.add("note", `'${to}'님에게 쪽지 발송`); } catch (e) {}
       window.showCommandToast?.(`${to} 님에게 쪽지를 보냈어요`);
     } catch (e) {
       console.warn("[쪽지 보내기 실패]", e);

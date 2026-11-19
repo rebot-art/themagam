@@ -257,6 +257,7 @@
     loadForest();
     loadAllowList();
     loadHello();
+    loadVerPause();
     if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); loadHonor(); }
   }
 
@@ -2395,6 +2396,30 @@
     }
   }
 
+  /* ⏸ 새 버전 자동 새로고침 멈춤/재개 — config/verPause = { on, at, until } (script_reload.js 가 듣습니다) */
+  const VERPAUSE_MAX = 6 * 3600 * 1000;
+  function verPauseDraw(v) {
+    const on = !!(v && v.on && Number(v.until) > Date.now());
+    const b = el("adm-verpause-toggle"); if (!b) return;
+    b.textContent = on ? "▶ 새 버전 자동 새로고침 다시 켜기" : "⏸ 새 버전 자동 새로고침 멈추기";
+    const t = on ? new Date(Number(v.until)) : null;
+    msg("adm-verpause-msg", on ? `멈춘 상태예요 — ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}에 저절로 풀려요.` : "켜져 있어요 (새 버전이 나오면 1시간 뒤 자동 새로고침).");
+  }
+  async function loadVerPause() {
+    try { verPauseDraw((await db.ref("config/verPause").once("value")).val()); } catch (e) {}
+  }
+  async function toggleVerPause() {
+    try {
+      const cur = (await db.ref("config/verPause").once("value")).val();
+      const on = !!(cur && cur.on && Number(cur.until) > Date.now());
+      const next = on ? { on: false, at: Date.now(), until: 0 } : { on: true, at: Date.now(), until: Date.now() + VERPAUSE_MAX };
+      await db.ref("config/verPause").set(next);
+      verPauseDraw(next);
+    } catch (e) {
+      msg("adm-verpause-msg", "바꾸지 못했어요. 방장 계정이 맞는지 확인해 주세요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   async function loadHello() {
     const ta = el("adm-hello");
     if (!ta) return;
@@ -3953,6 +3978,7 @@
     el("adm-h2q")?.addEventListener("click", moveHelpToQna);
     loadAttMin();
     el("adm-force-send")?.addEventListener("click", sendForceReload);
+    el("adm-verpause-toggle")?.addEventListener("click", toggleVerPause);
     el("adm-hello-clear")?.addEventListener("click", clearHello);
     el("adm-bnotice-save")?.addEventListener("click", saveBoardNotice);
     el("adm-bnotice-clear")?.addEventListener("click", clearBoardNotice);

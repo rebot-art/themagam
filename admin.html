@@ -1003,6 +1003,10 @@
           (어제 열어 둔 창은 안내 문구와 함께 로그인 화면으로 가요.) · <b>방장만</b> 누를 수 있어요.</p>
         <button class="adm-btn" id="adm-force-send">지금 전원 새로고침</button>
         <div class="adm-msg" id="adm-force-msg"></div>
+        <hr style="border:0;border-top:1px solid var(--border,#ddd);margin:14px 0 10px">
+        <p class="adm-sub"><b>⏸ 새 버전 자동 새로고침</b> — 새 버전이 나온 걸 알면 <b>1시간 뒤 자동으로</b> 새로고침돼요. 파일을 연달아 올릴 때는 잠깐 <b>멈췄다가</b>, 다 올린 뒤에 <b>다시 켜세요.</b> 다시 켜면 1시간을 처음부터 세요. (깜빡해도 <b>6시간 뒤엔 저절로 풀려요.</b> 20시간 자동·전원 새로고침은 그대로예요.)</p>
+        <button class="adm-btn" id="adm-verpause-toggle">⏸ 새 버전 자동 새로고침 멈추기</button>
+        <div class="adm-msg" id="adm-verpause-msg"></div>
       </div>
 
       <!-- 📌 배경판 공지 (2026-10-07 — 콩) — 방 배경의 현황판 바로 위에 한 줄.
@@ -1206,7 +1210,7 @@
 
   <!-- 🎑 명절 표 — 출근부가 의무 출석일을 낮출 때 봅니다 (멤버 화면과 같은 파일) -->
   <script src="script_holiday.js"></script>
-  <script src="script_admin.js?v=202611181515"></script>
+  <script src="script_admin.js?v=202611191316"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

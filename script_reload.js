@@ -61,6 +61,12 @@
   let _마커 = null, _보너스줌 = false;
   let _진행 = false, _마지막입력 = 0;
   let _새판at = 0, _새판no = 0, _가짜판 = 0;
+  /* ⏸ 새 판 새로고침 일시정지 (2026-11-19 콩) — 파일을 연달아 올릴 때 새로고침이 자꾸 겹치지 않게 방장이 잠시 멈춥니다.
+     config/verPause = { on, at, until } (관리자 페이지 🔄 박스). until(최대 6시간)이 지나면 저절로 풀려서 깜빡 잊어도 영영 안 멈춥니다.
+     20시간 자동·방장 전원 새로고침은 그대로 — 멈추는 건 '새 판 감지' 하나뿐. 다시 켜면 1시간을 처음부터 다시 셉니다. */
+  let _정지 = null;
+  const 정지중 = () => !!(_정지 && _정지.on && Number(_정지.until) > Date.now());
+  window.verPaused = 정지중;
 
   /* ---------- 순수 계산 (checks.js 가 따로 시험합니다) ---------- */
 
@@ -141,6 +147,7 @@
 
   function 새판검사() {
     if (_진행) return;
+    if (정지중()) { _새판at = 0; return; }       // 멈춘 동안은 세지 않습니다 (다시 켜면 처음부터 1시간)
     let 내 = 0, 최신 = 0, 시도 = null;
     try { 내 = Number(window.MY_VER || 0); 최신 = Number(window.newestVer?.() || 0); } catch (e) {}
     if (_가짜판) 최신 = Math.max(최신, 내 + _가짜판);
@@ -180,6 +187,9 @@
         }
       });
     } catch (e) { console.warn("[reload listen]", e); }
+    try {
+      window.db.ref("config/verPause").on("value", (s) => { _정지 = s.val() || null; _새판at = 0; });
+    } catch (e) { console.warn("[verPause listen]", e); }
   }
 
   /** 입장 직후에 불립니다 (본방: recordAttendance, 혼자 방: solo) */

@@ -13358,3 +13358,6 @@ html.achv-hidden #mywork-panel-achv{ display: none !important; }
 .tl-memo-in{ width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2, rgba(0,0,0,.04)); color: var(--text); font: inherit; font-size: var(--fs-sm); }
 .tl-memo-in:focus{ outline: none; border-color: var(--accent); }
 .tl-chip-memo{ background: var(--accent-soft, rgba(0,0,0,.06)); }
+.tl-chip-out{ color: #8A5A5A; }
+.tl-chip-share .tl-ic, .tl-chip-heart .tl-ic{ color: var(--accent); }
+.tl-chip-tomato .tl-ic, .tl-chip-pomo .tl-ic, .tl-chip-proom .tl-ic, .tl-chip-note .tl-ic{ color: var(--accent); }

@@ -1433,6 +1433,7 @@
     const next = _getTodaySessionCount() + 1;
     _setTodaySessionCount(next);
     renderTodaySessionCount();
+    try { window.Activity?.add("tomato", `토마토 +1 · 오늘 ${next}개`); } catch (e) {}
 
     if (myNick) {
       try {

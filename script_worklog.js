@@ -1155,6 +1155,13 @@
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>',
   };
   ICON.memo = ICON.wl;
+  ICON.out = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+  ICON.tomato = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 6c-.5-1.5-1.5-2.5-3-3"/><path d="M12 6c.5-1.5 1.5-2.5 3-3"/></svg>';
+  ICON.pomo = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
+  ICON.note = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>';
+  ICON.proom = ICON.in;
+  ICON.share = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+  ICON.heart = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
   const nick = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
   const dayOf = (t) => (window.ymd ? window.ymd(t) : new Date(t).toISOString().slice(0, 10));
   const two = (n) => String(n).padStart(2, "0");
@@ -1325,9 +1332,10 @@
       const s0 = ds + kk * HOUR, e0 = s0 + HOUR;
       return !segs.some(x => x.a < e0 && x.b > s0) && !ev.some(r => r.t >= s0 && r.t < e0) && !mk.some(m => m.t >= s0 && m.t < e0) && !(isToday && now >= s0 && now < e0);
     };
-    for (let k = 0; k < 24; k++) {
+    const lastH = isToday ? new Date(now).getHours() : 23;   // 오늘은 지금 시각까지만 — 맨 아래가 늘 '지금'
+    for (let k = 0; k <= lastH; k++) {
       if (emptyAt(k)) {
-        let e = k; while (e + 1 < 24 && emptyAt(e + 1)) e++;
+        let e = k; while (e + 1 <= lastH && emptyAt(e + 1)) e++;
         if (e > k) {
           h += `<div class="tl-hr skip${isToday && ds + k * HOUR > now ? " future" : ""}"><div class="tl-h"><span>${two(k)}</span><span>${two(e)}</span></div><div class="tl-mid"><div class="tl-bar"></div></div><div class="tl-c"></div></div>`;
           k = e; continue;
@@ -1383,10 +1391,11 @@
     if (!_box || !_box.isConnected || !on()) return;
     const body = bodyOf(_box);
     const list = body.querySelector(".tl-list"), keep = list ? list.scrollTop : 0, first = _first;
+    const atBottom = !list || (list.scrollTop + list.clientHeight >= list.scrollHeight - 12);   // 맨 아래를 보고 있었나
     body.innerHTML = board(_segDay);
     const l = body.querySelector(".tl-list");
     if (!l) return;
-    if (first) { _first = false; const n = l.querySelector(".tl-hr.now"); if (n) l.scrollTop = Math.max(0, n.offsetTop - l.clientHeight / 2 + n.clientHeight / 2); }
+    if (first || atBottom) { _first = false; l.scrollTop = l.scrollHeight; }   // 처음 열 때·맨 아래를 보던 중이면 늘 맨 아래(지금)로. 위로 올려 둔 채면 그 자리 유지
     else l.scrollTop = keep;
   }
   async function openActivity() {
@@ -1412,5 +1421,31 @@
   window.closeActivity = closeActivity;
 
   const count = () => ((load().days[dayOf(Date.now())] || { rows: [] }).rows.length);
-  window.Activity = { add, status, markAuto, count, redraw, _t: { load, board, marks, merge } };
+  /* 🚪 나가기=접속 종료 / 창 닫기=접속 끊김 / 새로고침 구분 (2026-11-19 콩)
+     창을 닫을 때와 새로고침할 때는 브라우저가 똑같이 "떠난다" 신호만 줍니다. 그래서 일단 "창 닫음 · 접속 끊김" 으로
+     적어 두고, 다음에 열린 페이지가 "새로고침으로 열린 것"이면 그 줄을 "새로고침" 으로 고칩니다. (이 기기 안에서만, 서버 0) */
+  const EXITKEY = "actExit";
+  function exitMark() {
+    if (!on() || !nick()) return;
+    const t = Date.now();
+    add("out", "창 닫음 · 접속 끊김", { at: t, key: "exit-" + t });
+    try { window.AppStore?.setItem(EXITKEY, JSON.stringify({ nick: nick(), t })); } catch (e) {}
+  }
+  function exitFix() {
+    try {
+      const m = JSON.parse(window.AppStore?.getItem(EXITKEY) || "null");
+      if (!m || !m.t) return;
+      window.AppStore?.removeItem?.(EXITKEY);
+      const nav = (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]) || {};
+      if (nav.type !== "reload" || Date.now() - m.t > 120000) return;
+      const d = readStore(m.nick), b = d.days[dayOf(m.t)];
+      const r = b && b.rows.find(x => x.key === "exit-" + m.t);
+      if (!r) return;
+      r.x = "새로고침";
+      window.AppStore?.setItem(keyOf(m.nick), JSON.stringify(d));
+    } catch (e) {}
+  }
+  exitFix();
+  const has = (key) => !on() || !!(bucket(dayOf(Date.now())).rows.some(r => r.key === key));
+  window.Activity = { add, has, exitMark, status, markAuto, count, redraw, _t: { load, board, marks, merge } };
 })();

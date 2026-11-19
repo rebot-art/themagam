@@ -759,6 +759,7 @@
     _proom열림 = true;
     if (!다시펴기) {
       _proom들어온때 = proom지금();  // 🍅 — 바퀴 시작 전부터 있었나 견주는 기준
+      try { window.Activity?.add("proom", "뽀모방 입장"); } catch (e) {}
       /* 👋 내 입장은 내 손으로 한 줄 — 남들 화면에는 status 를 타고
          각자의 기기가 그립니다 (proomSetHere 는 내 닉을 건너뜁니다) */
       if (proomMe()) {
@@ -795,6 +796,7 @@
         if (라벨 && 라벨.dataset.orig) 라벨.textContent = 라벨.dataset.orig;
       }
     }
+    if (_proom들어온때) { try { window.Activity?.add("proom", "뽀모방 퇴장"); } catch (e) {} }
     _proom들어온때 = 0;              // 나갔으면 다시 들어와야 셉니다
     /* 👋 입장 줄은 이 방문의 것 — 닫으면 비우고, 다시 열면 새로 봅니다 */
     _proom명단 = null; _proom입장줄 = []; _proom입장때 = {};
