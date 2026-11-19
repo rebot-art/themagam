@@ -912,6 +912,7 @@
     _attachStream(stream);
 
     _sharing = true;
+    try { window.Activity?.add("share", "화면 공유 시작"); } catch (e) {}
     _표시남기기(true);
 
     /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 예약해 둡니다.
@@ -954,6 +955,7 @@
   async function stopScreenShare() {
     const wasSharing = _sharing;
     _sharing = false;
+    if (wasSharing) { try { window.Activity?.add("share", "화면 공유 종료"); } catch (e) {} }
     _표시남기기(false);          // 내 손으로 껐으니 다음에 안 물어봅니다
 
     if (_timer)    { clearInterval(_timer);    _timer = null; }

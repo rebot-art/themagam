@@ -667,6 +667,7 @@ window.AppSession = AppSession;
        컴을 꺼도 안 지워졌어요 (12시간 고아 정리까지 버팀).
        → 나가는 중 표시를 먼저 켜서, 나가는 동안은 누구도 status 를 쓰지 않게. */
     window.__leaving = true;
+    try { window.Activity?.add("out", "접속 종료 (나가기)"); } catch (e) {}   // 🚪 타임라인에 남김
 
     /* [2026-08-03] 나가기 전 마무리 —
        ① 열려 있는 작업 구간을 지금까지로 저장 (워크 타임이 날아가지 않게)
@@ -830,6 +831,7 @@ window.AppSession = AppSession;
 
   function _handleBeforeUnload() {
     if (!myNick || _leaveBeaconSent) return;
+    try { window.Activity?.exitMark?.(); } catch (e) {}   // 🚪 타임라인에 "창 닫음 · 접속 끊김"(새로고침이면 다음 페이지가 고쳐 줍니다)
     /* [2026-10-04 콩 "창을 그냥 닫으면?"] 아래에서 status 를 지우면, 탭이
        완전히 닫히기 전 그 짧은 틈에 자가 복구가 줄을 되살리려 듭니다
        (나가기 버튼의 휴식 유령과 같은 길). 닫는 중에도 쓰지 않게 막습니다.

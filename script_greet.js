@@ -219,7 +219,17 @@
     const nick = 나();
     let prev = null;
     try { prev = (await DB().ref(`attendance/${day}/${nick}`).once("value")).val(); } catch (e) { return; }   // 못 읽으면 다음 틱에 다시
-    if (prev && (prev.firstAt || prev.at)) { A.stamped[day] = true; return; }                                // 이미 찍혀 있음 (다른 창·재입장)
+    if (prev && (prev.firstAt || prev.at)) {                                                                  // 이미 찍혀 있음 (다른 창·재입장)
+      A.stamped[day] = true;
+      /* 타임라인 출석 칸이 "–" 로 남지 않게 — 이 기기에 오늘 출석 줄이 없을 때만 한 번 적습니다 (2026-11-19 콩) */
+      try {
+        if (window.Activity && !window.Activity.has("att-" + day)) {
+          const n = await 몇번째(nick, day);
+          window.Activity.add("att", `${n}번째 출석! (${n}/18)`, { key: "att-" + day, at: Math.min(Date.now(), prev.firstAt || prev.at || Date.now()) });
+        }
+      } catch (e) {}
+      return;
+    }
     const v = (_visit && _visit.day === day) ? _visit : {};
     const first = v.firstAt || Date.now();
     A.stamped[day] = true;
