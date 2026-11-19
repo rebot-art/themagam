@@ -269,7 +269,7 @@
   const W_MEM = 250, W_NOTICE = 400;
   const TABS = [
     { id: "notice",  label: "📢 공지" },
-    { id: "members", label: "🙋 멤버스" }
+    { id: "members", label: "🙋 Members" }
   ];
   let _cur = "";
 
