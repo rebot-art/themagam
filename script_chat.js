@@ -435,7 +435,8 @@
     if (_shoutTimer) { clearTimeout(_shoutTimer); _shoutTimer = null; }
   }
 
-  function showShoutOverlay(nick, text, durationMs = 3000) {
+  /* [2026-11-20 콩] 외치기 팝업이 뜨는 시간 3초 → 15초 (5배). 두 곳(내가 외칠 때·남이 외칠 때) 모두 이 기본값을 씁니다. */
+  function showShoutOverlay(nick, text, durationMs = 15000) {
     // ✅ [FIX] 백그라운드 탭에서는 표시하지 않음 — 타이머가 얼려서
     // 복귀 후에도 오버레이가 남아 있는 버그 방지 (내용은 채팅 카드로 남음)
     if (document.visibilityState === "hidden") return;
