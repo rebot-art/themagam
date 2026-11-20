@@ -2468,26 +2468,6 @@
     } catch (e) {}
   }
 
-  /* 📓→🤔 표현 공부 글 → Q&A 복사 (2026-11-18) — 같은 키로 옮겨서 답(parent)·참고(ref) 연결이 그대로 살아요. 방장만 쓸 수 있어요(qna 규칙). */
-  async function moveHelpToQna() {
-    if (!confirm("표현 공부의 글을 Q&A 로 복사할까요? (원본은 그대로 두고, 같은 글은 겹치지 않아요)")) return;
-    try {
-      const src = (await db.ref("help").once("value")).val() || {};
-      const upd = {}; let n = 0;
-      Object.keys(src).forEach((id) => {
-        const v = src[id];
-        if (!v || typeof v !== "object" || !String(v.text || "").trim()) return;
-        const row = { text: String(v.text).slice(0, 600), at: Number(v.at) || 0, hearts: Math.max(0, Math.round(Number(v.checks) || 0)) };
-        if (typeof v.parent === "string" && v.parent) row.parent = v.parent;
-        if (typeof v.ref === "string" && v.ref) row.ref = v.ref;
-        upd[id] = row; n++;
-      });
-      if (!n) { msg("adm-h2q-msg", "옮길 글이 없어요.", true); return; }
-      await db.ref("qna").update(upd);
-      msg("adm-h2q-msg", `📓→🤔 ${n}개를 Q&A 로 옮겼어요. (표현 공부 원본은 그대로예요)`);
-    } catch (e) { msg("adm-h2q-msg", "옮기지 못했어요. (방장 계정인지 확인해 주세요) " + (e.code || e.message || ""), true); }
-  }
-
   /* ⏱ 출석 인정 시간 (2026-11-18) — config/attendMin (방장만 씀, 모두 읽음) */
   async function loadAttMin() {
     const i = el("adm-attmin"); if (!i) return;
@@ -4137,7 +4117,6 @@
     /* 👋 입장 인사 */
     el("adm-hello-save")?.addEventListener("click", saveHello);
     el("adm-attmin-save")?.addEventListener("click", saveAttMin);
-    el("adm-h2q")?.addEventListener("click", moveHelpToQna);
     loadAttMin();
     el("adm-force-send")?.addEventListener("click", sendForceReload);
     el("adm-verpause-toggle")?.addEventListener("click", toggleVerPause);
