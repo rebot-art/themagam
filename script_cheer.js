@@ -243,6 +243,7 @@
       });
       /* 타임라인에 "'모모'님께 🔥 불꽃" (2026-11-19) — 하트 판의 하트·불꽃·따봉·별이 모두 이 길을 지납니다 */
       try { window.Activity?.add("heart", `'${to}'님께 ${KIND_LABEL[String(kind).replace(/^m(?=fire|thumb|star|heart)/, "")] || kind}`); } catch (e) {}
+      try { window.useLogBump?.("h"); } catch (e) {}              // 📒 방 활동 기록 (명예 멤버 활동 점수)
     } catch (e) { console.warn("[cheer]", e); window.heartToast?.(`오늘 이미 ${KIND_LABEL[kind]} 붙였어요`); }
     _busy = false;
   }

@@ -1300,6 +1300,7 @@
       /* 🏅 수다왕 — **보내기가 끝난 뒤**에 셉니다. 위에서 빈 줄이나
          막힌 전송은 이미 걸러졌으므로, 여기 도달했으면 진짜 한 줄입니다. */
       window.achvBump?.("cChat");
+      try { window.useLogBump?.("c"); } catch (e) {}              // 📒 방 활동 기록 (명예 멤버 활동 점수)
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();

@@ -258,7 +258,7 @@
     loadAllowList();
     loadHello();
     loadVerPause();
-    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); loadHonor(); }
+    if (isOwner) { loadStaffList(); loadShareLimit(); loadHelpers(); loadBoardNotice(); loadHonor(); autoHonor(); }
   }
 
   /* =====================================================================
@@ -1845,10 +1845,10 @@
      전부 관리자 표가 이미 읽어 둔 값으로 셉니다 — 새로 읽는 건 🍅(사람별
      pomoSessions)와 📚(worklog, 방장만 읽힘)뿐.
        📅 개근    출석률 100% (개근 명단과 같은 기준)
-       ⏱ 장인    작업 시간 상위 5 (2026-09-08: 3 → 5, 다른 항목과 같게)
-       ✍️ 다작    글자수 상위 5          (콩: "3명은 아쉬워")
-       🍅 뽀모왕  뽀모 완주 상위 5
-       📚 완결러  Work Log 회차 마침 15회 이상 (2026-09-08: 18 → 15, "하루 1빡은 빡세")
+       ⏱ 장인    작업 시간 상위 10 (2026-09-08: 3 → 5, 다른 항목과 같게)
+       ✍️ 다작    글자수 상위 10          (콩: "3명은 아쉬워")
+       🍅 뽀모왕  뽀모 완주 상위 10
+       📚 완결러  Work Log 회차 마침 5회 이상 (2026-09-08: 18 → 15, 2026-11-21: 15 → 5 — 챕터로 나눠 쓰는 작가도 있어서)
        🦉 올빼미  23~03시 비중이 가장 높은 사람 (달 5시간 이상 앉은 사람 중)
        🌅 아침형  05~09시 비중이 가장 높은 사람 (둘 중 하나만)
        🌱 새싹    그 달에 처음 온 사람이 출석 기준을 채움
@@ -1856,12 +1856,12 @@
      ===================================================================== */
   const BADGE_META = {
     "개근":   { e: "📅", t: "개근 — 출석률 100%",          c: "그달 출석률 100% (휴가를 뺀 의무 출석일을 다 채우기)" },
-    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 5",     c: "그달 작업 시간 상위 5명" },
-    "다작":   { e: "✍️", t: "다작 — 글자수 상위 5",        c: "그달 글자수 상위 5명" },
-    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 5",   c: "그달 뽀모 완주 횟수 상위 5명" },
-    "완결러": { e: "📚", t: "완결러 — 회차 마침 15회",     c: "Work Log 회차 '마침' 15회 이상" },
-    "올빼미": { e: "🦉", t: "올빼미 — 밤 23~03시 상위 5",  c: "밤 23~03시에 쌓은 작업 시간 상위 5명" },
-    "아침형": { e: "🌅", t: "아침형 — 아침 05~09시 상위 5", c: "아침 05~09시에 쌓은 작업 시간 상위 5명" },
+    "장인":   { e: "⏱",  t: "장인 — 작업 시간 상위 10",     c: "그달 작업 시간 상위 10명" },
+    "다작":   { e: "✍️", t: "다작 — 글자수 상위 10",        c: "그달 글자수 상위 10명" },
+    "뽀모왕": { e: "🍅", t: "뽀모왕 — 뽀모 완주 상위 10",   c: "그달 뽀모 완주 횟수 상위 10명" },
+    "완결러": { e: "📚", t: "완결러 — 회차 마침 5회",     c: "Work Log 회차 '마침' 5회 이상" },
+    "올빼미": { e: "🦉", t: "올빼미 — 밤 23~03시 상위 10",  c: "밤 23~03시에 쌓은 작업 시간 상위 10명" },
+    "아침형": { e: "🌅", t: "아침형 — 아침 05~09시 상위 10", c: "아침 05~09시에 쌓은 작업 시간 상위 10명" },
     "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성", c: "들어온 첫 달에 출석 기준을 채우면 (한 번만)" }
   };
   let _배지캐시 = { key: "", 값: null };   // { key: "2026-08|48", 값: {닉:[...]} }
@@ -1910,7 +1910,7 @@
         }));
         work[n] = w; night[n] = nt; morn[n] = mo; total[n] = tt;
       });
-      상위(work, 5).forEach(n => 주기(n, "장인"));
+      상위(work, 10).forEach(n => 주기(n, "장인"));
       /* ★ [고침 2026-09-08 — 콩 "한 명한테만 주는 거였구나 ㅜㅜ, 채운
          순으로 각각 5명씩"] 처음엔 **비중(제 작업 중 밤 비율)이 가장 높은
          한 명**만 줬습니다. 그러면 밤에 오래 해도 낮에도 앉아 있으면
@@ -1920,26 +1920,28 @@
          (그래서 한 사람이 8종을 다 받을 수도 있어요 — 카드도 8개까지
           답니다). 표본이 작은 사람을 거르던 5시간 문턱은 뺐습니다 —
          총량으로 줄 세우면 애초에 위로 못 올라오니까요. */
-      상위(night, 5).forEach(n => 주기(n, "올빼미"));
-      상위(morn, 5).forEach(n => 주기(n, "아침형"));
+      상위(night, 10).forEach(n => 주기(n, "올빼미"));
+      상위(morn, 10).forEach(n => 주기(n, "아침형"));
       /* ✍️ 다작 — wordlog/{날}/{닉}.total */
       const words = {};
       Object.values(wordMonth || {}).forEach(day => Object.entries(day || {}).forEach(([n, r]) => {
         if (!nicks.includes(n)) return;
         words[n] = (words[n] || 0) + Math.max(0, Number(r?.total || 0));
       }));
-      상위(words, 5).forEach(n => 주기(n, "다작"));
-      /* 🍅 뽀모왕 — users/{닉}/pomoSessions/{날}.count */
+      상위(words, 10).forEach(n => 주기(n, "다작"));
+      /* 🍅 뽀모왕 — users/{닉}/pomoSessions/{날}.count
+         ★ 하루 상한 12개(12×25분=5시간, 작업시간 상한과 같은 잣대) — 타이머만 밤새 돌리는 경우 방지 */
+      const POMO_DAY_CAP = 12;
       const pomo = {};
       await Promise.all(nicks.map(async n => {
         try {
           const v = (await db.ref(`users/${n}/pomoSessions`).once("value")).val() || {};
           let c = 0;
-          Object.entries(v).forEach(([d, o]) => { if (d.startsWith(ymKey)) c += Math.max(0, Number(o?.count || 0)); });
+          Object.entries(v).forEach(([d, o]) => { if (d.startsWith(ymKey)) c += Math.min(POMO_DAY_CAP, Math.max(0, Number(o?.count || 0))); });
           pomo[n] = c;
         } catch (e) { pomo[n] = 0; }
       }));
-      상위(pomo, 5).forEach(n => 주기(n, "뽀모왕"));
+      상위(pomo, 10).forEach(n => 주기(n, "뽀모왕"));
       /* 📚 완결러 — worklog/{닉}/ep 에서 done && doneDay 가 그 달.
          ★ 방장만 읽을 수 있는 자리라, 운영진 화면에서는 아예 묻지 않습니다
            (거절될 요청을 48번 보내 봐야 통신량만 씁니다). */
@@ -1948,7 +1950,7 @@
           try {
             const v = (await db.ref(`worklog/${n}/ep`).once("value")).val() || {};
             const c = Object.values(v).filter(x => x && x.done && String(x.doneDay || "").startsWith(ymKey)).length;
-            if (c >= 15) 주기(n, "완결러");
+            if (c >= 5) 주기(n, "완결러");
           } catch (e) {}
         }));
       }
@@ -3390,10 +3392,16 @@
      분기마다 최대 7명. 기간은 **시작 달 ~ 끝 달**을 직접 고릅니다
      (첫 판은 8·9·10월이라 분기와 어긋나서요 — 기본값은 이번 달까지 석 달).
        · 출석률  = 나온 날 ÷ (입장일~어제 중 🏖️🌿 쉰 날을 뺀 날)
-       · 작업시간 = timeSegs 를 WORK_WEIGHT(작업ms)로 센 합계
+       · 작업시간 = timeSegs 를 WORK_WEIGHT(작업ms)로 센 합계 — ★ 단, 하루 5시간(HONOR_DAY_CAP)까지만 (2026-11-20 콩)
        · 글자수  = wordlog 합계
-       · 점수    = 출석률 40% + 작업시간 40% + 글자수 20%
-                   (작업시간·글자수는 후보 중 1등을 100% 로 놓고 견줍니다)
+       · 활동    = users/{닉}/useLog (script_uselog.js — 하트·채팅·화공·메뉴 종류) 를 하루마다
+                   HONOR_ACT 상한으로 잘라 더한 값 (2026-11-20 콩 — 기록은 그날부터 쌓여요)
+       · 자격    = 출석률 60% 이상(HONOR_MIN_RATE) + 점수 0 초과 → 점수 순 최대 7명 (2026-11-20 콩)
+       · 분기마다 자동으로도 뽑습니다 — 아래 autoHonor (2027-01-01 부터)
+       · 점수    = 출석률 40% + 작업시간 30% + 글자수 15% + 활동 15%
+                   (작업시간·글자수·활동은 후보 중 1등을 100% 로 놓고 견줍니다)
+                   ★ 그 기간에 활동 기록이 아무도 없으면(기록 시작 전 기간) 활동을 빼고
+                     나머지 셋의 비율(40:30:15)로 100% 를 채웁니다.
      ★ 방장·부방장·내보낸 닉은 후보에서 뺍니다 (이미 방장 딱지가 있으니까요).
      ★ [뽑기 시작] 을 눌렀을 때만 읽습니다 — 멤버마다 3번(휴가·개인사정·구간) 읽어요.
      ★ 저장 = config/honorary = { from, to, list:{닉:true}, at } (방 카드가 list 만 읽음)
@@ -3401,6 +3409,17 @@
      ★ config 는 누구나 읽고 방장만 써서 보안규칙은 안 고칩니다.
      ===================================================================== */
   const HONOR_MAX = 7;
+  /* [2026-11-20 콩] 하루 작업 시간은 **5시간까지만** 점수로 쳐요. 5시간을 넘긴 날은 모두 같은 점수.
+     (자동감지를 끄고 라이트만 켜 두거나, 출석률을 채우려고 밤새 컴을 안 끄는 경우를 막으려는 것 —
+      그 이상 작업은 사실상 어렵기도 하고요.) 하루마다 따로 자르니, 이틀에 걸쳐 나눠 한 시간은 그대로 다 쳐줍니다. */
+  const HONOR_DAY_CAP = 5 * 3600000;
+  /* [2026-11-20 콩] 방 활동 — 하루마다 네 가지를 각자 상한까지만 치고, 네 가지를 평균 냅니다.
+     (연타·도배로 점수를 올리지 못하게. 기록 자체는 그대로 남으니 상한은 언제든 바꿀 수 있어요.)
+       h 하트·응원 보낸 수 / c 채팅 보낸 줄 / s 화면 공유한 분 / m 그날 써 본 메뉴 종류 */
+  const HONOR_ACT = { h: 5, c: 30, s: 120, m: 6 };
+  const HONOR_W = { 출석: 0.40, 작업: 0.30, 글자: 0.15, 활동: 0.15 };
+  /* [2026-11-20 콩] 최소 출석률 — 이 아래는 점수가 높아도 뽑지 않아요 (사람 눈 없이 자동으로 뽑아도 안심되게) */
+  const HONOR_MIN_RATE = 0.6;
   let _honorRows = [];
   function 달목록(n) {
     const out = [], b = new Date(); b.setDate(1);
@@ -3431,13 +3450,13 @@
         : `지금 명예 멤버가 없어요.`;
     } catch (e) { box.textContent = ""; }
   }
-  async function runHonor() {
-    const from = el("adm-honor-from").value, to = el("adm-honor-to").value;
-    const box = el("adm-honor-list");
-    if (!from || !to || from > to) { msg("adm-honor-msg", "시작 달이 끝 달보다 뒤예요. 다시 골라 주세요.", true); return; }
-    msg("adm-honor-msg", "");
-    box.innerHTML = `<div class="adm-msg">읽는 중… 조금 걸려요 ⏳</div>`;
-    try {
+  /* 뽑을 자격 — 출석률 {HONOR_MIN_RATE} 이상 + 점수가 0 보다 큰 분, 점수 순으로 HONOR_MAX 명 */
+  function 자격자(후보) {
+    return (후보 || []).filter(r => r.rate >= HONOR_MIN_RATE && r.score > 0).slice(0, HONOR_MAX);
+  }
+
+  /* 읽어서 점수를 매깁니다 — 손으로 뽑을 때(runHonor)와 분기 자동(autoHonor)이 **같은 계산**을 씁니다 */
+  async function computeHonor(from, to) {
       const [nsnap, bsnap, vsnap, asnap, wsnap] = await Promise.all([
         db.ref("nickOwner").once("value"),
         db.ref("config/ban").once("value").catch(() => null),
@@ -3461,7 +3480,7 @@
           try { return (await db.ref(`users/${n}/${칸}`).orderByKey().startAt(첫날).endAt(`${to}-31`).once("value")).val() || {}; }
           catch (e) { return {}; }
         };
-        const [vac, leave, segs] = await Promise.all([읽기("vacations"), 읽기("leaves"), 읽기("timeSegs")]);
+        const [vac, leave, segs, useLog] = await Promise.all([읽기("vacations"), 읽기("leaves"), 읽기("timeSegs"), 읽기("useLog")]);
         /* 나온 날 */
         const 나온 = new Set();
         Object.keys(att).forEach(dk => { const r = att[dk] && att[dk][n]; if (r && (r.firstAt || r.at)) 나온.add(dk); });
@@ -3474,7 +3493,7 @@
         const 나옴 = 날들.filter(dk => 나온.has(dk)).length;
         const rate = 기준 > 0 ? Math.min(1, 나옴 / 기준) : 0;
         /* 작업 시간 — 같은 상태·같은 시작은 한 번만 (출석부와 같은 규칙) */
-        let work = 0;
+        let work = 0, 꽉찬날 = 0;
         Object.keys(segs).forEach(d => {
           const best = {};
           Object.values(segs[d] || {}).forEach(sg => {
@@ -3482,32 +3501,138 @@
             const k = `${sg.s}|${sg.a}`;
             if (!best[k] || sg.b > best[k].b) best[k] = sg;
           });
-          Object.values(best).forEach(sg => { work += 작업ms(sg.s, sg.b - sg.a); });
+          let 하루 = 0;
+          Object.values(best).forEach(sg => { 하루 += 작업ms(sg.s, sg.b - sg.a); });
+          if (하루 >= HONOR_DAY_CAP) 꽉찬날++;                 // 5시간 이상 한 날 (방장이 눈여겨볼 수 있게 표에 적어요)
+          work += Math.min(하루, HONOR_DAY_CAP);               // ★ 하루 5시간까지만 점수로
         });
         /* 글자수 */
         let words = 0;
         Object.values(wl).forEach(day => { words += Math.max(0, Number(day && day[n] && day[n].total || 0)); });
-        rows.push({ n, rate, 나옴, 기준, work, words });
+        /* 방 활동 — 날마다 네 가지를 상한까지만 쳐서 평균, 그걸 기간 동안 더합니다 */
+        let act = 0;
+        const 합 = { h: 0, c: 0, s: 0 }, 메뉴들 = {};
+        Object.keys(useLog || {}).forEach(d => {
+          const x = useLog[d] || {};
+          const h = Math.max(0, Number(x.h || 0)), c = Math.max(0, Number(x.c || 0)), sm = Math.max(0, Number(x.s || 0));
+          const mk = Object.keys(x.m || {});
+          합.h += h; 합.c += c; 합.s += sm; mk.forEach(k => { 메뉴들[k] = true; });
+          act += (Math.min(h, HONOR_ACT.h) / HONOR_ACT.h + Math.min(c, HONOR_ACT.c) / HONOR_ACT.c
+                + Math.min(sm, HONOR_ACT.s) / HONOR_ACT.s + Math.min(mk.length, HONOR_ACT.m) / HONOR_ACT.m) / 4;
+        });
+        rows.push({ n, rate, 나옴, 기준, work, 꽉찬날, words, act, 합, 메뉴종: Object.keys(메뉴들).length });
       }));
 
       const mw = Math.max(1, ...rows.map(r => r.work)), mc = Math.max(1, ...rows.map(r => r.words));
-      rows.forEach(r => { r.score = r.rate * 0.4 + (r.work / mw) * 0.4 + (r.words / mc) * 0.2; });
+      const ma = Math.max(0, ...rows.map(r => r.act));
+      const 활동있음 = ma > 0;                                  // 기록이 하나라도 있어야 활동을 점수에 넣습니다
+      const W = 활동있음 ? HONOR_W
+        : (() => { const t = HONOR_W.출석 + HONOR_W.작업 + HONOR_W.글자; return { 출석: HONOR_W.출석 / t, 작업: HONOR_W.작업 / t, 글자: HONOR_W.글자 / t, 활동: 0 }; })();
+      rows.forEach(r => {
+        r.활동률 = 활동있음 ? r.act / ma : 0;
+        r.score = r.rate * W.출석 + (r.work / mw) * W.작업 + (r.words / mc) * W.글자 + r.활동률 * W.활동;
+      });
       const 후보 = rows.filter(r => r.나옴 > 0)
         .sort((a, b) => b.score - a.score || a.n.localeCompare(b.n, "ko"));
-      _honorRows = 후보;
+      return { 후보, W, 활동있음 };
+  }
+
+  /* 후보 표를 그립니다 (체크 = 체크할 닉 Set) */
+  function paintHonor(res, 체크) {
+      const { 후보, W, 활동있음 } = res;
+      const box = el("adm-honor-list");
       box.innerHTML = 후보.length ? `
         <div class="adm-absent-list" style="max-height:360px;">` + 후보.map((r, i) => `
           <label class="adm-row" style="cursor:pointer;">
-            <input type="checkbox" data-honor-nick="${escapeHtml(r.n)}"${i < HONOR_MAX && r.score > 0 ? " checked" : ""}>
+            <input type="checkbox" data-honor-nick="${escapeHtml(r.n)}"${체크.has(r.n) ? " checked" : ""}>
             <span class="n">${i + 1}. ${escapeHtml(r.n)}</span>
-            <span class="s">출석 <b>${Math.round(r.rate * 100)}%</b> (${r.나옴}/${r.기준}일) · 작업 <b>${분(r.work)}</b> · 글자 <b>${r.words.toLocaleString()}</b> · 점수 ${(r.score * 100).toFixed(1)}</span>
+            <span class="s">출석 <b>${Math.round(r.rate * 100)}%</b> (${r.나옴}/${r.기준}일)${r.rate < HONOR_MIN_RATE ? ` <small style="color:#B5533C">(${Math.round(HONOR_MIN_RATE * 100)}% 미만 — 뽑기에서 제외)</small>` : ""} · 작업 <b>${분(r.work)}</b>${r.꽉찬날 ? ` <small style="opacity:.6">(5시간 상한 ${r.꽉찬날}일)</small>` : ""} · 글자 <b>${r.words.toLocaleString()}</b> · 활동 <b>${활동있음 ? Math.round(r.활동률 * 100) + "%" : "—"}</b>${활동있음 ? ` <small style="opacity:.6">(하트 ${r.합.h} · 채팅 ${r.합.c} · 화공 ${r.합.s}분 · 메뉴 ${r.메뉴종}종)</small>` : ""} · 점수 ${(r.score * 100).toFixed(1)}</span>
           </label>`).join("") + `</div>` : `<div class="adm-msg">후보가 없어요.</div>`;
-      msg("adm-honor-msg", `${후보.length}명을 견줬어요 · 1~${HONOR_MAX}등에 체크해 뒀어요. 바꿔도 됩니다 (최대 ${HONOR_MAX}명).`);
+      const 비율 = 활동있음
+        ? `출석 ${Math.round(W.출석 * 100)} · 작업 ${Math.round(W.작업 * 100)} · 글자 ${Math.round(W.글자 * 100)} · 활동 ${Math.round(W.활동 * 100)}`
+        : `이 기간엔 활동 기록이 아직 없어서 활동은 뺐어요 → 출석 ${Math.round(W.출석 * 100)} · 작업 ${Math.round(W.작업 * 100)} · 글자 ${Math.round(W.글자 * 100)}`;
+      msg("adm-honor-msg", `${후보.length}명을 견줬어요 (${비율}) · 출석 ${Math.round(HONOR_MIN_RATE * 100)}% 이상인 분 중 1~${HONOR_MAX}등에 체크해 뒀어요. 바꿔도 됩니다 (최대 ${HONOR_MAX}명).`);
+  }
+
+  async function runHonor() {
+    const from = el("adm-honor-from").value, to = el("adm-honor-to").value;
+    const box = el("adm-honor-list");
+    if (!from || !to || from > to) { msg("adm-honor-msg", "시작 달이 끝 달보다 뒤예요. 다시 골라 주세요.", true); return; }
+    msg("adm-honor-msg", "");
+    box.innerHTML = `<div class="adm-msg">읽는 중… 조금 걸려요 ⏳</div>`;
+    try {
+      const res = await computeHonor(from, to);
+      _honorRows = res.후보;
+      paintHonor(res, new Set(자격자(res.후보).map(r => r.n)));
     } catch (e) {
       console.warn("[adm honor]", e);
       box.innerHTML = `<div class="adm-msg">읽지 못했어요. 연결을 확인해 주세요.</div>`;
     }
   }
+
+  /* =====================================================================
+     🗓 명예 멤버 분기 자동 뽑기 (2026-11-20 — 콩)
+     ---------------------------------------------------------------------
+     분기가 끝나면 **방장이 관리자 페이지를 처음 여는 순간** 직전 분기를 자동으로 뽑아 저장합니다.
+       1/1 → 10~12월 · 4/1 → 1~3월 · 7/1 → 4~6월 · 10/1 → 7~9월
+       · 새 명단이 지금 명단을 갈아 끼웁니다(분기마다 갱신). 지난 명단은 config/honoraryHist 에 남아요.
+       · 자격 = 그 분기 출석률 60% 이상 + 점수 0 초과, 점수 순 최대 7명 (손으로 뽑을 때도 같은 기본 체크)
+       · 2027-01-01 전에는 아무것도 안 합니다 — 지금(8~10월 판) 명예 멤버는 그때까지 그대로예요.
+       · 같은 분기는 딱 한 번 — 이미 기록이 있거나, 콩이 직접 저장해 둔 분기면 건너뜁니다.
+       · 두 창이 동시에 열려도 한 번만 (config/honoraryAuto/{분기} 자리 맡기).
+       · 후보가 한 명도 없으면 명단은 그대로 두고, 그 분기는 다시 시도하지 않습니다.
+       · 저장 뒤에도 이 상자에서 고치거나 비울 수 있어요.
+     ★ 방장만 저장할 수 있어서(config 규칙) 방장 계정으로 열었을 때만 돕니다.
+     ===================================================================== */
+  const HONOR_AUTO_FROM = "2027-01-01";
+  function 지난분기(now) {
+    now = now || new Date();
+    const q = Math.floor(now.getMonth() / 3) * 3;                 // 이번 분기 첫 달 (0~11)
+    const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return { from: ym(new Date(now.getFullYear(), q - 3, 1)), to: ym(new Date(now.getFullYear(), q - 1, 1)) };
+  }
+  async function autoHonor() {
+    let 맡김 = null;
+    try {
+      if (!isOwner || !window.db) return;
+      if (dayKey(new Date()) < HONOR_AUTO_FROM) return;
+      const { from, to } = 지난분기();
+      const key = `${from}_${to}`;
+      const [h, cur] = await Promise.all([
+        db.ref(`config/honoraryHist/${key}`).once("value"),
+        db.ref("config/honorary").once("value")
+      ]);
+      const c = cur.val() || {};
+      if (h.exists() || (c.from === from && c.to === to)) return;            // 이미 뽑았거나 콩이 직접 저장한 분기
+      맡김 = db.ref(`config/honoraryAuto/${key}`);
+      const claim = await 맡김.transaction(v => (v ? undefined : { at: Date.now() }));
+      if (!claim.committed) return;                                           // 다른 창이 하는 중
+      paintHonorSelects();
+      el("adm-honor-from").value = from; el("adm-honor-to").value = to;
+      msg("adm-honor-msg", `🗓 ${from} ~ ${to} 명예 멤버를 자동으로 뽑는 중… 조금 걸려요 ⏳`);
+      const res = await computeHonor(from, to);
+      _honorRows = res.후보;
+      const 뽑힘 = 자격자(res.후보);
+      paintHonor(res, new Set(뽑힘.map(r => r.n)));
+      if (!뽑힘.length) {
+        await 맡김.update({ empty: true });
+        msg("adm-honor-msg", `🗓 ${from} ~ ${to} — 자격이 되는 분이 없어서 지금 명단은 그대로 뒀어요.`);
+        return;
+      }
+      const list = {}; 뽑힘.forEach(r => { list[r.n] = true; });
+      const data = { from, to, list, at: firebase.database.ServerValue.TIMESTAMP, auto: true };
+      await db.ref("config/honorary").set(data);
+      await db.ref(`config/honoraryHist/${key}`).set(data);
+      맡김 = null;                                                             // 끝났으니 자리 맡기는 그대로 둡니다
+      msg("adm-honor-msg", `✅ 🗓 ${from} ~ ${to} 명예 멤버를 자동으로 뽑아 저장했어요 — ${뽑힘.length}명. 바꾸고 싶으면 체크를 고쳐 [저장]을 눌러 주세요.`);
+      loadHonor();
+      try { alert(`🏅 ${from} ~ ${to} 명예 멤버를 자동으로 뽑았어요!\n${뽑힘.map(r => r.n).join(" · ")}\n\n(관리자 페이지 🏅 명예 멤버 뽑기 칸에서 고치거나 비울 수 있어요)`); } catch (e) {}
+    } catch (e) {
+      console.warn("[adm honor auto]", e);
+      try { if (맡김) await 맡김.remove(); } catch (e2) {}                     // 실패하면 자리를 비워 다음에 다시
+    }
+  }
+
   async function saveHonor() {
     if (!ownerOnly("명예 멤버 저장")) return;
     const picks = [...document.querySelectorAll("#adm-honor-list [data-honor-nick]:checked")]

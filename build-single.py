@@ -21,15 +21,15 @@ ORDER = [
     # 🧪 시험 모드는 맨 앞 — database() 를 갈아 끼우는 일이라 순서가 곧 전부입니다
     "script_demo.js", "script_solo.js",
     "fortune_data.js", "script_core.js", "script_auth.js", "script_ui.js",
-    "script_chat.js", "script_chatty.js", "script_data.js", "script_realtime.js",
+    "script_chat.js", "script_data.js", "script_realtime.js",
     # 배치 파일 — 여기 이름은 아래 main() 이 index.html 을 보고 바꿔 끼웁니다.
     #   · 지금 배치(알약 줄)  → script_dock.js
     #   · 예전 배치(세 칸)    → script_layout.js
     # ★ 되돌리기를 쉽게 하려는 것입니다. index-classic.html 을 index.html 로
     #   이름만 바꾸면 이 스크립트가 알아서 따라갑니다 — 목록까지 손대야
     #   한다면 "되돌릴 수 있다" 는 말이 반쪽이 되니까요.
-    "script_dock.js", "script_music.js", "script_wordcount.js",
-    "script_worklog.js", "script_timelog.js", "script_idledetect.js", "script_alive.js", "script_profile.js", "script_mywork.js", "script_forest.js", "script_pubreview.js",
+    "script_dock.js", "script_member.js", "script_sidetabs.js", "script_music.js", "script_wordcount.js",
+    "script_worklog.js", "script_timelog.js", "script_idledetect.js", "script_alive.js", "script_profile.js", "script_holiday.js", "script_mywork.js", "script_dday.js", "script_forest.js", "script_pubreview.js",
     # 빠뜨렸던 것 (2026-08-11) — 📢 공지판과 🏅 업적. index.html 에는 진작
     # ※ 이 안에 대괄호를 쓰지 마세요. checks.js 가 ORDER 를 대괄호로
     #   잘라 읽어서, 주석 속 대괄호 하나에 목록이 중간에서 끊깁니다.
@@ -38,8 +38,8 @@ ORDER = [
     # **단일파일에서만 공지판과 업적이 통째로 없었어요.** 남은 외부 참조
     # 검사도 못 잡습니다 — 태그가 사라져 버려서 찾을 게 없거든요.
     # 그래서 아래에 목록과 index.html 을 맞춰보는 문지기를 뒀습니다.
-    "script_notice.js", "script_achv.js",
-    "script_reactions.js", "script_note.js", "script_worktag.js", "script_sticker.js", "script_share.js", "script_help.js", "script_qna.js", "script_files.js", "script_zoom.js", "script_manual.js", "script_guard.js",
+    "script_notice.js", "script_greet.js", "script_reload.js", "script_ticker.js", "script_cardmemo.js", "script_achv.js", "script_uselog.js",
+    "script_reactions.js", "script_note.js", "script_heart.js", "script_worktag.js", "script_sticker.js", "script_imgup.js", "script_share.js", "script_cheer.js", "script_help.js", "script_qna.js", "script_sroom.js", "script_srpop.js", "script_proom.js", "script_files.js", "script_bookrec.js", "script_news.js", "script_halloween.js", "script_christmas.js", "script_deadline.js", "script_zoom.js", "script_manual.js", "script_guard.js",
 ]
 OUT = "index-단일파일.html"
 

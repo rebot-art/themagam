@@ -231,6 +231,7 @@
         [`${NODE_BY}/${day}/${from}/${to}`]: true
       });
       try { window.Activity?.add("heart", `'${to}'님께 ❤️ 하트`); } catch (e) {}
+      try { window.useLogBump?.("h"); } catch (e) {}              // 📒 방 활동 기록 (명예 멤버 활동 점수)
     } catch (e) {
       /* 서버가 거절 = 이미 쐈다 (다른 창에서 쐈다든지). 화면만 맞춰 줍니다 */
       console.warn("[heart]", e);
