@@ -592,6 +592,7 @@
      ★ [🔄 새로 읽기] 버튼도 뒀어요 — 다른 창에서 뭔가 바뀌었을 때.
      ===================================================================== */
   let _달자료 = null;      // { ymKey, attMonth, wordMonth, nicks, vacByNick, … }
+  const _배지현황 = {};   // 🎖️ 달별로 방금 뽑은 배지 {달: {닉:[...]}} — 관리자 화면 '배지 현황' 칸이 씁니다
   const _굳힌달 = new Set();   // 🎖️ 배지를 이미 뽑은 달 (아래 명단굳히기 주석 참고)
   const _펼친달 = new Set();   // 📊 그래프를 펼쳐 둔 달
 
@@ -1151,8 +1152,13 @@
          ★ 다시 뽑고 싶으면 [🔄 새로 읽기] 를 누르면 됩니다. */
       if (!_굳힌달.has(ymKey)) {
         _굳힌달.add(ymKey);
-        명단굳히기(ymKey, rateRows, await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }));
+        const 뽑힌배지 = await 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen });
+        if (뽑힌배지) _배지현황[ymKey] = 뽑힌배지;
+        명단굳히기(ymKey, rateRows, 뽑힌배지);
       }
+      /* 🎖️ [2026-11-21 — 콩 "완결러 받은 멤버가 있는지 확인 가능해?"] 이미 뽑아 둔 값을
+         그대로 보여 줍니다 — 서버를 더 읽지 않아요. */
+      배지현황그리기(ymKey);
 
       }  /* /펼침 — 여기까지가 그래프·배지 */
 
@@ -1865,6 +1871,37 @@
     "새싹":   { e: "🌱", t: "새싹 — 첫 달에 출석 기준 달성", c: "들어온 첫 달에 출석 기준을 채우면 (한 번만)" }
   };
   let _배지캐시 = { key: "", 값: null };   // { key: "2026-08|48", 값: {닉:[...]} }
+
+  /* 🎖️ 배지 현황 — 달마다 어떤 배지를 누가 받았는지 한눈에 (2026-11-21)
+     카드에만 보이던 것을 관리자 화면에도 보여 줍니다. 값은 배지뽑기가 이미 센 것이라
+     서버 요청은 0 입니다. 📚 완결러는 방장 화면에서만 셉니다(worklog 는 방장만 읽힘). */
+  function 배지현황그리기(ymKey) {
+    const box = el("adm-badge-box");
+    if (!box) return;
+    const out = _배지현황[ymKey];
+    const 제목 = `<div class="adm-chart-h"><span class="adm-chart-t">🎖️ 배지 현황</span></div>`;
+    if (!out) {
+      box.innerHTML = 제목 + `<p class="adm-chart-sub">배지는 <b>지난달과 이번 달</b>만 계산해요. 이 달은 계산하지 않았어요.</p>`;
+      return;
+    }
+    const 받은 = {};
+    Object.entries(out).forEach(([n, ks]) => (ks || []).forEach(k => { (받은[k] = 받은[k] || []).push(n); }));
+    const 줄들 = Object.keys(BADGE_META).map(k => {
+      const m = BADGE_META[k];
+      const 이름들 = (받은[k] || []).slice().sort((x, y) => x.localeCompare(y, "ko"));
+      const 뒤 = 이름들.length
+        ? `${이름들.map(escapeHtml).join(" · ")} <span style="opacity:.6">(${이름들.length}명)</span>`
+        : `<span style="opacity:.55">아직 없어요</span>`;
+      return `<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(0,0,0,.08)">
+        <span style="flex:0 0 96px;font-weight:800" title="${escapeHtml(m.c)}">${m.e} ${escapeHtml(k)}</span>
+        <span style="flex:1;line-height:1.5">${뒤}</span></div>`;
+    }).join("");
+    const 안내 = isOwner ? "" :
+      `<p class="adm-chart-sub">📚 완결러는 방장 화면에서만 계산돼요(운영진 화면에서는 비어 보입니다).</p>`;
+    box.innerHTML = 제목 +
+      `<p class="adm-chart-sub">${ymKey} 기록 기준 · 본방 카드는 지난달 배지를 닉네임 앞에 달아요</p>` +
+      줄들 + 안내;
+  }
 
   async function 배지뽑기({ ymKey, nicks, rateRows, minsByNick, segsByNick, wordMonth, firstSeen }) {
     /* ★★★ [다이어트 2026-09-08 — 콩 "어제부터 다운로드가 확 치솟았어"]
