@@ -293,31 +293,85 @@
   }
   window.leftMembersHide = (u) => membersOn() && !keepNick(u);
 
-  /* ── 명단 그리기 ── */
-  let _lastHtml = "";
+  /* ── 명단 그리기 ──
+     [2026-11-20 깜빡임 수정] 예전에는 누구 한 명의 글자(작업 시간이 1분 넘어가는 것 등)만 바뀌어도
+     명단 전체를 innerHTML 로 갈아서, 프사 <img> 가 전부 새로 태어나 잠깐 빈 동그라미로 번쩍였습니다.
+     (접속자가 10명이면 몇 초에 한 번꼴 — 기기가 느린 멤버의 화면에서 눈에 띔)
+     이제는
+       ① 같은 사람들이 같은 순서면 → 줄은 그대로 두고 글자만 고칩니다. 프사는 주소가 바뀔 때만 갈아 끼움.
+       ② 사람이 들고 나서 줄이 달라지면 → 새로 그리되, 이미 있던 프사 조각은 옮겨 심어 다시 불러오지 않음.
+     서버는 여전히 안 읽습니다 (window._cardRoster 만 사용). */
+  let _lastKey = "";
+  const HEART_HTML = `<span class="lm-heart" title="오늘 하트를 보냈어요">❤️</span>`;
+  const avaKey = (nick, photo) => (photo ? "p:" + photo : "s:" + nick);
+  function avaHtml(nick, photo) {
+    const k = esc(avaKey(nick, photo));
+    return photo
+      ? `<span class="member-ava lm-ava has-photo" data-avatar-of="${esc(nick)}" data-k="${k}"><img src="${esc(photo)}" alt=""></span>`
+      : `<span class="member-ava lm-ava has-snow" data-avatar-of="${esc(nick)}" data-k="${k}">${window.snowmanSvg?.(nick) || esc(String(nick).slice(0, 1))}</span>`;
+  }
+  function rowHtml(it) {
+    return `<li class="member-row lm-row" data-lm-nick="${esc(it.nick)}" title="더블클릭 — 하트 보내기">
+        ${avaHtml(it.nick, it.photo)}<span class="member-nick">${esc(it.nick)}</span>${it.sent ? HEART_HTML : ""}
+        <span class="card-state ${it.cls} member-state">${esc(it.label)}</span>
+        <span class="member-wh">⏱ ${whText(it.workMs)}</span></li>`;
+  }
+  /* 있던 줄의 글자만 고칩니다 — 바뀐 것만 건드려요 */
+  function patchRow(li, it) {
+    if (!li) return;
+    const a = li.querySelector(".lm-ava");
+    if (!a || a.getAttribute("data-k") !== avaKey(it.nick, it.photo)) {
+      if (a) a.outerHTML = avaHtml(it.nick, it.photo);
+    }
+    const h = li.querySelector(".lm-heart");
+    if (it.sent && !h) li.querySelector(".member-nick")?.insertAdjacentHTML("afterend", HEART_HTML);
+    else if (!it.sent && h) h.remove();
+    const st = li.querySelector(".member-state");
+    if (st) {
+      const c = `card-state ${it.cls} member-state`;
+      if (st.className !== c) st.className = c;
+      if (st.textContent !== it.label) st.textContent = it.label;
+    }
+    const wh = li.querySelector(".member-wh"), t = `⏱ ${whText(it.workMs)}`;
+    if (wh && wh.textContent !== t) wh.textContent = t;
+  }
   function paint() {
     const host = el("left-pane-body");
     if (!host || !membersOn()) return;
     const me = (typeof myNick === "string" && myNick) ? myNick : (window.myNick || "");
     const rows = (window._cardRoster || []).filter(x => x.nick !== me);
-    const li = rows.map(({ nick, row, prof }) => {
+    const items = rows.map(({ nick, row, prof }) => {
       const st = row.status || "idle";
-      const photo = (window.photoShown || window.photoSrcOf) ? (window.photoShown || window.photoSrcOf)(prof || {}) : "";
-      const ava = photo
-        ? `<span class="member-ava lm-ava has-photo" data-avatar-of="${esc(nick)}"><img src="${esc(photo)}" alt="" loading="lazy"></span>`
-        : `<span class="member-ava lm-ava has-snow" data-avatar-of="${esc(nick)}">${window.snowmanSvg?.(nick) || esc(String(nick).slice(0, 1))}</span>`;
-      const sent = window.heartSentTo?.(nick) ? `<span class="lm-heart" title="오늘 하트를 보냈어요">❤️</span>` : "";
-      return `<li class="member-row lm-row" data-lm-nick="${esc(nick)}" title="더블클릭 — 하트 보내기">
-        ${ava}<span class="member-nick">${esc(nick)}</span>${sent}
-        <span class="card-state ${CLS[st] || "status-rest"} member-state">${esc(row.statusLabel || LABEL[st] || "휴식")}</span>
-        <span class="member-wh">⏱ ${whText(row.workMs)}</span></li>`;
-    }).join("");
-    const html = rows.length
-      ? `<div class="member-body"><div class="member-head">나 말고 <b>${rows.length}명</b> 접속 중 <span class="member-when">더블클릭 = 💘</span></div><ul class="member-list">${li}</ul></div>`
+      return {
+        nick,
+        photo: (window.photoShown || window.photoSrcOf) ? (window.photoShown || window.photoSrcOf)(prof || {}) : "",
+        sent: !!window.heartSentTo?.(nick),
+        cls: CLS[st] || "status-rest",
+        label: row.statusLabel || LABEL[st] || "휴식",
+        workMs: row.workMs
+      };
+    });
+    const key = items.length ? items.map(i => i.nick).join("\u0001") : "\u0002empty";
+
+    /* ① 같은 사람들, 같은 순서 → 제자리에서 글자만 */
+    const list = host.querySelector(".member-list");
+    if (items.length && list && key === _lastKey && list.children.length === items.length) {
+      items.forEach((it, i) => patchRow(list.children[i], it));
+      return;
+    }
+    if (!items.length && key === _lastKey) return;
+
+    /* ② 사람이 달라짐 → 새로 그리되 이미 있던 프사 조각은 옮겨 심기 */
+    const oldAva = {};
+    host.querySelectorAll(".lm-ava[data-avatar-of]").forEach(a => { oldAva[a.getAttribute("data-avatar-of")] = a; });
+    host.innerHTML = items.length
+      ? `<div class="member-body"><div class="member-head">나 말고 <b>${items.length}명</b> 접속 중 <span class="member-when">더블클릭 = 💘</span></div><ul class="member-list">${items.map(rowHtml).join("")}</ul></div>`
       : `<div class="member-body"><div class="member-empty">지금은 나 혼자예요 🌙</div></div>`;
-    if (html === _lastHtml) return;          // 같으면 건드리지 않습니다 (더블클릭 도중에 줄이 새로 태어나지 않게)
-    _lastHtml = html;
-    host.innerHTML = html;
+    host.querySelectorAll(".lm-ava[data-avatar-of]").forEach(a => {
+      const o = oldAva[a.getAttribute("data-avatar-of")];
+      if (o && o.getAttribute("data-k") === a.getAttribute("data-k")) a.replaceWith(o);
+    });
+    _lastKey = key;
   }
   window.leftRoster = paint;
 
@@ -352,7 +406,7 @@
       try { window.getSelection()?.removeAllRanges(); } catch (x) {}
       const nick = row.getAttribute("data-lm-nick");
       window.heartSend?.(nick, row);
-      setTimeout(() => { _lastHtml = ""; paint(); }, 600);     // 보낸 줄에 ❤️ 표시
+      setTimeout(() => { _lastKey = ""; paint(); }, 600);     // 보낸 줄에 ❤️ 표시
     });
     /* 📢 새 공지 붉은 점 — 알약의 점(#dock-dot-notice)을 탭에 비춥니다 */
     const src = el("dock-dot-notice"), dst = el("left-dot-notice");
@@ -406,7 +460,7 @@
       _nOpen?.();
     } else {
       root.classList.add("left-members");
-      _lastHtml = "";
+      _lastKey = "";
       paint();
       try { window.renderUserCards?.(); } catch (e) {}      // 카드 마당을 내 카드만으로 다시 그립니다
     }
@@ -425,7 +479,7 @@
       root.classList.remove("lside-notice");
     } else {
       root.classList.remove("left-members");
-      el("left-pane-body").innerHTML = ""; _lastHtml = "";
+      el("left-pane-body").innerHTML = ""; _lastKey = "";
       try { window.renderUserCards?.(); } catch (e) {}      // 접속자 전원이 다시 보입니다
     }
     el("left-tab-" + id)?.setAttribute("aria-expanded", "false");
