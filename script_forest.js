@@ -273,12 +273,15 @@
   function noteHtml(n, z, replies) {
     const c = colorOf(n.color);
     const mine = isMine(n.id);
+    /* [2026-11-21] 방장·운영진은 남의 쪽지도 옮길 수 있습니다(정리용).
+       지우기 단추(✕)는 여전히 쓴 사람 것만 — 옮기기만 열어 둡니다. */
+    const canMove = mine || (typeof window.canAdmin === "function" && window.canAdmin());
     const on   = didHeart(n.id);
     const open = _openReplies.has(n.id);
     const rs   = replies || [];
     return `
-      <div class="fr-note${mine ? " is-mine" : ""}" data-fr-note="${esc(n.id)}"
-           ${mine ? `data-fr-mine="1"` : ""}
+      <div class="fr-note${mine ? " is-mine" : ""}${canMove ? " can-move" : ""}" data-fr-note="${esc(n.id)}"
+           ${canMove ? `data-fr-mine="1"` : ""}
            style="--fr-x:${n.x}%; --fr-y:${n.y}%; --fr-rot:${n.rot}deg;
                   --fr-bg:${c.bg}; --fr-fg:${c.fg}; --fr-sub:${c.sub}; z-index:${z};">
         ${mine ? `<button type="button" class="fr-del" data-fr-del="${esc(n.id)}"

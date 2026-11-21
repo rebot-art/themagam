@@ -685,6 +685,12 @@
     // system (줄바꿈 지원)
     if (data.type === "system") {
       _maybeRenderDateDivider(box, data.time || Date.now());
+      /* 💘 하트 응원 알림 (script_heart.js · 2026-11-21 콩 A안) — 카드도 박스도 없이 작은 글 한 줄 */
+      if (data.gk === "heart") {
+        box.insertAdjacentHTML("beforeend", `<div class="heart-note">${escapeHtml(data.msg)}</div>`);
+        lastRendered = { ...lastRendered, user: null, ts: Number(data.time || Date.now()), msg: String(data.msg || "") };
+        return;
+      }
       /* 👋 인사 규칙 카드 (script_greet.js · 시안 A) — 입장 / 건필 / 기다림 / 경고 */
       if (["in", "ok", "wait", "warn", "out", "re", "hi", "att"].includes(data.gk)) {
         const ic = { in: "👋", ok: "🌱", wait: "⏳", warn: "🌸", out: "👋", re: "🌿", hi: "🌱", att: "✅" }[data.gk];

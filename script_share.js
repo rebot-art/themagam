@@ -422,7 +422,11 @@
         img,
         at: firebase.database.ServerValue.TIMESTAMP,
         level: _shareW,
-        fit: _shareFit          // 카드에 어떻게 맞출지 — 보는 쪽이 그대로 따릅니다
+        fit: _shareFit,         // 카드에 어떻게 맞출지 — 보는 쪽이 그대로 따릅니다
+        /* 📝 화공 메모 (2026-11-21 콩) — set 이 노드를 통째로 덮어쓰므로 메모도 같이 싣습니다.
+           없으면 null(안 적힘). 바꿀 때는 script_cheer.js 가 따로 update 합니다. */
+        memo: (window.myShareMemo?.() || {}).t || null,
+        memoStyle: (window.myShareMemo?.() || {}).s || null
       });
       _지문 = 지문;                 // 보낸 것만 기준으로 삼습니다
       _마지막보냄 = Date.now();
@@ -1246,7 +1250,7 @@
       if (껍데기인가(nick)) continue;
       /* 모르는 값이 오면 예전처럼 "채우기" — 옛 기록과 섞여도 안 깨집니다 */
       const fit = (r.fit === "contain") ? "contain" : "cover";
-      rows.push({ nick, img, at, age, fit });
+      rows.push({ nick, img, at, age, fit, memo: r.memo, memoStyle: r.memoStyle });
     }
     // 내 카드가 맨 앞 (자기 것 확인용)
     rows.sort((a, b) => (a.nick === myNick ? -1 : 0) - (b.nick === myNick ? -1 : 0));
@@ -1266,6 +1270,16 @@
        · 강도 고르기 버튼과 안내 문구는 뺐습니다 (기본 "약함" 고정)
        · 아래 한 줄 = "닉네임의 화면" + [off] 나란히
      그림은 카드 비율에 맞춰 잘라 넣습니다(양옆이 잘려도 괜찮습니다). */
+  /* 📝 화공 메모 (2026-11-21 콩) — 화공 카드 위에 카드 메모와 같은 모양(.card-memo)으로 얹습니다.
+     ★ 내 것은 손안의 값(window.myShareMemo)을 바로 씁니다 — 서버를 돌아오길 기다리지 않아요.
+     ★ 남의 값은 글자만 믿습니다: 30자 · 두 줄 · 모양은 A/B/C 만 (그 밖엔 A). 그릴 때는 textContent/esc. */
+  function 메모조각(row) {
+    let t, st;
+    if (row.nick === myNick) { const m = window.myShareMemo?.(); t = m && m.t; st = m && m.s; }
+    else { t = row.memo; st = row.memoStyle; }
+    t = String(t == null ? "" : t).replace(/\r/g, "").split("\n").slice(0, 2).join("\n").trim().slice(0, 30);
+    return { t, s: (st === "B" || st === "C") ? st : "A" };
+  }
   function shareCardHtml(row) {
     /* =====================================================================
        손잡이 둘을 **따로** 답니다 (2026-08-21 고침 — 콩 신고)
@@ -1310,6 +1324,7 @@
             ${off}
           </div>
         </div>
+        ${(() => { const m = 메모조각(row); return m.t ? `<div class="card-memo s${m.s}" aria-label="메모: ${esc(m.t)}">${esc(m.t)}</div>` : ""; })()}
       </div>`;
   }
 
@@ -1382,6 +1397,17 @@
           if (!im.classList.contains(fitCls)) { im.classList.remove("is-cover", "is-contain"); im.classList.add(fitCls); }
         }
         had.setAttribute("data-share-at", String(row.at));
+        /* 📝 메모도 제자리에서 — 카드를 새로 만들지 않습니다 (그림이 깜빡이지 않게) */
+        const m = 메모조각(row);
+        let mm = had.querySelector(":scope > .card-memo");
+        if (!m.t) { if (mm) mm.remove(); }
+        else {
+          if (!mm) { mm = document.createElement("div"); had.appendChild(mm); }
+          const cls = "card-memo s" + m.s;
+          if (mm.className !== cls) mm.className = cls;
+          if (mm.textContent !== m.t) mm.textContent = m.t;
+          mm.setAttribute("aria-label", "메모: " + m.t);
+        }
         return;
       }
       own.insertAdjacentHTML("afterend", shareCardHtml(row));

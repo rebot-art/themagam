@@ -18,11 +18,13 @@
    하루만 삽니다 — 날짜가 맨 위 열쇠라 자정에 새 가지로 갈아 끼우면 끝.
    어제 가지는 방장이 들어올 때 조용히 치웁니다 (script_heart.js 와 같은 수).
 
-   [손가락]
-     화공 카드        더블클릭 (아무 데나)  → 고르기 판
-       ★ **내 화공 카드에도** 붙일 수 있습니다 (2026-09-30 콩 — 화공하는
-         사람이 적어서, 스스로 붙여 두면 화공 홍보가 됩니다). 프로필
-         하트(나에겐 못 쏨)와 다른 점이에요.
+   [손가락]  (2026-11-21 콩 — 스티커가 한 가지뿐이라 고르기 판을 뺐습니다)
+     남의 화공 카드   더블클릭 (아무 데나)  → **바로 🔥 붙음** (하루 한 번, 두 번째는 토스트)
+     내 화공 카드     더블클릭 → **📝 화공 메모 붙이기** (셀프 응원은 없앴어요)
+                      카드 메모와 같은 모양(손글씨·포스트잇·테이프), 30자 두 줄
+                      저장: users/{닉}/shareMemo = { t, s } + 이 기기 · 보여 주기: screens/{닉}.memo/.memoStyle
+                      (화공을 끄면 screens 가 지워져 메모도 카드와 함께 사라지고, 다시 켜면 다시 붙습니다)
+     새 카드 메모     더블클릭 → 고르기 판(👍) — 그대로
      내 화공 카드     off 단추 · "○○의 화면" · 빨간 불은 제 손이 있으니
                       그 위에서만 비켜 줍니다
      내 카드의 스티커  한 번 클릭 → 누가 쐈나
@@ -318,6 +320,103 @@
   function closePop() { if (_pop) { _pop.remove(); _pop = null; _popKind = ""; } }
 
   /* ---------------------------------------------------------------
+     📝 화공 메모 (2026-11-21 콩) — 내 화공 카드 위에 카드 메모처럼 얹는 글
+     ★ 카드 메모(script_cardmemo.js)와 **따로**입니다 — 저장도 따로, 화공을 끄면 같이 사라져요.
+     ★ 적는 창은 카드 메모의 것과 같은 클래스(.cmemo-*)를 써서 모양이 같습니다. (새 카드·그림은 없음)
+     ★ 모두에게 보이는 길: screens/{닉} 의 memo · memoStyle (화면 그림과 같은 자리 — 따로 듣는 게 없어요)
+     --------------------------------------------------------------- */
+  const SM_MAX = 30;
+  let _sm = { t: "", s: "A" }, _smNick = "";
+  const smStyle = (v) => (v === "B" || v === "C") ? v : "A";
+  function smClean(t) {
+    return String(t == null ? "" : t).replace(/\r/g, "").split("\n").slice(0, 2)
+      .map(x => x.replace(/\s+$/g, "")).join("\n").trim().slice(0, SM_MAX);
+  }
+  window.myShareMemo = () => (_sm.t ? { t: _sm.t, s: _sm.s } : null);
+  async function smLoad() {
+    const n = me();
+    if (!n || _smNick === n) return;
+    _smNick = n;
+    try {
+      const raw = window.AppStore?.getItem("shareMemo_" + n);
+      if (raw) { const o = JSON.parse(raw); _sm = { t: smClean(o.t), s: smStyle(o.s) }; }
+    } catch (e) {}
+    try {
+      if (window.db && !window.SOLO) {
+        const v = (await db.ref(`users/${n}/shareMemo`).once("value")).val();
+        if (v && typeof v === "object") _sm = { t: smClean(v.t), s: smStyle(v.s) };
+      }
+    } catch (e) {}
+    try { window.renderShareCards?.(); } catch (e) {}
+  }
+  setInterval(smLoad, 3000);
+  setTimeout(smLoad, 1500);
+
+  async function smSave(t, s) {
+    const n = me(); if (!n) return;
+    _sm = { t: smClean(t), s: smStyle(s) };
+    try { window.AppStore?.setItem("shareMemo_" + n, JSON.stringify(_sm)); } catch (e) {}
+    try {
+      if (window.db && !window.SOLO) {
+        await db.ref(`users/${n}/shareMemo`).set(_sm.t ? { t: _sm.t, s: _sm.s } : null);
+        /* 공유 중이면 모두에게 바로 — 그림이 다시 올라오길 기다리지 않습니다 */
+        if (window.isScreenSharing?.()) {
+          await db.ref(`screens/${n}`).update({ memo: _sm.t || null, memoStyle: _sm.t ? _sm.s : null });
+        }
+      }
+    } catch (e) { console.warn("[화공 메모]", e); }
+    try { window.renderShareCards?.(); } catch (e) {}
+  }
+
+  function openShareMemo() {
+    if (!me()) return;
+    document.querySelector(".cmemo-veil")?.remove();
+    const veil = document.createElement("div");
+    veil.className = "hello-veil cmemo-veil";
+    veil.innerHTML = `
+      <div class="hello-card cmemo-card" role="dialog" aria-modal="true" aria-label="화공 메모">
+        <p class="npop-h">📝 화공 메모</p>
+        <p class="cmemo-sub">내 화공 카드 위에 붙여 두세요. 화공을 끄면 같이 사라져요.</p>
+        <div class="cmemo-pick" role="radiogroup" aria-label="메모 모양">
+          ${[["A", "손글씨"], ["B", "포스트잇"], ["C", "테이프"]].map(([k, l]) =>
+            `<button type="button" class="cmemo-opt d${k}${_sm.s === k ? " on" : ""}" data-st="${k}" role="radio"
+                     aria-checked="${_sm.s === k}" title="${l}" aria-label="${l}"></button>`).join("")}
+        </div>
+        <textarea class="cmemo-in" rows="2" maxlength="${SM_MAX}" placeholder="화공 중!&#10;같이 해요 🙏"></textarea>
+        <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${SM_MAX} · 엔터로 두 줄까지</div>
+        <div class="npop-btns">
+          <button type="button" class="npop-later cmemo-off">${_sm.t ? "떼기" : "닫기"}</button>
+          <button type="button" class="hello-ok cmemo-ok">붙이기</button>
+        </div>
+      </div>`;
+    document.body.appendChild(veil);
+    requestAnimationFrame(() => veil.classList.add("on"));
+    const ta = veil.querySelector(".cmemo-in");
+    ta.value = _sm.t;
+    let 고른 = _sm.s;
+    veil.querySelectorAll(".cmemo-opt").forEach(b => b.addEventListener("click", () => {
+      고른 = smStyle(b.dataset.st);
+      veil.querySelectorAll(".cmemo-opt").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-checked", on); });
+    }));
+    const 세기 = () => { veil.querySelector(".cmemo-n").textContent = ta.value.length; };
+    세기();
+    ta.addEventListener("input", () => {
+      const 줄 = ta.value.split("\n");
+      if (줄.length > 2) { const p = ta.selectionStart; ta.value = 줄.slice(0, 2).join("\n") + 줄.slice(2).join(""); ta.selectionStart = ta.selectionEnd = Math.min(p, ta.value.length); }
+      세기();
+    });
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && ta.value.split("\n").length >= 2) e.preventDefault();
+    });
+    const 닫기 = () => { veil.classList.remove("on"); setTimeout(() => veil.remove(), 300); };
+    veil.addEventListener("click", (e) => { if (e.target === veil) 닫기(); });
+    veil.querySelector(".cmemo-ok").addEventListener("click", async () => { await smSave(ta.value, 고른); 닫기(); });
+    veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_sm.t) await smSave("", _sm.s); 닫기(); });
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 320);
+  }
+  window.openShareMemo = openShareMemo;
+
+  /* ---------------------------------------------------------------
      손가락
      --------------------------------------------------------------- */
   function bindCheerClicks() {
@@ -341,9 +440,15 @@
         if (e.target.closest("[data-share-stop], [data-share-switch], [data-blur-open], [data-cheer-open], .share-cheers")) return;
         const memo = card.classList.contains("memo-card");
         const nick = card.getAttribute(memo ? "data-memo-of" : "data-share-nick");
-        if (!nick) return;                    // 내 카드도 됩니다 (화공 홍보)
+        if (!nick) return;
         e.preventDefault(); e.stopPropagation();
         try { window.getSelection()?.removeAllRanges(); } catch (x) {}
+        if (!memo) {
+          closePicker(); closePop();
+          if (nick === me()) { openShareMemo(); return; }        // 내 화공 카드 → 📝 메모 붙이기
+          sendCheer(nick, "fire", card);                         // 남의 화공 카드 → 바로 🔥
+          return;
+        }
         openPicker(nick, card, e.clientX, e.clientY, memo);
       });
     }

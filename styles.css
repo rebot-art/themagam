@@ -8266,8 +8266,8 @@ html.member-open .cards-area{ padding-right: 250px; }
 .fr-pg:disabled{ opacity: .35; cursor: default; }
 
 /* ── 내 쪽지 끌기 (2026-08-13) ── */
-.fr-note.is-mine{ cursor: grab; touch-action: none; }
-.fr-note.is-mine.dragging{
+.fr-note.is-mine, .fr-note.can-move{ cursor: grab; touch-action: none; }
+.fr-note.is-mine.dragging, .fr-note.can-move.dragging{
   cursor: grabbing;
   z-index: 999 !important;
   box-shadow: 0 8px 22px rgba(60,45,25,.35);
@@ -12835,6 +12835,17 @@ html[data-lite] .user-card.share-card,
   background: repeating-linear-gradient(45deg, rgba(247,196,196,.92) 0 8px, rgba(250,214,214,.92) 8px 16px);
   box-shadow: 0 2px 4px rgba(0,0,0,.12); transform: translate(-50%, -50%) rotate(-3deg); }
 .lite-card .card-memo.sC{ font-size: 20px; }
+
+/* [2026-11-21] 화공 카드 메모 — 프로필 카드 메모(기울어져 한가운데)와 달리
+   반듯하게(기울기 0) 가로 가운데, 세로는 왼쪽 위 ● 단추(.share-live, top 6 + 높이 20)의
+   2/3 지점(≈19px)에 메모 윗변이 닿도록 얹습니다. */
+.share-card > .card-memo,
+.share-card > .card-memo.sB,
+.share-card > .card-memo.sC{
+  top: 19px;
+  left: 50%;
+  transform: translate(-50%, 0) rotate(0deg);   /* 윗변이 top 선에 닿음 */
+}
 /* 고르는 칸 — 작은 동그라미 셋 (2026-10-04 콩: 심플하게) */
 .cmemo-pick{ display: flex; gap: 8px; justify-content: center; margin: 0 0 10px; }
 .cmemo-opt{ width: 20px; height: 20px; padding: 0; border-radius: 50%; cursor: pointer;
@@ -12935,10 +12946,10 @@ html[data-lite] .user-card.share-card,
 /* 🔔 활동 — 24시간 타임라인 (2026-11-18) */
 .activity-board{ display: flex; flex-direction: column; min-height: 0; height: 100%; font-size: var(--fs-sm); }
 .tl-top{ display: flex; gap: 8px; padding: 2px 0 8px; }
-.tl-met{ flex: 1 1 0; background: var(--surface-2, rgba(0,0,0,.04)); border-radius: 10px; padding: 6px 10px; }
+.tl-met{ flex: 1 1 0; background: var(--surface-2, rgba(0,0,0,.04)); border-radius: 10px; padding: 6px 10px; text-align: right; }
 .tl-met small{ display: block; color: var(--muted); font-size: var(--fs-xs); }
 .tl-met b{ font-size: var(--fs-md, 15px); }
-.tl-legend{ display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 0 0 8px; color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.tl-legend{ display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; padding: 0 0 8px; color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
 .tl-legend i{ display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 .tl-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: 4px; }
 .tl-hr{ display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
@@ -13264,6 +13275,7 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
      아이콘 칸과 같은 너비의 빈 칸(.gc-sp)을 오른쪽에 두어 글이 정확히 가운데에 옵니다.
    ★ 경고에 빨강을 안 씁니다(2026-08-14 "잔소리 같다" 결정) — 분홍.
    ===================================================================== */
+.heart-note{ text-align: center; margin: 4px auto; font-size: 13px; color: var(--muted); line-height: 1.5; word-break: keep-all; }
 .greet-card{
   display: grid; grid-template-columns: 34px 1fr 34px; align-items: center;
   margin: 8px auto; width: 94%; max-width: 94%;
