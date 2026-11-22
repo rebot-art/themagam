@@ -2526,7 +2526,9 @@
   }
   async function saveBoardNotice() {
     if (!ownerOnly("배경판 공지")) return;
-    const t = String(el("adm-bnotice")?.value || "").replace(/\s+/g, " ").trim().slice(0, BNOTICE_MAX);
+    /* [2026-11-23 콩] 엔터로 나눈 줄은 그대로 둡니다(최대 3줄). 줄 안쪽의 겹친 띄어쓰기만 하나로, 빈 줄은 뺍니다. */
+    const t = String(el("adm-bnotice")?.value || "").replace(/\r\n?/g, "\n").split("\n")
+      .map(x => x.replace(/[ \t\u00a0]+/g, " ").trim()).filter(Boolean).slice(0, 3).join("\n").slice(0, BNOTICE_MAX);
     if (!t) { msg("adm-bnotice-msg", "공지를 적어 주세요. (내리려면 [내리기])", true); return; }
     const style = document.querySelector('input[name="adm-bnotice-style"]:checked')?.value || "A";
     try {

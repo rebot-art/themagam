@@ -863,7 +863,9 @@
     } catch (e) {}
   }
   function 공지글() {
-    return String((_boardNotice && _boardNotice.text) || "").replace(/\s+/g, " ").trim().slice(0, NOTICE_MAX);
+    /* [2026-11-23 콩] 방장이 엔터로 나눈 줄은 그대로(최대 3줄). 줄을 안 나눈 글만 아래 두줄로() 가 접어 줍니다. */
+    return String((_boardNotice && _boardNotice.text) || "").replace(/\r\n?/g, "\n").split("\n")
+      .map(x => x.replace(/[ \t\u00a0]+/g, " ").trim()).filter(Boolean).slice(0, 3).join("\n").slice(0, NOTICE_MAX);
   }
   function 공지그리기() {
     const box = document.getElementById("room-board");
@@ -881,7 +883,7 @@
     const 뼈대 = box.querySelector(".rb-inner");
     if (!뼈대) return;
     if (줄.nextSibling !== 뼈대) box.insertBefore(줄, 뼈대);
-    const 보임 = 두줄로(글);
+    const 보임 = 글.includes("\n") ? 글 : 두줄로(글);      // 직접 줄을 나눴으면 그대로
     줄.className = "rb-notice s" + 모양 + (보임.includes("\n") ? " two" : "");
     if (줄.textContent !== 보임) 줄.textContent = 보임;     // textContent — 글자 그대로만
   }
