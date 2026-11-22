@@ -232,28 +232,12 @@
       });
       try { window.Activity?.add("heart", `'${to}'님께 ❤️ 하트`); } catch (e) {}
       try { window.useLogBump?.("h"); } catch (e) {}              // 📒 방 활동 기록 (명예 멤버 활동 점수)
-      postChatNote(to, day);
     } catch (e) {
       /* 서버가 거절 = 이미 쐈다 (다른 창에서 쐈다든지). 화면만 맞춰 줍니다 */
       console.warn("[heart]", e);
       toast("오늘 이미 보냈어요 💘");
     }
     _busy = false;
-  }
-  /* 💘 챗창 알림 한 줄 (2026-11-21 — 콩 "[뫄뫄님에게 하트 응원이 뿅!]", A안 · 2번)
-     ★ **받는 사람만** 적습니다 — 누가 쐈는지는 글에도, 저장하는 값에도 넣지 않아요
-       (처음 정한 "누가 쐈는지는 받은 본인만" 을 지킵니다). 그래서 user·보낸이 칸이 없고,
-       키도 보낸이 이름 없이 무작위입니다. 하루 한 번 규칙이라 사람당 많아야 하루 한 줄.
-     ★ 알림이 안 올라가도 하트는 이미 갔습니다 — 실패해도 조용히 넘어갑니다. */
-  function postChatNote(to, day) {
-    try {
-      if (!window.db || window.SOLO) return;
-      const key = `ht_${day}_${to}_${Math.random().toString(36).slice(2, 8)}`.replace(/[.#$\[\]\/]/g, "_");
-      const payload = { type: "system", msg: `💘 ${to}님에게 하트 응원이 뿅!`, time: Date.now(), gk: "heart" };
-      db.ref(`messages/${key}`).set(payload).then(() => {
-        window._renderMessageLocal?.(key, payload);
-      }).catch(() => {});
-    } catch (e) {}
   }
   /* 작은 안내 — 화면 아래 가운데, 1.4초 */
   let _toastT = null;

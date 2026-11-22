@@ -1311,11 +1311,15 @@
   /* 📝 메모 칸 — 솔로방에서 먼저. 본방에 켤 때는 MEMO_MAIN 을 true 로 */
   const MEMO_MAIN = true;
   const memoOn = () => window.SOLO === true || MEMO_MAIN;
+  /* 💘 하트 응원 줄을 타임라인에 보일지 — 이 기기에만 저장, 기본은 켜짐 (2026-11-22 콩) */
+  const HSW_KEY = "tl-heart-show";
+  const 하트보임 = () => { try { return window.AppStore?.getItem(HSW_KEY) !== "0"; } catch (e) { return true; } };
   function board(day) {
     const T = window.TimeLog, now = Date.now(), ds = dayStart(day), isToday = day === dayOf(now);
     const b = (load().days[day] || { rows: [], auto: [] });
     const segs = merge(allSegs(day));
     const ev = (b.rows || []).filter(r => r.k !== "status" && r.k !== "work")
+      .filter(r => r.k !== "heart" || 하트보임())
       .concat(memoOn() ? ((window.wcMemosOf && window.wcMemosOf(day)) || []).map(m => ({ t: m.t, k: "memo", x: m.x })) : [])
       .sort((p, q) => p.t - q.t);
     const mk = marks(segs, b.auto || [], b.chg || []);
@@ -1326,7 +1330,7 @@
     let h = `<div class="tl-top"><div class="tl-met"><small>오늘 작업</small><b>${workAll > 0 ? dur(workAll) : "0분"}</b></div>` +
       `<div class="tl-met"><small>접속 시간</small><b>${stayAll > 0 ? dur(stayAll) : "0분"}</b></div>` +
       `<div class="tl-met"><small>출석</small><b>${attN ? attN + "/" + ATT_TOTAL : "–"}</b></div></div>`;
-    h += `<div class="tl-legend">` + ST().map(x => `<span><i style="background:${x.color}"></i>${esc(String(x.label).split("(")[0])}</span>`).join("") + `</div>`;
+    h += `<div class="tl-legend"><button type="button" class="tl-hsw" data-tl-hsw="1" role="switch" aria-checked="${하트보임() ? "true" : "false"}" title="하트 응원 발사 기록을 타임라인에 보일지"><span>하트 응원</span><i class="tl-sw"></i></button><div class="tl-cols">` + ST().map(x => `<span><i style="background:${x.color}"></i>${esc(String(x.label).split("(")[0])}</span>`).join("") + `</div></div>`;
     h += `<div class="tl-list">`;
     /* 활동이 없는 시간(접속이 끊겼던 시간·아직 안 온 시간)이 이어지면 한 칸으로 줄이고 처음·끝 시각만 보여 줍니다 (2026-11-18 콩) */
     const emptyAt = (kk) => {
@@ -1390,6 +1394,12 @@
     }
     return b;
   }
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-tl-hsw]");
+    if (!t) return;
+    try { window.AppStore?.setItem(HSW_KEY, 하트보임() ? "0" : "1"); } catch (x) {}
+    redraw();
+  });
   function redraw() {
     if (!_box || !_box.isConnected || !on()) return;
     const body = bodyOf(_box);

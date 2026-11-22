@@ -12950,6 +12950,14 @@ html[data-lite] .user-card.share-card,
 .tl-met small{ display: block; color: var(--muted); font-size: var(--fs-xs); }
 .tl-met b{ font-size: var(--fs-md, 15px); }
 .tl-legend{ display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; padding: 0 0 8px; color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.tl-legend{ align-items: center; justify-content: space-between; }
+.tl-legend .tl-cols{ display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; }
+/* [2026-11-22] 하트 응원 스위치 — 타임라인에 하트 발사 기록을 보일지 */
+.tl-hsw{ display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.tl-hsw .tl-sw{ position: relative; width: 26px; height: 14px; border-radius: 999px; background: #c9c2b8; transition: background .15s; flex: none; }
+.tl-hsw .tl-sw::after{ content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.tl-hsw[aria-checked="true"] .tl-sw{ background: #d9486f; }
+.tl-hsw[aria-checked="true"] .tl-sw::after{ transform: translateX(12px); }
 .tl-legend i{ display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 .tl-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: 4px; }
 .tl-hr{ display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
@@ -13275,7 +13283,6 @@ html.side-files #files-modal .fl-n{ white-space: normal; overflow: visible; text
      아이콘 칸과 같은 너비의 빈 칸(.gc-sp)을 오른쪽에 두어 글이 정확히 가운데에 옵니다.
    ★ 경고에 빨강을 안 씁니다(2026-08-14 "잔소리 같다" 결정) — 분홍.
    ===================================================================== */
-.heart-note{ text-align: center; margin: 4px auto; font-size: 13px; color: var(--muted); line-height: 1.5; word-break: keep-all; }
 .greet-card{
   display: grid; grid-template-columns: 34px 1fr 34px; align-items: center;
   margin: 8px auto; width: 94%; max-width: 94%;
