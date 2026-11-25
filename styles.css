@@ -12846,6 +12846,16 @@ html[data-lite] .user-card.share-card,
   left: 50%;
   transform: translate(-50%, 0) rotate(0deg);   /* 윗변이 top 선에 닿음 */
 }
+/* 🖍 [2026-11-25 콩] 메모에 붙인 챗 스티커(그림만) — 스티커 위, 글 아래 */
+.card-memo.has-stk{ display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.card-memo .cm-stk{ display: block; line-height: 0; }
+.card-memo .cm-stk svg{ display: block; }
+.card-memo .cm-t{ display: block; }
+.card-memo.sA .cm-stk{ filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+.cmemo-stkrow{ display: flex; align-items: center; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
+.cmemo-stkrow[hidden], .cmemo-stkprev[hidden]{ display: none; }
+.cmemo-stkprev{ display: inline-flex; align-items: center; gap: 4px; }
+.cmemo-stkimg{ display: inline-block; line-height: 0; }
 /* 고르는 칸 — 작은 동그라미 셋 (2026-10-04 콩: 심플하게) */
 .cmemo-pick{ display: flex; gap: 8px; justify-content: center; margin: 0 0 10px; }
 .cmemo-opt{ width: 20px; height: 20px; padding: 0; border-radius: 50%; cursor: pointer;

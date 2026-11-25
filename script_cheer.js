@@ -326,25 +326,26 @@
      ★ 모두에게 보이는 길: screens/{닉} 의 memo · memoStyle (화면 그림과 같은 자리 — 따로 듣는 게 없어요)
      --------------------------------------------------------------- */
   const SM_MAX = 30;
-  let _sm = { t: "", s: "A" }, _smNick = "";
+  let _sm = { t: "", s: "A", k: "" }, _smNick = "";
+  const smStk = (v) => { const x = String(v == null ? "" : v); return /^[a-z]{1,20}$/.test(x) && (window.stickerImgHtml?.(x) || "") ? x : ""; };   // 🖍 메모에 붙인 챗 스티커(그림만) 2026-11-25
   const smStyle = (v) => (v === "B" || v === "C") ? v : "A";
   function smClean(t) {
     return String(t == null ? "" : t).replace(/\r/g, "").split("\n").slice(0, 2)
       .map(x => x.replace(/\s+$/g, "")).join("\n").trim().slice(0, SM_MAX);
   }
-  window.myShareMemo = () => (_sm.t ? { t: _sm.t, s: _sm.s } : null);
+  window.myShareMemo = () => ((_sm.t || _sm.k) ? { t: _sm.t, s: _sm.s, k: _sm.k } : null);
   async function smLoad() {
     const n = me();
     if (!n || _smNick === n) return;
     _smNick = n;
     try {
       const raw = window.AppStore?.getItem("shareMemo_" + n);
-      if (raw) { const o = JSON.parse(raw); _sm = { t: smClean(o.t), s: smStyle(o.s) }; }
+      if (raw) { const o = JSON.parse(raw); _sm = { t: smClean(o.t), s: smStyle(o.s), k: smStk(o.k) }; }
     } catch (e) {}
     try {
       if (window.db && !window.SOLO) {
         const v = (await db.ref(`users/${n}/shareMemo`).once("value")).val();
-        if (v && typeof v === "object") _sm = { t: smClean(v.t), s: smStyle(v.s) };
+        if (v && typeof v === "object") _sm = { t: smClean(v.t), s: smStyle(v.s), k: smStk(v.k) };
       }
     } catch (e) {}
     try { window.renderShareCards?.(); } catch (e) {}
@@ -352,16 +353,16 @@
   setInterval(smLoad, 3000);
   setTimeout(smLoad, 1500);
 
-  async function smSave(t, s) {
+  async function smSave(t, s, k) {
     const n = me(); if (!n) return;
-    _sm = { t: smClean(t), s: smStyle(s) };
+    _sm = { t: smClean(t), s: smStyle(s), k: smStk(k) };
     try { window.AppStore?.setItem("shareMemo_" + n, JSON.stringify(_sm)); } catch (e) {}
     try {
       if (window.db && !window.SOLO) {
-        await db.ref(`users/${n}/shareMemo`).set(_sm.t ? { t: _sm.t, s: _sm.s } : null);
+        await db.ref(`users/${n}/shareMemo`).set((_sm.t || _sm.k) ? { t: _sm.t, s: _sm.s, k: _sm.k || null } : null);
         /* 공유 중이면 모두에게 바로 — 그림이 다시 올라오길 기다리지 않습니다 */
         if (window.isScreenSharing?.()) {
-          await db.ref(`screens/${n}`).update({ memo: _sm.t || null, memoStyle: _sm.t ? _sm.s : null });
+          await db.ref(`screens/${n}`).update({ memo: _sm.t || null, memoStyle: (_sm.t || _sm.k) ? _sm.s : null, memoStk: _sm.k || null });
         }
       }
     } catch (e) { console.warn("[화공 메모]", e); }
@@ -382,10 +383,14 @@
             `<button type="button" class="cmemo-opt d${k}${_sm.s === k ? " on" : ""}" data-st="${k}" role="radio"
                      aria-checked="${_sm.s === k}" title="${l}" aria-label="${l}"></button>`).join("")}
         </div>
+        <div class="cmemo-stkrow">
+          <button type="button" class="npop-later cmemo-stkbtn" id="cmemo-stk-btn">🖍 스티커 붙이기</button>
+          <span class="cmemo-stkprev" hidden><span class="cmemo-stkimg"></span><button type="button" class="cmemo-imgx cmemo-stkx" title="스티커 빼기" aria-label="스티커 빼기">✕</button></span>
+        </div>
         <textarea class="cmemo-in" rows="2" maxlength="${SM_MAX}" placeholder="화공 중!&#10;같이 해요 🙏"></textarea>
         <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${SM_MAX} · 엔터로 두 줄까지</div>
         <div class="npop-btns">
-          <button type="button" class="npop-later cmemo-off">${_sm.t ? "떼기" : "닫기"}</button>
+          <button type="button" class="npop-later cmemo-off">${(_sm.t || _sm.k) ? "떼기" : "닫기"}</button>
           <button type="button" class="hello-ok cmemo-ok">붙이기</button>
         </div>
       </div>`;
@@ -398,6 +403,19 @@
       고른 = smStyle(b.dataset.st);
       veil.querySelectorAll(".cmemo-opt").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-checked", on); });
     }));
+    /* 🖍 스티커 — [붙이기] 를 눌러야 걸립니다 */
+    let 고른스티커 = smStk(_sm.k);
+    const 스티커미리 = veil.querySelector(".cmemo-stkprev");
+    const 스티커그리기 = () => {
+      스티커미리.hidden = !고른스티커;
+      스티커미리.querySelector(".cmemo-stkimg").innerHTML = 고른스티커 ? window.stickerImgHtml(고른스티커) : "";
+      veil.querySelector("#cmemo-stk-btn").textContent = 고른스티커 ? "🖍 스티커 바꾸기" : "🖍 스티커 붙이기";
+    };
+    veil.querySelector("#cmemo-stk-btn").addEventListener("click", () => {
+      window.toggleStickerPicker?.({ btnId: "cmemo-stk-btn", z: 9800, onPick: (id) => { 고른스티커 = smStk(id); 스티커그리기(); } });
+    });
+    veil.querySelector(".cmemo-stkx").addEventListener("click", () => { 고른스티커 = ""; 스티커그리기(); });
+    스티커그리기();
     const 세기 = () => { veil.querySelector(".cmemo-n").textContent = ta.value.length; };
     세기();
     ta.addEventListener("input", () => {
@@ -410,8 +428,8 @@
     });
     const 닫기 = () => { veil.classList.remove("on"); setTimeout(() => veil.remove(), 300); };
     veil.addEventListener("click", (e) => { if (e.target === veil) 닫기(); });
-    veil.querySelector(".cmemo-ok").addEventListener("click", async () => { await smSave(ta.value, 고른); 닫기(); });
-    veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_sm.t) await smSave("", _sm.s); 닫기(); });
+    veil.querySelector(".cmemo-ok").addEventListener("click", async () => { await smSave(ta.value, 고른, 고른스티커); 닫기(); });
+    veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_sm.t || _sm.k) await smSave("", _sm.s, ""); 닫기(); });
     setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 320);
   }
   window.openShareMemo = openShareMemo;

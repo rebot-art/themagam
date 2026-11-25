@@ -426,7 +426,8 @@
         /* 📝 화공 메모 (2026-11-21 콩) — set 이 노드를 통째로 덮어쓰므로 메모도 같이 싣습니다.
            없으면 null(안 적힘). 바꿀 때는 script_cheer.js 가 따로 update 합니다. */
         memo: (window.myShareMemo?.() || {}).t || null,
-        memoStyle: (window.myShareMemo?.() || {}).s || null
+        memoStyle: (window.myShareMemo?.() || {}).s || null,
+        memoStk: (window.myShareMemo?.() || {}).k || null
       });
       _지문 = 지문;                 // 보낸 것만 기준으로 삼습니다
       _마지막보냄 = Date.now();
@@ -1250,7 +1251,7 @@
       if (껍데기인가(nick)) continue;
       /* 모르는 값이 오면 예전처럼 "채우기" — 옛 기록과 섞여도 안 깨집니다 */
       const fit = (r.fit === "contain") ? "contain" : "cover";
-      rows.push({ nick, img, at, age, fit, memo: r.memo, memoStyle: r.memoStyle });
+      rows.push({ nick, img, at, age, fit, memo: r.memo, memoStyle: r.memoStyle, memoStk: r.memoStk });
     }
     // 내 카드가 맨 앞 (자기 것 확인용)
     rows.sort((a, b) => (a.nick === myNick ? -1 : 0) - (b.nick === myNick ? -1 : 0));
@@ -1274,11 +1275,17 @@
      ★ 내 것은 손안의 값(window.myShareMemo)을 바로 씁니다 — 서버를 돌아오길 기다리지 않아요.
      ★ 남의 값은 글자만 믿습니다: 30자 · 두 줄 · 모양은 A/B/C 만 (그 밖엔 A). 그릴 때는 textContent/esc. */
   function 메모조각(row) {
-    let t, st;
-    if (row.nick === myNick) { const m = window.myShareMemo?.(); t = m && m.t; st = m && m.s; }
-    else { t = row.memo; st = row.memoStyle; }
+    let t, st, k;
+    if (row.nick === myNick) { const m = window.myShareMemo?.(); t = m && m.t; st = m && m.s; k = m && m.k; }
+    else { t = row.memo; st = row.memoStyle; k = row.memoStk; }
+    /* 🖍 스티커 — id 모양·실제 있는 스티커만 그립니다 (2026-11-25 콩) */
+    k = (/^[a-z]{1,20}$/.test(String(k || "")) && (window.stickerImgHtml?.(String(k)) || "")) ? String(k) : "";
     t = String(t == null ? "" : t).replace(/\r/g, "").split("\n").slice(0, 2).join("\n").trim().slice(0, 30);
-    return { t, s: (st === "B" || st === "C") ? st : "A" };
+    return { t, s: (st === "B" || st === "C") ? st : "A", k };
+  }
+  /** 메모 안쪽 — 스티커(그림만)가 있으면 위에, 글은 아래 */
+  function 메모속(m) {
+    return m.k ? `<span class="cm-stk">${window.stickerImgHtml(m.k)}</span>${m.t ? `<span class="cm-t">${esc(m.t)}</span>` : ""}` : esc(m.t);
   }
   function shareCardHtml(row) {
     /* =====================================================================
@@ -1324,7 +1331,7 @@
             ${off}
           </div>
         </div>
-        ${(() => { const m = 메모조각(row); return m.t ? `<div class="card-memo s${m.s}" aria-label="메모: ${esc(m.t)}">${esc(m.t)}</div>` : ""; })()}
+        ${(() => { const m = 메모조각(row); return (m.t || m.k) ? `<div class="card-memo${m.k ? " has-stk" : ""} s${m.s}" data-sig="${esc(m.t + "\u0001" + m.k)}" aria-label="메모: ${esc(m.t)}">${메모속(m)}</div>` : ""; })()}
       </div>`;
   }
 
@@ -1400,12 +1407,13 @@
         /* 📝 메모도 제자리에서 — 카드를 새로 만들지 않습니다 (그림이 깜빡이지 않게) */
         const m = 메모조각(row);
         let mm = had.querySelector(":scope > .card-memo");
-        if (!m.t) { if (mm) mm.remove(); }
+        if (!m.t && !m.k) { if (mm) mm.remove(); }
         else {
           if (!mm) { mm = document.createElement("div"); had.appendChild(mm); }
-          const cls = "card-memo s" + m.s;
+          const cls = "card-memo" + (m.k ? " has-stk" : "") + " s" + m.s;
           if (mm.className !== cls) mm.className = cls;
-          if (mm.textContent !== m.t) mm.textContent = m.t;
+          const sig = m.t + "\u0001" + m.k;
+          if (mm.dataset.sig !== sig) { mm.innerHTML = 메모속(m); mm.dataset.sig = sig; }
           mm.setAttribute("aria-label", "메모: " + m.t);
         }
         return;

@@ -1403,6 +1403,17 @@
     </svg>`;
   };
 
+  /** 🖍 메모에 붙이는 **그림만** (이름 글씨 없이) — 2026-11-25 콩.
+      크기는 고르기 판에서 보이는 그대로(판의 58px 칸 안에서 그림이 차지하는 51×42). 못 알아보면 "". */
+  window.stickerImgHtml = function (id, w) {
+    const s = /^[a-z]+$/.test(String(id || "")) ? byId(String(id)) : null;
+    if (!s) return "";
+    ensureFilter();
+    const W = w || 51, H = Math.round(W * 60 / 72);
+    return `<svg class="memo-stk" width="${W}" height="${H}" viewBox="0 0 72 60"
+                 role="img" aria-label="${s.label}" filter="url(#crayon-rough)">${s.svg}</svg>`;
+  };
+
   /* =====================================================================
      고르기 판
      ---------------------------------------------------------------------
@@ -1481,6 +1492,13 @@
   let _곳 = { btnId: "sticker-btn", inputId: "message", send: () => window.send?.() };
 
   function pick(id) {
+    /* 🖍 [2026-11-25 콩] 메모에 붙이는 길 — 입력칸·보내기를 안 거치고 고른 것만 돌려줍니다 */
+    if (typeof _곳.onPick === "function") {
+      close();
+      try { _곳.onPick(id); } catch (e) {}
+      recentPush(id);
+      return;
+    }
     const el = document.getElementById(_곳.inputId) || 찾기(_곳.inputId);
     if (!el) return;
     el.value = `[[스티커:${id}]]`;
@@ -1533,6 +1551,7 @@
     pop.className = "sticker-pop";
     pop.setAttribute("role", "menu");
     pop.setAttribute("aria-label", "스티커 고르기");
+    if (_곳.z) pop.style.zIndex = String(_곳.z);          // 창(메모 적는 곳) 위에 뜨게
     doc.body.appendChild(pop);   // 칸 수는 화면 폭(CSS)이 정하니, 붙인 뒤에 읽습니다
 
     /* ★★ 페이지 나누기 (2026-10-16 콩 "판이 거대해지는 걸 방지 — 10×5 를 한 페이지로")

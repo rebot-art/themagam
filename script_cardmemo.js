@@ -27,12 +27,14 @@
   const 나 = () => { try { return (typeof myNick === "string" && myNick) ? myNick : (window.myNick || ""); } catch (e) { return ""; } };
 
   let _memo = "";
+  let _stk = "";          // 🖍 [2026-11-25 콩] 메모에 붙인 챗 스티커(그림만) — id 한 낱말, 글과 같이도 혼자서도 됩니다
   let _style = "A";       // A 손글씨 · B 포스트잇 · C 마스킹테이프 (2026-10-04 콩: 고를 수 있게)
   /* [2026-10-07 콩] N = **새 카드** — 내 카드 위에 얹지 않고, 내 카드 옆에 빈 카드를 한 장
      더 띄워 거기에 메모만 적습니다. ("화공, 워크로그 많관부 🙏" 처럼 알리고 싶은 말)
      ★ 그리기는 늘 켜 두고, **고르는 단추만** 혼자 방에 먼저 냅니다 (NEW_MAIN_ON). */
   const NEW_MAIN_ON = true;               // [2026-10-07 콩] 혼자 방 시험 통과 → 본방 ON (글·그림 둘 다)
   const 새카드켜짐 = () => !!(window.SOLO || NEW_MAIN_ON);
+  const 스티커id = (v) => { const x = String(v == null ? "" : v); return /^[a-z]{1,20}$/.test(x) && (window.stickerImgHtml?.(x) || "") ? x : ""; };
   const 모양 = (v) => (["A", "B", "C", "N"].includes(v) ? v : "A");
   let _불러온닉 = "";
 
@@ -121,6 +123,7 @@
     if (!n || _불러온닉 === n) return;
     _불러온닉 = n;
     try { _memo = 다듬기(window.AppStore?.getItem("cardMemo_" + n) || ""); _style = 모양(window.AppStore?.getItem("cardMemoStyle_" + n)); } catch (e) {}
+    try { _stk = 스티커id(window.AppStore?.getItem("cardMemoStk_" + n)); } catch (e) {}
     try { _img = 그림주소(window.AppStore?.getItem("cardMemoImg_" + n) || ""); _fit = 맞춤(window.AppStore?.getItem("cardMemoFit_" + n)); } catch (e) {}
     try {
       if (window.db) {
@@ -128,6 +131,7 @@
         if (typeof v === "string") _memo = 다듬기(v);
         const st = (await window.db.ref(`users/${n}/cardMemoStyle`).once("value")).val();
         if (st) _style = 모양(st);
+        { const k = (await window.db.ref(`users/${n}/cardMemoStk`).once("value")).val(); _stk = 스티커id(k); }
         if (!window.SOLO) {
           const im = (await window.db.ref(`users/${n}/cardMemoImg`).once("value")).val();
           _img = 그림주소(im);
@@ -135,30 +139,33 @@
         }
       }
     } catch (e) {}
-    if (_memo || _img) window.updateStatus?.(true);
+    if (_memo || _img || _stk) window.updateStatus?.(true);
   }
   setInterval(불러오기, 3000);
   setTimeout(불러오기, 1500);
 
   window.myCardMemo = () => _memo || null;
-  window.myCardMemoStyle = () => ((_memo || _img) ? _style : null);
+  window.myCardMemoStyle = () => ((_memo || _img || _stk) ? _style : null);
+  window.myCardMemoStk = () => ((_style !== "N" && _stk) ? _stk : null);
   /* 그림은 **새 카드(N)** 일 때만 나갑니다 */
   window.myCardMemoImg = () => ((_style === "N" && _img) ? _img : null);
   window.myCardMemoFit = () => ((_style === "N" && _img && _fit) ? _fit : null);
 
   /* img: undefined = 그림은 그대로 · "" = 그림 떼기 · 주소 = 그 그림으로 */
-  async function 저장(t, st, img, fit) {
+  async function 저장(t, st, img, fit, stk) {
     const n = 나(); if (!n) return;
     _memo = 다듬기(t);
     if (st) _style = 모양(st);
     const 옛그림 = _img;
     if (img !== undefined) _img = 그림주소(img);
     if (fit !== undefined) _fit = 맞춤(fit);
+    if (stk !== undefined) _stk = 스티커id(stk);
+    if (_style === "N" || _img) _stk = "";          // 스티커는 새 카드·그림 메모에선 쓰지 않습니다
     if (_style !== "N" || _memo) _img = "";        // 그림은 새 카드에서만, 그리고 글이 있으면 그림은 뗍니다 (그림만 또는 글만)
     if (_img) _memo = "";
     if (옛그림 && 옛그림 !== _img) 옛그림지우기(옛그림);
-    try { window.AppStore?.setItem("cardMemo_" + n, _memo); window.AppStore?.setItem("cardMemoStyle_" + n, _style); window.AppStore?.setItem("cardMemoImg_" + n, _img); window.AppStore?.setItem("cardMemoFit_" + n, _fit); } catch (e) {}
-    try { if (window.db) { await window.db.ref(`users/${n}/cardMemo`).set(_memo || null); await window.db.ref(`users/${n}/cardMemoStyle`).set(_style);
+    try { window.AppStore?.setItem("cardMemoStk_" + n, _stk); window.AppStore?.setItem("cardMemo_" + n, _memo); window.AppStore?.setItem("cardMemoStyle_" + n, _style); window.AppStore?.setItem("cardMemoImg_" + n, _img); window.AppStore?.setItem("cardMemoFit_" + n, _fit); } catch (e) {}
+    try { if (window.db) { await window.db.ref(`users/${n}/cardMemoStk`).set(_stk || null); await window.db.ref(`users/${n}/cardMemo`).set(_memo || null); await window.db.ref(`users/${n}/cardMemoStyle`).set(_style);
           if (!window.SOLO) { await window.db.ref(`users/${n}/cardMemoImg`).set(_img || null); await window.db.ref(`users/${n}/cardMemoFit`).set((_img && _fit) || null); } } } catch (e) {}
     window.updateStatus?.(true);
   }
@@ -167,6 +174,9 @@
   window.cardMemoHtml = (row) => {
     const m = 다듬기(row && row.memo);
     if (m && 모양(row.memoStyle) === "N") return "";       // 새 카드로 따로 뜹니다 (아래)
+    /* 🖍 스티커 — 남이 보낸 값도 id 모양·실제 있는 스티커만 믿고 그립니다 */
+    const k = 모양(row && row.memoStyle) === "N" ? "" : 스티커id(row && row.memoStk);
+    if (k) return `<div class="card-memo has-stk s${모양(row.memoStyle)}" aria-label="메모: ${esc(m)}"><span class="cm-stk">${window.stickerImgHtml(k)}</span>${m ? `<span class="cm-t">${esc(m)}</span>` : ""}</div>`;
     return m ? `<div class="card-memo s${모양(row.memoStyle)}" aria-label="메모: ${esc(m)}">${esc(m)}</div>` : "";
   };
 
@@ -222,10 +232,15 @@
           </span>
           <span class="cmemo-imghint">그림을 넣으면 글 대신 그림만 떠요</span>
         </div>
+        <!-- 🖍 챗 스티커(그림만) 붙이기 — 새 카드(new)가 아닐 때 (2026-11-25 콩) -->
+        <div class="cmemo-stkrow">
+          <button type="button" class="npop-later cmemo-stkbtn" id="cmemo-stk-btn">🖍 스티커 붙이기</button>
+          <span class="cmemo-stkprev" hidden><span class="cmemo-stkimg"></span><button type="button" class="cmemo-imgx cmemo-stkx" title="스티커 빼기" aria-label="스티커 빼기">✕</button></span>
+        </div>
         <textarea class="cmemo-in" rows="2" maxlength="${MAX}" placeholder="마감 중…&#10;답변이 느려요 ㅜ^ㅜ">${esc(_memo)}</textarea>
         <div class="cmemo-cnt"><span class="cmemo-n">0</span>/${MAX} · 엔터로 두 줄까지</div>
         <div class="npop-btns">
-          <button type="button" class="npop-later cmemo-off">${(_memo || _img) ? "떼기" : "닫기"}</button>
+          <button type="button" class="npop-later cmemo-off">${(_memo || _img || _stk) ? "떼기" : "닫기"}</button>
           <button type="button" class="hello-ok cmemo-ok">붙이기</button>
         </div>
       </div>`;
@@ -280,6 +295,21 @@
       } catch (e) { alert(e.message || "그림을 못 읽었어요."); }
     });
     그림칸맞추기();
+    /* 🖍 스티커 — 고른 것은 [붙이기] 를 눌러야 걸립니다 */
+    let 고른스티커 = 스티커id(_stk);
+    const 스티커줄 = veil.querySelector(".cmemo-stkrow"), 스티커미리 = veil.querySelector(".cmemo-stkprev");
+    const 스티커그리기 = () => {
+      스티커줄.hidden = 고른 === "N";
+      스티커미리.hidden = !고른스티커;
+      스티커미리.querySelector(".cmemo-stkimg").innerHTML = 고른스티커 ? window.stickerImgHtml(고른스티커) : "";
+      veil.querySelector("#cmemo-stk-btn").textContent = 고른스티커 ? "🖍 스티커 바꾸기" : "🖍 스티커 붙이기";
+    };
+    veil.querySelector("#cmemo-stk-btn").addEventListener("click", () => {
+      window.toggleStickerPicker?.({ btnId: "cmemo-stk-btn", z: 9800, onPick: (id) => { 고른스티커 = 스티커id(id); 스티커그리기(); } });
+    });
+    veil.querySelector(".cmemo-stkx").addEventListener("click", () => { 고른스티커 = ""; 스티커그리기(); });
+    veil.querySelectorAll(".cmemo-opt").forEach(b => b.addEventListener("click", 스티커그리기));
+    스티커그리기();
     const 세기 = () => { veil.querySelector(".cmemo-n").textContent = ta.value.length; };
     세기();
     ta.addEventListener("input", () => {
@@ -303,7 +333,7 @@
         } else if (그림으로) {
           await 저장("", 고른, undefined, 고른맞춤);  // 걸려 있던 그림 그대로 (놓는 법만 바꿀 수도)
         } else {
-          await 저장(ta.value, 고른, "");            // 글만 — 그림은 뗍니다
+          await 저장(ta.value, 고른, "", undefined, 고른 === "N" ? "" : 고른스티커);            // 글(+스티커) — 그림은 뗍니다
         }
         닫기();
       } catch (err) {
@@ -311,7 +341,7 @@
         alert("그림을 올리지 못했어요. " + (err.message || ""));
       }
     });
-    veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_memo || _img) await 저장("", undefined, ""); 닫기(); });
+    veil.querySelector(".cmemo-off").addEventListener("click", async () => { if (_memo || _img || _stk) await 저장("", undefined, "", undefined, ""); 닫기(); });
     setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 320);
   }
   window.openCardMemo = 열기;

@@ -2600,6 +2600,7 @@
       /* 📝 [2026-10-04 콩] 카드 메모 — 붙이고 뗄 때만 바뀌는 칸 (script_cardmemo.js) */
       memo: window.myCardMemo?.() || null,
       memoStyle: window.myCardMemoStyle?.() || null,
+      memoStk: window.myCardMemoStk?.() || null,        // 🖍 메모에 붙인 스티커 id (2026-11-25 콩)
       /* 🖼 [2026-10-07 콩] 새 카드 메모의 그림 — **주소 한 줄만** (그림 자체는 창고에) */
       memoImg: window.myCardMemoImg?.() || null,
       memoFit: window.myCardMemoFit?.() || null,      // 채우기일 때만 "fill"
