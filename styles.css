@@ -11393,7 +11393,10 @@ body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
 /* ── 🔥 방 흐름 ── */
 .wl-feed{ margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
 .wl-fh{ font-size: 11.5px; font-weight: 700; color: var(--sub-muted); margin-bottom: 5px; }
-.wl-fb{ display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
+/* [2026-11-26 콩] 오늘 탭 — 방 흐름이 남은 자리를 전부 쓰고, 넘치면 그 안에서 스크롤 (기록 탭처럼).
+   예전엔 168px 에서 끊겨서 아래가 텅 비었습니다. 회차가 많아 위쪽이 길어지면 최소 140px 은 지키고 칸 전체가 스크롤돼요. */
+.wl-feed{ flex: 1 1 140px; min-height: 140px; display: flex; flex-direction: column; }
+.wl-fb{ display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-height: 0; overflow: auto; }
 .wl-fl{ display: flex; align-items: baseline; gap: 6px; font-size: 12px; padding: 2px 3px; border-radius: 5px; }
 .wl-fl.big{ background: var(--fill-1); font-weight: 600; }
 .wl-who{ flex: 0 0 auto; font-weight: 700; color: var(--text); }
